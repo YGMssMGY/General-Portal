@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:orgflow-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  cache:
+    type: simple
+  session:
+    store-type: none
+
+orgflow:
+  security:
+    demo-mode: true
+    auto-provision-users: true
+    frontend-origin: http://localhost:5173
+  seed:
+    enabled: false

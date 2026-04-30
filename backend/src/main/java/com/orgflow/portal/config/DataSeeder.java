@@ -1,0 +1,166 @@
+package com.orgflow.portal.config;
+
+import com.orgflow.portal.entity.ActivityLog;
+import com.orgflow.portal.entity.EventItem;
+import com.orgflow.portal.entity.FinanceTransaction;
+import com.orgflow.portal.entity.Membership;
+import com.orgflow.portal.entity.MessageThread;
+import com.orgflow.portal.entity.PermissionGrant;
+import com.orgflow.portal.entity.Proposal;
+import com.orgflow.portal.entity.TaskItem;
+import com.orgflow.portal.entity.UserAccount;
+import com.orgflow.portal.entity.VolunteerSlot;
+import com.orgflow.portal.entity.Workspace;
+import com.orgflow.portal.entity.WorkspaceFile;
+import com.orgflow.portal.entity.WorkspaceSettings;
+import com.orgflow.portal.repository.ActivityLogRepository;
+import com.orgflow.portal.repository.EventRepository;
+import com.orgflow.portal.repository.FinanceTransactionRepository;
+import com.orgflow.portal.repository.MembershipRepository;
+import com.orgflow.portal.repository.MessageThreadRepository;
+import com.orgflow.portal.repository.PermissionGrantRepository;
+import com.orgflow.portal.repository.ProposalRepository;
+import com.orgflow.portal.repository.TaskRepository;
+import com.orgflow.portal.repository.UserAccountRepository;
+import com.orgflow.portal.repository.VolunteerSlotRepository;
+import com.orgflow.portal.repository.WorkspaceFileRepository;
+import com.orgflow.portal.repository.WorkspaceRepository;
+import com.orgflow.portal.repository.WorkspaceSettingsRepository;
+import com.orgflow.portal.security.Permissions;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.Transactional;
+
+@Configuration
+@ConditionalOnProperty(name = "orgflow.seed.enabled", havingValue = "true")
+public class DataSeeder {
+    @Bean
+    CommandLineRunner seedData(Seeder seeder) {
+        return args -> seeder.seed();
+    }
+
+    @Configuration
+    static class Seeder {
+        private final WorkspaceRepository workspaceRepository;
+        private final UserAccountRepository userAccountRepository;
+        private final MembershipRepository membershipRepository;
+        private final PermissionGrantRepository permissionGrantRepository;
+        private final TaskRepository taskRepository;
+        private final ProposalRepository proposalRepository;
+        private final EventRepository eventRepository;
+        private final VolunteerSlotRepository volunteerSlotRepository;
+        private final FinanceTransactionRepository financeTransactionRepository;
+        private final MessageThreadRepository messageThreadRepository;
+        private final WorkspaceFileRepository workspaceFileRepository;
+        private final ActivityLogRepository activityLogRepository;
+        private final WorkspaceSettingsRepository workspaceSettingsRepository;
+
+        Seeder(
+            WorkspaceRepository workspaceRepository,
+            UserAccountRepository userAccountRepository,
+            MembershipRepository membershipRepository,
+            PermissionGrantRepository permissionGrantRepository,
+            TaskRepository taskRepository,
+            ProposalRepository proposalRepository,
+            EventRepository eventRepository,
+            VolunteerSlotRepository volunteerSlotRepository,
+            FinanceTransactionRepository financeTransactionRepository,
+            MessageThreadRepository messageThreadRepository,
+            WorkspaceFileRepository workspaceFileRepository,
+            ActivityLogRepository activityLogRepository,
+            WorkspaceSettingsRepository workspaceSettingsRepository
+        ) {
+            this.workspaceRepository = workspaceRepository;
+            this.userAccountRepository = userAccountRepository;
+            this.membershipRepository = membershipRepository;
+            this.permissionGrantRepository = permissionGrantRepository;
+            this.taskRepository = taskRepository;
+            this.proposalRepository = proposalRepository;
+            this.eventRepository = eventRepository;
+            this.volunteerSlotRepository = volunteerSlotRepository;
+            this.financeTransactionRepository = financeTransactionRepository;
+            this.messageThreadRepository = messageThreadRepository;
+            this.workspaceFileRepository = workspaceFileRepository;
+            this.activityLogRepository = activityLogRepository;
+            this.workspaceSettingsRepository = workspaceSettingsRepository;
+        }
+
+        @Transactional
+        void seed() {
+            if (workspaceRepository.findByName("OrgFlow Workspace").isPresent()) {
+                return;
+            }
+
+            Workspace workspace = workspaceRepository.save(new Workspace("OrgFlow Workspace", "Student Council Workspace"));
+            UserAccount chris = userAccountRepository.save(new UserAccount("chris@example.edu", "Chris Rivera", null));
+            UserAccount sarah = userAccountRepository.save(new UserAccount("sarah.j@example.edu", "Sarah Jenkins", null));
+            UserAccount maya = userAccountRepository.save(new UserAccount("maya.c@example.edu", "Maya Chen", null));
+            UserAccount jordan = userAccountRepository.save(new UserAccount("jordan.d@example.edu", "Jordan Diaz", null));
+
+            Membership chrisMembership = membershipRepository.save(new Membership(workspace, chris, "Operations Lead", "Leader", 4, 88));
+            Membership sarahMembership = membershipRepository.save(new Membership(workspace, sarah, "President", "Leader", 5, 120));
+            Membership mayaMembership = membershipRepository.save(new Membership(workspace, maya, "Treasurer", "Finance", 3, 96));
+            Membership jordanMembership = membershipRepository.save(new Membership(workspace, jordan, "Volunteer Lead", "Coordinator", 7, 142));
+
+            Permissions.demoPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(chrisMembership, permission)));
+            permissionGrantRepository.save(new PermissionGrant(sarahMembership, Permissions.MEMBERS_READ));
+            permissionGrantRepository.save(new PermissionGrant(sarahMembership, Permissions.PROPOSALS_READ));
+            permissionGrantRepository.save(new PermissionGrant(mayaMembership, Permissions.FINANCE_READ));
+            permissionGrantRepository.save(new PermissionGrant(jordanMembership, Permissions.VOLUNTEERS_READ));
+
+            taskRepository.save(new TaskItem(workspace, "Confirm gym reservation", "todo", "high", "Winter Formal", LocalDate.now().plusDays(8), "Maya Chen", 0, null));
+            taskRepository.save(new TaskItem(workspace, "Update volunteer contact list", "todo", "low", "General Admin", LocalDate.now().plusDays(12), "Jordan Diaz", 0, null));
+            taskRepository.save(new TaskItem(workspace, "Design fundraiser poster", "in_progress", "medium", "Fall Drive", LocalDate.now().plusDays(1), "Chris Rivera", 50, null));
+            taskRepository.save(new TaskItem(workspace, "Approve catering budget", "blocked", "high", "Winter Formal", LocalDate.now().minusDays(1), "Sarah Jenkins", 20, "Waiting on Finance Dept"));
+
+            proposalRepository.save(new Proposal(workspace, "Winter Formal Decoration Plan", "Event", "under_review", "Sarah Jenkins", Instant.now().minusSeconds(86400), new BigDecimal("1850.00"), "Decor, lighting, and table styling plan for the winter formal venue."));
+            proposalRepository.save(new Proposal(workspace, "Fall Merchandise Design", "Purchase", "pending", "Maya Chen", Instant.now().minusSeconds(7200), new BigDecimal("940.00"), "Hoodie and sticker set for the fall membership drive."));
+            proposalRepository.save(new Proposal(workspace, "Community Garden Workday", "Project", "approved", "Jordan Diaz", Instant.now().minusSeconds(420000), new BigDecimal("420.00"), "Volunteer event for cleanup, planting, and signage updates."));
+
+            EventItem spiritWeek = new EventItem(workspace, "Spirit Week 2026", "active", Instant.now().plusSeconds(1296000), Instant.now().plusSeconds(1641600), 75, new BigDecimal("2500.00"), new BigDecimal("3000.00"));
+            spiritWeek.addOwner("JD");
+            spiritWeek.addOwner("AL");
+            spiritWeek.addOwner("+3");
+            eventRepository.save(spiritWeek);
+
+            EventItem formal = new EventItem(workspace, "Winter Formal", "pending", Instant.parse("2026-12-10T19:00:00Z"), null, 30, new BigDecimal("1200.00"), new BigDecimal("6200.00"));
+            formal.addOwner("SJ");
+            formal.addOwner("MC");
+            eventRepository.save(formal);
+
+            volunteerSlotRepository.save(new VolunteerSlot(workspace, "Food Booth Setup", "Spirit Week", Instant.now().plusSeconds(1292400), 10, 8, 4));
+            volunteerSlotRepository.save(new VolunteerSlot(workspace, "Check-in Table", "Winter Formal", Instant.parse("2026-12-10T18:00:00Z"), 6, 4, 3));
+
+            financeTransactionRepository.save(new FinanceTransaction(workspace, "Receipt for event posters", "Printing", "pending", "Maya Chen", new BigDecimal("86.25"), Instant.now().minusSeconds(7200)));
+            financeTransactionRepository.save(new FinanceTransaction(workspace, "Venue deposit", "Event", "approved", "Sarah Jenkins", new BigDecimal("500.00"), Instant.now().minusSeconds(260000)));
+            financeTransactionRepository.save(new FinanceTransaction(workspace, "Catering quote", "Food", "under_review", "Chris Rivera", new BigDecimal("1280.00"), Instant.now().minusSeconds(160000)));
+
+            MessageThread thread = new MessageThread(workspace, "Winter Formal Planning", "event", "active", "Sarah: I updated the seating chart for the VIP section.", 2, Instant.now().minusSeconds(3600));
+            thread.addParticipant("Sarah");
+            thread.addParticipant("Maya");
+            thread.addParticipant("Chris");
+            thread.addMessage("Sarah", "I updated the seating chart for the VIP section.", Instant.now().minusSeconds(3600));
+            thread.addMessage("Chris", "Great, please attach it to the event file list too.", Instant.now().minusSeconds(3300));
+            messageThreadRepository.save(thread);
+
+            MessageThread resolvedThread = new MessageThread(workspace, "Confirm Decorations Task", "task", "completed", "Mark: All balloons and banners ordered.", 0, Instant.now().minusSeconds(90000));
+            resolvedThread.addParticipant("Mark");
+            resolvedThread.addParticipant("Chris");
+            messageThreadRepository.save(resolvedThread);
+
+            workspaceFileRepository.save(new WorkspaceFile(workspace, "Winter Formal Budget.xlsx", "Spreadsheet", "Sarah Jenkins", "Winter Formal", "84 KB", "files/winter-formal-budget", Instant.now().minusSeconds(1800)));
+            workspaceFileRepository.save(new WorkspaceFile(workspace, "Volunteer Roster.pdf", "PDF", "Jordan Diaz", "Volunteer Program", "1.2 MB", "files/volunteer-roster", Instant.now().minusSeconds(180000)));
+
+            activityLogRepository.save(new ActivityLog(workspace, "Maya Chen", "uploaded a receipt", "Finance", "Event posters", Instant.now().minusSeconds(7200)));
+            activityLogRepository.save(new ActivityLog(workspace, "Chris Rivera", "approved proposal", "Proposal", "#142", Instant.now().minusSeconds(18000)));
+            activityLogRepository.save(new ActivityLog(workspace, "Sarah Jenkins", "created an event", "Event", "Spirit Week 2026", Instant.now().minusSeconds(96000)));
+
+            workspaceSettingsRepository.save(new WorkspaceSettings(workspace, "members", true, false, "August"));
+        }
+    }
+}

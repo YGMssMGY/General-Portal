@@ -1,0 +1,65 @@
+package com.orgflow.portal.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.orgflow.portal.dto.Dtos.CreateTaskRequest;
+import com.orgflow.portal.entity.TaskItem;
+import com.orgflow.portal.entity.Workspace;
+import com.orgflow.portal.repository.TaskRepository;
+import com.orgflow.portal.security.Permissions;
+import java.time.LocalDate;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class TaskServiceTest {
+    @Mock
+    private CurrentUserService currentUserService;
+
+    @Mock
+    private PermissionService permissionService;
+
+    @Mock
+    private TaskRepository taskRepository;
+
+    @InjectMocks
+    private TaskService taskService;
+
+    @Test
+    void listTasksRequiresReadPermissionAndMapsDtos() {
+        Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
+        TaskItem task = new TaskItem(workspace, "Confirm gym reservation", "todo", "high", "Winter Formal", LocalDate.now(), "Maya Chen", 0, null);
+        when(currentUserService.currentWorkspace()).thenReturn(workspace);
+        when(taskRepository.findByWorkspaceOrderByDueDateAsc(workspace)).thenReturn(List.of(task));
+
+        var result = taskService.listTasks();
+
+        verify(permissionService).require(Permissions.TASKS_READ);
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().title()).isEqualTo("Confirm gym reservation");
+    }
+
+    @Test
+    void createTaskRequiresWritePermissionAndDefaultsStatus() {
+        Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
+        CreateTaskRequest request = new CreateTaskRequest("Draft agenda", "high", "Assembly", LocalDate.now().plusDays(1), "Chris Rivera");
+        when(currentUserService.currentWorkspace()).thenReturn(workspace);
+        when(taskRepository.save(any(TaskItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = taskService.createTask(request);
+
+        ArgumentCaptor<TaskItem> taskCaptor = ArgumentCaptor.forClass(TaskItem.class);
+        verify(permissionService).require(Permissions.TASKS_WRITE);
+        verify(taskRepository).save(taskCaptor.capture());
+        assertThat(taskCaptor.getValue().getStatus()).isEqualTo("todo");
+        assertThat(result.title()).isEqualTo("Draft agenda");
+    }
+}

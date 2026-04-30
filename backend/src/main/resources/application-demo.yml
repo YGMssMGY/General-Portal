@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/orgflow-demo;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+  cache:
+    type: simple
+  session:
+    store-type: none
+
+orgflow:
+  security:
+    demo-mode: true
+    auto-provision-users: true
+    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  seed:
+    enabled: true

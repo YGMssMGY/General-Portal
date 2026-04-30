@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: orgflow-postgres
+    environment:
+      POSTGRES_DB: orgflow
+      POSTGRES_USER: orgflow
+      POSTGRES_PASSWORD: orgflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - orgflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orgflow -d orgflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: orgflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - orgflow-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  orgflow-postgres-data:
+  orgflow-redis-data:

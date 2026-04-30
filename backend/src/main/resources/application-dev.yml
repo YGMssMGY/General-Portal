@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/orgflow}
+    username: ${POSTGRES_USER:orgflow}
+    password: ${POSTGRES_PASSWORD:orgflow}
+  cache:
+    type: simple
+  session:
+    store-type: none
+
+orgflow:
+  security:
+    demo-mode: ${ORGFLOW_DEMO_MODE:true}
+    auto-provision-users: ${ORGFLOW_AUTO_PROVISION_USERS:true}
+    frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  seed:
+    enabled: ${ORGFLOW_SEED_ENABLED:true}
