@@ -3,6 +3,9 @@ spring:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/orgflow}
     username: ${POSTGRES_USER:orgflow}
     password: ${POSTGRES_PASSWORD:orgflow}
+  jpa:
+    hibernate:
+      ddl-auto: update
   cache:
     type: simple
   session:

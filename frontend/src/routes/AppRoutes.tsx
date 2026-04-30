@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
+import { NotFoundPage } from "../components/NotFoundPage";
 import { ActivityPage } from "../features/activity/ActivityPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { EventsPage } from "../features/events/EventsPage";
@@ -38,6 +39,7 @@ export function AppRoutes() {
         <Route path="search" element={<SearchPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );

@@ -10,13 +10,13 @@ import com.orgflow.portal.entity.TaskItem;
 import com.orgflow.portal.repository.ActivityLogRepository;
 import com.orgflow.portal.repository.EventRepository;
 import com.orgflow.portal.repository.FinanceTransactionRepository;
+import com.orgflow.portal.repository.MessageThreadRepository;
 import com.orgflow.portal.repository.ProposalRepository;
 import com.orgflow.portal.repository.TaskRepository;
 import com.orgflow.portal.security.Permissions;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Service;
@@ -31,6 +31,7 @@ public class DashboardService {
     private final EventRepository eventRepository;
     private final FinanceTransactionRepository financeTransactionRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final MessageThreadRepository messageThreadRepository;
 
     public DashboardService(
         CurrentUserService currentUserService,
@@ -39,7 +40,8 @@ public class DashboardService {
         ProposalRepository proposalRepository,
         EventRepository eventRepository,
         FinanceTransactionRepository financeTransactionRepository,
-        ActivityLogRepository activityLogRepository
+        ActivityLogRepository activityLogRepository,
+        MessageThreadRepository messageThreadRepository
     ) {
         this.currentUserService = currentUserService;
         this.permissionService = permissionService;
@@ -48,6 +50,7 @@ public class DashboardService {
         this.eventRepository = eventRepository;
         this.financeTransactionRepository = financeTransactionRepository;
         this.activityLogRepository = activityLogRepository;
+        this.messageThreadRepository = messageThreadRepository;
     }
 
     @Transactional(readOnly = true)
@@ -69,11 +72,13 @@ public class DashboardService {
             .map(FinanceTransaction::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        long unreadThreads = messageThreadRepository.countByWorkspaceAndUnreadCountGreaterThan(workspace, 0);
+
         List<DashboardMetricDto> metrics = List.of(
             new DashboardMetricDto("Pending Proposals", String.valueOf(proposalRepository.countByWorkspaceAndStatus(workspace, "pending")), "tertiary", "proposal"),
             new DashboardMetricDto("Open Tasks", String.valueOf(openTasks), "primary", "task"),
             new DashboardMetricDto("Overdue Tasks", String.valueOf(overdueTasks), "danger", "warning"),
-            new DashboardMetricDto("Unread Threads", "12", "secondary", "message"),
+            new DashboardMetricDto("Unread Threads", String.valueOf(unreadThreads), "secondary", "message"),
             new DashboardMetricDto("Finance Pending", NumberFormat.getCurrencyInstance(Locale.US).format(pendingFinance), "primary", "finance")
         );
 
@@ -91,9 +96,7 @@ public class DashboardService {
             attention,
             myTasks,
             upcomingEvents,
-            activityLogRepository.findTop20ByWorkspaceOrderByOccurredAtDesc(workspace).stream()
-                .sorted(Comparator.comparing(activity -> activity.getOccurredAt(), Comparator.reverseOrder()))
-                .limit(2)
+            activityLogRepository.findTop2ByWorkspaceOrderByOccurredAtDesc(workspace).stream()
                 .map(DtoMapper::toActivityDto)
                 .toList()
         );

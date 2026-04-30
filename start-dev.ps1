@@ -9,12 +9,55 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendDir = Join-Path $Root "backend"
 $FrontendDir = Join-Path $Root "frontend"
-$Maven = Join-Path $Root ".tools\apache-maven-3.9.11\bin\mvn.cmd"
 $BackendOut = Join-Path $BackendDir "backend.log"
 $BackendErr = Join-Path $BackendDir "backend.err"
 $FrontendOut = Join-Path $FrontendDir "vite.log"
 $FrontendErr = Join-Path $FrontendDir "vite.err"
 $EnvFile = Join-Path $Root ".env.local"
+
+function Resolve-Command {
+    param(
+        [string[]]$Names,
+        [string]$EnvVar,
+        [string[]]$FallbackPaths
+    )
+
+    foreach ($Name in $Names) {
+        $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+        if ($cmd) {
+            return $cmd.Source
+        }
+    }
+
+    if ($EnvVar) {
+        $homePath = [System.Environment]::GetEnvironmentVariable($EnvVar, "Process")
+        if (-not $homePath) {
+            $homePath = [System.Environment]::GetEnvironmentVariable($EnvVar, "User")
+        }
+        if (-not $homePath) {
+            $homePath = [System.Environment]::GetEnvironmentVariable($EnvVar, "Machine")
+        }
+        if ($homePath) {
+            foreach ($Name in $Names) {
+                $candidate = Join-Path $homePath "bin\$Name"
+                if (Test-Path $candidate) {
+                    return $candidate
+                }
+            }
+        }
+    }
+
+    foreach ($FallbackPath in $FallbackPaths) {
+        foreach ($Name in $Names) {
+            $candidate = Join-Path $Root "$FallbackPath\bin\$Name"
+            if (Test-Path $candidate) {
+                return $candidate
+            }
+        }
+    }
+
+    return $null
+}
 
 function Normalize-PathEnvironment {
     $EnvironmentVariables = [System.Environment]::GetEnvironmentVariables()
@@ -72,16 +115,17 @@ if (Test-Path $EnvFile) {
     }
 }
 
-if (-not (Test-Path $Maven)) {
-    throw "Maven was not found at $Maven. Install Maven or restore .tools/apache-maven-3.9.11."
+$Maven = Resolve-Command -Names @("mvn.cmd", "mvn") -EnvVar "MAVEN_HOME" -FallbackPaths @(".tools\apache-maven-3.9.11")
+if (-not $Maven) {
+    throw "Maven (mvn) was not found. Set MAVEN_HOME, add Maven to PATH, or restore .tools/apache-maven-3.9.11."
 }
 
-$NpmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
-if (-not $NpmCommand) {
-    $NpmCommand = Get-Command npm -ErrorAction SilentlyContinue
+$NpmCmd = Resolve-Command -Names @("npm.cmd", "npm") -EnvVar "NODE_HOME" -FallbackPaths @()
+if (-not $NpmCmd) {
+    $NpmCmd = Resolve-Command -Names @("npm.cmd", "npm") -EnvVar "NVM_HOME" -FallbackPaths @()
 }
-if (-not $NpmCommand) {
-    throw "npm was not found on PATH. Install Node.js before starting the frontend."
+if (-not $NpmCmd) {
+    throw "npm was not found. Install Node.js and ensure npm is on PATH, or set NODE_HOME/NVM_HOME."
 }
 
 if ($BackendProfile -eq "dev" -and -not (Test-PortOpen -Port 5432)) {
@@ -114,7 +158,7 @@ Start-Process `
     -WindowStyle Hidden
 
 Start-Process `
-    -FilePath $NpmCommand.Source `
+    -FilePath $NpmCmd `
     -ArgumentList @("run", "dev") `
     -WorkingDirectory $FrontendDir `
     -RedirectStandardOutput $FrontendOut `

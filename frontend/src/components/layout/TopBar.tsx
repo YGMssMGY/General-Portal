@@ -58,11 +58,11 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-error" />
         </button>
         <div className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant bg-secondary-fixed text-xs font-bold text-secondary">
-          {user?.name
+          {(user?.name ?? "")
             .split(" ")
             .map((part) => part[0])
             .join("")
-            .slice(0, 2) ?? "U"}
+            .slice(0, 2) || "U"}
         </div>
       </div>
     </header>

@@ -48,7 +48,7 @@ export function DashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="font-display text-2xl font-semibold text-on-surface">Good morning, {user?.name.split(" ")[0]}</h1>
+        <h1 className="font-display text-2xl font-semibold text-on-surface">Good morning, {(user?.name ?? "").split(" ")[0]}</h1>
         <p className="mt-1 text-sm leading-6 text-on-surface-variant">
           Here is what is happening in your workspace today.
         </p>
