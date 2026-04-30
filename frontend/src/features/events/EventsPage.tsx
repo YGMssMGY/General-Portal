@@ -98,9 +98,9 @@ export function EventsPage() {
                 </p>
               </div>
               <div className="flex -space-x-2">
-                {event.ownerNames.map((owner) => (
+                {event.ownerNames.map((owner, index) => (
                   <span
-                    key={owner}
+                    key={`${owner}-${index}`}
                     className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-secondary-fixed text-xs font-bold text-secondary"
                   >
                     {owner}

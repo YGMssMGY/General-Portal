@@ -1,9 +1,11 @@
 package com.orgflow.portal.service;
 
 import com.orgflow.portal.dto.Dtos.MemberDto;
+import com.orgflow.portal.entity.Membership;
 import com.orgflow.portal.repository.MembershipRepository;
 import com.orgflow.portal.security.Permissions;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,8 +24,10 @@ public class MemberService {
     @Transactional(readOnly = true)
     public List<MemberDto> listMembers() {
         permissionService.require(Permissions.MEMBERS_READ);
-        return membershipRepository.findByWorkspaceOrderByUser_DisplayNameAsc(currentUserService.currentWorkspace()).stream()
-            .map(membership -> DtoMapper.toMemberDto(membership, permissionService.permissionsForEmail(membership.getUser().getEmail())))
+        List<Membership> memberships = membershipRepository.findByWorkspaceOrderByUser_DisplayNameAsc(currentUserService.currentWorkspace());
+        Map<Membership, List<String>> permissionsMap = permissionService.permissionsForMemberships(memberships);
+        return memberships.stream()
+            .map(membership -> DtoMapper.toMemberDto(membership, permissionsMap.getOrDefault(membership, List.of())))
             .toList();
     }
 }

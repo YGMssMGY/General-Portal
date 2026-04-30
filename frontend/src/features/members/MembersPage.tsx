@@ -92,7 +92,7 @@ export function MembersPage() {
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary-fixed text-xs font-bold text-secondary">
                         {member.name
                           .split(" ")
-                          .map((part) => part[0])
+                          .map((part) => part[0] ?? "")
                           .join("")
                           .slice(0, 2)}
                       </div>

@@ -9,10 +9,18 @@ import com.orgflow.portal.repository.MembershipRepository;
 import com.orgflow.portal.repository.PermissionGrantRepository;
 import com.orgflow.portal.repository.UserAccountRepository;
 import com.orgflow.portal.security.Permissions;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -22,6 +30,10 @@ public class PermissionService {
     private final MembershipRepository membershipRepository;
     private final PermissionGrantRepository permissionGrantRepository;
     private final boolean autoProvisionUsers;
+
+    @Lazy
+    @Autowired
+    private PermissionService self;
 
     public PermissionService(
         CurrentUserService currentUserService,
@@ -46,23 +58,47 @@ public class PermissionService {
 
     @Transactional
     public List<String> currentPermissions() {
-        return permissionsForEmail(currentUserService.currentEmail());
+        return self.permissionsForEmail(currentUserService.currentEmail());
     }
 
     @Cacheable(cacheNames = "permissions", key = "#email")
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<String> permissionsForEmail(String email) {
-        var user = userAccountRepository.findByEmailIgnoreCase(email)
-            .orElseGet(() -> provisionUser(email));
-        var workspace = currentUserService.currentWorkspace();
-        Membership membership = membershipRepository.findByWorkspaceAndUser(workspace, user)
-            .orElseGet(() -> provisionMembership(workspace, user));
+        try {
+            var user = userAccountRepository.findByEmailIgnoreCase(email)
+                .orElseGet(() -> provisionUser(email));
+            var workspace = currentUserService.currentWorkspace();
+            Membership membership = membershipRepository.findByWorkspaceAndUser(workspace, user)
+                .orElseGet(() -> provisionMembership(workspace, user));
 
-        return permissionGrantRepository.findByMembership(membership)
-            .stream()
-            .map(PermissionGrant::getPermission)
-            .sorted()
-            .toList();
+            return permissionGrantRepository.findByMembership(membership)
+                .stream()
+                .map(PermissionGrant::getPermission)
+                .sorted()
+                .toList();
+        } catch (DataIntegrityViolationException e) {
+            var user = userAccountRepository.findByEmailIgnoreCase(email).orElseThrow();
+            var workspace = currentUserService.currentWorkspace();
+            Membership membership = membershipRepository.findByWorkspaceAndUser(workspace, user).orElseThrow();
+            return permissionGrantRepository.findByMembership(membership)
+                .stream()
+                .map(PermissionGrant::getPermission)
+                .sorted()
+                .toList();
+        }
+    }
+
+    public Map<Membership, List<String>> permissionsForMemberships(Collection<Membership> memberships) {
+        List<PermissionGrant> allGrants = permissionGrantRepository.findByMembershipIn(new ArrayList<>(memberships));
+        return memberships.stream()
+            .collect(Collectors.toMap(
+                m -> m,
+                m -> allGrants.stream()
+                    .filter(g -> g.getMembership().getId().equals(m.getId()))
+                    .map(PermissionGrant::getPermission)
+                    .sorted()
+                    .toList()
+            ));
     }
 
     private UserAccount provisionUser(String email) {

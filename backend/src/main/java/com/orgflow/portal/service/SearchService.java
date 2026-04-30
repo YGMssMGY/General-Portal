@@ -47,30 +47,38 @@ public class SearchService {
         String normalizedQuery = query == null ? "" : query.toLowerCase(Locale.ROOT).trim();
         var workspace = currentUserService.currentWorkspace();
 
-        Stream<SearchResultDto> tasks = taskRepository.findByWorkspaceOrderByDueDateAsc(workspace).stream()
+        if (normalizedQuery.isBlank()) {
+            Stream<SearchResultDto> tasks = taskRepository.findByWorkspaceOrderByDueDateAsc(workspace).stream()
+                .map(task -> new SearchResultDto(task.getId(), "Task", task.getTitle(), task.getProject(), task.getPriority()));
+            Stream<SearchResultDto> proposals = proposalRepository.findByWorkspaceOrderBySubmittedAtDesc(workspace).stream()
+                .map(proposal -> new SearchResultDto(proposal.getId(), "Proposal", proposal.getTitle(), proposal.getSummary(), proposal.getStatus()));
+            Stream<SearchResultDto> events = eventRepository.findByWorkspaceOrderByStartsAtAsc(workspace).stream()
+                .map(event -> new SearchResultDto(event.getId(), "Event", event.getTitle(), "Workspace event plan", event.getStatus()));
+            Stream<SearchResultDto> files = workspaceFileRepository.findByWorkspaceOrderByFileUpdatedAtDesc(workspace).stream()
+                .map(file -> new SearchResultDto(file.getId(), "File", file.getName(), file.getLinkedResource(), file.getFileType()));
+            Stream<SearchResultDto> finance = financeTransactionRepository.findByWorkspaceOrderByOccurredAtDesc(workspace).stream()
+                .map(transaction -> new SearchResultDto(transaction.getId(), "Finance", transaction.getTitle(), transaction.getCategory(), transaction.getStatus()));
+
+            return Stream.of(tasks, proposals, events, files, finance)
+                .flatMap(stream -> stream)
+                .limit(20)
+                .toList();
+        }
+
+        Stream<SearchResultDto> tasks = taskRepository.searchByWorkspace(workspace, normalizedQuery).stream()
             .map(task -> new SearchResultDto(task.getId(), "Task", task.getTitle(), task.getProject(), task.getPriority()));
-        Stream<SearchResultDto> proposals = proposalRepository.findByWorkspaceOrderBySubmittedAtDesc(workspace).stream()
+        Stream<SearchResultDto> proposals = proposalRepository.searchByWorkspace(workspace, normalizedQuery).stream()
             .map(proposal -> new SearchResultDto(proposal.getId(), "Proposal", proposal.getTitle(), proposal.getSummary(), proposal.getStatus()));
-        Stream<SearchResultDto> events = eventRepository.findByWorkspaceOrderByStartsAtAsc(workspace).stream()
+        Stream<SearchResultDto> events = eventRepository.searchByWorkspace(workspace, normalizedQuery).stream()
             .map(event -> new SearchResultDto(event.getId(), "Event", event.getTitle(), "Workspace event plan", event.getStatus()));
-        Stream<SearchResultDto> files = workspaceFileRepository.findByWorkspaceOrderByFileUpdatedAtDesc(workspace).stream()
+        Stream<SearchResultDto> files = workspaceFileRepository.searchByWorkspace(workspace, normalizedQuery).stream()
             .map(file -> new SearchResultDto(file.getId(), "File", file.getName(), file.getLinkedResource(), file.getFileType()));
-        Stream<SearchResultDto> finance = financeTransactionRepository.findByWorkspaceOrderByOccurredAtDesc(workspace).stream()
+        Stream<SearchResultDto> finance = financeTransactionRepository.searchByWorkspace(workspace, normalizedQuery).stream()
             .map(transaction -> new SearchResultDto(transaction.getId(), "Finance", transaction.getTitle(), transaction.getCategory(), transaction.getStatus()));
 
         return Stream.of(tasks, proposals, events, files, finance)
             .flatMap(stream -> stream)
-            .filter(result -> matches(result, normalizedQuery))
             .limit(20)
             .toList();
-    }
-
-    private boolean matches(SearchResultDto result, String query) {
-        if (query.isBlank()) {
-            return true;
-        }
-        return result.title().toLowerCase(Locale.ROOT).contains(query)
-            || result.description().toLowerCase(Locale.ROOT).contains(query)
-            || result.type().toLowerCase(Locale.ROOT).contains(query);
     }
 }

@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> {
     List<ActivityLog> findTop20ByWorkspaceOrderByOccurredAtDesc(Workspace workspace);
+
+    List<ActivityLog> findTop2ByWorkspaceOrderByOccurredAtDesc(Workspace workspace);
 }

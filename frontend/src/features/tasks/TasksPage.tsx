@@ -53,7 +53,7 @@ function TaskCard({ task }: { task: Task }) {
             <span className="rounded-full bg-secondary-fixed px-2 py-1 text-xs font-bold text-secondary">
               {task.assigneeName
                 .split(" ")
-                .map((part) => part[0])
+                .map((part) => part[0] ?? "")
                 .join("")
                 .slice(0, 2)}
             </span>
