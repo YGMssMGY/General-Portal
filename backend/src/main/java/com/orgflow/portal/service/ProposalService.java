@@ -8,6 +8,7 @@ import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.ProposalRepository;
 import com.orgflow.portal.security.Permissions;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +44,7 @@ public class ProposalService {
     @Transactional
     public ProposalDto updateProposal(UUID id, UpdateProposalRequest request) {
         permissionService.require(Permissions.PROPOSALS_WRITE);
-        Proposal proposal = proposalRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Proposal"));
+        Proposal proposal = proposalRepository.findById(Objects.requireNonNull(id)).orElseThrow(() -> new ResourceNotFoundException("Proposal"));
         proposal.setStatus(request.status());
         return DtoMapper.toProposalDto(proposal);
     }
