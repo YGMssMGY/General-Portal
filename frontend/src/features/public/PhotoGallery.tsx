@@ -12,7 +12,7 @@ interface Photo {
 
 export function PhotoGallery() {
   const { data, error, isLoading, refetch } = useAsyncData(
-    () => fetchJson<Photo[]>("/api/photos"),
+    () => fetchJson<Photo[]>("/photos"),
     [],
   );
 

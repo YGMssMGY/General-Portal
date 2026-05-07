@@ -29,9 +29,9 @@ foreach ($port in $ports) {
     foreach ($line in (netstat -ano | Select-String -Pattern ":$port\s")) {
         $parts = ($line.Line -split "\s+") | Where-Object { $_ -ne "" }
         if ($parts.Count -ge 5 -and $parts[3] -eq "LISTENING") {
-            $pid = [int]$parts[4]
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-            Write-Host "  Stopped process PID $pid on port $port" -ForegroundColor Yellow
+            $procId = [int]$parts[4]
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Write-Host "  Stopped process PID $procId on port $port" -ForegroundColor Yellow
             $found = $true
         }
     }
