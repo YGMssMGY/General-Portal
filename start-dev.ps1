@@ -196,7 +196,7 @@ Write-Host "  OrgFlow is starting up!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Url "Frontend:" "http://localhost:5173"
 Write-Url "Backend:" "http://localhost:8080/api/health"
-Write-Url "Swagger:" "http://localhost:8080/swagger-ui/index.html"
+Write-Url "API Docs:" "http://localhost:8080/api-docs"
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press Ctrl+C to stop all services." -ForegroundColor Yellow

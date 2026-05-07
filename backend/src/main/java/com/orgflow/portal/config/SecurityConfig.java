@@ -54,6 +54,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api-docs").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/events/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/photos").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/dev-login").permitAll()
@@ -81,10 +82,16 @@ public class SecurityConfig {
 
     @PostConstruct
     void validateOAuth2Credentials() {
-        List<String> activeProfiles = List.of(
-            System.getProperty("spring.profiles.active", "").split(",")
-        );
-        boolean isDevProfile = activeProfiles.contains("dev")
+        String profilesStr = System.getProperty("spring.profiles.active", "");
+        if (profilesStr.isBlank()) {
+            profilesStr = System.getenv().getOrDefault("SPRING_PROFILES_ACTIVE", "");
+        }
+        List<String> activeProfiles = profilesStr.isBlank()
+            ? List.of()
+            : List.of(profilesStr.split(","));
+
+        boolean isDevProfile = activeProfiles.isEmpty()
+            || activeProfiles.contains("dev")
             || activeProfiles.contains("demo")
             || activeProfiles.contains("local")
             || activeProfiles.contains("sqlite");

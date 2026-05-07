@@ -6,7 +6,7 @@ import type { PublicEvent } from "../../mocks/data";
 
 export function EventGallery() {
   const { data, error, isLoading, refetch } = useAsyncData(
-    () => fetchJson<PublicEvent[]>("/api/events/public"),
+    () => fetchJson<PublicEvent[]>("/events/public"),
     [],
   );
 

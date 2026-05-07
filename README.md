@@ -179,8 +179,8 @@ REDIS_PORT=6379
 |---------|-----|
 | **Frontend** | http://localhost:5173 |
 | **Backend Health** | http://localhost:8080/api/health |
-| **Swagger UI** | http://localhost:8080/swagger-ui/index.html |
-| **OpenAPI Spec** | http://localhost:8080/v3/api-docs |
+| **API Docs** | http://localhost:8080/api-docs |
+| **API Docs** | http://localhost:8080/api-docs |
 
 ---
 
