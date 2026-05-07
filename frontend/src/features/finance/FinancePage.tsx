@@ -1,11 +1,47 @@
-import { WalletCards } from "lucide-react";
+import { DataTable } from "../../components/DataTable/DataTable";
+import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Badge } from "../../components/Badge";
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useFinanceTransactions } from "../../hooks/useWorkspaceResources";
+import type { FinanceTransaction } from "../../types";
 import { statusBadgeClass } from "../../utils/classes";
 import { formatCurrency, formatDateTime, sentenceCase } from "../../utils/format";
+
+const columns: ColumnDef<FinanceTransaction>[] = [
+  {
+    key: "title",
+    header: "Request",
+    sortable: true,
+    render: (tx) => (
+      <div>
+        <p className="font-medium text-text-primary">{tx.title}</p>
+        <p className="text-xs text-text-secondary">By {tx.submittedBy}</p>
+      </div>
+    ),
+  },
+  { key: "category", header: "Category", sortable: true },
+  {
+    key: "status",
+    header: "Status",
+    sortable: true,
+    render: (tx) => <Badge className={statusBadgeClass(tx.status)}>{sentenceCase(tx.status)}</Badge>,
+  },
+  {
+    key: "amount",
+    header: "Amount",
+    sortable: true,
+    render: (tx) => formatCurrency(tx.amount),
+    className: "text-right font-medium",
+  },
+  {
+    key: "occurredAt",
+    header: "Submitted",
+    sortable: true,
+    render: (tx) => formatDateTime(tx.occurredAt),
+  },
+];
 
 export function FinancePage() {
   const { data, error, isLoading, refetch } = useFinanceTransactions();
@@ -13,71 +49,36 @@ export function FinancePage() {
   if (isLoading) return <LoadingState />;
   if (error || !data) return <ErrorState message={error ?? "Finance data is unavailable"} onRetry={refetch} />;
 
-  const pending = data.filter((transaction) => transaction.status === "pending" || transaction.status === "under_review");
-  const totalPending = pending.reduce((total, transaction) => total + transaction.amount, 0);
-  const approved = data.filter((transaction) => transaction.status === "approved").reduce((total, transaction) => total + transaction.amount, 0);
+  const pending = data.filter((tx) => tx.status === "pending" || tx.status === "under_review");
+  const totalPending = pending.reduce((s, tx) => s + tx.amount, 0);
+  const approved = data.filter((tx) => tx.status === "approved").reduce((s, tx) => s + tx.amount, 0);
 
   return (
     <div>
-      <PageHeader
-        title="Finance"
-        description="Track reimbursements, approvals, budgets, and event spending."
-      />
+      <PageHeader title="Finance" description="Track reimbursements, approvals, budgets, and spending." />
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <Card className="p-card-padding">
-          <p className="text-sm font-medium text-on-surface-variant">Pending Review</p>
-          <p className="mt-4 font-display text-3xl font-bold text-on-surface">{formatCurrency(totalPending)}</p>
+        <Card padding="lg">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Pending Review</p>
+          <p className="mt-2 text-3xl font-semibold text-text-primary">{formatCurrency(totalPending)}</p>
         </Card>
-        <Card className="p-card-padding">
-          <p className="text-sm font-medium text-on-surface-variant">Approved Spend</p>
-          <p className="mt-4 font-display text-3xl font-bold text-primary">{formatCurrency(approved)}</p>
+        <Card padding="lg">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Approved Spend</p>
+          <p className="mt-2 text-3xl font-semibold text-carbon-blue-60">{formatCurrency(approved)}</p>
         </Card>
-        <Card className="flex items-center gap-4 p-card-padding">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary-fixed text-secondary">
-            <WalletCards className="h-6 w-6" aria-hidden="true" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-on-surface-variant">Open Requests</p>
-            <p className="font-display text-3xl font-bold text-on-surface">{pending.length}</p>
-          </div>
+        <Card padding="lg">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Open Requests</p>
+          <p className="mt-2 text-3xl font-semibold text-text-primary">{pending.length}</p>
         </Card>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="border-b border-outline-variant p-card-padding">
-          <h2 className="font-display text-lg font-semibold text-on-surface">Transactions</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-outline-variant bg-surface-container-low text-xs uppercase tracking-normal text-on-surface-variant">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Request</th>
-                <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Amount</th>
-                <th className="px-4 py-3 font-semibold">Submitted</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant">
-              {data.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-surface-container-low/60">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-on-surface">{transaction.title}</div>
-                    <div className="text-xs text-on-surface-variant">By {transaction.submittedBy}</div>
-                  </td>
-                  <td className="px-4 py-3 text-on-surface-variant">{transaction.category}</td>
-                  <td className="px-4 py-3">
-                    <Badge className={statusBadgeClass(transaction.status)}>{sentenceCase(transaction.status)}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-on-surface">{formatCurrency(transaction.amount)}</td>
-                  <td className="px-4 py-3 text-on-surface-variant">{formatDateTime(transaction.occurredAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={data as unknown as Record<string, unknown>[]}
+        selectable
+        defaultSort={{ key: "occurredAt", direction: "desc" }}
+        pageSize={10}
+      />
     </div>
   );
 }

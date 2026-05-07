@@ -1,92 +1,90 @@
-import { FileText, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Badge } from "../../components/Badge";
 import { Card } from "../../components/Card";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useSearch } from "../../hooks/useWorkspaceResources";
+import { Search, Document } from "@carbon/icons-react";
 
 const categories = ["All", "Tasks", "Proposals", "Events", "Files", "Finance"];
 
 export function SearchPage() {
   const [searchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") ?? "winter formal");
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [category, setCategory] = useState("All");
   const { data, error, isLoading, refetch } = useSearch(query);
 
   useEffect(() => {
-    const queryParam = searchParams.get("q");
-    if (queryParam) {
-      setQuery(queryParam);
-    }
+    const q = searchParams.get("q");
+    if (q) setQuery(q);
   }, [searchParams]);
 
-  const filteredResults = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!data) return [];
     if (category === "All") return data;
-    const singularCategory = category.endsWith("s") ? category.slice(0, -1) : category;
-    return data.filter((result) => result.type === singularCategory);
+    const singular = category.endsWith("s") ? category.slice(0, -1) : category;
+    return data.filter((r) => r.type === singular);
   }, [category, data]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
-      <Card className="p-8 text-center">
-        <h1 className="font-display text-3xl font-bold text-on-surface">Search Workspace</h1>
-        <label className="relative mx-auto mt-6 block max-w-2xl">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Card padding="lg">
+        <h1 className="text-xl font-semibold text-text-primary font-condensed">Search Workspace</h1>
+        <label className="relative mt-4 block">
           <span className="sr-only">Search across workspace</span>
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-on-surface-variant" aria-hidden="true" />
+          <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
           <input
-            className="w-full rounded-xl border border-outline-variant bg-surface py-4 pl-12 pr-4 text-base text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="w-full border border-border-subtle bg-surface py-2.5 pl-10 pr-4 text-sm text-text-primary outline-none placeholder:text-text-placeholder focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search across proposals, tasks, events..."
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search proposals, tasks, events, files..."
             type="search"
           />
         </label>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {categories.map((option) => (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {categories.map((opt) => (
             <button
-              key={option}
+              key={opt}
               type="button"
-              className={`rounded-full border px-4 py-2 text-sm font-semibold ${
-                category === option
-                  ? "border-primary-container bg-primary-container text-on-primary-container"
-                  : "border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant"
+              className={`px-3 py-1 text-xs font-medium transition-colors ${
+                category === opt
+                  ? "bg-carbon-blue-60 text-white"
+                  : "border border-border-subtle text-text-secondary hover:bg-surface-hover"
               }`}
-              onClick={() => setCategory(option)}
+              onClick={() => setCategory(opt)}
             >
-              {option}
+              {opt}
             </button>
           ))}
         </div>
       </Card>
 
       <section>
-        <p className="mb-4 text-sm font-medium text-on-surface-variant">
-          Showing results for <span className="font-semibold text-on-surface">"{query}"</span>
-        </p>
-        {isLoading ? <LoadingState label="Searching workspace" /> : null}
+        {query ? (
+          <p className="mb-4 text-sm text-text-secondary">
+            Results for <span className="font-medium text-text-primary">&ldquo;{query}&rdquo;</span>
+          </p>
+        ) : null}
+        {isLoading ? <LoadingState /> : null}
         {error ? <ErrorState message={error} onRetry={refetch} /> : null}
         <div className="grid gap-4 md:grid-cols-2">
-          {filteredResults.map((result) => (
-            <Card key={result.id} className="p-card-padding transition hover:bg-surface-container-low">
-              <div className="mb-3 flex items-start justify-between">
+          {filtered.map((result) => (
+            <Card key={result.id} padding="lg">
+              <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded bg-secondary-fixed text-secondary">
-                    <FileText className="h-4 w-4" aria-hidden="true" />
-                  </div>
-                  <span className="text-xs font-semibold uppercase tracking-normal text-on-surface-variant">{result.type}</span>
+                  <Document size={16} className="text-text-secondary" aria-hidden="true" />
+                  <span className="text-xs font-semibold uppercase text-text-secondary">{result.type}</span>
                 </div>
-                <Badge className="bg-surface-container-high text-on-surface-variant">{result.status}</Badge>
+                <Badge className="border-border-subtle bg-surface text-text-secondary">{result.status}</Badge>
               </div>
-              <h2 className="font-display text-lg font-semibold text-on-surface">{result.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-on-surface-variant">{result.description}</p>
+              <h2 className="text-lg font-semibold text-text-primary">{result.title}</h2>
+              <p className="mt-2 text-sm text-text-secondary">{result.description}</p>
             </Card>
           ))}
         </div>
-        {!isLoading && !error && filteredResults.length === 0 ? (
-          <p className="rounded-lg border border-outline-variant bg-white p-6 text-sm text-on-surface-variant">
-            No results match this category.
+        {!isLoading && !error && filtered.length === 0 && query ? (
+          <p className="border border-border-subtle bg-surface p-6 text-sm text-text-secondary text-center">
+            No results found.
           </p>
         ) : null}
       </section>

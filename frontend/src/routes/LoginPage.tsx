@@ -1,28 +1,30 @@
-import { LogIn } from "lucide-react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/admin", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6">
-      <section className="w-full max-w-md rounded-lg border border-outline-variant bg-surface-container-lowest p-8 shadow-panel">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary font-bold text-on-primary">OF</div>
-          <div>
-            <h1 className="font-display text-xl font-bold text-on-surface">OrgFlow Workspace</h1>
-            <p className="text-sm text-on-surface-variant">Sign in with your organization account.</p>
-          </div>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="border border-border-subtle bg-surface p-8 max-w-sm w-full text-center">
+        <div className="flex h-12 w-12 items-center justify-center mx-auto bg-carbon-blue-60 text-lg font-semibold text-white">
+          CP
         </div>
-        <button
-          type="button"
-          onClick={login}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition hover:bg-primary-container"
-        >
-          <LogIn className="h-4 w-4" aria-hidden="true" />
-          Continue with Microsoft
-        </button>
-      </section>
-    </main>
+        <h1 className="mt-4 text-xl font-semibold text-text-primary">
+          Club Portal
+        </h1>
+        <p className="mt-2 text-sm text-text-secondary">
+          Redirecting to the admin portal...
+        </p>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+export type UserRole = "teacher" | "president" | "vp" | "member" | "grade_rep";
+
 export type ResourceStatus =
   | "draft"
   | "pending"
@@ -19,6 +21,7 @@ export interface UserProfile {
   avatarUrl?: string;
   workspaceId: string;
   permissions: string[];
+  role?: UserRole;
 }
 
 export interface Workspace {

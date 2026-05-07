@@ -1,6 +1,11 @@
 import { Route, Routes } from "react-router-dom";
-import { AppShell } from "../components/layout/AppShell";
+import { UIShell } from "../components/UIShell/UIShell";
 import { NotFoundPage } from "../components/NotFoundPage";
+import { PublicLayout } from "../features/public/PublicLayout";
+import { PublicHome } from "../features/public/PublicHome";
+import { EventGallery } from "../features/public/EventGallery";
+import { AboutPage } from "../features/public/AboutPage";
+import { PhotoGallery } from "../features/public/PhotoGallery";
 import { ActivityPage } from "../features/activity/ActivityPage";
 import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { EventsPage } from "../features/events/EventsPage";
@@ -20,27 +25,43 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+
+      <Route element={<PublicLayout />}>
+        <Route index element={<PublicHome />} />
+        <Route path="events" element={<EventGallery />} />
+        <Route path="photos" element={<PhotoGallery />} />
+        <Route path="about" element={<AboutPage />} />
+      </Route>
+
       <Route
         element={
           <ProtectedRoute>
-            <AppShell />
+            <UIShell />
           </ProtectedRoute>
         }
       >
-        <Route index element={<DashboardPage />} />
-        <Route path="proposals" element={<ProposalsPage />} />
-        <Route path="tasks" element={<TasksPage />} />
-        <Route path="events" element={<EventsPage />} />
-        <Route path="volunteers" element={<VolunteersPage />} />
-        <Route path="finance" element={<FinancePage />} />
-        <Route path="messages" element={<MessagesPage />} />
-        <Route path="files" element={<FilesPage />} />
-        <Route path="members" element={<MembersPage />} />
-        <Route path="search" element={<SearchPage />} />
-        <Route path="activity" element={<ActivityPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="admin" element={<DashboardPage />} />
+        <Route path="admin/proposals" element={<ProposalsPage />} />
+        <Route path="admin/tasks" element={<TasksPage />} />
+        <Route path="admin/events" element={<EventsPage />} />
+        <Route path="admin/volunteers" element={<VolunteersPage />} />
+        <Route path="admin/finance" element={<FinancePage />} />
+        <Route path="admin/messages" element={<MessagesPage />} />
+        <Route path="admin/files" element={<FilesPage />} />
+        <Route path="admin/members" element={<MembersPage />} />
+        <Route path="admin/search" element={<SearchPage />} />
+        <Route path="admin/activity" element={<ActivityPage />} />
+        <Route
+          path="admin/settings"
+          element={
+            <ProtectedRoute requiredRole="vp">
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
