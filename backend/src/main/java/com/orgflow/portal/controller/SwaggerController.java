@@ -21,6 +21,7 @@ public class SwaggerController {
     }
 
     @GetMapping(value = "/api-docs", produces = "text/html")
+    @SuppressWarnings("null")
     public String swaggerUi(HttpServletRequest request) {
         Map<RequestMappingInfo, HandlerMethod> methods = handlerMapping.getHandlerMethods();
         Map<String, List<EndpointInfo>> grouped = new LinkedHashMap<>();

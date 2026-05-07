@@ -1,11 +1,14 @@
 package com.orgflow.portal.service;
 
-import com.orgflow.portal.dto.Dtos.ProposalDto;
 import com.orgflow.portal.dto.Dtos.CreateProposalRequest;
+import com.orgflow.portal.dto.Dtos.ProposalDto;
+import com.orgflow.portal.dto.Dtos.UpdateProposalRequest;
 import com.orgflow.portal.entity.Proposal;
+import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.ProposalRepository;
 import com.orgflow.portal.security.Permissions;
 import java.time.Instant;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,16 +36,15 @@ public class ProposalService {
     @Transactional
     public ProposalDto createProposal(CreateProposalRequest request) {
         permissionService.require(Permissions.PROPOSALS_WRITE);
-        var proposal = new Proposal(
-            currentUserService.currentWorkspace(),
-            request.title(),
-            request.type(),
-            "pending",
-            request.submittedBy(),
-            Instant.now(),
-            request.budget(),
-            request.summary()
-        );
+        var proposal = new Proposal(currentUserService.currentWorkspace(), request.title(), request.type(), "pending", request.submittedBy(), Instant.now(), request.budget(), request.summary());
         return DtoMapper.toProposalDto(proposalRepository.save(proposal));
+    }
+
+    @Transactional
+    public ProposalDto updateProposal(UUID id, UpdateProposalRequest request) {
+        permissionService.require(Permissions.PROPOSALS_WRITE);
+        Proposal proposal = proposalRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Proposal"));
+        proposal.setStatus(request.status());
+        return DtoMapper.toProposalDto(proposal);
     }
 }

@@ -74,4 +74,9 @@ public class Membership extends AuditableEntity {
     public int getVolunteerHours() {
         return volunteerHours;
     }
+
+    public void updatePosition(String position, String accessLabel) {
+        this.position = position;
+        this.accessLabel = accessLabel;
+    }
 }

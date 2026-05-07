@@ -1,9 +1,11 @@
 package com.orgflow.portal.service;
 
 import com.orgflow.portal.dto.Dtos.MessageThreadDto;
+import com.orgflow.portal.entity.MessageThread;
 import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.MessageThreadRepository;
 import com.orgflow.portal.security.Permissions;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -36,5 +38,17 @@ public class MessageService {
         return messageThreadRepository.findById(Objects.requireNonNull(threadId))
             .map(DtoMapper::toMessageThreadDto)
             .orElseThrow(() -> new ResourceNotFoundException("MessageThread " + threadId));
+    }
+
+    @Transactional
+    public MessageThreadDto sendMessage(UUID threadId, String body) {
+        permissionService.require(Permissions.MESSAGES_WRITE);
+        MessageThread thread = messageThreadRepository.findById(Objects.requireNonNull(threadId))
+            .orElseThrow(() -> new ResourceNotFoundException("MessageThread " + threadId));
+        String authorName = currentUserService.currentUser().getDisplayName();
+        thread.addMessage(authorName, body, Instant.now());
+        thread.setPreview(body.length() > 80 ? body.substring(0, 80) + "..." : body);
+        thread.setLastMessageAt(Instant.now());
+        return DtoMapper.toMessageThreadDto(thread);
     }
 }

@@ -163,4 +163,30 @@ public final class Dtos {
 
     public record ApiErrorDto(Instant timestamp, int status, String code, String message, String path) {
     }
+
+    public record PublicEventDto(UUID id, String title, LocalDate date, String description, String category) {}
+
+    public record CreatePublicEventRequest(@NotBlank String title, @NotNull LocalDate date, @NotBlank String description, @NotBlank String category) {}
+
+    public record PhotoDto(UUID id, String title, LocalDate date, String description) {}
+
+    public record CreatePhotoRequest(@NotBlank String title, @NotNull LocalDate date, @NotBlank String description) {}
+
+    public record CreateEventRequest(@NotBlank String title, @NotNull Instant startsAt, Instant endsAt) {}
+
+    public record UpdateEventRequest(@NotBlank String title, @NotBlank String status, @NotNull Instant startsAt, Instant endsAt, @Min(0) @Max(100) int progress) {}
+
+    public record UpdateProposalRequest(@NotBlank String status) {}
+
+    public record CreateVolunteerSlotRequest(@NotBlank String title, @NotBlank String eventName, @NotNull Instant startsAt, @Min(1) int capacity, @Min(1) int hours) {}
+
+    public record CreateFinanceTransactionRequest(@NotBlank String title, @NotBlank String category, @NotNull @DecimalMin("0.01") BigDecimal amount) {}
+
+    public record CreateMessageRequest(@NotBlank String body) {}
+
+    public record CreateWorkspaceFileRequest(@NotBlank String name, @NotBlank String fileType, @NotBlank String linkedResource, @NotBlank String sizeLabel) {}
+
+    public record UpdateMemberRequest(@NotBlank String position, @NotBlank String accessLabel) {}
+
+    public record UpdateSettingsRequest(String defaultVisibility, Boolean requireProposalApproval, Boolean allowMemberInvites) {}
 }

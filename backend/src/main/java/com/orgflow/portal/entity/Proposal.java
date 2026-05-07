@@ -89,4 +89,8 @@ public class Proposal extends AuditableEntity {
     public String getSummary() {
         return summary;
     }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }
