@@ -102,4 +102,12 @@ public class MessageThread extends AuditableEntity {
     public List<Message> getMessages() {
         return messages;
     }
+
+    public void setPreview(String preview) {
+        this.preview = preview;
+    }
+
+    public void setLastMessageAt(Instant lastMessageAt) {
+        this.lastMessageAt = lastMessageAt;
+    }
 }

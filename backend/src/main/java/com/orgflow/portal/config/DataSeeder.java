@@ -6,7 +6,9 @@ import com.orgflow.portal.entity.FinanceTransaction;
 import com.orgflow.portal.entity.Membership;
 import com.orgflow.portal.entity.MessageThread;
 import com.orgflow.portal.entity.PermissionGrant;
+import com.orgflow.portal.entity.Photo;
 import com.orgflow.portal.entity.Proposal;
+import com.orgflow.portal.entity.PublicEvent;
 import com.orgflow.portal.entity.TaskItem;
 import com.orgflow.portal.entity.UserAccount;
 import com.orgflow.portal.entity.VolunteerSlot;
@@ -19,7 +21,9 @@ import com.orgflow.portal.repository.FinanceTransactionRepository;
 import com.orgflow.portal.repository.MembershipRepository;
 import com.orgflow.portal.repository.MessageThreadRepository;
 import com.orgflow.portal.repository.PermissionGrantRepository;
+import com.orgflow.portal.repository.PhotoRepository;
 import com.orgflow.portal.repository.ProposalRepository;
+import com.orgflow.portal.repository.PublicEventRepository;
 import com.orgflow.portal.repository.TaskRepository;
 import com.orgflow.portal.repository.UserAccountRepository;
 import com.orgflow.portal.repository.VolunteerSlotRepository;
@@ -59,6 +63,8 @@ public class DataSeeder {
         private final WorkspaceFileRepository workspaceFileRepository;
         private final ActivityLogRepository activityLogRepository;
         private final WorkspaceSettingsRepository workspaceSettingsRepository;
+        private final PublicEventRepository publicEventRepository;
+        private final PhotoRepository photoRepository;
 
         Seeder(
             WorkspaceRepository workspaceRepository,
@@ -73,7 +79,9 @@ public class DataSeeder {
             MessageThreadRepository messageThreadRepository,
             WorkspaceFileRepository workspaceFileRepository,
             ActivityLogRepository activityLogRepository,
-            WorkspaceSettingsRepository workspaceSettingsRepository
+            WorkspaceSettingsRepository workspaceSettingsRepository,
+            PublicEventRepository publicEventRepository,
+            PhotoRepository photoRepository
         ) {
             this.workspaceRepository = workspaceRepository;
             this.userAccountRepository = userAccountRepository;
@@ -88,6 +96,8 @@ public class DataSeeder {
             this.workspaceFileRepository = workspaceFileRepository;
             this.activityLogRepository = activityLogRepository;
             this.workspaceSettingsRepository = workspaceSettingsRepository;
+            this.publicEventRepository = publicEventRepository;
+            this.photoRepository = photoRepository;
         }
 
         @Transactional
@@ -161,6 +171,20 @@ public class DataSeeder {
             activityLogRepository.save(new ActivityLog(workspace, "Sarah Jenkins", "created an event", "Event", "Spirit Week 2026", Instant.now().minusSeconds(96000)));
 
             workspaceSettingsRepository.save(new WorkspaceSettings(workspace, "members", true, false, "August"));
+
+            publicEventRepository.save(new PublicEvent(workspace, "Annual Hackathon 2025", LocalDate.of(2025, 11, 15), "Our flagship event brought together over 200 participants for a weekend of innovation and collaboration.", "Competition"));
+            publicEventRepository.save(new PublicEvent(workspace, "Spring Coding Workshop", LocalDate.of(2025, 4, 10), "Hands-on sessions covering web development, Python, and introductory programming.", "Workshop"));
+            publicEventRepository.save(new PublicEvent(workspace, "Leadership Summit", LocalDate.of(2025, 9, 22), "An inspiring gathering of students, mentors, and industry professionals.", "Conference"));
+            publicEventRepository.save(new PublicEvent(workspace, "Community Tech Fair", LocalDate.of(2025, 6, 5), "Students showcased projects to parents, teachers, and local tech companies.", "Community"));
+            publicEventRepository.save(new PublicEvent(workspace, "Robotics Competition", LocalDate.of(2025, 3, 18), "Teams competed in autonomous and driver-controlled challenges.", "Competition"));
+            publicEventRepository.save(new PublicEvent(workspace, "Alumni Networking Night", LocalDate.of(2025, 12, 1), "Former club members returned to share career advice.", "Social"));
+
+            photoRepository.save(new Photo(workspace, "Group Photo", LocalDate.of(2025, 11, 15), "Participants at the Annual Hackathon."));
+            photoRepository.save(new Photo(workspace, "Workshop Session", LocalDate.of(2025, 4, 10), "Students engaged in hands-on coding."));
+            photoRepository.save(new Photo(workspace, "Award Ceremony", LocalDate.of(2025, 9, 22), "Award recipients at the Leadership Summit."));
+            photoRepository.save(new Photo(workspace, "Team Building", LocalDate.of(2025, 6, 5), "Team activities at the Community Tech Fair."));
+            photoRepository.save(new Photo(workspace, "Presentations", LocalDate.of(2025, 3, 18), "Teams presenting their robotics projects."));
+            photoRepository.save(new Photo(workspace, "Panel Discussion", LocalDate.of(2025, 12, 1), "Alumni panel sharing career insights."));
         }
     }
 }

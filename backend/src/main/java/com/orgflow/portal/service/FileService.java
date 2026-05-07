@@ -1,8 +1,13 @@
 package com.orgflow.portal.service;
 
+import com.orgflow.portal.dto.Dtos.CreateWorkspaceFileRequest;
 import com.orgflow.portal.dto.Dtos.WorkspaceFileDto;
+import com.orgflow.portal.entity.WorkspaceFile;
 import com.orgflow.portal.repository.WorkspaceFileRepository;
 import com.orgflow.portal.security.Permissions;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,5 +30,18 @@ public class FileService {
         permissionService.require(Permissions.FILES_READ);
         return workspaceFileRepository.findByWorkspace(currentUserService.currentWorkspace(), pageable)
             .map(DtoMapper::toWorkspaceFileDto);
+    }
+
+    @Transactional
+    public WorkspaceFileDto createFile(CreateWorkspaceFileRequest request) {
+        permissionService.require(Permissions.FILES_WRITE);
+        var file = new WorkspaceFile(currentUserService.currentWorkspace(), request.name(), request.fileType(), currentUserService.currentUser().getDisplayName(), request.linkedResource(), request.sizeLabel(), "files/" + UUID.randomUUID(), Instant.now());
+        return DtoMapper.toWorkspaceFileDto(workspaceFileRepository.save(file));
+    }
+
+    @Transactional
+    public void deleteFile(UUID id) {
+        permissionService.require(Permissions.FILES_WRITE);
+        workspaceFileRepository.deleteById(Objects.requireNonNull(id));
     }
 }

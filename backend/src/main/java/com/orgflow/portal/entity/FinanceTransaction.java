@@ -77,4 +77,8 @@ public class FinanceTransaction extends AuditableEntity {
     public Instant getOccurredAt() {
         return occurredAt;
     }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }

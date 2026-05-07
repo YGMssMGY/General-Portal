@@ -104,4 +104,12 @@ public class EventItem extends AuditableEntity {
     public List<EventOwner> getOwners() {
         return owners;
     }
+
+    public void update(String title, String status, Instant startsAt, Instant endsAt, int progress) {
+        this.title = title;
+        this.status = status;
+        this.startsAt = startsAt;
+        this.endsAt = endsAt;
+        this.progress = progress;
+    }
 }

@@ -57,4 +57,8 @@ public class WorkspaceSettings extends AuditableEntity {
     public String getFiscalYearStart() {
         return fiscalYearStart;
     }
+
+    public void setDefaultVisibility(String defaultVisibility) { this.defaultVisibility = defaultVisibility; }
+    public void setRequireProposalApproval(boolean requireProposalApproval) { this.requireProposalApproval = requireProposalApproval; }
+    public void setAllowMemberInvites(boolean allowMemberInvites) { this.allowMemberInvites = allowMemberInvites; }
 }
