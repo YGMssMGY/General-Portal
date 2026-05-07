@@ -1,12 +1,13 @@
 package com.orgflow.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreateProposalRequest;
 import com.orgflow.portal.dto.Dtos.ProposalDto;
+import com.orgflow.portal.dto.Dtos.CreateProposalRequest;
 import com.orgflow.portal.entity.Proposal;
 import com.orgflow.portal.repository.ProposalRepository;
 import com.orgflow.portal.security.Permissions;
 import java.time.Instant;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +24,10 @@ public class ProposalService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProposalDto> listProposals() {
+    public Page<ProposalDto> listProposals(Pageable pageable) {
         permissionService.require(Permissions.PROPOSALS_READ);
-        return proposalRepository.findByWorkspaceOrderBySubmittedAtDesc(currentUserService.currentWorkspace()).stream()
-            .map(DtoMapper::toProposalDto)
-            .toList();
+        return proposalRepository.findByWorkspace(currentUserService.currentWorkspace(), pageable)
+            .map(DtoMapper::toProposalDto);
     }
 
     @Transactional

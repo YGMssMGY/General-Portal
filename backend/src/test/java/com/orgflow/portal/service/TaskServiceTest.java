@@ -18,6 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -37,14 +40,15 @@ class TaskServiceTest {
     void listTasksRequiresReadPermissionAndMapsDtos() {
         Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
         TaskItem task = new TaskItem(workspace, "Confirm gym reservation", "todo", "high", "Winter Formal", LocalDate.now(), "Maya Chen", 0, null);
+        var pageable = PageRequest.of(0, 25);
         when(currentUserService.currentWorkspace()).thenReturn(workspace);
-        when(taskRepository.findByWorkspaceOrderByDueDateAsc(workspace)).thenReturn(List.of(task));
+        when(taskRepository.findByWorkspace(workspace, pageable)).thenReturn(new PageImpl<>(List.of(task)));
 
-        var result = taskService.listTasks();
+        var result = taskService.listTasks(pageable);
 
         verify(permissionService).require(Permissions.TASKS_READ);
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().title()).isEqualTo("Confirm gym reservation");
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).title()).isEqualTo("Confirm gym reservation");
     }
 
     @Test

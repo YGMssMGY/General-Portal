@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:data/orgflow.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+  cache:
+    type: simple
+  session:
+    store-type: none
+
+orgflow:
+  security:
+    demo-mode: true
+  seed:
+    enabled: true

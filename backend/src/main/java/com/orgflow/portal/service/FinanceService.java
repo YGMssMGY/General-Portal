@@ -3,7 +3,8 @@ package com.orgflow.portal.service;
 import com.orgflow.portal.dto.Dtos.FinanceTransactionDto;
 import com.orgflow.portal.repository.FinanceTransactionRepository;
 import com.orgflow.portal.security.Permissions;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,9 @@ public class FinanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<FinanceTransactionDto> listTransactions() {
+    public Page<FinanceTransactionDto> listTransactions(Pageable pageable) {
         permissionService.require(Permissions.FINANCE_READ);
-        return financeTransactionRepository.findByWorkspaceOrderByOccurredAtDesc(currentUserService.currentWorkspace()).stream()
-            .map(DtoMapper::toFinanceTransactionDto)
-            .toList();
+        return financeTransactionRepository.findByWorkspace(currentUserService.currentWorkspace(), pageable)
+            .map(DtoMapper::toFinanceTransactionDto);
     }
 }

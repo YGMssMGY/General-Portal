@@ -1,6 +1,8 @@
 param(
+    [ValidateSet("postgresql", "sqlite", "h2")]
+    [string]$DatabaseProvider = "postgresql",
     [ValidateSet("dev", "demo")]
-    [string]$BackendProfile = "dev",
+    [string]$BackendProfile,
     [switch]$WithRedis
 )
 
@@ -101,6 +103,57 @@ function Test-PortOpen {
     return $false
 }
 
+function Resolve-Java {
+    $javaCmd = $null
+
+    $javaHome = [System.Environment]::GetEnvironmentVariable("JAVA_HOME", "Process")
+    if (-not $javaHome) { $javaHome = [System.Environment]::GetEnvironmentVariable("JAVA_HOME", "User") }
+    if (-not $javaHome) { $javaHome = [System.Environment]::GetEnvironmentVariable("JAVA_HOME", "Machine") }
+    if ($javaHome) {
+        $candidate = Join-Path $javaHome "bin\java.exe"
+        if (Test-Path $candidate) { $javaCmd = $candidate }
+        if (-not $javaCmd) {
+            $candidate = Join-Path $javaHome "bin\java"
+            if (Test-Path $candidate) { $javaCmd = $candidate }
+        }
+    }
+
+    if (-not $javaCmd) {
+        $jdkHome = [System.Environment]::GetEnvironmentVariable("JDK_HOME", "Process")
+        if (-not $jdkHome) { $jdkHome = [System.Environment]::GetEnvironmentVariable("JDK_HOME", "User") }
+        if ($jdkHome) {
+            $candidate = Join-Path $jdkHome "bin\java.exe"
+            if (Test-Path $candidate) { $javaCmd = $candidate }
+        }
+    }
+
+    if (-not $javaCmd) {
+        $fromPath = Get-Command "java.exe" -ErrorAction SilentlyContinue
+        if (-not $fromPath) { $fromPath = Get-Command "java" -ErrorAction SilentlyContinue }
+        if ($fromPath) { $javaCmd = $fromPath.Source }
+    }
+
+    return $javaCmd
+}
+
+function Test-JavaVersion {
+    param([string]$JavaCmd)
+
+    try {
+        $output = & $JavaCmd -version 2>&1 | Out-String
+        Write-Output "[OK]   Java: $($output -split "`n" | Select-Object -First 1)"
+        if ($output -match 'version "(\d+)') {
+            $major = [int]$Matches[1]
+            if ($major -lt 17) {
+                Write-Warning "[WARN] Java 17+ is recommended. Detected Java $major."
+            }
+        }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 Normalize-PathEnvironment
 
 if (Test-Path $EnvFile) {
@@ -115,9 +168,41 @@ if (Test-Path $EnvFile) {
     }
 }
 
-$Maven = Resolve-Command -Names @("mvn.cmd", "mvn") -EnvVar "MAVEN_HOME" -FallbackPaths @(".tools\apache-maven-3.9.11")
+$JavaCmd = Resolve-Java
+if (-not $JavaCmd) {
+    throw "Java was not found. Set JAVA_HOME, add Java to PATH, or install Java 17+ (https://adoptium.net)."
+}
+$null = Test-JavaVersion -JavaCmd $JavaCmd
+
+$Maven = $null
+$mvnEnvCmd = [System.Environment]::GetEnvironmentVariable("MVN_CMD", "Process")
+if (-not $mvnEnvCmd) {
+    $mvnEnvCmd = [System.Environment]::GetEnvironmentVariable("MVN_CMD", "User")
+}
+if ($mvnEnvCmd -and (Test-Path $mvnEnvCmd)) {
+    $Maven = $mvnEnvCmd
+}
+
 if (-not $Maven) {
-    throw "Maven (mvn) was not found. Set MAVEN_HOME, add Maven to PATH, or restore .tools/apache-maven-3.9.11."
+    $toolsDir = Join-Path $Root ".tools"
+    if (Test-Path $toolsDir) {
+        $mavenDirs = Get-ChildItem -Path $toolsDir -Directory -Filter "maven*" -ErrorAction SilentlyContinue
+        foreach ($dir in $mavenDirs) {
+            $candidate = Join-Path $dir.FullName "bin\mvn.cmd"
+            if (Test-Path $candidate) {
+                $Maven = $candidate
+                break
+            }
+        }
+    }
+}
+
+if (-not $Maven) {
+    $Maven = Resolve-Command -Names @("mvn.cmd", "mvn")
+}
+
+if (-not $Maven) {
+    throw "Maven (mvn) was not found. Set MVN_CMD env var, add Maven to PATH, or restore .tools/maven/*."
 }
 
 $NpmCmd = Resolve-Command -Names @("npm.cmd", "npm") -EnvVar "NODE_HOME" -FallbackPaths @()
@@ -128,12 +213,33 @@ if (-not $NpmCmd) {
     throw "npm was not found. Install Node.js and ensure npm is on PATH, or set NODE_HOME/NVM_HOME."
 }
 
-if ($BackendProfile -eq "dev" -and -not (Test-PortOpen -Port 5432)) {
-    throw "PostgreSQL is not listening on localhost:5432. Install/start PostgreSQL, or run .\start-dev.ps1 -BackendProfile demo for the H2 fallback."
+$Profiles = ""
+if ($BackendProfile) {
+    $Profiles = $BackendProfile
+} else {
+    switch ($DatabaseProvider) {
+        "postgresql" { $Profiles = "dev" }
+        "sqlite"     { $Profiles = "sqlite" }
+        "h2"         { $Profiles = "demo" }
+    }
 }
 
-if ($WithRedis -and -not (Test-PortOpen -Port 6379)) {
-    throw "Redis is not listening on localhost:6379. Start Redis, or omit -WithRedis to use the simple in-memory cache."
+if ($Profiles -eq "dev") {
+    if (-not (Test-PortOpen -Port 5432)) {
+        throw "PostgreSQL is not listening on localhost:5432. Install/start PostgreSQL, or use -DatabaseProvider sqlite or -DatabaseProvider h2."
+    }
+} elseif ($Profiles -eq "sqlite") {
+    $dataDir = Join-Path $BackendDir "data"
+    if (-not (Test-Path $dataDir)) {
+        New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+    }
+}
+
+if ($WithRedis) {
+    $Profiles = "$Profiles,redis"
+    if (-not (Test-PortOpen -Port 6379)) {
+        throw "Redis is not listening on localhost:6379. Start Redis, or omit -WithRedis."
+    }
 }
 
 if (Test-PortOpen -Port 8080) {
@@ -144,10 +250,19 @@ if (Test-PortOpen -Port 5173) {
     throw "Port 5173 is already in use. Run .\stop-dev.ps1 or stop the existing frontend."
 }
 
-$Profiles = $BackendProfile
-if ($WithRedis) {
-    $Profiles = "$BackendProfile,redis"
+try {
+    $nodeVersion = & node --version 2>&1
+    $nodeMajor = [int]($nodeVersion -replace "v", "").Split(".")[0]
+    if ($nodeMajor -lt 16) {
+        Write-Warning "[WARN] Node.js 16+ is recommended. Detected: $nodeVersion"
+    }
+} catch {
+    throw "Node.js was not found on PATH. Install Node.js (https://nodejs.org)."
 }
+
+Write-Output "Database provider: $DatabaseProvider -> Spring profile: $Profiles"
+Write-Output "Maven: $Maven"
+Write-Output "npm: $NpmCmd"
 
 Start-Process `
     -FilePath $Maven `
