@@ -58,7 +58,6 @@ public class DashboardService {
         permissionService.require(Permissions.DASHBOARD_READ);
         var workspace = currentUserService.currentWorkspace();
         List<TaskItem> tasks = taskRepository.findByWorkspaceOrderByDueDateAsc(workspace);
-        var proposals = proposalRepository.findByWorkspaceOrderBySubmittedAtDesc(workspace);
         var events = eventRepository.findByWorkspaceOrderByStartsAtAsc(workspace);
         var transactions = financeTransactionRepository.findByWorkspaceOrderByOccurredAtDesc(workspace);
 

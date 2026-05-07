@@ -172,3 +172,6 @@ AGENTS.md
 opencode.json
 .opencode
 docs
+
+# SQLite database files
+data/*.db

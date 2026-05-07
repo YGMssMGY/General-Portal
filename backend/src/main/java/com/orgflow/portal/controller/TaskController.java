@@ -6,6 +6,7 @@ import com.orgflow.portal.dto.Dtos.UpdateTaskRequest;
 import com.orgflow.portal.service.TaskService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,7 +41,7 @@ public class TaskController {
     @PreAuthorize("hasAuthority('tasks:write')")
     public ResponseEntity<TaskDto> createTask(@Valid @RequestBody CreateTaskRequest request) {
         TaskDto task = taskService.createTask(request);
-        return ResponseEntity.created(URI.create("/api/tasks/" + task.id())).body(task);
+        return ResponseEntity.created(Objects.requireNonNull(URI.create("/api/tasks/" + task.id()))).body(task);
     }
 
     @PatchMapping("/{id}")

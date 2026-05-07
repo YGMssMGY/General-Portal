@@ -5,6 +5,7 @@ import com.orgflow.portal.dto.Dtos.ProposalDto;
 import com.orgflow.portal.service.ProposalService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.Objects;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -35,6 +36,6 @@ public class ProposalController {
     @PreAuthorize("hasAuthority('proposals:write')")
     public ResponseEntity<ProposalDto> createProposal(@Valid @RequestBody CreateProposalRequest request) {
         ProposalDto proposal = proposalService.createProposal(request);
-        return ResponseEntity.created(URI.create("/api/proposals/" + proposal.id())).body(proposal);
+        return ResponseEntity.created(Objects.requireNonNull(URI.create("/api/proposals/" + proposal.id()))).body(proposal);
     }
 }
