@@ -7,11 +7,12 @@ import type { PublicEvent } from "../../mocks/data";
 export function EventGallery() {
   const { data, error, isLoading, refetch } = useAsyncData(
     () => fetchJson<PublicEvent[]>("/api/events/public"),
-    []
+    [],
   );
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Events unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Events unavailable"} onRetry={refetch} />;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">

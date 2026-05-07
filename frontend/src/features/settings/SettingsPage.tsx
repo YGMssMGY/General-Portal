@@ -3,14 +3,28 @@ import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useSettings } from "../../hooks/useWorkspaceResources";
 
-function Toggle({ checked, label, description }: { checked: boolean; label: string; description: string }) {
+function Toggle({
+  checked,
+  label,
+  description,
+}: {
+  checked: boolean;
+  label: string;
+  description: string;
+}) {
   return (
     <label className="flex cursor-pointer items-center justify-between gap-4 border border-border-subtle p-4">
       <span>
         <span className="block font-medium text-text-primary">{label}</span>
         <span className="text-sm text-text-secondary">{description}</span>
       </span>
-      <input className="h-5 w-5 accent-carbon-blue-60" type="checkbox" checked={checked} disabled readOnly />
+      <input
+        className="h-5 w-5 accent-carbon-blue-60"
+        type="checkbox"
+        checked={checked}
+        disabled
+        readOnly
+      />
     </label>
   );
 }
@@ -19,11 +33,15 @@ export function SettingsPage() {
   const { data, error, isLoading, refetch } = useSettings();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Settings unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Settings unavailable"} onRetry={refetch} />;
 
   return (
     <div>
-      <PageHeader title="Workspace Settings" description="Configure workspace defaults, approvals, and policies." />
+      <PageHeader
+        title="Workspace Settings"
+        description="Configure workspace defaults, approvals, and policies."
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card padding="lg">

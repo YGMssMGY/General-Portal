@@ -26,10 +26,10 @@ const columns: ColumnDef<Task>[] = [
           task.status === "in_progress"
             ? "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
             : task.status === "blocked"
-            ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
-            : task.status === "done"
-            ? "border-carbon-green-30 bg-carbon-green-10 text-carbon-green-60"
-            : "border-border-subtle bg-surface text-text-secondary"
+              ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
+              : task.status === "done"
+                ? "border-carbon-green-30 bg-carbon-green-10 text-carbon-green-60"
+                : "border-border-subtle bg-surface text-text-secondary"
         }
       >
         {sentenceCase(task.status)}
@@ -42,7 +42,12 @@ const columns: ColumnDef<Task>[] = [
     sortable: true,
     render: (task) => <Badge className={priorityBadgeClass(task.priority)}>{task.priority}</Badge>,
   },
-  { key: "dueDate", header: "Due Date", sortable: true, render: (task) => formatDate(task.dueDate) },
+  {
+    key: "dueDate",
+    header: "Due Date",
+    sortable: true,
+    render: (task) => formatDate(task.dueDate),
+  },
   { key: "assigneeName", header: "Assignee", sortable: true },
 ];
 
@@ -65,19 +70,31 @@ export function TasksPage() {
     setCreateError(undefined);
     setIsCreating(true);
     try {
-      await workspaceApi.createTask({ ...taskForm, assigneeName: taskForm.assigneeName || user?.name || "Unassigned" });
-      setTaskForm({ title: "", priority: "normal", project: "", dueDate: new Date().toISOString().slice(0, 10), assigneeName: "" });
+      await workspaceApi.createTask({
+        ...taskForm,
+        assigneeName: taskForm.assigneeName || user?.name || "Unassigned",
+      });
+      setTaskForm({
+        title: "",
+        priority: "normal",
+        project: "",
+        dueDate: new Date().toISOString().slice(0, 10),
+        assigneeName: "",
+      });
       setIsTaskModalOpen(false);
       refetch();
     } catch (unknownError) {
-      setCreateError(unknownError instanceof Error ? unknownError.message : "Could not create task");
+      setCreateError(
+        unknownError instanceof Error ? unknownError.message : "Could not create task",
+      );
     } finally {
       setIsCreating(false);
     }
   }
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Tasks are unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Tasks are unavailable"} onRetry={refetch} />;
 
   return (
     <div>
@@ -156,7 +173,9 @@ export function TasksPage() {
               <select
                 className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
                 value={taskForm.priority}
-                onChange={(e) => setTaskForm((c) => ({ ...c, priority: e.target.value as Priority }))}
+                onChange={(e) =>
+                  setTaskForm((c) => ({ ...c, priority: e.target.value as Priority }))
+                }
               >
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
@@ -166,13 +185,23 @@ export function TasksPage() {
             </label>
           </div>
           {createError ? (
-            <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">{createError}</p>
+            <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">
+              {createError}
+            </p>
           ) : null}
           <div className="flex justify-end gap-3">
-            <button type="button" className="border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors" onClick={() => setIsTaskModalOpen(false)}>
+            <button
+              type="button"
+              className="border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
+              onClick={() => setIsTaskModalOpen(false)}
+            >
               Cancel
             </button>
-            <button type="submit" disabled={isCreating} className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors">
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors"
+            >
               {isCreating ? "Creating..." : "Create Task"}
             </button>
           </div>

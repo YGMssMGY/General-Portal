@@ -20,7 +20,9 @@ const columns: ColumnDef<EventItem>[] = [
     key: "status",
     header: "Status",
     sortable: true,
-    render: (event) => <Badge className={statusBadgeClass(event.status)}>{sentenceCase(event.status)}</Badge>,
+    render: (event) => (
+      <Badge className={statusBadgeClass(event.status)}>{sentenceCase(event.status)}</Badge>
+    ),
   },
   {
     key: "progress",
@@ -35,11 +37,15 @@ export function EventsPage() {
   const { data, error, isLoading, refetch } = useEvents();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Events are unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Events are unavailable"} onRetry={refetch} />;
 
   return (
     <div>
-      <PageHeader title="Events" description="Plan and track events, assign volunteers, and manage budgets." />
+      <PageHeader
+        title="Events"
+        description="Plan and track events, assign volunteers, and manage budgets."
+      />
 
       <DataTable
         columns={columns}

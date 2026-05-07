@@ -29,9 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
           <Warning size={48} className="text-danger" aria-hidden="true" />
-          <h1 className="mt-6 text-xl font-semibold text-text-primary">
-            Something went wrong
-          </h1>
+          <h1 className="mt-6 text-xl font-semibold text-text-primary">Something went wrong</h1>
           <p className="mt-2 max-w-md text-center text-sm text-text-secondary">
             An unexpected error occurred. Please refresh the page to try again.
           </p>

@@ -11,9 +11,8 @@ export function PublicHome() {
               Developers' Club &amp; Student Council
             </h1>
             <p className="mt-4 text-expressive-02 text-text-secondary max-w-2xl">
-              Building a community of innovators, leaders, and creators. Explore
-              our events, meet our members, and see what we've accomplished
-              together.
+              Building a community of innovators, leaders, and creators. Explore our events, meet
+              our members, and see what we've accomplished together.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -58,10 +57,7 @@ export function PublicHome() {
                 icon: "Launch" as const,
               },
             ].map((item) => (
-              <div
-                key={item.title}
-                className="border border-border-subtle bg-surface p-6"
-              >
+              <div key={item.title} className="border border-border-subtle bg-surface p-6">
                 <CarbonIcon
                   name={item.icon}
                   size={32}
@@ -71,9 +67,7 @@ export function PublicHome() {
                 <h3 className="mt-4 text-expressive-02 font-semibold text-text-primary">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-productive-02 text-text-secondary">
-                  {item.description}
-                </p>
+                <p className="mt-2 text-productive-02 text-text-secondary">{item.description}</p>
               </div>
             ))}
           </div>
@@ -82,12 +76,10 @@ export function PublicHome() {
 
       <section className="border-t border-border-subtle bg-surface py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 lg:px-6 text-center">
-          <h2 className="text-expressive-04 text-text-primary">
-            Ready to Get Involved?
-          </h2>
+          <h2 className="text-expressive-04 text-text-primary">Ready to Get Involved?</h2>
           <p className="mt-4 text-expressive-01 text-text-secondary max-w-xl mx-auto">
-            Join our community of passionate students. Attend an event, become a
-            member, or just say hello.
+            Join our community of passionate students. Attend an event, become a member, or just say
+            hello.
           </p>
           <Link
             to="/about"

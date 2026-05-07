@@ -13,13 +13,9 @@ import {
   generateSearchResults,
   generateSettings,
   generateTasks,
-  generateUserProfiles,
   generateVolunteerSlots,
-  getCurrentRole,
   getCurrentUser,
-  setCurrentRole,
 } from "./data";
-import type { UserRole } from "./data";
 
 const SIMULATED_LATENCY_MS = 120;
 
@@ -44,11 +40,16 @@ export const handlers = [
     return HttpResponse.json(getCurrentUser());
   }),
 
-  http.post("/api/auth/role", async ({ request }) => {
+  http.post("/api/auth/dev-login", async ({ request }) => {
     await delay(SIMULATED_LATENCY_MS);
-    const body = (await request.json()) as { role: UserRole };
-    setCurrentRole(body.role);
-    return HttpResponse.json(getCurrentUser());
+    const body = (await request.json()) as { username: string; password: string };
+    if (body.username && body.password) {
+      return HttpResponse.json({ status: "ok", message: "Dev login successful" });
+    }
+    return HttpResponse.json(
+      { error: "Invalid dev credentials." },
+      { status: 401 },
+    );
   }),
 
   http.get("/api/dashboard", async () => {
@@ -71,7 +72,7 @@ export const handlers = [
 
   http.post("/api/tasks", async ({ request }) => {
     await delay(SIMULATED_LATENCY_MS);
-    const body = (await request.json()) as Partial<typeof tasks[0]>;
+    const body = (await request.json()) as Partial<(typeof tasks)[0]>;
     const newTask = {
       id: `task-${Date.now()}`,
       title: body.title || "Untitled",
@@ -96,7 +97,7 @@ export const handlers = [
 
   http.post("/api/proposals", async ({ request }) => {
     await delay(SIMULATED_LATENCY_MS);
-    const body = (await request.json()) as Partial<typeof proposals[0]>;
+    const body = (await request.json()) as Partial<(typeof proposals)[0]>;
     const newProposal = {
       id: `prop-${Date.now()}`,
       title: body.title || "New Proposal",
@@ -194,10 +195,8 @@ export const handlers = [
     if (q) {
       return HttpResponse.json(
         results.filter(
-          (r) =>
-            r.title.toLowerCase().includes(q) ||
-            r.description.toLowerCase().includes(q)
-        )
+          (r) => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q),
+        ),
       );
     }
     return HttpResponse.json(results);

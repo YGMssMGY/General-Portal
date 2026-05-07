@@ -13,6 +13,8 @@ spring:
 
 orgflow:
   security:
-    demo-mode: true
+    dev-auth:
+      username: ${DEV_AUTH_USERNAME:dev@orgflow.local}
+      password: ${DEV_AUTH_PASSWORD:}
   seed:
     enabled: true

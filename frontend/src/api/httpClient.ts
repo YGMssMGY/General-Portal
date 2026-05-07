@@ -6,7 +6,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly details?: unknown
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -31,7 +31,7 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
     ...init,
-    headers
+    headers,
   });
 
   if (!response.ok) {
@@ -49,6 +49,6 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
 export function jsonBody<TBody extends object>(body: TBody): RequestInit {
   return {
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   };
 }

@@ -11,7 +11,7 @@ import type {
   UserProfile,
   VolunteerSlot,
   WorkspaceFile,
-  WorkspaceSettings
+  WorkspaceSettings,
 } from "../types";
 import { API_ORIGIN, fetchJson, jsonBody } from "./httpClient";
 
@@ -22,8 +22,9 @@ export const workspaceApi = {
   createTask: (task: Pick<Task, "title" | "priority" | "project" | "dueDate" | "assigneeName">) =>
     fetchJson<Task>("/tasks", { method: "POST", ...jsonBody(task) }),
   getProposals: () => fetchJson<Proposal[]>("/proposals"),
-  createProposal: (proposal: Pick<Proposal, "title" | "type" | "submittedBy" | "budget" | "summary">) =>
-    fetchJson<Proposal>("/proposals", { method: "POST", ...jsonBody(proposal) }),
+  createProposal: (
+    proposal: Pick<Proposal, "title" | "type" | "submittedBy" | "budget" | "summary">,
+  ) => fetchJson<Proposal>("/proposals", { method: "POST", ...jsonBody(proposal) }),
   getEvents: () => fetchJson<EventItem[]>("/events"),
   getVolunteerSlots: () => fetchJson<VolunteerSlot[]>("/volunteers/slots"),
   getFinanceTransactions: () => fetchJson<FinanceTransaction[]>("/finance/transactions"),
@@ -33,5 +34,5 @@ export const workspaceApi = {
   getActivity: () => fetchJson<ActivityItem[]>("/activity"),
   getSettings: () => fetchJson<WorkspaceSettings>("/settings"),
   search: (query: string) => fetchJson<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
-  getMicrosoftLoginUrl: () => `${API_ORIGIN}/oauth2/authorization/microsoft`
+  getMicrosoftLoginUrl: () => `${API_ORIGIN}/oauth2/authorization/microsoft`,
 };

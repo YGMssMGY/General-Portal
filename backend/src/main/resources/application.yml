@@ -47,8 +47,10 @@ orgflow:
   microsoft:
     graph-base-url: ${MICROSOFT_GRAPH_BASE_URL:https://graph.microsoft.com/v1.0}
   security:
-    demo-mode: ${ORGFLOW_DEMO_MODE:true}
-    auto-provision-users: ${ORGFLOW_AUTO_PROVISION_USERS:true}
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+    auto-provision-users: ${ORGFLOW_AUTO_PROVISION_USERS:true}
+    dev-auth:
+      username: ${DEV_AUTH_USERNAME:}
+      password: ${DEV_AUTH_PASSWORD:}
   seed:
     enabled: ${ORGFLOW_SEED_ENABLED:true}
