@@ -1,58 +1,54 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BACKEND_PROFILE="${1:-dev}"
-WITH_REDIS=false
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_DIR="$ROOT/backend"
+FRONTEND_DIR="$ROOT/frontend"
+ENV_FILE="$ROOT/.env.local"
 
-usage() {
-    echo "Usage: $0 [dev|demo] [--redis]"
-    echo "  dev   - Start with PostgreSQL (default)"
-    echo "  demo  - Start with H2 in-memory database"
-    echo "  --redis - Enable Redis for sessions"
-    exit 1
+BACKEND_PROFILE="${BACKEND_PROFILE:-dev}"
+DB_PROVIDER="${DB_PROVIDER:-postgres}"
+WITH_REDIS="${WITH_REDIS:-false}"
+FRONTEND_ONLY="${FRONTEND_ONLY:-false}"
+BACKEND_PID=""
+FRONTEND_PID=""
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+cleanup() {
+    echo -e "${YELLOW}[orgflow] Shutting down...${NC}"
+    if [ -n "$BACKEND_PID" ]; then
+        kill "$BACKEND_PID" 2>/dev/null || true
+        wait "$BACKEND_PID" 2>/dev/null || true
+        echo -e "${YELLOW}[orgflow] Backend stopped (PID $BACKEND_PID)${NC}"
+    fi
+    if [ -n "$FRONTEND_PID" ]; then
+        kill "$FRONTEND_PID" 2>/dev/null || true
+        wait "$FRONTEND_PID" 2>/dev/null || true
+        echo -e "${YELLOW}[orgflow] Frontend stopped (PID $FRONTEND_PID)${NC}"
+    fi
+    exit 0
 }
 
-for arg in "$@"; do
-    case "$arg" in
-        dev|demo) BACKEND_PROFILE="$arg" ;;
-        --redis) WITH_REDIS=true ;;
-        -h|--help) usage ;;
-        *) echo "Unknown argument: $arg"; usage ;;
+trap cleanup SIGINT SIGTERM
+
+while getopts "b:d:rfh" opt; do
+    case $opt in
+        b) BACKEND_PROFILE="$OPTARG" ;;
+        d) DB_PROVIDER="$OPTARG" ;;
+        r) WITH_REDIS="true" ;;
+        f) FRONTEND_ONLY="true" ;;
+        h) echo "Usage: $0 [-b profile] [-d postgres|sqlite] [-r] [-f]"; exit 0 ;;
+        *) exit 1 ;;
     esac
 done
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$SCRIPT_DIR"
-BACKEND_DIR="$ROOT/backend"
-FRONTEND_DIR="$ROOT/frontend"
-BACKEND_OUT="$BACKEND_DIR/backend.log"
-BACKEND_ERR="$BACKEND_DIR/backend.err"
-FRONTEND_OUT="$FRONTEND_DIR/vite.log"
-FRONTEND_ERR="$FRONTEND_DIR/vite.err"
-ENV_FILE="$ROOT/.env.local"
-
-resolve_command() {
-    local names=("$@")
-    for name in "${names[@]}"; do
-        if command -v "$name" &>/dev/null; then
-            command -v "$name"
-            return 0
-        fi
-    done
-    return 1
-}
-
-test_port_open() {
-    local port="$1"
-    if command -v ss &>/dev/null; then
-        ss -tlnp 2>/dev/null | grep -q ":$port " && return 0
-    elif command -v netstat &>/dev/null; then
-        netstat -tlnp 2>/dev/null | grep -q ":$port " && return 0
-    elif command -v lsof &>/dev/null; then
-        lsof -i ":$port" -sTCP:LISTEN &>/dev/null && return 0
-    fi
-    return 1
-}
+echo -e "${CYAN}[orgflow] OrgFlow Dev Launcher${NC}"
+echo -e "${CYAN}[orgflow] =====================${NC}"
 
 if [ -f "$ENV_FILE" ]; then
     set -a
@@ -60,72 +56,97 @@ if [ -f "$ENV_FILE" ]; then
     set +a
 fi
 
-MVN=""
-if MVN=$(resolve_command mvn); then
-    :
-elif [ -n "${MAVEN_HOME:-}" ] && [ -x "$MAVEN_HOME/bin/mvn" ]; then
-    MVN="$MAVEN_HOME/bin/mvn"
-elif [ -x "$ROOT/.tools/apache-maven-3.9.11/bin/mvn" ]; then
-    MVN="$ROOT/.tools/apache-maven-3.9.11/bin/mvn"
+if ! command -v java &>/dev/null; then
+    if [ -n "${JAVA_HOME:-}" ]; then
+        export PATH="$JAVA_HOME/bin:$PATH"
+    fi
 fi
 
-if [ -z "$MVN" ]; then
-    echo "ERROR: Maven (mvn) was not found. Set MAVEN_HOME, add Maven to PATH, or restore .tools/apache-maven-3.9.11." >&2
+if ! command -v java &>/dev/null; then
+    echo -e "${RED}[orgflow] ERROR: Java not found${NC}"
     exit 1
 fi
+JAVA_VER=$(java -version 2>&1 | head -1)
+echo -e "${CYAN}[orgflow] $JAVA_VER${NC}"
 
-NPM=""
-if NPM=$(resolve_command npm); then
-    :
-elif [ -n "${NODE_HOME:-}" ] && [ -x "$NODE_HOME/bin/npm" ]; then
-    NPM="$NODE_HOME/bin/npm"
-elif [ -n "${NVM_HOME:-}" ] && [ -x "$NVM_HOME/bin/npm" ]; then
-    NPM="$NVM_HOME/bin/npm"
+MVN_CMD=""
+if [ -n "${MVN_CMD:-}" ] && [ -x "$MVN_CMD" ]; then
+    MVN_CMD="$MVN_CMD"
+elif command -v mvn &>/dev/null; then
+    MVN_CMD="mvn"
+elif [ -d "$ROOT/.tools" ]; then
+    for d in "$ROOT/.tools"/maven*; do
+        if [ -x "$d/bin/mvn" ]; then
+            MVN_CMD="$d/bin/mvn"
+            break
+        fi
+    done
 fi
 
-if [ -z "$NPM" ]; then
-    echo "ERROR: npm was not found. Install Node.js and ensure npm is on PATH, or set NODE_HOME/NVM_HOME." >&2
+if [ -z "$MVN_CMD" ]; then
+    echo -e "${RED}[orgflow] ERROR: Maven not found${NC}"
     exit 1
 fi
+echo -e "${CYAN}[orgflow] Maven: $MVN_CMD${NC}"
 
-if [ "$BACKEND_PROFILE" = "dev" ] && ! test_port_open 5432; then
-    echo "ERROR: PostgreSQL is not listening on localhost:5432. Install/start PostgreSQL, or run with 'demo' profile for H2 fallback." >&2
-    exit 1
-fi
-
-if $WITH_REDIS && ! test_port_open 6379; then
-    echo "ERROR: Redis is not listening on localhost:6379. Start Redis, or omit --redis to use the simple in-memory cache." >&2
-    exit 1
-fi
-
-if test_port_open 8080; then
-    echo "ERROR: Port 8080 is already in use. Run ./stop-dev.sh or stop the existing backend." >&2
-    exit 1
-fi
-
-if test_port_open 5173; then
-    echo "ERROR: Port 5173 is already in use. Run ./stop-dev.sh or stop the existing frontend." >&2
-    exit 1
+if [ "$FRONTEND_ONLY" != "true" ]; then
+    if ! command -v npm &>/dev/null; then
+        echo -e "${RED}[orgflow] ERROR: npm not found${NC}"
+        exit 1
+    fi
+    echo -e "${CYAN}[orgflow] npm: $(command -v npm)${NC}"
 fi
 
 PROFILES="$BACKEND_PROFILE"
-if $WITH_REDIS; then
-    PROFILES="$BACKEND_PROFILE,redis"
+if [ "$BACKEND_PROFILE" = "" ]; then
+    case "$DB_PROVIDER" in
+        postgres) PROFILES="dev" ;;
+        sqlite)   PROFILES="sqlite" ;;
+    esac
 fi
 
-echo "Starting OrgFlow with backend profiles: $PROFILES"
+if [ "$PROFILES" = "dev" ]; then
+    if ! nc -z localhost 5432 2>/dev/null; then
+        echo -e "${RED}[orgflow] ERROR: PostgreSQL not on localhost:5432${NC}"
+        exit 1
+    fi
+elif [ "$PROFILES" = "sqlite" ]; then
+    mkdir -p "$ROOT/data"
+fi
 
-nohup "$MVN" spring-boot:run -Dspring-boot.run.profiles="$PROFILES" \
-    > "$BACKEND_OUT" 2> "$BACKEND_ERR" &
+if [ "$WITH_REDIS" = "true" ]; then
+    PROFILES="$PROFILES,redis"
+    if ! nc -z localhost 6379 2>/dev/null; then
+        echo -e "${RED}[orgflow] ERROR: Redis not on localhost:6379${NC}"
+        exit 1
+    fi
+fi
+
+export SPRING_PROFILES_ACTIVE="$PROFILES"
+echo -e "${CYAN}[orgflow] Spring profiles: $PROFILES${NC}"
+
+echo -e "${CYAN}[orgflow] Starting backend on port 8080...${NC}"
+"$MVN_CMD" spring-boot:run -Dspring-boot.run.profiles="$PROFILES" -f "$BACKEND_DIR/pom.xml" &
 BACKEND_PID=$!
+echo -e "${CYAN}[orgflow] Backend PID: $BACKEND_PID${NC}"
 
-nohup "$NPM" run dev \
-    > "$FRONTEND_OUT" 2> "$FRONTEND_ERR" &
-FRONTEND_PID=$!
+if [ "$FRONTEND_ONLY" != "true" ]; then
+    echo -e "${CYAN}[orgflow] Starting frontend on port 5173...${NC}"
+    npm run dev --prefix "$FRONTEND_DIR" &
+    FRONTEND_PID=$!
+    echo -e "${CYAN}[orgflow] Frontend PID: $FRONTEND_PID${NC}"
+fi
 
-echo "Backend PID:  $BACKEND_PID"
-echo "Frontend PID: $FRONTEND_PID"
-echo "Frontend: http://localhost:5173"
-echo "Backend health: http://localhost:8080/api/health"
-echo "Backend log: $BACKEND_OUT"
-echo "Frontend log: $FRONTEND_OUT"
+echo ""
+echo -e "${GREEN}============================================${NC}"
+echo -e "${GREEN}  OrgFlow is starting up!${NC}"
+echo -e "${GREEN}============================================${NC}"
+echo -e "  Frontend: ${GREEN}http://localhost:5173${NC}"
+echo -e "  Backend:  ${GREEN}http://localhost:8080/api/health${NC}"
+echo -e "  Swagger:  ${GREEN}http://localhost:8080/swagger-ui/index.html${NC}"
+echo -e "${GREEN}============================================${NC}"
+echo ""
+echo -e "${YELLOW}Press Ctrl+C to stop all services.${NC}"
+echo ""
+
+wait

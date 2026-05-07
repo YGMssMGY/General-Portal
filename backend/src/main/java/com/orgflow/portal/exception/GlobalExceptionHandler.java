@@ -52,6 +52,6 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiErrorDto> error(HttpStatus status, String code, String message, HttpServletRequest request) {
-        return ResponseEntity.status(status).body(new ApiErrorDto(Instant.now(), status.value(), code, message, request.getRequestURI()));
+        return ResponseEntity.status(status.value()).body(new ApiErrorDto(Instant.now(), status.value(), code, message, request.getRequestURI()));
     }
 }

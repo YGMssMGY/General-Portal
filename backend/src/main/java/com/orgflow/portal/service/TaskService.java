@@ -7,6 +7,7 @@ import com.orgflow.portal.entity.TaskItem;
 import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.TaskRepository;
 import com.orgflow.portal.security.Permissions;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -70,12 +71,12 @@ public class TaskService {
     @Transactional
     public void deleteTask(UUID id) {
         permissionService.require(Permissions.TASKS_WRITE);
-        taskRepository.delete(getTaskInCurrentWorkspace(id));
+        taskRepository.delete(Objects.requireNonNull(getTaskInCurrentWorkspace(id)));
     }
 
     private TaskItem getTaskInCurrentWorkspace(UUID id) {
         var workspace = currentUserService.currentWorkspace();
-        TaskItem task = taskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Task"));
+        TaskItem task = taskRepository.findById(Objects.requireNonNull(id)).orElseThrow(() -> new ResourceNotFoundException("Task"));
         if (!task.getWorkspace().getId().equals(workspace.getId())) {
             throw new ResourceNotFoundException("Task");
         }

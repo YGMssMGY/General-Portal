@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,9 +117,9 @@ public class PermissionService {
         }
 
         Membership membership = membershipRepository.save(new Membership(workspace, user, "Member", "Member", 0, 0));
-        permissionGrantRepository.saveAll(Permissions.demoPermissions().stream()
+        permissionGrantRepository.saveAll(Objects.requireNonNull(Permissions.demoPermissions().stream()
             .map(permission -> new PermissionGrant(membership, permission))
-            .toList());
+            .toList()));
         return membership;
     }
 }

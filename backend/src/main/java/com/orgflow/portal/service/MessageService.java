@@ -4,6 +4,7 @@ import com.orgflow.portal.dto.Dtos.MessageThreadDto;
 import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.MessageThreadRepository;
 import com.orgflow.portal.security.Permissions;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +33,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public MessageThreadDto getThread(UUID threadId) {
         permissionService.require(Permissions.MESSAGES_READ);
-        return messageThreadRepository.findById(threadId)
+        return messageThreadRepository.findById(Objects.requireNonNull(threadId))
             .map(DtoMapper::toMessageThreadDto)
             .orElseThrow(() -> new ResourceNotFoundException("MessageThread " + threadId));
     }

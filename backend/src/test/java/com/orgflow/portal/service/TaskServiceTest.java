@@ -18,7 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
@@ -37,6 +36,7 @@ class TaskServiceTest {
     private TaskService taskService;
 
     @Test
+    @SuppressWarnings("null")
     void listTasksRequiresReadPermissionAndMapsDtos() {
         Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
         TaskItem task = new TaskItem(workspace, "Confirm gym reservation", "todo", "high", "Winter Formal", LocalDate.now(), "Maya Chen", 0, null);
@@ -52,6 +52,7 @@ class TaskServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void createTaskRequiresWritePermissionAndDefaultsStatus() {
         Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
         CreateTaskRequest request = new CreateTaskRequest("Draft agenda", "high", "Assembly", LocalDate.now().plusDays(1), "Chris Rivera");

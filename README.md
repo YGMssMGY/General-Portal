@@ -1,211 +1,269 @@
-# OrgFlow Workspace MVP
+# OrgFlow &mdash; General Portal
 
-This repository turns the Google Stitch UI export into a full-stack MVP:
+A dual-purpose club management and student council platform with a public showcase
+and a private, role-based admin dashboard.
 
-- `frontend/`: React + Vite + TypeScript + Tailwind CSS
-- `backend/`: Spring Boot REST API + Spring Security OAuth2 + PostgreSQL
-- Redis support is available, but optional for local MVP development
-- `stitch_orgflow_workspace_dashboard/`: original Stitch export and screenshots
+**Stack:** Java 21 &bull; Spring Boot 3.3.5 &bull; React 18 &bull; Vite 6 &bull; TypeScript &bull; Tailwind CSS 3
+**Databases:** PostgreSQL &bull; SQLite &bull; H2 &bull; Redis (optional)
 
-## Tooling
+---
 
-Maven is installed locally in `.tools/apache-maven-3.9.11` and verified with the Maven Central SHA-512 checksum.
+## Project Overview
 
-Java 21 and Node.js are expected on PATH.
+OrgFlow General Portal powers the **Developers&apos; Club** and **Student Council**
+through a single shared web application. Public visitors browse past events, photo
+galleries, and organizational information. Authenticated members enter the admin
+dashboard where a strict role hierarchy (Teacher &rarr; President &rarr; VP &rarr; Members
+&rarr; Grade Reps) controls feature visibility and write access.
 
-## Run And Stop The Site
+The frontend works **completely offline** during development thanks to Mock Service
+Worker (MSW) &mdash; no backend, no database, and no internet connection are required
+to preview and navigate every page.
 
-Use these commands from the repository root: `D:\programs\Portal`.
+---
 
-Start the normal development site after PostgreSQL is installed and running:
+## Tech Stack
 
-```powershell
-.\start-dev.ps1
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Spring Boot 3.3.5, Java 21, Spring Security OAuth2, Spring Data JPA |
+| **Auth** | Microsoft Entra ID (OAuth2), Dev Login Filter (dev-mode only) |
+| **Database** | PostgreSQL 16, SQLite 3, H2 (demo fallback) |
+| **Cache** | Caffeine (simple), Redis (optional) |
+| **Frontend** | React 18, Vite 6, TypeScript, Tailwind CSS 3 |
+| **Mocking** | Mock Service Worker (MSW) |
+| **Icons** | Carbon Design System (`@carbon/icons-react`) |
+| **Testing** | JUnit 5, Mockito, Spring Boot Test |
+| **Build** | Maven, npm |
+
+---
+
+## Project Structure
+
+```
+├── backend/                          # Spring Boot backend
+│   ├── src/main/java/com/orgflow/portal/
+│   │   ├── config/                   # Security, Swagger, CORS config
+│   │   ├── controller/               # REST controllers (17 endpoints)
+│   │   ├── dto/                      # Data Transfer Objects
+│   │   ├── entity/                   # JPA entities (16 tables)
+│   │   ├── exception/                # Global exception handler
+│   │   ├── repository/               # Spring Data repositories
+│   │   ├── security/                 # OAuth2, dev-auth filter
+│   │   └── service/                  # Business logic
+│   ├── src/main/resources/
+│   │   ├── application.yml           # Main configuration
+│   │   ├── application-dev.yml       # PostgreSQL dev profile
+│   │   ├── application-sqlite.yml    # SQLite profile
+│   │   ├── application-demo.yml      # H2 fallback profile
+│   │   ├── application-redis.yml     # Redis add-on profile
+│   │   └── db/migration/             # Flyway database migrations
+│   ├── data/                         # SQLite database file location
+│   └── pom.xml
+├── frontend/                         # React + Vite frontend
+│   ├── src/
+│   │   ├── api/                      # HTTP client + API service
+│   │   ├── components/               # Reusable components (DataTable, Modal, etc.)
+│   │   ├── context/                  # React contexts (Auth, Theme, Workspace)
+│   │   ├── features/                 # Feature pages (dashboard, tasks, etc.)
+│   │   ├── hooks/                    # Custom React hooks
+│   │   ├── mocks/                    # MSW handlers & mock data generators
+│   │   ├── routes/                   # Route definitions + auth guards
+│   │   ├── types/                    # TypeScript type definitions
+│   │   └── utils/                    # Formatting, class name utilities
+│   ├── public/                       # Static assets, MSW service worker
+│   └── package.json
+├── data/                             # Shared SQLite database directory
+│   └── .gitkeep
+├── .tools/                           # Bundled Maven (portable, no system setup)
+├── start-dev.ps1                     # Windows dev launcher
+├── start-dev.sh                      # Linux/macOS dev launcher
+├── stop-dev.ps1                      # Stop script
+├── check-dev.ps1                     # Health check script
+├── .env.example                      # Environment variable template
+└── README.md                         # This file
 ```
 
-Start the demo fallback without PostgreSQL:
+---
+
+## Quick Start
+
+### Prerequisites
+- **Java 17+** (21 recommended)
+- **Node.js 18+**
+- **Maven** (bundled in `.tools/`, or system PATH, or set `MVN_CMD`)
+
+### Zero-Setup Start (SQLite &mdash; no database install!)
 
 ```powershell
-.\start-dev.ps1 -BackendProfile demo
-```
+# Clone the repo
+git clone <repo-url>
+cd General-Portal
 
-Open the site:
-
-- Frontend: http://localhost:5173
-- Backend health check: http://localhost:8080/api/health
-
-Check whether the frontend, backend, and PostgreSQL are reachable:
-
-```powershell
-.\check-dev.ps1
-```
-
-Stop the frontend and backend:
-
-```powershell
-.\stop-dev.ps1
-```
-
-## Local Development
-
-The normal workflow does not require Docker. Run React and Spring Boot directly, and use a native Windows PostgreSQL install for structured data.
-
-### 1. Install PostgreSQL
-
-Install PostgreSQL 16.x from the official Windows installer:
-
-- https://www.postgresql.org/download/windows/
-
-Create the development user and database with SQL Shell or pgAdmin:
-
-```sql
-CREATE USER orgflow WITH PASSWORD 'orgflow';
-CREATE DATABASE orgflow OWNER orgflow;
-GRANT ALL PRIVILEGES ON DATABASE orgflow TO orgflow;
-```
-
-The app expects PostgreSQL at `localhost:5432` by default.
-
-### 2. Start The App
-
-From the repository root:
-
-```powershell
-.\start-dev.ps1
-```
-
-This starts:
-
-- Backend: `http://localhost:8080`
-- Frontend: `http://localhost:5173`
-
-Check the stack:
-
-```powershell
-.\check-dev.ps1
-```
-
-Stop both servers:
-
-```powershell
-.\stop-dev.ps1
-```
-
-## Backend Profiles
-
-The backend defaults to the `dev` profile.
-
-- `dev`: PostgreSQL on `localhost:5432`, simple in-memory cache, no Redis required.
-- `redis`: optional add-on profile for Redis cache/session support.
-- `demo`: H2 fallback with seeded data for quick demos when PostgreSQL is unavailable.
-
-Run the H2 fallback:
-
-```powershell
-.\start-dev.ps1 -BackendProfile demo
-```
-
-Run PostgreSQL with Redis enabled:
-
-```powershell
-.\start-dev.ps1 -WithRedis
-```
-
-Redis is intentionally deferred for the MVP. If you add it later on Windows, prefer WSL Redis or Memurai:
-
-- https://redis.io/docs/latest/operate/oss_and_stack/install/archive/install-redis/install-redis-on-windows/
-
-## Manual Commands
-
-Backend:
-
-```powershell
-cd backend
-..\.tools\apache-maven-3.9.11\bin\mvn.cmd spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-Frontend:
-
-```powershell
-cd frontend
-npm run dev
-```
-
-## Configuration And Microsoft APIs
-
-Demo authentication is enabled by default so the MVP is usable before Microsoft Entra credentials are configured.
-
-Copy the example environment file:
-
-```powershell
+# Copy environment template
 Copy-Item .env.example .env.local
+
+# Start everything with SQLite (auto-creates data/orgflow.db)
+.\start-dev.ps1 -DatabaseProvider sqlite
 ```
 
-Then fill in `.env.local`. The `start-dev.ps1` script loads `.env.local` automatically.
-
-Set these values for real Microsoft login:
+### Start with PostgreSQL
 
 ```powershell
-$env:ORGFLOW_DEMO_MODE="false"
-$env:MICROSOFT_TENANT_ID="..."
-$env:MICROSOFT_CLIENT_ID="..."
-$env:MICROSOFT_CLIENT_SECRET="..."
-$env:FRONTEND_ORIGIN="http://localhost:5173"
+# Requires PostgreSQL running on localhost:5432
+.\start-dev.ps1 -DatabaseProvider postgres
 ```
 
-Microsoft Entra redirect URI for local development:
-
-```text
-http://localhost:8080/login/oauth2/code/microsoft
-```
-
-Microsoft Graph and API integration instructions live in:
-
-- `docs/MICROSOFT_API_INTEGRATION.md`
-
-Important boundary: Microsoft client secrets belong in `.env.local` and backend configuration only. Do not put Microsoft secrets in React/Vite files.
-
-PostgreSQL defaults:
+### Start with H2 (in-memory, no persistence)
 
 ```powershell
-$env:POSTGRES_URL="jdbc:postgresql://localhost:5432/orgflow"
-$env:POSTGRES_USER="orgflow"
-$env:POSTGRES_PASSWORD="orgflow"
+.\start-dev.ps1 -BackendProfile demo
 ```
 
-Optional Redis defaults:
+### Linux / macOS
 
-```powershell
-$env:REDIS_HOST="localhost"
-$env:REDIS_PORT="6379"
+```bash
+chmod +x start-dev.sh
+./start-dev.sh -d sqlite        # SQLite
+./start-dev.sh -d postgres      # PostgreSQL
+./start-dev.sh -b demo          # H2
 ```
 
-The frontend API URL defaults to `http://localhost:8080/api`. Override it with:
+---
 
-```powershell
-$env:VITE_API_URL="http://localhost:8080/api"
+## Available Profiles
+
+| Profile | Database | Requires | Persistence | Use Case |
+|---------|----------|----------|-------------|----------|
+| `dev` (default) | PostgreSQL | PostgreSQL 16 at `localhost:5432` | Yes | Full development |
+| `sqlite` | SQLite | Nothing (file auto-created) | Yes | Quick dev / demo |
+| `demo` | H2 in-memory | Nothing | No (lost on restart) | Quick test / fallback |
+| `redis` | Redis add-on | Redis at `localhost:6379` | &mdash; | Cache & session |
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and customize:
+
+```ini
+# Frontend
+FRONTEND_ORIGIN=http://localhost:5173
+VITE_API_URL=http://localhost:8080/api
+VITE_DEV_AUTH=false              # Set to "true" to show developer login form
+
+# Database (PostgreSQL)
+POSTGRES_URL=jdbc:postgresql://localhost:5432/orgflow
+POSTGRES_USER=orgflow
+POSTGRES_PASSWORD=yourpassword
+
+# Dev Authentication
+DEV_AUTH_USERNAME=dev@orgflow.local
+DEV_AUTH_PASSWORD=your-dev-password
+
+# Microsoft Entra ID (OAuth2)
+MICROSOFT_TENANT_ID=common
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+
+# Redis (optional)
+REDIS_HOST=localhost
+REDIS_PORT=6379
 ```
 
-## Docker
+---
 
-Docker is not required for daily development. `docker-compose.yml` remains as an optional convenience if you later want containerized PostgreSQL and Redis:
+## URLs After Startup
 
-```powershell
-docker compose up -d
+| Service | URL |
+|---------|-----|
+| **Frontend** | http://localhost:5173 |
+| **Backend Health** | http://localhost:8080/api/health |
+| **Swagger UI** | http://localhost:8080/swagger-ui/index.html |
+| **OpenAPI Spec** | http://localhost:8080/v3/api-docs |
+
+---
+
+## Role Hierarchy
+
+The portal enforces a linear role hierarchy. Higher roles inherit all permissions
+of lower roles:
+
+```
+Teacher Advisor  ─── Full access (admin)
+    │
+President  ─── Manage members, tasks, events, proposals, volunteers, files
+    │
+Vice President  ─── Manage tasks, events, volunteers, files
+    │
+Member  ─── View all (dashboard, tasks, events, messages, files)
+    │
+Grade Rep  ─── View events, messages, activity only
 ```
 
-## Verification
+Role enforcement happens at two levels:
+1. **Method security** (`@PreAuthorize`) on every controller endpoint
+2. **Role hierarchy** (`RoleHierarchyImpl`) for inherited permissions
 
-Backend:
+---
+
+## Running Tests
+
+### Backend
 
 ```powershell
 cd backend
-..\.tools\apache-maven-3.9.11\bin\mvn.cmd test
+
+# With bundled Maven
+..\tools\apache-maven-3.9.11\bin\mvn.cmd test
+
+# With SQLite profile
+..\tools\apache-maven-3.9.11\bin\mvn.cmd test -Dspring.profiles.active=sqlite
+
+# With H2 profile
+..\tools\apache-maven-3.9.11\bin\mvn.cmd test -Dspring.profiles.active=demo
 ```
 
-Frontend:
+### Frontend
 
 ```powershell
 cd frontend
-npm run build
+npm run build          # TypeScript type-check + Vite production build
+npm run format         # Prettier code formatting
+npm run check-format   # Verify formatting (CI)
 ```
+
+---
+
+## Authentication Modes
+
+### 1. Dev Login (local development)
+Set `DEV_AUTH_USERNAME` and `DEV_AUTH_PASSWORD` in `.env.local`. The frontend
+shows a Developer Login form when `VITE_DEV_AUTH=true`. The backend `DevLoginFilter`
+is only active in `dev`, `demo`, `local`, and `sqlite` profiles.
+
+### 2. Microsoft Entra ID (production)
+Set `ORGFLOW_DEMO_MODE=false` and provide real `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`,
+and `MICROSOFT_CLIENT_SECRET` values. Redirect URI: `http://localhost:8080/login/oauth2/code/microsoft`
+
+### 3. Frontend-Only (MSW Mock Mode)
+The frontend uses Mock Service Worker to intercept all API calls. No backend, no
+database, and no authentication are required. Simply run `npm run dev` from `frontend/`.
+
+---
+
+## Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| *PostgreSQL connection refused* | Use `-DatabaseProvider sqlite` or `-BackendProfile demo` |
+| *Maven not found* | The bundled Maven is in `.tools/`. Clone with `git` (not ZIP download). |
+| *Port 8080 / 5173 already in use* | Run `.\stop-dev.ps1` to clean up old processes. |
+| *SQLite database locked* | Stop the backend, delete `data/orgflow.db`, restart. |
+| *Frontend shows "Network error"* | Start the backend first, or run `npm run dev` from `frontend/` for MSW mock mode. |
+
+---
+
+## License
+
+This project is for internal club use. All rights reserved.
