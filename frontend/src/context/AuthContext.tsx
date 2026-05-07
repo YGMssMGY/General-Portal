@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { workspaceApi } from "../api/workspaceApi";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useDemoAuth } from "./DemoAuthContext";
 import type { UserProfile } from "../types";
 
 interface AuthContextValue {
@@ -14,44 +14,22 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile>();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    workspaceApi
-      .getCurrentUser()
-      .then((profile) => {
-        if (isMounted) {
-          setUser(profile);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const demo = useDemoAuth();
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
-      isAuthenticated: Boolean(user),
-      isLoading,
+      user: demo.user,
+      isAuthenticated: demo.isAuthenticated,
+      isLoading: demo.isLoading,
       login: () => {
-        window.location.href = workspaceApi.getMicrosoftLoginUrl();
+        window.location.href = "/admin";
       },
       logout: () => {
-        window.location.href = "/logout";
+        window.location.href = "/";
       },
-      hasPermission: (permission: string) => Boolean(user?.permissions.includes(permission))
+      hasPermission: demo.hasPermission,
     }),
-    [user, isLoading]
+    [demo.user, demo.isAuthenticated, demo.isLoading, demo.hasPermission]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -62,6 +40,5 @@ export function useAuth() {
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider");
   }
-
   return context;
 }

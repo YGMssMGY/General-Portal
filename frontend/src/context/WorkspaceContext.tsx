@@ -6,9 +6,9 @@ interface WorkspaceContextValue {
 }
 
 const defaultWorkspace: Workspace = {
-  id: "orgflow",
-  name: "OrgFlow Workspace",
-  description: "Workspace"
+  id: "ws-main",
+  name: "Club Portal",
+  description: "Developers' Club & Student Council Workspace",
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
@@ -24,6 +24,5 @@ export function useWorkspace() {
   if (!context) {
     throw new Error("useWorkspace must be used inside WorkspaceProvider");
   }
-
   return context;
 }
