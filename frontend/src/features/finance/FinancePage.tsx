@@ -26,7 +26,9 @@ const columns: ColumnDef<FinanceTransaction>[] = [
     key: "status",
     header: "Status",
     sortable: true,
-    render: (tx) => <Badge className={statusBadgeClass(tx.status)}>{sentenceCase(tx.status)}</Badge>,
+    render: (tx) => (
+      <Badge className={statusBadgeClass(tx.status)}>{sentenceCase(tx.status)}</Badge>
+    ),
   },
   {
     key: "amount",
@@ -47,27 +49,43 @@ export function FinancePage() {
   const { data, error, isLoading, refetch } = useFinanceTransactions();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Finance data is unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Finance data is unavailable"} onRetry={refetch} />;
 
   const pending = data.filter((tx) => tx.status === "pending" || tx.status === "under_review");
   const totalPending = pending.reduce((s, tx) => s + tx.amount, 0);
-  const approved = data.filter((tx) => tx.status === "approved").reduce((s, tx) => s + tx.amount, 0);
+  const approved = data
+    .filter((tx) => tx.status === "approved")
+    .reduce((s, tx) => s + tx.amount, 0);
 
   return (
     <div>
-      <PageHeader title="Finance" description="Track reimbursements, approvals, budgets, and spending." />
+      <PageHeader
+        title="Finance"
+        description="Track reimbursements, approvals, budgets, and spending."
+      />
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Pending Review</p>
-          <p className="mt-2 text-3xl font-semibold text-text-primary">{formatCurrency(totalPending)}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Pending Review
+          </p>
+          <p className="mt-2 text-3xl font-semibold text-text-primary">
+            {formatCurrency(totalPending)}
+          </p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Approved Spend</p>
-          <p className="mt-2 text-3xl font-semibold text-carbon-blue-60">{formatCurrency(approved)}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Approved Spend
+          </p>
+          <p className="mt-2 text-3xl font-semibold text-carbon-blue-60">
+            {formatCurrency(approved)}
+          </p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Open Requests</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Open Requests
+          </p>
           <p className="mt-2 text-3xl font-semibold text-text-primary">{pending.length}</p>
         </Card>
       </div>

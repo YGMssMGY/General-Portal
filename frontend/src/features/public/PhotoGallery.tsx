@@ -13,11 +13,12 @@ interface Photo {
 export function PhotoGallery() {
   const { data, error, isLoading, refetch } = useAsyncData(
     () => fetchJson<Photo[]>("/api/photos"),
-    []
+    [],
   );
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Photos unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Photos unavailable"} onRetry={refetch} />;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">

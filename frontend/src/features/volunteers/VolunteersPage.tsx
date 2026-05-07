@@ -22,7 +22,9 @@ const columns: ColumnDef<VolunteerSlot>[] = [
     header: "Capacity",
     sortable: true,
     render: (slot) => (
-      <span className={slot.filled >= slot.capacity ? "text-danger font-medium" : "text-text-primary"}>
+      <span
+        className={slot.filled >= slot.capacity ? "text-danger font-medium" : "text-text-primary"}
+      >
         {slot.filled}/{slot.capacity}
       </span>
     ),
@@ -35,7 +37,8 @@ export function VolunteersPage() {
   const { data, error, isLoading, refetch } = useVolunteerSlots();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Volunteer data unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Volunteer data unavailable"} onRetry={refetch} />;
 
   const totalSlots = data.length;
   const totalFilled = data.reduce((s, slot) => s + slot.filled, 0);
@@ -47,15 +50,21 @@ export function VolunteersPage() {
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Total Slots</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Total Slots
+          </p>
           <p className="mt-2 text-3xl font-semibold text-text-primary">{totalSlots}</p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Filled</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Filled
+          </p>
           <p className="mt-2 text-3xl font-semibold text-carbon-blue-60">{totalFilled}</p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Volunteer Hours</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Volunteer Hours
+          </p>
           <p className="mt-2 text-3xl font-semibold text-text-primary">{totalHours}</p>
         </Card>
       </div>

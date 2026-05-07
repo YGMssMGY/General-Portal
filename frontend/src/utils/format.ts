@@ -1,14 +1,14 @@
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD"
+    currency: "USD",
   }).format(value);
 }
 
 export function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
-    day: "numeric"
+    day: "numeric",
   }).format(new Date(value));
 }
 
@@ -17,7 +17,7 @@ export function formatDateTime(value: string): string {
     month: "short",
     day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
   }).format(new Date(value));
 }
 

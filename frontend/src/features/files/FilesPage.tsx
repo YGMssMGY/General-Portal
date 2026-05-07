@@ -35,18 +35,24 @@ export function FilesPage() {
   const { data, error, isLoading, refetch } = useFiles();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Files are unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Files are unavailable"} onRetry={refetch} />;
 
   return (
     <div>
-      <PageHeader title="Files" description="Store files and keep documents linked to workspace context." />
+      <PageHeader
+        title="Files"
+        description="Store files and keep documents linked to workspace context."
+      />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {data.slice(0, 4).map((file) => (
           <Card key={file.id} padding="lg">
             <Document size={24} className="text-carbon-blue-60" aria-hidden="true" />
             <h2 className="mt-3 font-medium text-text-primary text-sm truncate">{file.name}</h2>
-            <p className="mt-1 text-xs text-text-secondary">{file.sizeLabel} &middot; {file.fileType}</p>
+            <p className="mt-1 text-xs text-text-secondary">
+              {file.sizeLabel} &middot; {file.fileType}
+            </p>
           </Card>
         ))}
       </div>

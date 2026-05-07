@@ -90,7 +90,8 @@ export function ProposalsPage() {
   }
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Proposals unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Proposals unavailable"} onRetry={refetch} />;
 
   return (
     <div>
@@ -121,7 +122,9 @@ export function ProposalsPage() {
           <Card padding="lg" className="h-fit">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <Badge className={statusBadgeClass(selected.status)}>{sentenceCase(selected.status)}</Badge>
+                <Badge className={statusBadgeClass(selected.status)}>
+                  {sentenceCase(selected.status)}
+                </Badge>
                 <h2 className="mt-3 text-lg font-semibold text-text-primary">{selected.title}</h2>
               </div>
               <Document size={24} className="text-text-secondary shrink-0" aria-hidden="true" />
@@ -145,16 +148,32 @@ export function ProposalsPage() {
         ) : null}
       </div>
 
-      <Modal title="New Proposal" description="Submit a proposal for review." isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <Modal
+        title="New Proposal"
+        description="Submit a proposal for review."
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      >
         <form className="grid gap-4" onSubmit={handleCreate}>
           <label className="grid gap-1.5">
             <span className="text-sm font-medium text-text-primary">Title</span>
-            <input required className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive" value={form.title} onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))} />
+            <input
+              required
+              className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+              value={form.title}
+              onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
+            />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5">
               <span className="text-sm font-medium text-text-primary">Type</span>
-              <select className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive" value={form.type} onChange={(e) => setForm((c) => ({ ...c, type: e.target.value as Proposal["type"] }))}>
+              <select
+                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+                value={form.type}
+                onChange={(e) =>
+                  setForm((c) => ({ ...c, type: e.target.value as Proposal["type"] }))
+                }
+              >
                 <option value="Event">Event</option>
                 <option value="Purchase">Purchase</option>
                 <option value="Project">Project</option>
@@ -162,17 +181,47 @@ export function ProposalsPage() {
             </label>
             <label className="grid gap-1.5">
               <span className="text-sm font-medium text-text-primary">Budget</span>
-              <input required min="0" step="0.01" type="number" className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive" value={form.budget} onChange={(e) => setForm((c) => ({ ...c, budget: e.target.value }))} />
+              <input
+                required
+                min="0"
+                step="0.01"
+                type="number"
+                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+                value={form.budget}
+                onChange={(e) => setForm((c) => ({ ...c, budget: e.target.value }))}
+              />
             </label>
           </div>
           <label className="grid gap-1.5">
             <span className="text-sm font-medium text-text-primary">Summary</span>
-            <textarea required rows={4} className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive resize-y" value={form.summary} onChange={(e) => setForm((c) => ({ ...c, summary: e.target.value }))} />
+            <textarea
+              required
+              rows={4}
+              className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive resize-y"
+              value={form.summary}
+              onChange={(e) => setForm((c) => ({ ...c, summary: e.target.value }))}
+            />
           </label>
-          {createError ? <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">{createError}</p> : null}
+          {createError ? (
+            <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">
+              {createError}
+            </p>
+          ) : null}
           <div className="flex justify-end gap-3">
-            <button type="button" className="border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors" onClick={() => setIsModalOpen(false)}>Cancel</button>
-            <button type="submit" disabled={isCreating} className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors">{isCreating ? "Submitting..." : "Submit Proposal"}</button>
+            <button
+              type="button"
+              className="border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors"
+            >
+              {isCreating ? "Submitting..." : "Submit Proposal"}
+            </button>
           </div>
         </form>
       </Modal>

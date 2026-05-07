@@ -38,14 +38,14 @@ export function DemoAuthProvider({ children }: { children: ReactNode }) {
 
   const hasPermission = useCallback(
     (permission: string) => user.permissions.includes(permission),
-    [user.permissions]
+    [user.permissions],
   );
 
   const isAtLeastRole = useCallback(
     (requiredRole: UserRole) => {
       return (ROLE_HIERARCHY[role] ?? 0) >= (ROLE_HIERARCHY[requiredRole] ?? 0);
     },
-    [role]
+    [role],
   );
 
   const value = useMemo<DemoAuthContextValue>(
@@ -59,7 +59,7 @@ export function DemoAuthProvider({ children }: { children: ReactNode }) {
       hasPermission,
       isAtLeastRole,
     }),
-    [user, role, switchRole, hasPermission, isAtLeastRole]
+    [user, role, switchRole, hasPermission, isAtLeastRole],
   );
 
   return <DemoAuthContext.Provider value={value}>{children}</DemoAuthContext.Provider>;

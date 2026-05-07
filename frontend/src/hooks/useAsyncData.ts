@@ -26,7 +26,8 @@ export function useAsyncData<T>(loader: () => Promise<T>, deps: DependencyList):
       })
       .catch((unknownError: unknown) => {
         if (isMounted) {
-          const message = unknownError instanceof Error ? unknownError.message : "Something went wrong";
+          const message =
+            unknownError instanceof Error ? unknownError.message : "Something went wrong";
           setError(message);
         }
       })
@@ -45,6 +46,6 @@ export function useAsyncData<T>(loader: () => Promise<T>, deps: DependencyList):
     data,
     error,
     isLoading,
-    refetch: () => setVersion((current) => current + 1)
+    refetch: () => setVersion((current) => current + 1),
   };
 }

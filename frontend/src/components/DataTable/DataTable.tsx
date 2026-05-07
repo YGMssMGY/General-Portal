@@ -99,7 +99,10 @@ export function DataTable({
   return (
     <div className="border border-border-subtle bg-surface">
       {toolbar ? (
-        <DataTableToolbar selectedCount={selected.size} onClearSelection={() => setSelected(new Set())}>
+        <DataTableToolbar
+          selectedCount={selected.size}
+          onClearSelection={() => setSelected(new Set())}
+        >
           {toolbar}
         </DataTableToolbar>
       ) : null}

@@ -32,7 +32,9 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
       <Icon size={24} className={colorMap[metric.tone]} aria-hidden="true" />
       <div>
         <p className="text-2xl font-semibold text-text-primary">{metric.value}</p>
-        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{metric.label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          {metric.label}
+        </p>
       </div>
     </Card>
   );
@@ -43,7 +45,8 @@ export function DashboardPage() {
   const { data, error, isLoading, refetch } = useDashboard();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Dashboard data is unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Dashboard data is unavailable"} onRetry={refetch} />;
 
   return (
     <div>
@@ -66,22 +69,30 @@ export function DashboardPage() {
         <div className="space-y-6">
           <Card padding="lg">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text-primary font-condensed">Needs Attention</h2>
-              <Link to="/admin/tasks" className="text-sm font-medium text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors">
+              <h2 className="text-lg font-semibold text-text-primary font-condensed">
+                Needs Attention
+              </h2>
+              <Link
+                to="/admin/tasks"
+                className="text-sm font-medium text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors"
+              >
                 View All
               </Link>
             </div>
             <div className="space-y-3">
               {data.attention.map((item) => (
-                <div key={item.id} className="flex flex-col gap-3 border border-border-subtle p-4 md:flex-row md:items-center md:justify-between">
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-3 border border-border-subtle p-4 md:flex-row md:items-center md:justify-between"
+                >
                   <div className="flex items-center gap-4">
                     <Badge
                       className={
                         item.tone === "danger"
                           ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
                           : item.tone === "tertiary"
-                          ? "border-carbon-yellow-30 bg-carbon-yellow-10 text-carbon-yellow-50"
-                          : "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
+                            ? "border-carbon-yellow-30 bg-carbon-yellow-10 text-carbon-yellow-50"
+                            : "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
                       }
                     >
                       {item.label}
@@ -103,7 +114,10 @@ export function DashboardPage() {
           <Card padding="lg">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-text-primary font-condensed">My Tasks</h2>
-              <Link to="/admin/tasks" className="text-sm font-medium text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors">
+              <Link
+                to="/admin/tasks"
+                className="text-sm font-medium text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors"
+              >
                 View All
               </Link>
             </div>
@@ -121,7 +135,9 @@ export function DashboardPage() {
 
         <div className="space-y-6">
           <Card padding="lg">
-            <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">Upcoming Events</h2>
+            <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">
+              Upcoming Events
+            </h2>
             <div className="space-y-4">
               {data.upcomingEvents.map((event) => (
                 <div key={event.id} className="border-l-2 border-carbon-blue-60 pl-4">
@@ -136,7 +152,9 @@ export function DashboardPage() {
           </Card>
 
           <Card padding="lg">
-            <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">Recent Activity</h2>
+            <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">
+              Recent Activity
+            </h2>
             <div className="space-y-4">
               {data.recentActivity.map((activity) => (
                 <div key={activity.id} className="flex gap-3">

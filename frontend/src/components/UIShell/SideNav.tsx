@@ -31,9 +31,7 @@ export function SideNav({ isOpen, onNavigate }: SideNavProps) {
           CP
         </div>
         <div>
-          <p className="text-sm font-semibold text-text-primary leading-tight">
-            Club Portal
-          </p>
+          <p className="text-sm font-semibold text-text-primary leading-tight">Club Portal</p>
           <p className="text-xs text-text-secondary">Workspace</p>
         </div>
       </div>
@@ -52,18 +50,8 @@ export function SideNav({ isOpen, onNavigate }: SideNavProps) {
       </nav>
 
       <div className="border-t border-border-subtle py-2">
-        <SideNavItem
-          to="/admin/settings"
-          icon="Settings"
-          label="Settings"
-          onClick={onNavigate}
-        />
-        <SideNavItem
-          to="/"
-          icon="Launch"
-          label="Public Site"
-          onClick={onNavigate}
-        />
+        <SideNavItem to="/admin/settings" icon="Settings" label="Settings" onClick={onNavigate} />
+        <SideNavItem to="/" icon="Launch" label="Public Site" onClick={onNavigate} />
       </div>
     </aside>
   );

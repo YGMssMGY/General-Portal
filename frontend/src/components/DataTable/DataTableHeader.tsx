@@ -43,7 +43,9 @@ export function DataTableHeader<T>({
             onClick={() => {
               if (col.sortable) onSort(col.key);
             }}
-            aria-sort={sortKey === col.key ? (sortDir === "asc" ? "ascending" : "descending") : undefined}
+            aria-sort={
+              sortKey === col.key ? (sortDir === "asc" ? "ascending" : "descending") : undefined
+            }
             scope="col"
           >
             <span className="inline-flex items-center gap-1">

@@ -50,42 +50,111 @@ function pickN<T>(arr: T[], n: number): T[] {
 }
 
 const firstNames = [
-  "Alex", "Bianca", "Carlos", "Diana", "Ethan", "Fatima", "George", "Hannah",
-  "Isaac", "Julia", "Kevin", "Lena", "Marcus", "Naomi", "Oscar", "Priya",
-  "Quinn", "Ravi", "Sofia", "Tomas", "Uma", "Victor", "Wei", "Xiomara",
-  "Yuki", "Zara",
+  "Alex",
+  "Bianca",
+  "Carlos",
+  "Diana",
+  "Ethan",
+  "Fatima",
+  "George",
+  "Hannah",
+  "Isaac",
+  "Julia",
+  "Kevin",
+  "Lena",
+  "Marcus",
+  "Naomi",
+  "Oscar",
+  "Priya",
+  "Quinn",
+  "Ravi",
+  "Sofia",
+  "Tomas",
+  "Uma",
+  "Victor",
+  "Wei",
+  "Xiomara",
+  "Yuki",
+  "Zara",
 ];
 const lastNames = [
-  "Anderson", "Brown", "Chen", "Davis", "Edwards", "Fernandez", "Gupta",
-  "Hughes", "Ivanov", "Johnson", "Kim", "Lee", "Martinez", "Nakamura",
-  "O'Brien", "Patel", "Reyes", "Singh", "Taylor", "Williams",
+  "Anderson",
+  "Brown",
+  "Chen",
+  "Davis",
+  "Edwards",
+  "Fernandez",
+  "Gupta",
+  "Hughes",
+  "Ivanov",
+  "Johnson",
+  "Kim",
+  "Lee",
+  "Martinez",
+  "Nakamura",
+  "O'Brien",
+  "Patel",
+  "Reyes",
+  "Singh",
+  "Taylor",
+  "Williams",
 ];
 const projects = [
-  "Hackathon 2026", "Open House", "Website Redesign", "Mentorship Program",
-  "Fundraising Gala", "Club Fair", "Tech Workshop Series", "Community Outreach",
-  "Newsletter", "Alumni Networking",
+  "Hackathon 2026",
+  "Open House",
+  "Website Redesign",
+  "Mentorship Program",
+  "Fundraising Gala",
+  "Club Fair",
+  "Tech Workshop Series",
+  "Community Outreach",
+  "Newsletter",
+  "Alumni Networking",
 ];
 const categories = [
-  "Supplies", "Events", "Travel", "Equipment", "Software", "Food", "Marketing",
-  "Venue", "Speaker Fees", "Miscellaneous",
+  "Supplies",
+  "Events",
+  "Travel",
+  "Equipment",
+  "Software",
+  "Food",
+  "Marketing",
+  "Venue",
+  "Speaker Fees",
+  "Miscellaneous",
 ];
 const fileTypes = ["PDF", "DOCX", "XLSX", "PNG", "ZIP", "PPTX", "CSV"];
 const positions = [
-  "Teacher Advisor", "President", "Vice President", "Secretary", "Treasurer",
-  "Event Coordinator", "Member", "Grade Representative",
+  "Teacher Advisor",
+  "President",
+  "Vice President",
+  "Secretary",
+  "Treasurer",
+  "Event Coordinator",
+  "Member",
+  "Grade Representative",
 ];
 const accessLevels = ["Admin", "Officer", "Member", "Public"];
 const eventStatuses: ResourceStatus[] = [
-  "draft", "pending", "under_review", "approved", "active", "completed",
+  "draft",
+  "pending",
+  "under_review",
+  "approved",
+  "active",
+  "completed",
 ];
 const resourceStatuses: ResourceStatus[] = [
-  "draft", "pending", "under_review", "approved", "rejected", "active", "completed",
+  "draft",
+  "pending",
+  "under_review",
+  "approved",
+  "rejected",
+  "active",
+  "completed",
 ];
 const taskStatuses: TaskStatus[] = ["todo", "in_progress", "blocked", "done"];
 const priorities: Priority[] = ["low", "normal", "medium", "high"];
-const proposalTypes: Array<"Event" | "Purchase" | "Project"> = [
-  "Event", "Purchase", "Project",
-];
+const proposalTypes: Array<"Event" | "Purchase" | "Project"> = ["Event", "Purchase", "Project"];
 
 function name(): string {
   return `${pick(firstNames)} ${pick(lastNames)}`;
@@ -127,9 +196,16 @@ export function generateUserProfiles(): Record<UserRole, UserProfile> {
       avatarUrl: "",
       workspaceId: "ws-main",
       permissions: [
-        "admin", "manage_members", "manage_tasks", "manage_events",
-        "manage_finance", "manage_proposals", "manage_volunteers",
-        "manage_files", "manage_settings", "view_all",
+        "admin",
+        "manage_members",
+        "manage_tasks",
+        "manage_events",
+        "manage_finance",
+        "manage_proposals",
+        "manage_volunteers",
+        "manage_files",
+        "manage_settings",
+        "view_all",
       ],
     },
     president: {
@@ -139,8 +215,12 @@ export function generateUserProfiles(): Record<UserRole, UserProfile> {
       avatarUrl: "",
       workspaceId: "ws-main",
       permissions: [
-        "manage_members", "manage_tasks", "manage_events",
-        "manage_proposals", "manage_volunteers", "manage_files",
+        "manage_members",
+        "manage_tasks",
+        "manage_events",
+        "manage_proposals",
+        "manage_volunteers",
+        "manage_files",
         "view_all",
       ],
     },
@@ -151,8 +231,11 @@ export function generateUserProfiles(): Record<UserRole, UserProfile> {
       avatarUrl: "",
       workspaceId: "ws-main",
       permissions: [
-        "manage_tasks", "manage_events", "manage_volunteers",
-        "manage_files", "view_all",
+        "manage_tasks",
+        "manage_events",
+        "manage_volunteers",
+        "manage_files",
+        "view_all",
       ],
     },
     member: {
@@ -196,12 +279,27 @@ export function generateTasks(): Task[] {
     tasks.push({
       id: uid("task"),
       title: `${pick([
-        "Prepare", "Review", "Update", "Finalize", "Draft", "Submit", "Organize",
-        "Coordinate", "Plan", "Execute",
+        "Prepare",
+        "Review",
+        "Update",
+        "Finalize",
+        "Draft",
+        "Submit",
+        "Organize",
+        "Coordinate",
+        "Plan",
+        "Execute",
       ])} ${pick([
-        "budget report", "event schedule", "member survey", "sponsorship deck",
-        "social media post", "volunteer roster", "venue contract",
-        "equipment inventory", "training materials", "meeting minutes",
+        "budget report",
+        "event schedule",
+        "member survey",
+        "sponsorship deck",
+        "social media post",
+        "volunteer roster",
+        "venue contract",
+        "equipment inventory",
+        "training materials",
+        "meeting minutes",
       ])}`,
       status,
       priority: pick(priorities),
@@ -210,7 +308,14 @@ export function generateTasks(): Task[] {
       assigneeName: name(),
       progress: status === "done" ? 100 : status === "todo" ? 0 : randomInt(10, 90),
       ...(status === "blocked"
-        ? { blockedReason: pick(["Waiting on approval", "Budget pending", "Missing requirements", "External dependency"]) }
+        ? {
+            blockedReason: pick([
+              "Waiting on approval",
+              "Budget pending",
+              "Missing requirements",
+              "External dependency",
+            ]),
+          }
         : {}),
     });
   }
@@ -221,9 +326,16 @@ export function generateProposals(): Proposal[] {
   return Array.from({ length: 25 }, (_, i) => ({
     id: uid("prop"),
     title: `${pick(["Proposal:", "Request for:", "Plan for:"])} ${pick([
-      "Spring Carnival", "New Laptops", "Website Hosting", "Guest Speaker Series",
-      "Club T-Shirts", "Photography Equipment", "End-of-Year Banquet",
-      "Coding Bootcamp", "Robotics Kit", "Field Trip",
+      "Spring Carnival",
+      "New Laptops",
+      "Website Hosting",
+      "Guest Speaker Series",
+      "Club T-Shirts",
+      "Photography Equipment",
+      "End-of-Year Banquet",
+      "Coding Bootcamp",
+      "Robotics Kit",
+      "Field Trip",
     ])}`,
     type: pick(proposalTypes),
     status: pick(resourceStatuses),
@@ -245,10 +357,18 @@ export function generateEvents(): EventItem[] {
     return {
       id: uid("event"),
       title: pick([
-        "Annual Hackathon", "Club Fair Booth", "Leadership Workshop",
-        "Community Cleanup", "Movie Night", "Study Group Session",
-        "Guest Lecture", "Fundraising Bake Sale", "Team Building Retreat",
-        "Career Panel", "Game Tournament", "Art Exhibition",
+        "Annual Hackathon",
+        "Club Fair Booth",
+        "Leadership Workshop",
+        "Community Cleanup",
+        "Movie Night",
+        "Study Group Session",
+        "Guest Lecture",
+        "Fundraising Bake Sale",
+        "Team Building Retreat",
+        "Career Panel",
+        "Game Tournament",
+        "Art Exhibition",
       ]),
       status,
       startsAt: isoDate(randomInt(-30, 60)),
@@ -268,13 +388,26 @@ export function generateVolunteerSlots(): VolunteerSlot[] {
     return {
       id: uid("vol"),
       title: pick([
-        "Registration Desk", "Setup Crew", "Photographer", "MC / Host",
-        "Food Service", "Security", "Cleanup Crew", "Social Media Live",
-        "First Aid", "Greeter",
+        "Registration Desk",
+        "Setup Crew",
+        "Photographer",
+        "MC / Host",
+        "Food Service",
+        "Security",
+        "Cleanup Crew",
+        "Social Media Live",
+        "First Aid",
+        "Greeter",
       ]),
       eventName: pick([
-        "Hackathon", "Open House", "Club Fair", "Fundraising Gala",
-        "Workshop", "Retreat", "Panel Discussion", "Tournament",
+        "Hackathon",
+        "Open House",
+        "Club Fair",
+        "Fundraising Gala",
+        "Workshop",
+        "Retreat",
+        "Panel Discussion",
+        "Tournament",
       ]),
       startsAt: isoDate(randomInt(1, 30)),
       capacity: cap,
@@ -288,9 +421,16 @@ export function generateFinanceTransactions(): FinanceTransaction[] {
   return Array.from({ length: 25 }, () => ({
     id: uid("fin"),
     title: `${pick(["Payment for", "Reimbursement:", "Invoice:", "Receipt:", "Transfer:"])} ${pick([
-      "catering services", "venue deposit", "equipment rental",
-      "software license", "printing costs", "transportation",
-      "speaker honorarium", "decorations", "prizes", "subscription",
+      "catering services",
+      "venue deposit",
+      "equipment rental",
+      "software license",
+      "printing costs",
+      "transportation",
+      "speaker honorarium",
+      "decorations",
+      "prizes",
+      "subscription",
     ])}`,
     category: pick(categories),
     status: pick(resourceStatuses),
@@ -328,8 +468,12 @@ export function generateMessages(): { threads: MessageThread[]; msgs: Record<str
     threads.push({
       id: tid,
       title: pick([
-        "Budget Discussion", "Event Planning", "Member Onboarding",
-        "Volunteer Schedule", "Project Update", "General Announcement",
+        "Budget Discussion",
+        "Event Planning",
+        "Member Onboarding",
+        "Volunteer Schedule",
+        "Project Update",
+        "General Announcement",
       ]),
       context: pick(["event", "task", "proposal", "file", "general"]),
       status: pick(resourceStatuses),
@@ -347,9 +491,16 @@ export function generateFiles(): WorkspaceFile[] {
   return Array.from({ length: 25 }, () => ({
     id: uid("file"),
     name: `${pick([
-      "Budget_Report", "Event_Plan", "Meeting_Notes", "Proposal_Draft",
-      "Member_Roster", "Volunteer_Schedule", "Presentation", "Flyer",
-      "Contract", "Photo_Album",
+      "Budget_Report",
+      "Event_Plan",
+      "Meeting_Notes",
+      "Proposal_Draft",
+      "Member_Roster",
+      "Volunteer_Schedule",
+      "Presentation",
+      "Flyer",
+      "Contract",
+      "Photo_Album",
     ])}_${dateStr(randomInt(-90, -1))}.${pick(fileTypes).toLowerCase()}`,
     fileType: pick(fileTypes),
     ownerName: name(),
@@ -362,10 +513,14 @@ export function generateFiles(): WorkspaceFile[] {
 export function generateMembers(): Member[] {
   return Array.from({ length: 25 }, () => {
     const p = pick(positions);
-    const a = p === "Teacher Advisor" ? "Admin"
-      : p === "President" || p === "Vice President" || p === "Treasurer" || p === "Secretary" ? "Officer"
-      : p === "Grade Representative" ? "Public"
-      : "Member";
+    const a =
+      p === "Teacher Advisor"
+        ? "Admin"
+        : p === "President" || p === "Vice President" || p === "Treasurer" || p === "Secretary"
+          ? "Officer"
+          : p === "Grade Representative"
+            ? "Public"
+            : "Member";
     return {
       id: uid("mbr"),
       name: name(),
@@ -374,11 +529,12 @@ export function generateMembers(): Member[] {
       accessLabel: a,
       taskCount: randomInt(0, 15),
       volunteerHours: randomInt(0, 40),
-      permissions: a === "Admin"
-        ? ["admin", "manage_all"]
-        : a === "Officer"
-        ? ["manage_tasks", "manage_events"]
-        : ["view_all"],
+      permissions:
+        a === "Admin"
+          ? ["admin", "manage_all"]
+          : a === "Officer"
+            ? ["manage_tasks", "manage_events"]
+            : ["view_all"],
     };
   });
 }
@@ -389,7 +545,13 @@ export function generateActivity(): ActivityItem[] {
     actorName: name(),
     action: pick(["created", "updated", "commented on", "approved", "rejected", "completed"]),
     resourceType: pick(["Task", "Proposal", "Event", "File", "Finance"]),
-    resourceTitle: pick(["Budget Report", "Event Plan", "Task Assignment", "Proposal #42", "Meeting Notes"]),
+    resourceTitle: pick([
+      "Budget Report",
+      "Event Plan",
+      "Task Assignment",
+      "Proposal #42",
+      "Meeting Notes",
+    ]),
     occurredAt: isoDate(randomInt(-7, 0)),
   }));
 }
@@ -398,15 +560,51 @@ export function generateDashboardData(): DashboardData {
   const tasks = generateTasks();
   return {
     metrics: [
-      { label: "Active Tasks", value: String(tasks.filter((t) => t.status !== "done").length), tone: "primary", icon: "Task" },
-      { label: "Open Proposals", value: String(randomInt(3, 12)), tone: "secondary", icon: "Document" },
-      { label: "Upcoming Events", value: String(randomInt(2, 8)), tone: "tertiary", icon: "Calendar" },
+      {
+        label: "Active Tasks",
+        value: String(tasks.filter((t) => t.status !== "done").length),
+        tone: "primary",
+        icon: "Task",
+      },
+      {
+        label: "Open Proposals",
+        value: String(randomInt(3, 12)),
+        tone: "secondary",
+        icon: "Document",
+      },
+      {
+        label: "Upcoming Events",
+        value: String(randomInt(2, 8)),
+        tone: "tertiary",
+        icon: "Calendar",
+      },
       { label: "Overdue Items", value: String(randomInt(0, 5)), tone: "danger", icon: "Warning" },
     ],
     attention: [
-      { id: "att-1", label: "Overdue", title: "Budget report submission", owner: "Diana Edwards", dueLabel: "3 days ago", tone: "danger" },
-      { id: "att-2", label: "Due soon", title: "Sponsorship deck finalization", owner: "Kevin Lee", dueLabel: "Tomorrow", tone: "tertiary" },
-      { id: "att-3", label: "New", title: "Member onboarding for March", owner: "Fatima Fernandez", dueLabel: "In 2 days", tone: "primary" },
+      {
+        id: "att-1",
+        label: "Overdue",
+        title: "Budget report submission",
+        owner: "Diana Edwards",
+        dueLabel: "3 days ago",
+        tone: "danger",
+      },
+      {
+        id: "att-2",
+        label: "Due soon",
+        title: "Sponsorship deck finalization",
+        owner: "Kevin Lee",
+        dueLabel: "Tomorrow",
+        tone: "tertiary",
+      },
+      {
+        id: "att-3",
+        label: "New",
+        title: "Member onboarding for March",
+        owner: "Fatima Fernandez",
+        dueLabel: "In 2 days",
+        tone: "primary",
+      },
     ],
     myTasks: tasks.slice(0, 5),
     upcomingEvents: generateEvents().slice(0, 4),
@@ -416,7 +614,11 @@ export function generateDashboardData(): DashboardData {
 
 export function generateSearchResults(): SearchResult[] {
   const types: Array<"Task" | "Proposal" | "Event" | "File" | "Finance"> = [
-    "Task", "Proposal", "Event", "File", "Finance",
+    "Task",
+    "Proposal",
+    "Event",
+    "File",
+    "Finance",
   ];
   return Array.from({ length: 20 }, () => ({
     id: uid("sr"),
@@ -445,10 +647,18 @@ export function generatePublicEvents(): PublicEvent[] {
   return Array.from({ length: 12 }, (_, i) => ({
     id: u("pub-" + i),
     title: pick([
-      "Annual Hackathon 2025", "Spring Coding Workshop", "Leadership Summit",
-      "Community Tech Fair", "Robotics Competition", "Alumni Networking Night",
-      "Open Source Bootcamp", "Game Jam Weekend", "Career Development Panel",
-      "Science Exhibition", "Cultural Festival", "End-of-Year Celebration",
+      "Annual Hackathon 2025",
+      "Spring Coding Workshop",
+      "Leadership Summit",
+      "Community Tech Fair",
+      "Robotics Competition",
+      "Alumni Networking Night",
+      "Open Source Bootcamp",
+      "Game Jam Weekend",
+      "Career Development Panel",
+      "Science Exhibition",
+      "Cultural Festival",
+      "End-of-Year Celebration",
     ]),
     date: dateStr(randomInt(-365, -1)),
     description: pick([
@@ -461,12 +671,23 @@ export function generatePublicEvents(): PublicEvent[] {
   }));
 }
 
-export function generatePhotoGallery(): { id: string; title: string; date: string; description: string }[] {
+export function generatePhotoGallery(): {
+  id: string;
+  title: string;
+  date: string;
+  description: string;
+}[] {
   return Array.from({ length: 16 }, (_, i) => ({
     id: u("photo-" + i),
     title: pick([
-      "Group Photo", "Workshop Session", "Award Ceremony", "Team Building",
-      "Presentations", "Panel Discussion", "Hands-on Lab", "Closing Remarks",
+      "Group Photo",
+      "Workshop Session",
+      "Award Ceremony",
+      "Team Building",
+      "Presentations",
+      "Panel Discussion",
+      "Hands-on Lab",
+      "Closing Remarks",
     ]),
     date: dateStr(randomInt(-365, -1)),
     description: pick([
@@ -478,6 +699,6 @@ export function generatePhotoGallery(): { id: string; title: string; date: strin
 }
 
 function u(prefix: string): string {
-    nextId += 1;
-    return `${prefix}${nextId}`;
-  }
+  nextId += 1;
+  return `${prefix}${nextId}`;
+}

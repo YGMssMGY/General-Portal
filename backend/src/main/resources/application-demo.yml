@@ -13,8 +13,10 @@ spring:
 
 orgflow:
   security:
-    demo-mode: true
     auto-provision-users: true
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+    dev-auth:
+      username: ${DEV_AUTH_USERNAME:dev@orgflow.local}
+      password: ${DEV_AUTH_PASSWORD:}
   seed:
     enabled: true

@@ -50,9 +50,7 @@ export function Header({ onMenuClick, isSideNavOpen }: HeaderProps) {
         <RoleSwitcher />
 
         <div className="ml-2 flex items-center gap-2 pl-2">
-          <span className="hidden text-sm text-text-secondary sm:block">
-            {user?.name}
-          </span>
+          <span className="hidden text-sm text-text-secondary sm:block">{user?.name}</span>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-carbon-blue-60 text-sm font-semibold text-white">
             {user?.name
               ?.split(" ")

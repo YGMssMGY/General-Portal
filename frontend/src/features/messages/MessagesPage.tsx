@@ -22,14 +22,17 @@ export function MessagesPage() {
   }, [filtered, selectedId]);
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Messages unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Messages unavailable"} onRetry={refetch} />;
 
   return (
     <div className="grid min-h-[calc(100vh-96px)] border border-border-subtle bg-surface lg:grid-cols-[320px_minmax(0,1fr)_260px]">
       <aside className="border-b border-border-subtle lg:border-b-0 lg:border-r">
         <div className="border-b border-border-subtle p-4">
           <h1 className="text-lg font-semibold text-text-primary font-condensed">Messages</h1>
-          <p className="mt-1 text-sm text-text-secondary">Conversations linked to workspace resources.</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            Conversations linked to workspace resources.
+          </p>
         </div>
         <div className="flex gap-2 border-b border-border-subtle p-3">
           {(["all", "event", "task"] as const).map((f) => (
@@ -61,11 +64,15 @@ export function MessagesPage() {
             >
               <div className="mb-1 flex items-start justify-between gap-3">
                 <h2 className="font-medium text-text-primary">{thread.title}</h2>
-                <span className="text-xs text-text-secondary">{formatDateTime(thread.updatedAt)}</span>
+                <span className="text-xs text-text-secondary">
+                  {formatDateTime(thread.updatedAt)}
+                </span>
               </div>
               <p className="truncate text-sm text-text-secondary">{thread.preview}</p>
               <div className="mt-3 flex items-center justify-between">
-                <Badge className={statusBadgeClass(thread.status)}>{sentenceCase(thread.status)}</Badge>
+                <Badge className={statusBadgeClass(thread.status)}>
+                  {sentenceCase(thread.status)}
+                </Badge>
                 {thread.unreadCount > 0 ? (
                   <span className="flex h-5 min-w-5 items-center justify-center bg-carbon-blue-60 px-1.5 text-xs font-semibold text-white">
                     {thread.unreadCount}
@@ -107,7 +114,9 @@ export function MessagesPage() {
           </div>
           <div>
             <dt className="text-text-secondary">Status</dt>
-            <dd className="font-medium text-text-primary">{selected ? sentenceCase(selected.status) : ""}</dd>
+            <dd className="font-medium text-text-primary">
+              {selected ? sentenceCase(selected.status) : ""}
+            </dd>
           </div>
           <div>
             <dt className="text-text-secondary">Unread</dt>

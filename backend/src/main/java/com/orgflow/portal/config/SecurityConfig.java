@@ -1,6 +1,6 @@
 package com.orgflow.portal.config;
 
-import com.orgflow.portal.security.DemoAuthenticationFilter;
+import com.orgflow.portal.security.DevLoginFilter;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import org.slf4j.Logger;
@@ -26,7 +26,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    private final DemoAuthenticationFilter demoAuthenticationFilter;
+    private final DevLoginFilter devLoginFilter;
 
     @Value("${orgflow.security.frontend-origin}")
     private String frontendOrigin;
@@ -34,8 +34,8 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.client.registration.microsoft.client-id:}")
     private String oauth2ClientId;
 
-    public SecurityConfig(DemoAuthenticationFilter demoAuthenticationFilter) {
-        this.demoAuthenticationFilter = demoAuthenticationFilter;
+    public SecurityConfig(DevLoginFilter devLoginFilter) {
+        this.devLoginFilter = devLoginFilter;
     }
 
     @Bean
@@ -50,20 +50,19 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-            // CSRF disabled: this REST API uses OAuth2 bearer tokens in production;
-            // demo mode uses cookie-based auth in dev only and is guarded by @ConditionalOnExpression.
             .csrf(AbstractHttpConfigurer::disable)
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/events/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/photos").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/dev-login").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(Customizer.withDefaults())
             .logout(logout -> logout.logoutSuccessUrl("/"))
-            .addFilterBefore(demoAuthenticationFilter, AnonymousAuthenticationFilter.class)
+            .addFilterBefore(devLoginFilter, AnonymousAuthenticationFilter.class)
             .build();
     }
 
@@ -101,7 +100,7 @@ public class SecurityConfig {
     @PostConstruct
     void validateCorsOrigin() {
         if ("*".equals(frontendOrigin) || !frontendOrigin.startsWith("http")) {
-            logger.warn("FRONTEND_ORIGIN '{}' may be misconfigured — expected an HTTP(S) origin", frontendOrigin);
+            logger.warn("FRONTEND_ORIGIN '{}' may be misconfigured -- expected an HTTP(S) origin", frontendOrigin);
         }
     }
 }

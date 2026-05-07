@@ -39,8 +39,8 @@ const columns: ColumnDef<Member>[] = [
           member.accessLabel === "Admin"
             ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
             : member.accessLabel === "Officer"
-            ? "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
-            : "border-border-subtle bg-surface text-text-secondary"
+              ? "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
+              : "border-border-subtle bg-surface text-text-secondary"
         }
       >
         {member.accessLabel}
@@ -55,7 +55,8 @@ export function MembersPage() {
   const { data, error, isLoading, refetch } = useMembers();
 
   if (isLoading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error ?? "Members are unavailable"} onRetry={refetch} />;
+  if (error || !data)
+    return <ErrorState message={error ?? "Members are unavailable"} onRetry={refetch} />;
 
   const totalHours = data.reduce((total, m) => total + m.volunteerHours, 0);
 
@@ -65,15 +66,21 @@ export function MembersPage() {
 
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Total Members</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Total Members
+          </p>
           <p className="mt-2 text-3xl font-semibold text-text-primary">{data.length}</p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Tracked Hours</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Tracked Hours
+          </p>
           <p className="mt-2 text-3xl font-semibold text-text-primary">{totalHours}</p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Access Levels</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Access Levels
+          </p>
           <p className="mt-2 text-3xl font-semibold text-text-primary">
             {new Set(data.map((m) => m.accessLabel)).size}
           </p>

@@ -6,7 +6,10 @@ export function PublicLayout() {
     <div className="min-h-screen bg-background text-text-primary">
       <header className="sticky top-0 z-40 border-b border-border-subtle bg-surface/90 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
-          <Link to="/" className="flex items-center gap-3 text-text-primary hover:text-text-primary">
+          <Link
+            to="/"
+            className="flex items-center gap-3 text-text-primary hover:text-text-primary"
+          >
             <div className="flex h-8 w-8 items-center justify-center bg-carbon-blue-60 text-sm font-semibold text-white">
               CP
             </div>
@@ -53,7 +56,8 @@ export function PublicLayout() {
       <footer className="border-t border-border-subtle bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
           <p className="text-sm text-text-secondary">
-            &copy; {new Date().getFullYear()} Developers' Club &amp; Student Council. All rights reserved.
+            &copy; {new Date().getFullYear()} Developers' Club &amp; Student Council. All rights
+            reserved.
           </p>
         </div>
       </footer>

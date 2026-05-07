@@ -33,7 +33,10 @@ export function DataTableRow<T extends Record<string, unknown>>({
         </td>
       ) : null}
       {columns.map((col) => (
-        <td key={col.key} className={`px-4 py-2.5 text-sm text-text-primary ${col.className ?? ""}`}>
+        <td
+          key={col.key}
+          className={`px-4 py-2.5 text-sm text-text-primary ${col.className ?? ""}`}
+        >
           {col.render ? col.render(item) : String(item[col.key] ?? "")}
         </td>
       ))}

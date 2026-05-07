@@ -90,7 +90,11 @@
     min-height: 100vh;
     background: var(--cds-background);
     color: var(--cds-text-primary);
-    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    font-family:
+      "IBM Plex Sans",
+      system-ui,
+      -apple-system,
+      sans-serif;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

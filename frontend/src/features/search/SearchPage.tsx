@@ -32,7 +32,11 @@ export function SearchPage() {
         <h1 className="text-xl font-semibold text-text-primary font-condensed">Search Workspace</h1>
         <label className="relative mt-4 block">
           <span className="sr-only">Search across workspace</span>
-          <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
+          <Search
+            size={20}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
+            aria-hidden="true"
+          />
           <input
             className="w-full border border-border-subtle bg-surface py-2.5 pl-10 pr-4 text-sm text-text-primary outline-none placeholder:text-text-placeholder focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
             value={query}
@@ -73,9 +77,13 @@ export function SearchPage() {
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Document size={16} className="text-text-secondary" aria-hidden="true" />
-                  <span className="text-xs font-semibold uppercase text-text-secondary">{result.type}</span>
+                  <span className="text-xs font-semibold uppercase text-text-secondary">
+                    {result.type}
+                  </span>
                 </div>
-                <Badge className="border-border-subtle bg-surface text-text-secondary">{result.status}</Badge>
+                <Badge className="border-border-subtle bg-surface text-text-secondary">
+                  {result.status}
+                </Badge>
               </div>
               <h2 className="text-lg font-semibold text-text-primary">{result.title}</h2>
               <p className="mt-2 text-sm text-text-secondary">{result.description}</p>

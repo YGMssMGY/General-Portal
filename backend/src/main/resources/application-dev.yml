@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/orgflow}
     username: ${POSTGRES_USER:orgflow}
-    password: ${POSTGRES_PASSWORD:orgflow}
+    password: ${POSTGRES_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: update
@@ -13,8 +13,10 @@ spring:
 
 orgflow:
   security:
-    demo-mode: ${ORGFLOW_DEMO_MODE:true}
     auto-provision-users: ${ORGFLOW_AUTO_PROVISION_USERS:true}
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+    dev-auth:
+      username: ${DEV_AUTH_USERNAME:dev@orgflow.local}
+      password: ${DEV_AUTH_PASSWORD:}
   seed:
     enabled: ${ORGFLOW_SEED_ENABLED:true}
