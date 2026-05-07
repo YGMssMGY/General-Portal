@@ -7,12 +7,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
+@ConditionalOnExpression("${orgflow.security.demo-mode:false} and !'${spring.profiles.active:}'.contains('default')")
 public class DemoAuthenticationFilter extends OncePerRequestFilter {
     private final boolean demoMode;
 

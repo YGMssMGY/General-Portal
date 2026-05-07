@@ -3,6 +3,7 @@ package com.orgflow.portal.controller;
 import com.orgflow.portal.dto.Dtos.SearchResultDto;
 import com.orgflow.portal.service.SearchService;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,6 +19,7 @@ public class SearchController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('search:read')")
     public List<SearchResultDto> search(@RequestParam(defaultValue = "") String q) {
         return searchService.search(q);
     }

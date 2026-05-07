@@ -1,9 +1,12 @@
 package com.orgflow.portal.service;
 
 import com.orgflow.portal.dto.Dtos.MessageThreadDto;
+import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.MessageThreadRepository;
 import com.orgflow.portal.security.Permissions;
-import java.util.List;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +23,17 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<MessageThreadDto> listThreads() {
+    public Page<MessageThreadDto> listThreads(Pageable pageable) {
         permissionService.require(Permissions.MESSAGES_READ);
-        return messageThreadRepository.findByWorkspaceOrderByLastMessageAtDesc(currentUserService.currentWorkspace()).stream()
+        return messageThreadRepository.findByWorkspace(currentUserService.currentWorkspace(), pageable)
+            .map(DtoMapper::toMessageThreadDto);
+    }
+
+    @Transactional(readOnly = true)
+    public MessageThreadDto getThread(UUID threadId) {
+        permissionService.require(Permissions.MESSAGES_READ);
+        return messageThreadRepository.findById(threadId)
             .map(DtoMapper::toMessageThreadDto)
-            .toList();
+            .orElseThrow(() -> new ResourceNotFoundException("MessageThread " + threadId));
     }
 }

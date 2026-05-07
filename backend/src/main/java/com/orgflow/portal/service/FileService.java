@@ -3,7 +3,8 @@ package com.orgflow.portal.service;
 import com.orgflow.portal.dto.Dtos.WorkspaceFileDto;
 import com.orgflow.portal.repository.WorkspaceFileRepository;
 import com.orgflow.portal.security.Permissions;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,9 @@ public class FileService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkspaceFileDto> listFiles() {
+    public Page<WorkspaceFileDto> listFiles(Pageable pageable) {
         permissionService.require(Permissions.FILES_READ);
-        return workspaceFileRepository.findByWorkspaceOrderByFileUpdatedAtDesc(currentUserService.currentWorkspace()).stream()
-            .map(DtoMapper::toWorkspaceFileDto)
-            .toList();
+        return workspaceFileRepository.findByWorkspace(currentUserService.currentWorkspace(), pageable)
+            .map(DtoMapper::toWorkspaceFileDto);
     }
 }

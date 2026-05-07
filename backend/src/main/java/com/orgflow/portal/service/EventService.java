@@ -3,7 +3,8 @@ package com.orgflow.portal.service;
 import com.orgflow.portal.dto.Dtos.EventDto;
 import com.orgflow.portal.repository.EventRepository;
 import com.orgflow.portal.security.Permissions;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,9 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public List<EventDto> listEvents() {
+    public Page<EventDto> listEvents(Pageable pageable) {
         permissionService.require(Permissions.EVENTS_READ);
-        return eventRepository.findByWorkspaceOrderByStartsAtAsc(currentUserService.currentWorkspace()).stream()
-            .map(DtoMapper::toEventDto)
-            .toList();
+        return eventRepository.findByWorkspace(currentUserService.currentWorkspace(), pageable)
+            .map(DtoMapper::toEventDto);
     }
 }

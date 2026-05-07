@@ -3,7 +3,8 @@ package com.orgflow.portal.service;
 import com.orgflow.portal.dto.Dtos.ActivityDto;
 import com.orgflow.portal.repository.ActivityLogRepository;
 import com.orgflow.portal.security.Permissions;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,9 @@ public class ActivityService {
     }
 
     @Transactional(readOnly = true)
-    public List<ActivityDto> listActivity() {
+    public Page<ActivityDto> listActivity(Pageable pageable) {
         permissionService.require(Permissions.ACTIVITY_READ);
-        return activityLogRepository.findTop20ByWorkspaceOrderByOccurredAtDesc(currentUserService.currentWorkspace()).stream()
-            .map(DtoMapper::toActivityDto)
-            .toList();
+        return activityLogRepository.findByWorkspaceOrderByOccurredAtDesc(currentUserService.currentWorkspace(), pageable)
+            .map(DtoMapper::toActivityDto);
     }
 }

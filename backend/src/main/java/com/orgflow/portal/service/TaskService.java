@@ -1,14 +1,15 @@
 package com.orgflow.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreateTaskRequest;
 import com.orgflow.portal.dto.Dtos.TaskDto;
+import com.orgflow.portal.dto.Dtos.CreateTaskRequest;
 import com.orgflow.portal.dto.Dtos.UpdateTaskRequest;
 import com.orgflow.portal.entity.TaskItem;
 import com.orgflow.portal.exception.ResourceNotFoundException;
 import com.orgflow.portal.repository.TaskRepository;
 import com.orgflow.portal.security.Permissions;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +26,11 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
-    public List<TaskDto> listTasks() {
+    public Page<TaskDto> listTasks(Pageable pageable) {
         permissionService.require(Permissions.TASKS_READ);
         var workspace = currentUserService.currentWorkspace();
-        return taskRepository.findByWorkspaceOrderByDueDateAsc(workspace).stream().map(DtoMapper::toTaskDto).toList();
+        return taskRepository.findByWorkspace(workspace, pageable)
+            .map(DtoMapper::toTaskDto);
     }
 
     @Transactional

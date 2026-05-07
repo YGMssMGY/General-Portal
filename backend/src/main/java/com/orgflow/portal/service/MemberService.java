@@ -6,6 +6,9 @@ import com.orgflow.portal.repository.MembershipRepository;
 import com.orgflow.portal.security.Permissions;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,12 +25,11 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public List<MemberDto> listMembers() {
+    public Page<MemberDto> listMembers(Pageable pageable) {
         permissionService.require(Permissions.MEMBERS_READ);
-        List<Membership> memberships = membershipRepository.findByWorkspaceOrderByUser_DisplayNameAsc(currentUserService.currentWorkspace());
-        Map<Membership, List<String>> permissionsMap = permissionService.permissionsForMemberships(memberships);
-        return memberships.stream()
-            .map(membership -> DtoMapper.toMemberDto(membership, permissionsMap.getOrDefault(membership, List.of())))
-            .toList();
+        var workspace = currentUserService.currentWorkspace();
+        Page<Membership> page = membershipRepository.findByWorkspace(workspace, pageable);
+        Map<Membership, List<String>> permissionsMap = permissionService.permissionsForMemberships(page.getContent());
+        return page.map(membership -> DtoMapper.toMemberDto(membership, permissionsMap.getOrDefault(membership, List.of())));
     }
 }
