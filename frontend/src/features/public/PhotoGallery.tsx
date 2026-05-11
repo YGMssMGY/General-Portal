@@ -12,7 +12,10 @@ interface Photo {
 }
 
 export function PhotoGallery() {
-  const { data, error, isLoading, refetch } = useAsyncData(() => fetchJson<Photo[]>("/photos"), []);
+  const { data, error, isLoading, refetch } = useAsyncData(
+    () => fetchJson<{ content: Photo[] }>("/photos"),
+    [],
+  );
 
   if (isLoading) return <LoadingState />;
   if (error || !data)
@@ -43,7 +46,7 @@ export function PhotoGallery() {
           gap: "1rem",
         }}
       >
-        {data.map((photo) => (
+        {data.content.map((photo) => (
           <Tile key={photo.id}>
             <div
               style={{

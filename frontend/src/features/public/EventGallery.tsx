@@ -7,13 +7,15 @@ import type { PublicEvent } from "../../mocks/data";
 
 export function EventGallery() {
   const { data, error, isLoading, refetch } = useAsyncData(
-    () => fetchJson<PublicEvent[]>("/events/public"),
+    () => fetchJson<{ content: PublicEvent[] }>("/events/public"),
     [],
   );
 
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Events unavailable"} onRetry={refetch} />;
+
+  const events = Array.isArray(data) ? data : data.content;
 
   return (
     <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "3rem 1rem" }}>
@@ -40,7 +42,7 @@ export function EventGallery() {
           gap: "1.5rem",
         }}
       >
-        {data.map((event) => (
+        {events.map((event) => (
           <Tile key={event.id}>
             <div
               style={{
