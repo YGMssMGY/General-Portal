@@ -2,9 +2,11 @@ package com.generalportal.portal.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.generalportal.portal.entity.Membership;
+import com.generalportal.portal.entity.PermissionGrant;
 import com.generalportal.portal.entity.UserAccount;
 import com.generalportal.portal.entity.Workspace;
 import com.generalportal.portal.repository.MembershipRepository;
+import com.generalportal.portal.repository.PermissionGrantRepository;
 import com.generalportal.portal.repository.UserAccountRepository;
 import com.generalportal.portal.repository.WorkspaceRepository;
 import jakarta.servlet.FilterChain;
@@ -25,7 +27,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
@@ -40,19 +41,22 @@ public class DevLoginFilter extends OncePerRequestFilter {
     private final UserAccountRepository userAccountRepository;
     private final MembershipRepository membershipRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final PermissionGrantRepository permissionGrantRepository;
 
     public DevLoginFilter(
         @Value("${general-portal.security.dev-auth.username:}") String devUsername,
         @Value("${general-portal.security.dev-auth.password:}") String devPassword,
         UserAccountRepository userAccountRepository,
         MembershipRepository membershipRepository,
-        WorkspaceRepository workspaceRepository
+        WorkspaceRepository workspaceRepository,
+        PermissionGrantRepository permissionGrantRepository
     ) {
         this.devUsername = devUsername;
         this.devPassword = devPassword;
         this.userAccountRepository = userAccountRepository;
         this.membershipRepository = membershipRepository;
         this.workspaceRepository = workspaceRepository;
+        this.permissionGrantRepository = permissionGrantRepository;
 
         if (devPassword == null || devPassword.isBlank()) {
             logger.info("Dev auth password is not configured — dev login is disabled.");
@@ -123,6 +127,11 @@ public class DevLoginFilter extends OncePerRequestFilter {
             userAccountRepository.save(user);
             Membership membership = new Membership(workspace, user, "Admin", "Admin", 0, 0);
             membershipRepository.save(membership);
+
+            for (String perm : Permissions.adminPermissions()) {
+                permissionGrantRepository.save(new PermissionGrant(membership, perm));
+            }
+
             logger.info("Auto-provisioned dev user: {} as Admin in workspace '{}'", username, workspace.getName());
         } catch (Exception e) {
             logger.warn("Auto-provision of dev user failed (may already exist): {}", e.getMessage());

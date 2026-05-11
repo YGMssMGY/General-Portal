@@ -3,12 +3,16 @@ import { Button, Tile } from "@carbon/react";
 import { Group, Launch, ArrowRight } from "@carbon/icons-react";
 
 const leadership = [
-  { role: "Teacher Advisor", desc: "Provides guidance, oversight, and institutional knowledge." },
-  { role: "President", desc: "Leads the organization, sets vision, and represents externally." },
-  { role: "Vice President", desc: "Supports the President and oversees day-to-day operations." },
-  { role: "Secretary", desc: "Manages communications, meeting minutes, and documentation." },
-  { role: "Treasurer", desc: "Oversees budget, finances, and funding proposals." },
-  { role: "Event Coordinator", desc: "Plans and executes events, manages volunteers." },
+  { role: "Admin", desc: "Full system access — manages workspace configuration and security." },
+  {
+    role: "President / Vice President",
+    desc: "Leads the organization, sets vision, manages members and finances.",
+  },
+  { role: "Officer", desc: "Manages operations, events, volunteers, and resource coordination." },
+  {
+    role: "Member / Representative",
+    desc: "Participates in tasks, proposals, events, and team communication.",
+  },
 ];
 
 export function AboutPage() {

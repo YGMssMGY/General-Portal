@@ -78,9 +78,9 @@ export function PublicLayout() {
             <Link to="/about" style={navLinkStyle}>
               About
             </Link>
-            <Link to="/admin" style={{ marginLeft: "0.5rem" }}>
-              <Button kind="tertiary" size="sm" renderIcon={Launch}>
-                Admin
+            <Link to="/login" style={{ marginLeft: "0.5rem" }}>
+              <Button kind="tertiary" size="sm">
+                Sign In
               </Button>
             </Link>
           </nav>
