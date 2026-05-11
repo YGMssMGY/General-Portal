@@ -20,11 +20,10 @@ public class AuthService {
     private final PermissionGrantRepository permissionGrantRepository;
 
     private static final Map<String, String> ROLE_EMAIL_MAP = Map.of(
-        "teacher", "chris@example.edu",
+        "admin", "chris@example.edu",
         "president", "sarah.j@example.edu",
-        "vp", "maya.c@example.edu",
-        "member", "jordan.d@example.edu",
-        "grade_rep", "grade.rep@example.edu"
+        "officer", "maya.c@example.edu",
+        "member", "jordan.d@example.edu"
     );
 
     public AuthService(

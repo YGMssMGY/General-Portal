@@ -120,8 +120,8 @@ public class DevLoginFilter extends OncePerRequestFilter {
             }
             Workspace workspace = workspaceRepository.findAll().stream().findFirst().orElse(null);
             if (workspace == null) {
-                logger.warn("No workspace found — cannot auto-provision dev user");
-                return;
+                workspace = workspaceRepository.save(new Workspace("General Portal Workspace", "Default workspace"));
+                logger.info("Auto-created default workspace for dev user");
             }
             UserAccount user = new UserAccount(username, "Dev Admin", null);
             userAccountRepository.save(user);

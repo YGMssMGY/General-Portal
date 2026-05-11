@@ -131,7 +131,7 @@ public class DataSeeder {
             taskRepository.save(new TaskItem(workspace, "Approve catering budget", "blocked", "high", "Winter Formal", LocalDate.now().minusDays(1), "Sarah Jenkins", 20, "Waiting on Finance Dept"));
 
             proposalRepository.save(new Proposal(workspace, "Winter Formal Decoration Plan", "Event", "under_review", "Sarah Jenkins", Instant.now().minusSeconds(86400), new BigDecimal("1850.00"), "Decor, lighting, and table styling plan for the winter formal venue."));
-            proposalRepository.save(new Proposal(workspace, "Fall Merchandise Design", "Purchase", "pending", "Maya Chen", Instant.now().minusSeconds(7200), new BigDecimal("940.00"), "Hoodie and sticker set for the fall membership drive."));
+            proposalRepository.save(new Proposal(workspace, "Fall Merchandise Design", "Purchase", "submitted", "Maya Chen", Instant.now().minusSeconds(7200), new BigDecimal("940.00"), "Hoodie and sticker set for the fall membership drive."));
             proposalRepository.save(new Proposal(workspace, "Community Garden Workday", "Project", "approved", "Jordan Diaz", Instant.now().minusSeconds(420000), new BigDecimal("420.00"), "Volunteer event for cleanup, planting, and signage updates."));
 
             EventItem spiritWeek = new EventItem(workspace, "Spirit Week 2026", "active", Instant.now().plusSeconds(1296000), Instant.now().plusSeconds(1641600), 75, new BigDecimal("2500.00"), new BigDecimal("3000.00"));
