@@ -111,17 +111,19 @@ public class DataSeeder {
             UserAccount sarah = userAccountRepository.save(new UserAccount("sarah.j@example.edu", "Sarah Jenkins", null));
             UserAccount maya = userAccountRepository.save(new UserAccount("maya.c@example.edu", "Maya Chen", null));
             UserAccount jordan = userAccountRepository.save(new UserAccount("jordan.d@example.edu", "Jordan Diaz", null));
+            UserAccount devAdmin = userAccountRepository.save(new UserAccount("dev@generalportal.local", "Dev Admin", null));
 
-            Membership chrisMembership = membershipRepository.save(new Membership(workspace, chris, "Operations Lead", "Leader", 4, 88));
-            Membership sarahMembership = membershipRepository.save(new Membership(workspace, sarah, "President", "Leader", 5, 120));
-            Membership mayaMembership = membershipRepository.save(new Membership(workspace, maya, "Treasurer", "Finance", 3, 96));
-            Membership jordanMembership = membershipRepository.save(new Membership(workspace, jordan, "Volunteer Lead", "Coordinator", 7, 142));
+            Membership chrisMembership = membershipRepository.save(new Membership(workspace, chris, "Admin", "Admin", 4, 88));
+            Membership sarahMembership = membershipRepository.save(new Membership(workspace, sarah, "President", "President", 5, 120));
+            Membership mayaMembership = membershipRepository.save(new Membership(workspace, maya, "Officer", "Officer", 3, 96));
+            Membership jordanMembership = membershipRepository.save(new Membership(workspace, jordan, "Member", "Member", 7, 142));
+            Membership devMembership = membershipRepository.save(new Membership(workspace, devAdmin, "Admin", "Admin", 0, 0));
 
-            Permissions.demoPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(chrisMembership, permission)));
-            permissionGrantRepository.save(new PermissionGrant(sarahMembership, Permissions.MEMBERS_READ));
-            permissionGrantRepository.save(new PermissionGrant(sarahMembership, Permissions.PROPOSALS_READ));
-            permissionGrantRepository.save(new PermissionGrant(mayaMembership, Permissions.FINANCE_READ));
-            permissionGrantRepository.save(new PermissionGrant(jordanMembership, Permissions.VOLUNTEERS_READ));
+            Permissions.adminPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(chrisMembership, permission)));
+            Permissions.presidentPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(sarahMembership, permission)));
+            Permissions.officerPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(mayaMembership, permission)));
+            Permissions.memberPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(jordanMembership, permission)));
+            Permissions.adminPermissions().forEach(permission -> permissionGrantRepository.save(new PermissionGrant(devMembership, permission)));
 
             taskRepository.save(new TaskItem(workspace, "Confirm gym reservation", "todo", "high", "Winter Formal", LocalDate.now().plusDays(8), "Maya Chen", 0, null));
             taskRepository.save(new TaskItem(workspace, "Update volunteer contact list", "todo", "low", "General Admin", LocalDate.now().plusDays(12), "Jordan Diaz", 0, null));

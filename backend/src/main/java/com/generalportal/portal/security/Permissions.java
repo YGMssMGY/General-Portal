@@ -27,7 +27,7 @@ public final class Permissions {
 
     private Permissions() {}
 
-    public static List<String> demoPermissions() {
+    public static List<String> adminPermissions() {
         return List.of(
             DASHBOARD_READ,
             TASKS_READ, TASKS_WRITE,
@@ -42,5 +42,59 @@ public final class Permissions {
             ACTIVITY_READ,
             SEARCH_READ
         );
+    }
+
+    public static List<String> presidentPermissions() {
+        return List.of(
+            DASHBOARD_READ,
+            TASKS_READ, TASKS_WRITE,
+            PROPOSALS_READ, PROPOSALS_WRITE,
+            EVENTS_READ, EVENTS_WRITE,
+            VOLUNTEERS_READ, VOLUNTEERS_WRITE,
+            FINANCE_READ, FINANCE_WRITE,
+            MESSAGES_READ, MESSAGES_WRITE,
+            FILES_READ, FILES_WRITE,
+            MEMBERS_READ, MEMBERS_WRITE,
+            SETTINGS_READ,
+            ACTIVITY_READ,
+            SEARCH_READ
+        );
+    }
+
+    public static List<String> officerPermissions() {
+        return List.of(
+            DASHBOARD_READ,
+            TASKS_READ, TASKS_WRITE,
+            PROPOSALS_READ, PROPOSALS_WRITE,
+            EVENTS_READ, EVENTS_WRITE,
+            VOLUNTEERS_READ, VOLUNTEERS_WRITE,
+            FINANCE_READ,
+            MESSAGES_READ, MESSAGES_WRITE,
+            FILES_READ, FILES_WRITE,
+            MEMBERS_READ,
+            ACTIVITY_READ,
+            SEARCH_READ
+        );
+    }
+
+    public static List<String> memberPermissions() {
+        return List.of(
+            DASHBOARD_READ,
+            TASKS_READ, TASKS_WRITE,
+            PROPOSALS_READ,
+            EVENTS_READ, EVENTS_WRITE,
+            VOLUNTEERS_READ, VOLUNTEERS_WRITE,
+            FINANCE_READ,
+            MESSAGES_READ, MESSAGES_WRITE,
+            FILES_READ,
+            MEMBERS_READ,
+            ACTIVITY_READ,
+            SEARCH_READ
+        );
+    }
+
+    @Deprecated
+    public static List<String> demoPermissions() {
+        return adminPermissions();
     }
 }
