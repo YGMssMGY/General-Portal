@@ -19,7 +19,7 @@ import type {
   WorkspaceSettings,
 } from "../types";
 
-export type UserRole = "teacher" | "president" | "vp" | "member" | "grade_rep";
+export type UserRole = "admin" | "president" | "officer" | "member";
 
 export interface PublicEvent {
   id: string;
@@ -125,16 +125,16 @@ const categories = [
 ];
 const fileTypes = ["PDF", "DOCX", "XLSX", "PNG", "ZIP", "PPTX", "CSV"];
 const positions = [
-  "Teacher Advisor",
+  "Administrator",
   "President",
   "Vice President",
   "Secretary",
   "Treasurer",
   "Event Coordinator",
   "Member",
-  "Grade Representative",
+  "Officer",
 ];
-const accessLevels = ["Admin", "Officer", "Member", "Public"];
+const accessLevels = ["Admin", "Officer", "Member"];
 const eventStatuses: ResourceStatus[] = [
   "draft",
   "pending",
@@ -189,12 +189,13 @@ export function resetData(): void {
 
 export function generateUserProfiles(): Record<UserRole, UserProfile> {
   return {
-    teacher: {
-      id: "user-teacher",
-      name: "Dr. Sarah Mitchell",
+    admin: {
+      id: "user-admin",
       email: "sarah.mitchell@school.edu",
+      displayName: "Dr. Sarah Mitchell",
       avatarUrl: "",
-      workspaceId: "ws-main",
+      role: "admin",
+      workspaceName: "Developers' Club & Student Council",
       permissions: [
         "admin",
         "manage_members",
@@ -210,10 +211,11 @@ export function generateUserProfiles(): Record<UserRole, UserProfile> {
     },
     president: {
       id: "user-president",
-      name: "Marcus Johnson",
       email: "marcus.johnson@school.edu",
+      displayName: "Marcus Johnson",
       avatarUrl: "",
-      workspaceId: "ws-main",
+      role: "president",
+      workspaceName: "Developers' Club & Student Council",
       permissions: [
         "manage_members",
         "manage_tasks",
@@ -224,12 +226,13 @@ export function generateUserProfiles(): Record<UserRole, UserProfile> {
         "view_all",
       ],
     },
-    vp: {
-      id: "user-vp",
-      name: "Priya Patel",
+    officer: {
+      id: "user-officer",
       email: "priya.patel@school.edu",
+      displayName: "Priya Patel",
       avatarUrl: "",
-      workspaceId: "ws-main",
+      role: "officer",
+      workspaceName: "Developers' Club & Student Council",
       permissions: [
         "manage_tasks",
         "manage_events",
@@ -240,19 +243,12 @@ export function generateUserProfiles(): Record<UserRole, UserProfile> {
     },
     member: {
       id: "user-member",
-      name: "Ethan Brown",
       email: "ethan.brown@school.edu",
+      displayName: "Ethan Brown",
       avatarUrl: "",
-      workspaceId: "ws-main",
+      role: "member",
+      workspaceName: "Developers' Club & Student Council",
       permissions: ["view_all"],
-    },
-    grade_rep: {
-      id: "user-graderep",
-      name: "Sofia Chen",
-      email: "sofia.chen@school.edu",
-      avatarUrl: "",
-      workspaceId: "ws-main",
-      permissions: ["view_public"],
     },
   };
 }
@@ -512,29 +508,30 @@ export function generateFiles(): WorkspaceFile[] {
 
 export function generateMembers(): Member[] {
   return Array.from({ length: 25 }, () => {
+    const firstName = pick(firstNames);
+    const lastName = pick(lastNames);
     const p = pick(positions);
     const a =
-      p === "Teacher Advisor"
+      p === "Administrator"
         ? "Admin"
         : p === "President" || p === "Vice President" || p === "Treasurer" || p === "Secretary"
           ? "Officer"
-          : p === "Grade Representative"
-            ? "Public"
-            : "Member";
+          : "Member";
+    const role: UserRole = a === "Admin" ? "admin" : a === "Officer" ? "officer" : "member";
     return {
       id: uid("mbr"),
-      name: name(),
-      email: `${pick(firstNames).toLowerCase()}.${pick(lastNames).toLowerCase()}@school.edu`,
+      user: {
+        id: uid("usr"),
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@school.edu`,
+        displayName: `${firstName} ${lastName}`,
+        role,
+        workspaceName: "Developers' Club & Student Council",
+      },
       position: p,
       accessLabel: a,
       taskCount: randomInt(0, 15),
       volunteerHours: randomInt(0, 40),
-      permissions:
-        a === "Admin"
-          ? ["admin", "manage_all"]
-          : a === "Officer"
-            ? ["manage_tasks", "manage_events"]
-            : ["view_all"],
+      role,
     };
   });
 }

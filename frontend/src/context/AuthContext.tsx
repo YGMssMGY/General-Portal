@@ -1,44 +1,80 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { useDemoAuth } from "./DemoAuthContext";
-import type { UserProfile } from "../types";
+import { useDemoAuth, DemoAuthProvider } from "./DemoAuthContext";
+import { useRealAuth, RealAuthProvider } from "./RealAuthContext";
+import type { UserProfile, UserRole } from "../types";
 
-interface AuthContextValue {
-  user?: UserProfile;
+export interface AuthState {
+  user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: () => void;
-  logout: () => void;
+  error: string | null;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  role: UserRole | null;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthCtx = createContext<AuthState | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthCtx);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}
+
+const USE_MSW = import.meta.env.VITE_USE_MSW === "true";
+
+function DemoBridge({ children }: { children: ReactNode }) {
   const demo = useDemoAuth();
-
-  const value = useMemo<AuthContextValue>(
+  const value = useMemo<AuthState>(
     () => ({
       user: demo.user,
       isAuthenticated: demo.isAuthenticated,
       isLoading: demo.isLoading,
-      login: () => {
+      error: null,
+      login: async () => {
         window.location.href = "/admin";
       },
-      logout: () => {
+      logout: async () => {
         window.location.href = "/";
       },
       hasPermission: demo.hasPermission,
+      role: demo.currentRole,
     }),
-    [demo.user, demo.isAuthenticated, demo.isLoading, demo.hasPermission],
+    [demo.user, demo.isAuthenticated, demo.isLoading, demo.hasPermission, demo.currentRole],
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
+function RealBridge({ children }: { children: ReactNode }) {
+  const real = useRealAuth();
+  const value = useMemo<AuthState>(
+    () => ({
+      user: real.user,
+      isAuthenticated: real.isAuthenticated,
+      isLoading: real.isLoading,
+      error: real.error,
+      login: real.login,
+      logout: real.logout,
+      hasPermission: () => true,
+      role: real.user?.role ?? null,
+    }),
+    [real.user, real.isAuthenticated, real.isLoading, real.error, real.login, real.logout],
+  );
+  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  if (USE_MSW) {
+    return (
+      <DemoAuthProvider>
+        <DemoBridge>{children}</DemoBridge>
+      </DemoAuthProvider>
+    );
   }
-  return context;
+  return (
+    <RealAuthProvider>
+      <RealBridge>{children}</RealBridge>
+    </RealAuthProvider>
+  );
 }

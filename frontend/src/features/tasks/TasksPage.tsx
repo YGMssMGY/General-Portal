@@ -58,7 +58,7 @@ export function TasksPage() {
     try {
       await workspaceApi.createTask({
         ...taskForm,
-        assigneeName: taskForm.assigneeName || user?.name || "Unassigned",
+        assigneeName: taskForm.assigneeName || user?.displayName || "Unassigned",
       });
       setTaskForm({
         title: "",
@@ -130,7 +130,7 @@ export function TasksPage() {
                 labelText="Assignee"
                 value={taskForm.assigneeName}
                 onChange={(e) => setTaskForm((c) => ({ ...c, assigneeName: e.target.value }))}
-                placeholder={user?.name}
+                placeholder={user?.displayName}
               />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>

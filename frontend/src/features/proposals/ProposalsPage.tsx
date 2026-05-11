@@ -77,7 +77,7 @@ export function ProposalsPage() {
       await workspaceApi.createProposal({
         title: form.title,
         type: form.type,
-        submittedBy: user?.name ?? "Demo User",
+        submittedBy: user?.displayName ?? "Demo User",
         budget: Number(form.budget),
         summary: form.summary,
       });

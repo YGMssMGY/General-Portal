@@ -5,13 +5,13 @@ import { useAuth } from "../context/AuthContext";
 
 export function DevLoginForm() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [username, setUsername] = useState("dev@general-portal.local");
+  const { isAuthenticated, login, isLoading } = useAuth();
+  const [username, setUsername] = useState("dev@generalportal.local");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  if (user) {
+  if (isAuthenticated) {
     navigate("/admin", { replace: true });
     return null;
   }
@@ -19,27 +19,15 @@ export function DevLoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/dev-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || "Login failed");
-        return;
-      }
-
-      window.location.href = "/admin";
-    } catch {
-      setError("Network error. Is the backend running?");
+      await login(username, password);
+      navigate("/admin", { replace: true });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
@@ -49,7 +37,7 @@ export function DevLoginForm() {
         Developer Login
       </h2>
       <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-        Configure DEV_AUTH_USERNAME and DEV_AUTH_PASSWORD in .env.local
+        Default credentials: dev@generalportal.local / devpass123
       </p>
       <Form onSubmit={handleSubmit} style={{ marginTop: "1rem" }}>
         <TextInput
@@ -72,8 +60,6 @@ export function DevLoginForm() {
           <p
             style={{
               borderLeft: "4px solid var(--cds-support-error)",
-              background: "var(--cds-support-error)",
-              backgroundClip: "padding-box",
               backgroundColor: "#fff1f1",
               padding: "0.5rem 0.75rem",
               fontSize: "0.875rem",
@@ -84,8 +70,8 @@ export function DevLoginForm() {
             {error}
           </p>
         ) : null}
-        <Button type="submit" disabled={loading} style={{ marginTop: "1rem" }}>
-          {loading ? "Signing in..." : "Sign In (Dev)"}
+        <Button type="submit" disabled={submitting || isLoading} style={{ marginTop: "1rem" }}>
+          {submitting || isLoading ? "Signing in..." : "Sign In (Dev)"}
         </Button>
       </Form>
     </Tile>

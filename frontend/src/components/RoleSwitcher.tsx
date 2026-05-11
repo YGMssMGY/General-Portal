@@ -1,15 +1,18 @@
 import { useDemoAuth } from "../context/DemoAuthContext";
 import type { UserRole } from "../mocks/data";
 
+const USE_MSW = import.meta.env.VITE_USE_MSW === "true";
+
 const ROLE_LABELS: Record<UserRole, string> = {
-  teacher: "Teacher",
+  admin: "Admin",
   president: "President",
-  vp: "Vice President",
+  officer: "Officer",
   member: "Member",
-  grade_rep: "Grade Rep",
 };
 
 export function RoleSwitcher() {
+  if (!USE_MSW) return null;
+
   const { currentRole, availableRoles, switchRole } = useDemoAuth();
 
   return (

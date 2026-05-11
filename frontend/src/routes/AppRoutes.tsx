@@ -54,7 +54,7 @@ export function AppRoutes() {
         <Route
           path="admin/settings"
           element={
-            <ProtectedRoute requiredRole="vp">
+            <ProtectedRoute requiredRole="officer">
               <SettingsPage />
             </ProtectedRoute>
           }
