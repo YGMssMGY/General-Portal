@@ -172,7 +172,6 @@ if ($WithRedis) {
 if (Test-PortOpen -Port 8080) { Write-ErrorMsg "Port 8080 in use. Run .\stop-dev.ps1 first."; exit 1 }
 if (Test-PortOpen -Port 5173) { Write-ErrorMsg "Port 5173 in use. Run .\stop-dev.ps1 first."; exit 1 }
 
-$env:SPRING_PROFILES_ACTIVE = $Profiles
 Write-Status "Spring profiles: $Profiles"
 
 Register-Cleanup
@@ -183,6 +182,21 @@ $backendProc = Start-Process -FilePath $Maven `
     -WorkingDirectory $BackendDir -PassThru -WindowStyle Minimized
 $Script:BackendProc = $backendProc
 Write-Status "Backend PID: $($Script:BackendProc.Id)"
+
+Write-Status "Waiting for backend to be ready..."
+$backendReady = $false
+for ($i = 0; $i -lt 60; $i++) {
+    try {
+        $r = Invoke-WebRequest -Uri "http://localhost:8080/api/health" -UseBasicParsing -TimeoutSec 2
+        if ($r.StatusCode -eq 200) { $backendReady = $true; break }
+    } catch {}
+    Start-Sleep -Seconds 2
+}
+if (-not $backendReady) {
+    Write-ErrorMsg "Backend did not become ready within 120s. Check backend logs."
+    exit 1
+}
+Write-Status "Backend is healthy."
 
 if (-not $FrontendOnly) {
     Write-Status "Starting frontend on port 5173..."

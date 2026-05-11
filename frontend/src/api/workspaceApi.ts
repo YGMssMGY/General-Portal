@@ -14,25 +14,25 @@ import type {
   WorkspaceFile,
   WorkspaceSettings,
 } from "../types";
-import { API_BASE_URL, fetchJson, jsonBody } from "./httpClient";
+import { API_BASE_URL, fetchJson, fetchPage, jsonBody } from "./httpClient";
 
 export const workspaceApi = {
   getCurrentUser: () => fetchJson<UserProfile>("/auth/me"),
   getDashboard: () => fetchJson<DashboardData>("/dashboard"),
-  getTasks: () => fetchJson<Task[]>("/tasks"),
+  getTasks: () => fetchPage<Task>("/tasks"),
   createTask: (task: Pick<Task, "title" | "priority" | "project" | "dueDate" | "assigneeName">) =>
     fetchJson<Task>("/tasks", { method: "POST", ...jsonBody(task) }),
-  getProposals: () => fetchJson<Proposal[]>("/proposals"),
+  getProposals: () => fetchPage<Proposal>("/proposals"),
   createProposal: (
     proposal: Pick<Proposal, "title" | "type" | "submittedBy" | "budget" | "summary">,
   ) => fetchJson<Proposal>("/proposals", { method: "POST", ...jsonBody(proposal) }),
-  getEvents: () => fetchJson<EventItem[]>("/events"),
-  getVolunteerSlots: () => fetchJson<VolunteerSlot[]>("/volunteers/slots"),
-  getFinanceTransactions: () => fetchJson<FinanceTransaction[]>("/finance/transactions"),
-  getMessageThreads: () => fetchJson<MessageThread[]>("/messages/threads"),
-  getFiles: () => fetchJson<WorkspaceFile[]>("/files"),
-  getMembers: () => fetchJson<Member[]>("/members"),
-  getActivity: () => fetchJson<ActivityItem[]>("/activity"),
+  getEvents: () => fetchPage<EventItem>("/events"),
+  getVolunteerSlots: () => fetchPage<VolunteerSlot>("/volunteers/slots"),
+  getFinanceTransactions: () => fetchPage<FinanceTransaction>("/finance/transactions"),
+  getMessageThreads: () => fetchPage<MessageThread>("/messages/threads"),
+  getFiles: () => fetchPage<WorkspaceFile>("/files"),
+  getMembers: () => fetchPage<Member>("/members"),
+  getActivity: () => fetchPage<ActivityItem>("/activity"),
   getSettings: () => fetchJson<WorkspaceSettings>("/settings"),
   search: (query: string) => fetchJson<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
   getMicrosoftLoginUrl: () => `${API_BASE_URL}/oauth2/authorization/microsoft`,

@@ -8,6 +8,7 @@ import com.generalportal.portal.dto.Dtos.MessageDto;
 import com.generalportal.portal.dto.Dtos.MessageThreadDto;
 import com.generalportal.portal.dto.Dtos.ProposalDto;
 import com.generalportal.portal.dto.Dtos.TaskDto;
+import com.generalportal.portal.dto.Dtos.UserDto;
 import com.generalportal.portal.dto.Dtos.VolunteerSlotDto;
 import com.generalportal.portal.dto.Dtos.WorkspaceFileDto;
 import com.generalportal.portal.dto.Dtos.WorkspaceSettingsDto;
@@ -121,10 +122,13 @@ final class DtoMapper {
     }
 
     static MemberDto toMemberDto(Membership membership, List<String> permissions) {
+        var u = membership.getUser();
+        var w = membership.getWorkspace();
+        var userDto = new UserDto(u.getId(), u.getDisplayName(), u.getEmail(), u.getAvatarUrl(),
+            w.getId(), w.getName(), membership.getPosition().toLowerCase(), permissions);
         return new MemberDto(
             membership.getId(),
-            membership.getUser().getDisplayName(),
-            membership.getUser().getEmail(),
+            userDto,
             membership.getPosition(),
             membership.getAccessLabel(),
             membership.getTaskCount(),

@@ -13,6 +13,7 @@ export function priorityBadgeClass(priority: Priority): string {
 export function statusBadgeClass(status: ResourceStatus): string {
   const classes: Record<ResourceStatus, string> = {
     draft: "border-border-subtle bg-surface text-text-secondary",
+    submitted: "border-carbon-purple-30 bg-carbon-purple-10 text-carbon-purple-60",
     pending: "border-carbon-yellow-30 bg-carbon-yellow-10 text-carbon-yellow-50",
     under_review: "border-carbon-teal-30 bg-carbon-teal-10 text-carbon-teal-60",
     approved: "border-carbon-green-30 bg-carbon-green-10 text-carbon-green-60",

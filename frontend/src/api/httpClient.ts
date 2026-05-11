@@ -45,6 +45,12 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
   return response.json() as Promise<T>;
 }
 
+export async function fetchPage<T>(path: string, init?: RequestInit): Promise<T[]> {
+  type PageResponse = { content: T[] };
+  const page = await fetchJson<PageResponse>(path, init);
+  return page.content;
+}
+
 export function jsonBody<TBody extends object>(body: TBody): RequestInit {
   return {
     headers: { "Content-Type": "application/json" },

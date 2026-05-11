@@ -2,6 +2,7 @@ export type UserRole = "admin" | "president" | "officer" | "member";
 
 export type ResourceStatus =
   | "draft"
+  | "submitted"
   | "pending"
   | "under_review"
   | "approved"

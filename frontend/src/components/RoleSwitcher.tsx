@@ -1,5 +1,5 @@
 import { useDemoAuth } from "../context/DemoAuthContext";
-import type { UserRole } from "../mocks/data";
+import type { UserRole } from "../types";
 
 const USE_MSW = import.meta.env.VITE_USE_MSW === "true";
 

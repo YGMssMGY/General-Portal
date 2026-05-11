@@ -136,8 +136,7 @@ public final class Dtos {
 
     public record MemberDto(
         UUID id,
-        String name,
-        String email,
+        UserDto user,
         String position,
         String accessLabel,
         int taskCount,

@@ -38,8 +38,8 @@ export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role) {
-    const userLevel = ROLE_HIERARCHY[user.role] ?? 0;
+  if (requiredRole) {
+    const userLevel = user?.role ? (ROLE_HIERARCHY[user.role] ?? 0) : 0;
     const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0;
     if (userLevel < requiredLevel) {
       return (
