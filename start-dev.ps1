@@ -57,16 +57,19 @@ function Test-PortOpen {
 }
 
 function Register-Cleanup {
-    Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
-        if ($Script:BackendPid) {
-            Stop-Process -Id $Script:BackendPid -Force -ErrorAction SilentlyContinue
-            Write-Host "[general-portal] Stopped backend (PID $Script:BackendPid)" -ForegroundColor Yellow
+    [Console]::TreatControlCAsInput = $false
+    $null = Register-ObjectEvent -InputObject ([Console]) -EventName CancelKeyPress -Action {
+        Write-Host ""
+        Write-Host "[general-portal] Ctrl+C detected — stopping services..." -ForegroundColor Yellow
+        if ($Script:BackendProc) {
+            & taskkill /T /PID $Script:BackendProc.Id /F 2>$null
+            Write-Host "[general-portal] Stopped backend (PID $($Script:BackendProc.Id))" -ForegroundColor Yellow
         }
-        if ($Script:FrontendPid) {
-            Stop-Process -Id $Script:FrontendPid -Force -ErrorAction SilentlyContinue
-            Write-Host "[general-portal] Stopped frontend (PID $Script:FrontendPid)" -ForegroundColor Yellow
+        if ($Script:FrontendProc) {
+            & taskkill /T /PID $Script:FrontendProc.Id /F 2>$null
+            Write-Host "[general-portal] Stopped frontend (PID $($Script:FrontendProc.Id))" -ForegroundColor Yellow
         }
-    } | Out-Null
+    }
 }
 
 Write-Status "General Portal Dev Launcher"
@@ -178,16 +181,16 @@ Write-Status "Starting backend on port 8080..."
 $backendProc = Start-Process -FilePath $Maven `
     -ArgumentList @("spring-boot:run", "-Dspring-boot.run.profiles=$Profiles") `
     -WorkingDirectory $BackendDir -PassThru -WindowStyle Minimized
-$Script:BackendPid = $backendProc.Id
-Write-Status "Backend PID: $Script:BackendPid"
+$Script:BackendProc = $backendProc
+Write-Status "Backend PID: $($Script:BackendProc.Id)"
 
 if (-not $FrontendOnly) {
     Write-Status "Starting frontend on port 5173..."
     $frontendProc = Start-Process -FilePath $NpmCmd `
         -ArgumentList @("run", "dev") `
         -WorkingDirectory $FrontendDir -PassThru -WindowStyle Minimized
-    $Script:FrontendPid = $frontendProc.Id
-    Write-Status "Frontend PID: $Script:FrontendPid"
+    $Script:FrontendProc = $frontendProc
+    Write-Status "Frontend PID: $($Script:FrontendProc.Id)"
 }
 
 Write-Host ""
@@ -211,7 +214,7 @@ try {
         }
     }
 } finally {
-    if ($Script:BackendPid) { Stop-Process -Id $Script:BackendPid -Force -ErrorAction SilentlyContinue }
-    if ($Script:FrontendPid) { Stop-Process -Id $Script:FrontendPid -Force -ErrorAction SilentlyContinue }
+    if ($Script:BackendProc) { & taskkill /T /PID $Script:BackendProc.Id /F 2>$null }
+    if ($Script:FrontendProc) { & taskkill /T /PID $Script:FrontendProc.Id /F 2>$null }
     Write-Host "[general-portal] All services stopped." -ForegroundColor Yellow
 }
