@@ -34,22 +34,31 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.client.registration.microsoft.client-id:}")
     private String oauth2ClientId;
 
+    @Value("${general-portal.security.officer-role-enabled:true}")
+    private boolean officerRoleEnabled;
+
     public SecurityConfig(DevLoginFilter devLoginFilter) {
         this.devLoginFilter = devLoginFilter;
     }
 
     @Bean
     RoleHierarchy roleHierarchy() {
-        return RoleHierarchyImpl.withDefaultRolePrefix()
-            .role("ADMIN").implies("OFFICER")
-            .role("OFFICER").implies("MEMBER")
-            .role("MEMBER").implies("GRADE_REP")
-            .build();
+        return RoleHierarchyImpl.fromHierarchy(roleHierarchyString());
+    }
+
+    private String roleHierarchyString() {
+        if (officerRoleEnabled) {
+            return "ROLE_ADMIN > ROLE_PRESIDENT\n" +
+                   "ROLE_PRESIDENT > ROLE_OFFICER\n" +
+                   "ROLE_OFFICER > ROLE_MEMBER";
+        }
+        return "ROLE_ADMIN > ROLE_PRESIDENT\n" +
+               "ROLE_PRESIDENT > ROLE_MEMBER";
     }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        var chain = http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
@@ -60,8 +69,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/dev-login").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
-            )
-            .oauth2Login(Customizer.withDefaults())
+            );
+
+        if (!"demo-client-id".equals(oauth2ClientId) && !oauth2ClientId.isBlank()) {
+            chain.oauth2Login(Customizer.withDefaults());
+        }
+
+        return chain
             .logout(logout -> logout.logoutSuccessUrl("/"))
             .addFilterBefore(devLoginFilter, AnonymousAuthenticationFilter.class)
             .build();

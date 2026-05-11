@@ -6,7 +6,7 @@ spring:
   application:
     name: general-portal
   profiles:
-    default: dev
+    default: sqlite
   jpa:
     hibernate:
       ddl-auto: validate
@@ -50,6 +50,7 @@ general-portal:
   security:
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
     auto-provision-users: ${GENERAL_PORTAL_AUTO_PROVISION_USERS:true}
+    officer-role-enabled: ${GENERAL_PORTAL_OFFICER_ROLE_ENABLED:true}
     dev-auth:
       username: ${DEV_AUTH_USERNAME:}
       password: ${DEV_AUTH_PASSWORD:}
