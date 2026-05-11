@@ -4,7 +4,7 @@ import { App } from "./App";
 import "@carbon/styles/css/styles.css";
 
 async function bootstrap() {
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV && import.meta.env.VITE_USE_MSW === "true") {
     const { startMockService } = await import("./mocks/browser");
     await startMockService();
   }

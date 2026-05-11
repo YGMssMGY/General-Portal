@@ -28,15 +28,19 @@ const columns: ColumnDef<Member>[] = [
     render: (member) => (
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <div style={avatarStyle}>
-          {member.name
+          {member.user.displayName
             .split(" ")
             .map((p) => p[0])
             .join("")
             .slice(0, 2)}
         </div>
         <div>
-          <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{member.name}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>{member.email}</p>
+          <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+            {member.user.displayName}
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
+            {member.user.email}
+          </p>
         </div>
       </div>
     ),
@@ -143,7 +147,7 @@ export function MembersPage() {
       <DataTable
         columns={columns}
         data={data as unknown as Record<string, unknown>[]}
-        defaultSort={{ key: "name", direction: "asc" }}
+        defaultSort={{ key: "position", direction: "asc" }}
         pageSize={10}
       />
     </div>

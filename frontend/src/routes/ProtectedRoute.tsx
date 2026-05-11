@@ -9,11 +9,10 @@ interface ProtectedRouteProps {
 }
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
-  teacher: 5,
-  president: 4,
-  vp: 3,
-  member: 2,
-  grade_rep: 1,
+  admin: 4,
+  president: 3,
+  officer: 2,
+  member: 1,
 };
 
 export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) {

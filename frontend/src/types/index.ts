@@ -1,4 +1,4 @@
-export type UserRole = "teacher" | "president" | "vp" | "member" | "grade_rep";
+export type UserRole = "admin" | "president" | "officer" | "member";
 
 export type ResourceStatus =
   | "draft"
@@ -16,12 +16,12 @@ export type Priority = "low" | "normal" | "medium" | "high";
 
 export interface UserProfile {
   id: string;
-  name: string;
   email: string;
+  displayName: string;
   avatarUrl?: string;
-  workspaceId: string;
-  permissions: string[];
-  role?: UserRole;
+  role: UserRole;
+  workspaceName: string;
+  permissions?: string[];
 }
 
 export interface Workspace {
@@ -123,13 +123,12 @@ export interface WorkspaceFile {
 
 export interface Member {
   id: string;
-  name: string;
-  email: string;
+  user: UserProfile;
   position: string;
   accessLabel: string;
   taskCount: number;
   volunteerHours: number;
-  permissions: string[];
+  role?: UserRole;
 }
 
 export interface ActivityItem {

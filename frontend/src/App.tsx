@@ -1,7 +1,6 @@
 import { BrowserRouter } from "react-router-dom";
 import { Theme } from "@carbon/react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
-import { DemoAuthProvider } from "./context/DemoAuthContext";
 import { AuthProvider } from "./context/AuthContext";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -11,13 +10,11 @@ function ThemedApp() {
   const { theme } = useTheme();
   return (
     <Theme theme={theme === "dark" ? "g100" : "g10"}>
-      <DemoAuthProvider>
-        <AuthProvider>
-          <WorkspaceProvider>
-            <AppRoutes />
-          </WorkspaceProvider>
-        </AuthProvider>
-      </DemoAuthProvider>
+      <AuthProvider>
+        <WorkspaceProvider>
+          <AppRoutes />
+        </WorkspaceProvider>
+      </AuthProvider>
     </Theme>
   );
 }

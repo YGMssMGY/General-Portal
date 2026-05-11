@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tile } from "@carbon/react";
+import { Tile, Button } from "@carbon/react";
 import { useAuth } from "../context/AuthContext";
 import { DevLoginForm } from "../components/DevLoginForm";
-
-const isDevAuth = import.meta.env.VITE_DEV_AUTH === "true";
+import { workspaceApi } from "../api/workspaceApi";
 
 export function LoginPage() {
   const { isAuthenticated } = useAuth();
@@ -65,17 +64,25 @@ export function LoginPage() {
           Sign in with your Microsoft account to access the admin portal.
         </p>
 
-        {isDevAuth ? (
-          <div
-            style={{
-              marginTop: "1.5rem",
-              borderTop: "1px solid var(--cds-border-subtle)",
-              paddingTop: "1.5rem",
+        <div style={{ marginTop: "1rem", textAlign: "center" }}>
+          <Button
+            kind="primary"
+            onClick={() => {
+              window.location.href = workspaceApi.getMicrosoftLoginUrl();
             }}
+            disabled
+            style={{ width: "100%" }}
           >
-            <DevLoginForm />
-          </div>
-        ) : null}
+            Sign in with Microsoft
+          </Button>
+          <p
+            style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}
+          >
+            OAuth2 not configured — use developer login below
+          </p>
+        </div>
+
+        <DevLoginForm />
       </Tile>
     </div>
   );

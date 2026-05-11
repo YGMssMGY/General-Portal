@@ -63,7 +63,7 @@ export function DashboardPage() {
     <div>
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
-          Good morning, {(user?.name ?? "").split(" ")[0]}
+          Good morning, {(user?.displayName ?? "").split(" ")[0]}
         </h1>
         <p
           style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}

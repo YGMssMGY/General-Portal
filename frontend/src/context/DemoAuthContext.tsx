@@ -4,11 +4,10 @@ import { generateUserProfiles, getCurrentRole, setCurrentRole as setMockRole } f
 import type { UserProfile } from "../types";
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
-  teacher: 5,
-  president: 4,
-  vp: 3,
-  member: 2,
-  grade_rep: 1,
+  admin: 4,
+  president: 3,
+  officer: 2,
+  member: 1,
 };
 
 interface DemoAuthContextValue {
@@ -37,7 +36,7 @@ export function DemoAuthProvider({ children }: { children: ReactNode }) {
   const user = useMemo(() => profiles[role], [role]);
 
   const hasPermission = useCallback(
-    (permission: string) => user.permissions.includes(permission),
+    (permission: string) => (user.permissions ?? []).includes(permission),
     [user.permissions],
   );
 

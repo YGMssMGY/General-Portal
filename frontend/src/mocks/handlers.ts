@@ -100,7 +100,7 @@ export const handlers = [
       title: body.title || "New Proposal",
       type: body.type || "Event",
       status: "draft" as const,
-      submittedBy: body.submittedBy || getCurrentUser().name,
+      submittedBy: body.submittedBy || getCurrentUser().displayName,
       submittedAt: new Date().toISOString(),
       budget: body.budget || 0,
       summary: body.summary || "",
