@@ -1,11 +1,11 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreateFinanceTransactionRequest;
-import com.orgflow.portal.dto.Dtos.FinanceTransactionDto;
-import com.orgflow.portal.entity.FinanceTransaction;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.FinanceTransactionRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.CreateFinanceTransactionRequest;
+import com.generalportal.portal.dto.Dtos.FinanceTransactionDto;
+import com.generalportal.portal.entity.FinanceTransaction;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.FinanceTransactionRepository;
+import com.generalportal.portal.security.Permissions;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;

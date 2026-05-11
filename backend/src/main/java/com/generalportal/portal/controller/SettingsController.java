@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.WorkspaceSettingsDto;
-import com.orgflow.portal.dto.Dtos.UpdateSettingsRequest;
-import com.orgflow.portal.service.SettingsService;
+import com.generalportal.portal.dto.Dtos.WorkspaceSettingsDto;
+import com.generalportal.portal.dto.Dtos.UpdateSettingsRequest;
+import com.generalportal.portal.service.SettingsService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;

@@ -1,12 +1,12 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.UserDto;
-import com.orgflow.portal.entity.PermissionGrant;
-import com.orgflow.portal.entity.UserAccount;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.PermissionGrantRepository;
-import com.orgflow.portal.repository.UserAccountRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.UserDto;
+import com.generalportal.portal.entity.PermissionGrant;
+import com.generalportal.portal.entity.UserAccount;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.PermissionGrantRepository;
+import com.generalportal.portal.repository.UserAccountRepository;
+import com.generalportal.portal.security.Permissions;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;

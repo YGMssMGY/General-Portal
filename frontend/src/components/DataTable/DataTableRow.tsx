@@ -1,3 +1,4 @@
+import { TableRow, TableCell, TableSelectRow } from "@carbon/react";
 import type { ColumnDef } from "./DataTable";
 
 interface DataTableRowProps<T> {
@@ -16,30 +17,21 @@ export function DataTableRow<T extends Record<string, unknown>>({
   onToggleSelect,
 }: DataTableRowProps<T>) {
   return (
-    <tr
-      className={`border-b border-border-subtle transition-colors ${
-        selected ? "bg-surface-selected" : "hover:bg-surface-hover"
-      }`}
-    >
+    <TableRow isSelected={selected}>
       {selectable ? (
-        <td className="w-10 px-3 py-2.5">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-carbon-blue-60"
-            checked={selected}
-            onChange={onToggleSelect}
-            aria-label={`Select row`}
-          />
-        </td>
+        <TableSelectRow
+          id={`row-${String(item.id)}`}
+          name={`row-${String(item.id)}`}
+          checked={selected}
+          onSelect={onToggleSelect}
+          aria-label="Select row"
+        />
       ) : null}
       {columns.map((col) => (
-        <td
-          key={col.key}
-          className={`px-4 py-2.5 text-sm text-text-primary ${col.className ?? ""}`}
-        >
+        <TableCell key={col.key}>
           {col.render ? col.render(item) : String(item[col.key] ?? "")}
-        </td>
+        </TableCell>
       ))}
-    </tr>
+    </TableRow>
   );
 }

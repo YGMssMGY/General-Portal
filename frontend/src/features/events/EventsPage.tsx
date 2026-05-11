@@ -5,7 +5,6 @@ import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useEvents } from "../../hooks/useWorkspaceResources";
 import type { EventItem } from "../../types";
-import { statusBadgeClass } from "../../utils/classes";
 import { formatDate, sentenceCase } from "../../utils/format";
 
 const columns: ColumnDef<EventItem>[] = [
@@ -20,9 +19,7 @@ const columns: ColumnDef<EventItem>[] = [
     key: "status",
     header: "Status",
     sortable: true,
-    render: (event) => (
-      <Badge className={statusBadgeClass(event.status)}>{sentenceCase(event.status)}</Badge>
-    ),
+    render: (event) => <Badge>{sentenceCase(event.status)}</Badge>,
   },
   {
     key: "progress",
@@ -35,7 +32,6 @@ const columns: ColumnDef<EventItem>[] = [
 
 export function EventsPage() {
   const { data, error, isLoading, refetch } = useEvents();
-
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Events are unavailable"} onRetry={refetch} />;
@@ -46,7 +42,6 @@ export function EventsPage() {
         title="Events"
         description="Plan and track events, assign volunteers, and manage budgets."
       />
-
       <DataTable
         columns={columns}
         data={data as unknown as Record<string, unknown>[]}

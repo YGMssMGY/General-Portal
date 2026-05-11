@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { TextInput, Button, Form, Tile } from "@carbon/react";
 import { useAuth } from "../context/AuthContext";
 
 export function DevLoginForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [username, setUsername] = useState("dev@orgflow.local");
+  const [username, setUsername] = useState("dev@general-portal.local");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,45 +44,50 @@ export function DevLoginForm() {
   }
 
   return (
-    <div className="mx-auto mt-6 max-w-sm border border-border-subtle bg-surface p-6">
-      <h2 className="text-lg font-semibold text-text-primary">Developer Login</h2>
-      <p className="mt-1 text-sm text-text-secondary">
+    <Tile style={{ maxWidth: "24rem", margin: "1.5rem auto 0" }}>
+      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+        Developer Login
+      </h2>
+      <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
         Configure DEV_AUTH_USERNAME and DEV_AUTH_PASSWORD in .env.local
       </p>
-      <form className="mt-4 grid gap-3" onSubmit={handleSubmit}>
-        <label className="grid gap-1">
-          <span className="text-sm font-medium text-text-primary">Username</span>
-          <input
-            type="text"
-            className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </label>
-        <label className="grid gap-1">
-          <span className="text-sm font-medium text-text-primary">Password</span>
-          <input
-            type="password"
-            className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </label>
+      <Form onSubmit={handleSubmit} style={{ marginTop: "1rem" }}>
+        <TextInput
+          id="dev-username"
+          labelText="Username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+        <TextInput
+          id="dev-password"
+          labelText="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
         {error ? (
-          <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">
+          <p
+            style={{
+              borderLeft: "4px solid var(--cds-support-error)",
+              background: "var(--cds-support-error)",
+              backgroundClip: "padding-box",
+              backgroundColor: "#fff1f1",
+              padding: "0.5rem 0.75rem",
+              fontSize: "0.875rem",
+              color: "#a2191f",
+              marginTop: "0.75rem",
+            }}
+          >
             {error}
           </p>
         ) : null}
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors"
-        >
+        <Button type="submit" disabled={loading} style={{ marginTop: "1rem" }}>
           {loading ? "Signing in..." : "Sign In (Dev)"}
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Form>
+    </Tile>
   );
 }

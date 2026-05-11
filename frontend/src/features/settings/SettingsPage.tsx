@@ -1,33 +1,8 @@
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
+import { Toggle, TextInput, Select, SelectItem } from "@carbon/react";
 import { useSettings } from "../../hooks/useWorkspaceResources";
-
-function Toggle({
-  checked,
-  label,
-  description,
-}: {
-  checked: boolean;
-  label: string;
-  description: string;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 border border-border-subtle p-4">
-      <span>
-        <span className="block font-medium text-text-primary">{label}</span>
-        <span className="text-sm text-text-secondary">{description}</span>
-      </span>
-      <input
-        className="h-5 w-5 accent-carbon-blue-60"
-        type="checkbox"
-        checked={checked}
-        disabled
-        readOnly
-      />
-    </label>
-  );
-}
 
 export function SettingsPage() {
   const { data, error, isLoading, refetch } = useSettings();
@@ -43,54 +18,78 @@ export function SettingsPage() {
         description="Configure workspace defaults, approvals, and policies."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem" }}>
         <Card padding="lg">
-          <h2 className="text-lg font-semibold text-text-primary font-condensed">General</h2>
-          <div className="mt-4 grid gap-4">
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Workspace name</span>
-              <input
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
-                value={data.workspaceName}
-                readOnly
-              />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Default visibility</span>
-              <select
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
-                value={data.defaultVisibility}
-                disabled
-              >
-                <option value="members">Members</option>
-                <option value="officers">Officers</option>
-                <option value="private">Private</option>
-              </select>
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Fiscal year start</span>
-              <input
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none"
-                value={data.fiscalYearStart}
-                readOnly
-              />
-            </label>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            General
+          </h2>
+          <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <TextInput
+              id="ws-name"
+              labelText="Workspace name"
+              value={data.workspaceName}
+              readOnly
+            />
+            <Select
+              id="ws-visibility"
+              labelText="Default visibility"
+              value={data.defaultVisibility}
+              disabled
+            >
+              <SelectItem value="members" text="Members" />
+              <SelectItem value="officers" text="Officers" />
+              <SelectItem value="private" text="Private" />
+            </Select>
+            <TextInput
+              id="ws-fiscal"
+              labelText="Fiscal year start"
+              value={data.fiscalYearStart}
+              readOnly
+            />
           </div>
         </Card>
 
         <Card padding="lg">
-          <h2 className="text-lg font-semibold text-text-primary font-condensed">Policy</h2>
-          <div className="mt-4 space-y-4">
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            Policy
+          </h2>
+          <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
             <Toggle
-              checked={data.requireProposalApproval}
-              label="Require proposal approval"
-              description="Route new proposals through the approval queue."
+              id="require-approval"
+              labelText="Require proposal approval"
+              hideLabel
+              toggled={data.requireProposalApproval}
+              readOnly
+              labelA="Off"
+              labelB="On"
             />
+            <div
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--cds-text-secondary)",
+                marginTop: "-0.5rem",
+              }}
+            >
+              Route new proposals through the approval queue.
+            </div>
             <Toggle
-              checked={data.allowMemberInvites}
-              label="Allow member invites"
-              description="Let approved members invite collaborators."
+              id="allow-invites"
+              labelText="Allow member invites"
+              hideLabel
+              toggled={data.allowMemberInvites}
+              readOnly
+              labelA="Off"
+              labelB="On"
             />
+            <div
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--cds-text-secondary)",
+                marginTop: "-0.5rem",
+              }}
+            >
+              Let approved members invite collaborators.
+            </div>
           </div>
         </Card>
       </div>

@@ -1,4 +1,4 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;

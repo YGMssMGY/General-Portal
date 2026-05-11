@@ -1,7 +1,7 @@
-package com.orgflow.portal.repository;
+package com.generalportal.portal.repository;
 
-import com.orgflow.portal.entity.Membership;
-import com.orgflow.portal.entity.PermissionGrant;
+import com.generalportal.portal.entity.Membership;
+import com.generalportal.portal.entity.PermissionGrant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;

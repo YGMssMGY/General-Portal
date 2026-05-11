@@ -20,16 +20,16 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 cleanup() {
-    echo -e "${YELLOW}[orgflow] Shutting down...${NC}"
+    echo -e "${YELLOW}[general-portal] Shutting down...${NC}"
     if [ -n "$BACKEND_PID" ]; then
         kill "$BACKEND_PID" 2>/dev/null || true
         wait "$BACKEND_PID" 2>/dev/null || true
-        echo -e "${YELLOW}[orgflow] Backend stopped (PID $BACKEND_PID)${NC}"
+        echo -e "${YELLOW}[general-portal] Backend stopped (PID $BACKEND_PID)${NC}"
     fi
     if [ -n "$FRONTEND_PID" ]; then
         kill "$FRONTEND_PID" 2>/dev/null || true
         wait "$FRONTEND_PID" 2>/dev/null || true
-        echo -e "${YELLOW}[orgflow] Frontend stopped (PID $FRONTEND_PID)${NC}"
+        echo -e "${YELLOW}[general-portal] Frontend stopped (PID $FRONTEND_PID)${NC}"
     fi
     exit 0
 }
@@ -47,8 +47,8 @@ while getopts "b:d:rfh" opt; do
     esac
 done
 
-echo -e "${CYAN}[orgflow] OrgFlow Dev Launcher${NC}"
-echo -e "${CYAN}[orgflow] =====================${NC}"
+echo -e "${CYAN}[general-portal] General Portal Dev Launcher${NC}"
+echo -e "${CYAN}[general-portal] =====================${NC}"
 
 if [ -f "$ENV_FILE" ]; then
     set -a
@@ -63,11 +63,11 @@ if ! command -v java &>/dev/null; then
 fi
 
 if ! command -v java &>/dev/null; then
-    echo -e "${RED}[orgflow] ERROR: Java not found${NC}"
+    echo -e "${RED}[general-portal] ERROR: Java not found${NC}"
     exit 1
 fi
 JAVA_VER=$(java -version 2>&1 | head -1)
-echo -e "${CYAN}[orgflow] $JAVA_VER${NC}"
+echo -e "${CYAN}[general-portal] $JAVA_VER${NC}"
 
 MVN_CMD=""
 if [ -n "${MVN_CMD:-}" ] && [ -x "$MVN_CMD" ]; then
@@ -84,17 +84,17 @@ elif [ -d "$ROOT/.tools" ]; then
 fi
 
 if [ -z "$MVN_CMD" ]; then
-    echo -e "${RED}[orgflow] ERROR: Maven not found${NC}"
+    echo -e "${RED}[general-portal] ERROR: Maven not found${NC}"
     exit 1
 fi
-echo -e "${CYAN}[orgflow] Maven: $MVN_CMD${NC}"
+echo -e "${CYAN}[general-portal] Maven: $MVN_CMD${NC}"
 
 if [ "$FRONTEND_ONLY" != "true" ]; then
     if ! command -v npm &>/dev/null; then
-        echo -e "${RED}[orgflow] ERROR: npm not found${NC}"
+        echo -e "${RED}[general-portal] ERROR: npm not found${NC}"
         exit 1
     fi
-    echo -e "${CYAN}[orgflow] npm: $(command -v npm)${NC}"
+    echo -e "${CYAN}[general-portal] npm: $(command -v npm)${NC}"
 fi
 
 PROFILES="$BACKEND_PROFILE"
@@ -107,7 +107,7 @@ fi
 
 if [ "$PROFILES" = "dev" ]; then
     if ! nc -z localhost 5432 2>/dev/null; then
-        echo -e "${RED}[orgflow] ERROR: PostgreSQL not on localhost:5432${NC}"
+        echo -e "${RED}[general-portal] ERROR: PostgreSQL not on localhost:5432${NC}"
         exit 1
     fi
 elif [ "$PROFILES" = "sqlite" ]; then
@@ -117,29 +117,29 @@ fi
 if [ "$WITH_REDIS" = "true" ]; then
     PROFILES="$PROFILES,redis"
     if ! nc -z localhost 6379 2>/dev/null; then
-        echo -e "${RED}[orgflow] ERROR: Redis not on localhost:6379${NC}"
+        echo -e "${RED}[general-portal] ERROR: Redis not on localhost:6379${NC}"
         exit 1
     fi
 fi
 
 export SPRING_PROFILES_ACTIVE="$PROFILES"
-echo -e "${CYAN}[orgflow] Spring profiles: $PROFILES${NC}"
+echo -e "${CYAN}[general-portal] Spring profiles: $PROFILES${NC}"
 
-echo -e "${CYAN}[orgflow] Starting backend on port 8080...${NC}"
+echo -e "${CYAN}[general-portal] Starting backend on port 8080...${NC}"
 "$MVN_CMD" spring-boot:run -Dspring-boot.run.profiles="$PROFILES" -f "$BACKEND_DIR/pom.xml" &
 BACKEND_PID=$!
-echo -e "${CYAN}[orgflow] Backend PID: $BACKEND_PID${NC}"
+echo -e "${CYAN}[general-portal] Backend PID: $BACKEND_PID${NC}"
 
 if [ "$FRONTEND_ONLY" != "true" ]; then
-    echo -e "${CYAN}[orgflow] Starting frontend on port 5173...${NC}"
+    echo -e "${CYAN}[general-portal] Starting frontend on port 5173...${NC}"
     npm run dev --prefix "$FRONTEND_DIR" &
     FRONTEND_PID=$!
-    echo -e "${CYAN}[orgflow] Frontend PID: $FRONTEND_PID${NC}"
+    echo -e "${CYAN}[general-portal] Frontend PID: $FRONTEND_PID${NC}"
 fi
 
 echo ""
 echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}  OrgFlow is starting up!${NC}"
+echo -e "${GREEN}  General Portal is starting up!${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo -e "  Frontend: ${GREEN}http://localhost:5173${NC}"
 echo -e "  Backend:  ${GREEN}http://localhost:8080/api/health${NC}"

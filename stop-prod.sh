@@ -5,7 +5,7 @@ echo "Stopping production services..."
 
 FOUND=false
 
-JAVA_PIDS=$(pgrep -f "portal.*\.jar|orgflow" 2>/dev/null || true)
+JAVA_PIDS=$(pgrep -f "portal.*\.jar|general-portal" 2>/dev/null || true)
 if [ -n "$JAVA_PIDS" ]; then
     echo "$JAVA_PIDS" | while read p; do
         kill "$p" 2>/dev/null && echo "  Stopped backend PID $p" && FOUND=true

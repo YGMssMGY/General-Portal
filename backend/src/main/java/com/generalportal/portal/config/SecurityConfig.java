@@ -1,6 +1,6 @@
-package com.orgflow.portal.config;
+package com.generalportal.portal.config;
 
-import com.orgflow.portal.security.DevLoginFilter;
+import com.generalportal.portal.security.DevLoginFilter;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import org.slf4j.Logger;
@@ -28,7 +28,7 @@ public class SecurityConfig {
 
     private final DevLoginFilter devLoginFilter;
 
-    @Value("${orgflow.security.frontend-origin}")
+    @Value("${general-portal.security.frontend-origin}")
     private String frontendOrigin;
 
     @Value("${spring.security.oauth2.client.registration.microsoft.client-id:}")

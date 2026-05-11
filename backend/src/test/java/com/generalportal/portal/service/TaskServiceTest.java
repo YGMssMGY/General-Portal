@@ -1,15 +1,15 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.orgflow.portal.dto.Dtos.CreateTaskRequest;
-import com.orgflow.portal.entity.TaskItem;
-import com.orgflow.portal.entity.Workspace;
-import com.orgflow.portal.repository.TaskRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.CreateTaskRequest;
+import com.generalportal.portal.entity.TaskItem;
+import com.generalportal.portal.entity.Workspace;
+import com.generalportal.portal.repository.TaskRepository;
+import com.generalportal.portal.security.Permissions;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class TaskServiceTest {
     @Test
     @SuppressWarnings("null")
     void listTasksRequiresReadPermissionAndMapsDtos() {
-        Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
+        Workspace workspace = new Workspace("General Portal Workspace", "Student Council Workspace");
         TaskItem task = new TaskItem(workspace, "Confirm gym reservation", "todo", "high", "Winter Formal", LocalDate.now(), "Maya Chen", 0, null);
         var pageable = PageRequest.of(0, 25);
         when(currentUserService.currentWorkspace()).thenReturn(workspace);
@@ -54,7 +54,7 @@ class TaskServiceTest {
     @Test
     @SuppressWarnings("null")
     void createTaskRequiresWritePermissionAndDefaultsStatus() {
-        Workspace workspace = new Workspace("OrgFlow Workspace", "Student Council Workspace");
+        Workspace workspace = new Workspace("General Portal Workspace", "Student Council Workspace");
         CreateTaskRequest request = new CreateTaskRequest("Draft agenda", "high", "Assembly", LocalDate.now().plusDays(1), "Chris Rivera");
         when(currentUserService.currentWorkspace()).thenReturn(workspace);
         when(taskRepository.save(any(TaskItem.class))).thenAnswer(invocation -> invocation.getArgument(0));

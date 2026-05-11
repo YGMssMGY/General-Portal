@@ -1,9 +1,9 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.CreateProposalRequest;
-import com.orgflow.portal.dto.Dtos.ProposalDto;
-import com.orgflow.portal.dto.Dtos.UpdateProposalRequest;
-import com.orgflow.portal.service.ProposalService;
+import com.generalportal.portal.dto.Dtos.CreateProposalRequest;
+import com.generalportal.portal.dto.Dtos.ProposalDto;
+import com.generalportal.portal.dto.Dtos.UpdateProposalRequest;
+import com.generalportal.portal.service.ProposalService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

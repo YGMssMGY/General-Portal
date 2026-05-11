@@ -3,8 +3,8 @@ import { Badge } from "../../components/Badge";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useMessageThreads } from "../../hooks/useWorkspaceResources";
 import type { MessageThread } from "../../types";
-import { statusBadgeClass } from "../../utils/classes";
 import { formatDateTime, sentenceCase } from "../../utils/format";
+import { Tag, Button } from "@carbon/react";
 
 export function MessagesPage() {
   const { data, error, isLoading, refetch } = useMessageThreads();
@@ -25,102 +25,213 @@ export function MessagesPage() {
   if (error || !data)
     return <ErrorState message={error ?? "Messages unavailable"} onRetry={refetch} />;
 
+  const sidebarStyle: React.CSSProperties = {
+    border: "1px solid var(--cds-border-subtle)",
+    background: "var(--cds-layer)",
+    display: "grid",
+    gridTemplateColumns: "320px 1fr 260px",
+    minHeight: "calc(100vh - 6rem)",
+  };
+
   return (
-    <div className="grid min-h-[calc(100vh-96px)] border border-border-subtle bg-surface lg:grid-cols-[320px_minmax(0,1fr)_260px]">
-      <aside className="border-b border-border-subtle lg:border-b-0 lg:border-r">
-        <div className="border-b border-border-subtle p-4">
-          <h1 className="text-lg font-semibold text-text-primary font-condensed">Messages</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+    <div style={sidebarStyle}>
+      <aside style={{ borderRight: "1px solid var(--cds-border-subtle)" }}>
+        <div style={{ borderBottom: "1px solid var(--cds-border-subtle)", padding: "1rem" }}>
+          <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            Messages
+          </h1>
+          <p
+            style={{
+              marginTop: "0.25rem",
+              fontSize: "0.875rem",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Conversations linked to workspace resources.
           </p>
         </div>
-        <div className="flex gap-2 border-b border-border-subtle p-3">
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            borderBottom: "1px solid var(--cds-border-subtle)",
+            padding: "0.75rem",
+          }}
+        >
           {(["all", "event", "task"] as const).map((f) => (
-            <button
+            <Button
               key={f}
-              type="button"
-              className={`px-3 py-1 text-sm font-medium transition-colors ${
-                contextFilter === f
-                  ? "bg-carbon-blue-60 text-white"
-                  : "text-text-secondary hover:bg-surface-hover"
-              }`}
+              kind={contextFilter === f ? "primary" : "ghost"}
+              size="sm"
               onClick={() => setContextFilter(f)}
             >
               {f === "all" ? "All" : f === "event" ? "Events" : "Tasks"}
-            </button>
+            </Button>
           ))}
         </div>
-        <div className="scrollbar-soft max-h-[600px] overflow-y-auto">
+        <div className="scrollbar-soft" style={{ maxHeight: "600px", overflowY: "auto" }}>
           {filtered.map((thread) => (
             <button
               key={thread.id}
               type="button"
               onClick={() => setSelectedId(thread.id)}
-              className={`w-full border-b border-border-subtle p-4 text-left transition-colors border-l-[3px] ${
-                selected?.id === thread.id
-                  ? "border-l-border-interactive bg-surface-selected"
-                  : "border-l-transparent hover:bg-surface-hover"
-              }`}
+              style={{
+                width: "100%",
+                borderBottom: "1px solid var(--cds-border-subtle)",
+                padding: "1rem",
+                textAlign: "left",
+                borderLeft:
+                  selected?.id === thread.id
+                    ? "3px solid var(--cds-border-interactive)"
+                    : "3px solid transparent",
+                background:
+                  selected?.id === thread.id ? "var(--cds-layer-selected)" : "transparent",
+                cursor: "pointer",
+              }}
             >
-              <div className="mb-1 flex items-start justify-between gap-3">
-                <h2 className="font-medium text-text-primary">{thread.title}</h2>
-                <span className="text-xs text-text-secondary">
+              <div
+                style={{
+                  marginBottom: "0.25rem",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <h2 style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+                  {thread.title}
+                </h2>
+                <span style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
                   {formatDateTime(thread.updatedAt)}
                 </span>
               </div>
-              <p className="truncate text-sm text-text-secondary">{thread.preview}</p>
-              <div className="mt-3 flex items-center justify-between">
-                <Badge className={statusBadgeClass(thread.status)}>
-                  {sentenceCase(thread.status)}
-                </Badge>
-                {thread.unreadCount > 0 ? (
-                  <span className="flex h-5 min-w-5 items-center justify-center bg-carbon-blue-60 px-1.5 text-xs font-semibold text-white">
-                    {thread.unreadCount}
-                  </span>
-                ) : null}
+              <p
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  fontSize: "0.875rem",
+                  color: "var(--cds-text-secondary)",
+                }}
+              >
+                {thread.preview}
+              </p>
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Badge>{sentenceCase(thread.status)}</Badge>
+                {thread.unreadCount > 0 ? <Tag type="blue">{thread.unreadCount}</Tag> : null}
               </div>
             </button>
           ))}
           {filtered.length === 0 ? (
-            <p className="p-4 text-sm text-text-secondary">No threads match this filter.</p>
+            <p
+              style={{ padding: "1rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}
+            >
+              No threads match this filter.
+            </p>
           ) : null}
         </div>
       </aside>
 
-      <section className="flex min-h-[500px] flex-col">
-        <div className="border-b border-border-subtle p-4">
-          <h2 className="text-lg font-semibold text-text-primary">{selected?.title}</h2>
-          <p className="text-sm text-text-secondary">{selected?.participants.join(", ")}</p>
+      <section style={{ display: "flex", flexDirection: "column", minHeight: "500px" }}>
+        <div style={{ borderBottom: "1px solid var(--cds-border-subtle)", padding: "1rem" }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            {selected?.title}
+          </h2>
+          <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+            {selected?.participants.join(", ")}
+          </p>
         </div>
-        <div className="scrollbar-soft flex-1 space-y-4 overflow-y-auto p-4">
+        <div
+          className="scrollbar-soft"
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "1rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+          }}
+        >
           {selected?.messages.map((msg) => (
-            <div key={msg.id} className="max-w-xl border border-border-subtle bg-surface p-4">
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-medium text-text-primary">{msg.authorName}</span>
-                <span className="text-text-secondary">{formatDateTime(msg.sentAt)}</span>
+            <div
+              key={msg.id}
+              style={{
+                maxWidth: "36rem",
+                border: "1px solid var(--cds-border-subtle)",
+                padding: "1rem",
+              }}
+            >
+              <div
+                style={{
+                  marginBottom: "0.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <span style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+                  {msg.authorName}
+                </span>
+                <span style={{ color: "var(--cds-text-secondary)" }}>
+                  {formatDateTime(msg.sentAt)}
+                </span>
               </div>
-              <p className="text-sm text-text-primary">{msg.body}</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--cds-text-primary)" }}>{msg.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <aside className="hidden border-l border-border-subtle p-4 lg:block">
-        <h2 className="text-lg font-semibold text-text-primary font-condensed">Context</h2>
-        <dl className="mt-4 space-y-3 text-sm">
+      <aside
+        style={{
+          borderLeft: "1px solid var(--cds-border-subtle)",
+          padding: "1rem",
+          display: "block",
+        }}
+      >
+        <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+          Context
+        </h2>
+        <dl
+          style={{
+            marginTop: "1rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+            fontSize: "0.875rem",
+          }}
+        >
           <div>
-            <dt className="text-text-secondary">Type</dt>
-            <dd className="font-medium capitalize text-text-primary">{selected?.context}</dd>
+            <dt style={{ color: "var(--cds-text-secondary)" }}>Type</dt>
+            <dd
+              style={{
+                fontWeight: 500,
+                textTransform: "capitalize",
+                color: "var(--cds-text-primary)",
+              }}
+            >
+              {selected?.context}
+            </dd>
           </div>
           <div>
-            <dt className="text-text-secondary">Status</dt>
-            <dd className="font-medium text-text-primary">
+            <dt style={{ color: "var(--cds-text-secondary)" }}>Status</dt>
+            <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
               {selected ? sentenceCase(selected.status) : ""}
             </dd>
           </div>
           <div>
-            <dt className="text-text-secondary">Unread</dt>
-            <dd className="font-medium text-text-primary">{selected?.unreadCount ?? 0}</dd>
+            <dt style={{ color: "var(--cds-text-secondary)" }}>Unread</dt>
+            <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+              {selected?.unreadCount ?? 0}
+            </dd>
           </div>
         </dl>
       </aside>

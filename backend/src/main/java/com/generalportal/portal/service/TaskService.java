@@ -1,12 +1,12 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.TaskDto;
-import com.orgflow.portal.dto.Dtos.CreateTaskRequest;
-import com.orgflow.portal.dto.Dtos.UpdateTaskRequest;
-import com.orgflow.portal.entity.TaskItem;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.TaskRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.TaskDto;
+import com.generalportal.portal.dto.Dtos.CreateTaskRequest;
+import com.generalportal.portal.dto.Dtos.UpdateTaskRequest;
+import com.generalportal.portal.entity.TaskItem;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.TaskRepository;
+import com.generalportal.portal.security.Permissions;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

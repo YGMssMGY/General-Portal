@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Badge } from "../../components/Badge";
+import { Tile, Tag } from "@carbon/react";
 import { Card } from "../../components/Card";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useAuth } from "../../context/AuthContext";
@@ -17,22 +17,33 @@ const metricIcons: Record<string, ComponentType<any>> = {
   Warning,
 };
 
+const colorMap: Record<string, string> = {
+  primary: "#0f62fe",
+  secondary: "#007d79",
+  tertiary: "#198038",
+  danger: "#da1e28",
+  neutral: "var(--cds-text-secondary)",
+};
+
 function MetricCard({ metric }: { metric: DashboardMetric }) {
   const Icon = metricIcons[metric.icon] ?? Task;
-  const colorMap: Record<string, string> = {
-    primary: "text-carbon-blue-60",
-    secondary: "text-carbon-teal-60",
-    tertiary: "text-carbon-green-60",
-    danger: "text-carbon-red-60",
-    neutral: "text-text-secondary",
-  };
 
   return (
     <Card padding="lg" className="flex flex-col justify-between">
-      <Icon size={24} className={colorMap[metric.tone]} aria-hidden="true" />
+      <Icon size={24} style={{ color: colorMap[metric.tone] }} aria-hidden="true" />
       <div>
-        <p className="text-2xl font-semibold text-text-primary">{metric.value}</p>
-        <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+        <p style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+          {metric.value}
+        </p>
+        <p
+          style={{
+            fontSize: "0.75rem",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.025em",
+            color: "var(--cds-text-secondary)",
+          }}
+        >
           {metric.label}
         </p>
       </div>
@@ -50,59 +61,97 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-text-primary font-condensed">
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
           Good morning, {(user?.name ?? "").split(" ")[0]}
         </h1>
-        <p className="mt-1 text-sm text-text-secondary">
+        <p
+          style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}
+        >
           Here is what is happening in your workspace today.
         </p>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: "1rem",
+          marginBottom: "2rem",
+        }}
+      >
         {data.metrics.map((metric) => (
           <MetricCard key={metric.label} metric={metric} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
-        <div className="space-y-6">
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <Card padding="lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text-primary font-condensed">
+            <div
+              style={{
+                marginBottom: "1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h2
+                style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}
+              >
                 Needs Attention
               </h2>
               <Link
                 to="/admin/tasks"
-                className="text-sm font-medium text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors"
+                style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--cds-link-primary)" }}
               >
                 View All
               </Link>
             </div>
-            <div className="space-y-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {data.attention.map((item) => (
                 <div
                   key={item.id}
-                  className="flex flex-col gap-3 border border-border-subtle p-4 md:flex-row md:items-center md:justify-between"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.75rem",
+                    padding: "1rem",
+                    border: "1px solid var(--cds-border-subtle)",
+                  }}
                 >
-                  <div className="flex items-center gap-4">
-                    <Badge
-                      className={
+                  <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                    <Tag
+                      type={
                         item.tone === "danger"
-                          ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
+                          ? "red"
                           : item.tone === "tertiary"
-                            ? "border-carbon-yellow-30 bg-carbon-yellow-10 text-carbon-yellow-50"
-                            : "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
+                            ? "warm-gray"
+                            : "blue"
                       }
                     >
                       {item.label}
-                    </Badge>
+                    </Tag>
                     <div>
-                      <p className="font-medium text-text-primary">{item.title}</p>
-                      <p className="text-sm text-text-secondary">Owner: {item.owner}</p>
+                      <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+                        {item.title}
+                      </p>
+                      <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                        Owner: {item.owner}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-text-secondary">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      fontSize: "0.875rem",
+                      color: "var(--cds-text-secondary)",
+                    }}
+                  >
                     {item.dueLabel}
                     <ArrowRight size={16} aria-hidden="true" />
                   </div>
@@ -112,53 +161,128 @@ export function DashboardPage() {
           </Card>
 
           <Card padding="lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text-primary font-condensed">My Tasks</h2>
+            <div
+              style={{
+                marginBottom: "1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h2
+                style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}
+              >
+                My Tasks
+              </h2>
               <Link
                 to="/admin/tasks"
-                className="text-sm font-medium text-carbon-blue-60 hover:text-carbon-blue-70 transition-colors"
+                style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--cds-link-primary)" }}
               >
                 View All
               </Link>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: "1rem",
+              }}
+            >
               {data.myTasks.map((task) => (
-                <div key={task.id} className="border border-border-subtle p-4">
-                  <Badge className={priorityBadgeClass(task.priority)}>{task.priority}</Badge>
-                  <p className="mt-3 font-medium text-text-primary">{task.title}</p>
-                  <p className="mt-2 text-sm text-text-secondary">Due {formatDate(task.dueDate)}</p>
+                <div
+                  key={task.id}
+                  style={{ padding: "1rem", border: "1px solid var(--cds-border-subtle)" }}
+                >
+                  <Tag type="outline">{task.priority}</Tag>
+                  <p
+                    style={{
+                      marginTop: "0.75rem",
+                      fontWeight: 500,
+                      color: "var(--cds-text-primary)",
+                    }}
+                  >
+                    {task.title}
+                  </p>
+                  <p
+                    style={{
+                      marginTop: "0.5rem",
+                      fontSize: "0.875rem",
+                      color: "var(--cds-text-secondary)",
+                    }}
+                  >
+                    Due {formatDate(task.dueDate)}
+                  </p>
                 </div>
               ))}
             </div>
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <Card padding="lg">
-            <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">
+            <h2
+              style={{
+                marginBottom: "1rem",
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+              }}
+            >
               Upcoming Events
             </h2>
-            <div className="space-y-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {data.upcomingEvents.map((event) => (
-                <div key={event.id} className="border-l-2 border-carbon-blue-60 pl-4">
-                  <p className="text-sm font-semibold text-carbon-blue-60">
+                <div
+                  key={event.id}
+                  style={{ borderLeft: "2px solid #0f62fe", paddingLeft: "1rem" }}
+                >
+                  <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0f62fe" }}>
                     {formatDate(event.startsAt)}
                     {event.endsAt ? ` - ${formatDate(event.endsAt)}` : ""}
                   </p>
-                  <p className="mt-1 font-medium text-text-primary">{event.title}</p>
+                  <p
+                    style={{
+                      marginTop: "0.25rem",
+                      fontWeight: 500,
+                      color: "var(--cds-text-primary)",
+                    }}
+                  >
+                    {event.title}
+                  </p>
                 </div>
               ))}
             </div>
           </Card>
 
           <Card padding="lg">
-            <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">
+            <h2
+              style={{
+                marginBottom: "1rem",
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+              }}
+            >
               Recent Activity
             </h2>
-            <div className="space-y-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {data.recentActivity.map((activity) => (
-                <div key={activity.id} className="flex gap-3">
-                  <div className="mt-1 h-8 w-8 shrink-0 flex items-center justify-center bg-surface-hover text-xs font-semibold text-text-secondary">
+                <div key={activity.id} style={{ display: "flex", gap: "0.75rem" }}>
+                  <div
+                    style={{
+                      marginTop: "0.25rem",
+                      width: "2rem",
+                      height: "2rem",
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "var(--cds-layer-hover)",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      color: "var(--cds-text-secondary)",
+                    }}
+                  >
                     {activity.actorName
                       .split(" ")
                       .map((p) => p[0])
@@ -166,10 +290,18 @@ export function DashboardPage() {
                       .slice(0, 2)}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-text-primary">
+                    <p
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
                       {activity.actorName} {activity.action}
                     </p>
-                    <p className="text-sm text-text-secondary">{activity.resourceTitle}</p>
+                    <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                      {activity.resourceTitle}
+                    </p>
                   </div>
                 </div>
               ))}

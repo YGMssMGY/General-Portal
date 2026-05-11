@@ -1,7 +1,7 @@
-package com.orgflow.portal.repository;
+package com.generalportal.portal.repository;
 
-import com.orgflow.portal.entity.EventItem;
-import com.orgflow.portal.entity.Workspace;
+import com.generalportal.portal.entity.EventItem;
+import com.generalportal.portal.entity.Workspace;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

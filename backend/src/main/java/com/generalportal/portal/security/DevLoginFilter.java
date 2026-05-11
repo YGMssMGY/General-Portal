@@ -1,4 +1,4 @@
-package com.orgflow.portal.security;
+package com.generalportal.portal.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -31,8 +31,8 @@ public class DevLoginFilter extends OncePerRequestFilter {
     private final String devPassword;
 
     public DevLoginFilter(
-        @Value("${orgflow.security.dev-auth.username:}") String devUsername,
-        @Value("${orgflow.security.dev-auth.password:}") String devPassword
+        @Value("${general-portal.security.dev-auth.username:}") String devUsername,
+        @Value("${general-portal.security.dev-auth.password:}") String devPassword
     ) {
         this.devUsername = devUsername;
         this.devPassword = devPassword;

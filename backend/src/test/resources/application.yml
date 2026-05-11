@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:orgflow-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    url: jdbc:h2:mem:general-portal-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     username: sa
     password:
   jpa:
@@ -11,7 +11,7 @@ spring:
   session:
     store-type: none
 
-orgflow:
+general-portal:
   security:
     demo-mode: true
     auto-provision-users: true

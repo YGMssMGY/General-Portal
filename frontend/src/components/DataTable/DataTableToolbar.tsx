@@ -1,5 +1,6 @@
-import { TrashCan, Close } from "@carbon/icons-react";
+import { Close } from "@carbon/icons-react";
 import type { ReactNode } from "react";
+import { TableToolbar, TableToolbarContent, Button } from "@carbon/react";
 
 interface DataTableToolbarProps {
   selectedCount: number;
@@ -13,23 +14,22 @@ export function DataTableToolbar({
   children,
 }: DataTableToolbarProps) {
   return (
-    <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-2">
-      {selectedCount > 0 ? (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-text-secondary">{selectedCount} selected</span>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 border border-border-subtle px-2 py-1 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
-            onClick={onClearSelection}
-          >
-            <Close size={14} aria-hidden="true" />
-            Clear
-          </button>
-          {children}
-        </div>
-      ) : (
-        children
-      )}
-    </div>
+    <TableToolbar>
+      <TableToolbarContent>
+        {selectedCount > 0 ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+              {selectedCount} selected
+            </span>
+            <Button kind="ghost" size="sm" onClick={onClearSelection} renderIcon={Close}>
+              Clear
+            </Button>
+            {children}
+          </div>
+        ) : (
+          children
+        )}
+      </TableToolbarContent>
+    </TableToolbar>
   );
 }

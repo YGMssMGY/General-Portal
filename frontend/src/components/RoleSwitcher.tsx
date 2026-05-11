@@ -13,19 +13,28 @@ export function RoleSwitcher() {
   const { currentRole, availableRoles, switchRole } = useDemoAuth();
 
   return (
-    <div className="flex items-center">
-      <select
-        value={currentRole}
-        onChange={(e) => switchRole(e.target.value as UserRole)}
-        className="h-8 border-b border-border-subtle bg-transparent px-2 text-xs font-medium text-text-secondary outline-none hover:border-border-interactive focus:border-border-interactive"
-        aria-label="Switch demo role"
-      >
-        {availableRoles.map((role) => (
-          <option key={role} value={role}>
-            {ROLE_LABELS[role]}
-          </option>
-        ))}
-      </select>
-    </div>
+    <select
+      value={currentRole}
+      onChange={(e) => switchRole(e.target.value as UserRole)}
+      aria-label="Switch demo role"
+      style={{
+        height: "2rem",
+        border: "none",
+        borderBottom: "2px solid var(--cds-border-subtle)",
+        background: "transparent",
+        padding: "0 0.5rem",
+        fontSize: "0.75rem",
+        fontWeight: 500,
+        color: "var(--cds-text-secondary)",
+        outline: "none",
+        cursor: "pointer",
+      }}
+    >
+      {availableRoles.map((role) => (
+        <option key={role} value={role}>
+          {ROLE_LABELS[role]}
+        </option>
+      ))}
+    </select>
   );
 }

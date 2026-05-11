@@ -1,10 +1,10 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreateWorkspaceFileRequest;
-import com.orgflow.portal.dto.Dtos.WorkspaceFileDto;
-import com.orgflow.portal.entity.WorkspaceFile;
-import com.orgflow.portal.repository.WorkspaceFileRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.CreateWorkspaceFileRequest;
+import com.generalportal.portal.dto.Dtos.WorkspaceFileDto;
+import com.generalportal.portal.entity.WorkspaceFile;
+import com.generalportal.portal.repository.WorkspaceFileRepository;
+import com.generalportal.portal.security.Permissions;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;

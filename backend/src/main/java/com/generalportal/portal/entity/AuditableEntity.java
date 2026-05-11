@@ -1,4 +1,4 @@
-package com.orgflow.portal.entity;
+package com.generalportal.portal.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;

@@ -1,10 +1,10 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreatePhotoRequest;
-import com.orgflow.portal.dto.Dtos.PhotoDto;
-import com.orgflow.portal.entity.Photo;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.PhotoRepository;
+import com.generalportal.portal.dto.Dtos.CreatePhotoRequest;
+import com.generalportal.portal.dto.Dtos.PhotoDto;
+import com.generalportal.portal.entity.Photo;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.PhotoRepository;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

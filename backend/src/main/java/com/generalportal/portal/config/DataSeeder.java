@@ -1,36 +1,36 @@
-package com.orgflow.portal.config;
+package com.generalportal.portal.config;
 
-import com.orgflow.portal.entity.ActivityLog;
-import com.orgflow.portal.entity.EventItem;
-import com.orgflow.portal.entity.FinanceTransaction;
-import com.orgflow.portal.entity.Membership;
-import com.orgflow.portal.entity.MessageThread;
-import com.orgflow.portal.entity.PermissionGrant;
-import com.orgflow.portal.entity.Photo;
-import com.orgflow.portal.entity.Proposal;
-import com.orgflow.portal.entity.PublicEvent;
-import com.orgflow.portal.entity.TaskItem;
-import com.orgflow.portal.entity.UserAccount;
-import com.orgflow.portal.entity.VolunteerSlot;
-import com.orgflow.portal.entity.Workspace;
-import com.orgflow.portal.entity.WorkspaceFile;
-import com.orgflow.portal.entity.WorkspaceSettings;
-import com.orgflow.portal.repository.ActivityLogRepository;
-import com.orgflow.portal.repository.EventRepository;
-import com.orgflow.portal.repository.FinanceTransactionRepository;
-import com.orgflow.portal.repository.MembershipRepository;
-import com.orgflow.portal.repository.MessageThreadRepository;
-import com.orgflow.portal.repository.PermissionGrantRepository;
-import com.orgflow.portal.repository.PhotoRepository;
-import com.orgflow.portal.repository.ProposalRepository;
-import com.orgflow.portal.repository.PublicEventRepository;
-import com.orgflow.portal.repository.TaskRepository;
-import com.orgflow.portal.repository.UserAccountRepository;
-import com.orgflow.portal.repository.VolunteerSlotRepository;
-import com.orgflow.portal.repository.WorkspaceFileRepository;
-import com.orgflow.portal.repository.WorkspaceRepository;
-import com.orgflow.portal.repository.WorkspaceSettingsRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.entity.ActivityLog;
+import com.generalportal.portal.entity.EventItem;
+import com.generalportal.portal.entity.FinanceTransaction;
+import com.generalportal.portal.entity.Membership;
+import com.generalportal.portal.entity.MessageThread;
+import com.generalportal.portal.entity.PermissionGrant;
+import com.generalportal.portal.entity.Photo;
+import com.generalportal.portal.entity.Proposal;
+import com.generalportal.portal.entity.PublicEvent;
+import com.generalportal.portal.entity.TaskItem;
+import com.generalportal.portal.entity.UserAccount;
+import com.generalportal.portal.entity.VolunteerSlot;
+import com.generalportal.portal.entity.Workspace;
+import com.generalportal.portal.entity.WorkspaceFile;
+import com.generalportal.portal.entity.WorkspaceSettings;
+import com.generalportal.portal.repository.ActivityLogRepository;
+import com.generalportal.portal.repository.EventRepository;
+import com.generalportal.portal.repository.FinanceTransactionRepository;
+import com.generalportal.portal.repository.MembershipRepository;
+import com.generalportal.portal.repository.MessageThreadRepository;
+import com.generalportal.portal.repository.PermissionGrantRepository;
+import com.generalportal.portal.repository.PhotoRepository;
+import com.generalportal.portal.repository.ProposalRepository;
+import com.generalportal.portal.repository.PublicEventRepository;
+import com.generalportal.portal.repository.TaskRepository;
+import com.generalportal.portal.repository.UserAccountRepository;
+import com.generalportal.portal.repository.VolunteerSlotRepository;
+import com.generalportal.portal.repository.WorkspaceFileRepository;
+import com.generalportal.portal.repository.WorkspaceRepository;
+import com.generalportal.portal.repository.WorkspaceSettingsRepository;
+import com.generalportal.portal.security.Permissions;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -41,7 +41,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.Transactional;
 
 @Configuration
-@ConditionalOnProperty(name = "orgflow.seed.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "general-portal.seed.enabled", havingValue = "true")
 public class DataSeeder {
     @Bean
     CommandLineRunner seedData(Seeder seeder) {
@@ -102,11 +102,11 @@ public class DataSeeder {
 
         @Transactional
         void seed() {
-            if (workspaceRepository.findByName("OrgFlow Workspace").isPresent()) {
+            if (workspaceRepository.findByName("General Portal Workspace").isPresent()) {
                 return;
             }
 
-            Workspace workspace = workspaceRepository.save(new Workspace("OrgFlow Workspace", "Student Council Workspace"));
+            Workspace workspace = workspaceRepository.save(new Workspace("General Portal Workspace", "Student Council Workspace"));
             UserAccount chris = userAccountRepository.save(new UserAccount("chris@example.edu", "Chris Rivera", null));
             UserAccount sarah = userAccountRepository.save(new UserAccount("sarah.j@example.edu", "Sarah Jenkins", null));
             UserAccount maya = userAccountRepository.save(new UserAccount("maya.c@example.edu", "Maya Chen", null));

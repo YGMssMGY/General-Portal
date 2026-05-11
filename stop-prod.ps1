@@ -3,10 +3,10 @@ param([switch]$Force)
 $ErrorActionPreference = "Stop"
 $found = $false
 
-Write-Host "[orgflow] Stopping production services..." -ForegroundColor Cyan
+Write-Host "[general-portal] Stopping production services..." -ForegroundColor Cyan
 
 $javaProcs = Get-Process -Name "java" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -match "orgflow|PortalApplication|portal.*\.jar"
+    $_.CommandLine -match "general-portal|PortalApplication|portal.*\.jar"
 }
 foreach ($p in $javaProcs) {
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
@@ -38,5 +38,5 @@ Start-Sleep -Seconds 2
 if (-not $found) {
     Write-Host "Nothing to stop. No production processes found." -ForegroundColor Green
 } else {
-    Write-Host "[orgflow] Production services stopped." -ForegroundColor Green
+    Write-Host "[general-portal] Production services stopped." -ForegroundColor Green
 }

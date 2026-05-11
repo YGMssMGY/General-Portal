@@ -1,6 +1,6 @@
-package com.orgflow.portal.exception;
+package com.generalportal.portal.exception;
 
-import com.orgflow.portal.dto.Dtos.ApiErrorDto;
+import com.generalportal.portal.dto.Dtos.ApiErrorDto;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.slf4j.Logger;

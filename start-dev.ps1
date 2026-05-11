@@ -17,8 +17,8 @@ $EnvFile = Join-Path $Root ".env.local"
 $Script:BackendPid = $null
 $Script:FrontendPid = $null
 
-function Write-Status { param([string]$Msg) Write-Host "[orgflow] $Msg" -ForegroundColor Cyan }
-function Write-ErrorMsg { param([string]$Msg) Write-Host "[orgflow] ERROR: $Msg" -ForegroundColor Red }
+function Write-Status { param([string]$Msg) Write-Host "[general-portal] $Msg" -ForegroundColor Cyan }
+function Write-ErrorMsg { param([string]$Msg) Write-Host "[general-portal] ERROR: $Msg" -ForegroundColor Red }
 function Write-Url { param([string]$Label, [string]$Url) Write-Host "  $Label  $Url" -ForegroundColor Green }
 
 function Resolve-Command {
@@ -60,16 +60,16 @@ function Register-Cleanup {
     Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
         if ($Script:BackendPid) {
             Stop-Process -Id $Script:BackendPid -Force -ErrorAction SilentlyContinue
-            Write-Host "[orgflow] Stopped backend (PID $Script:BackendPid)" -ForegroundColor Yellow
+            Write-Host "[general-portal] Stopped backend (PID $Script:BackendPid)" -ForegroundColor Yellow
         }
         if ($Script:FrontendPid) {
             Stop-Process -Id $Script:FrontendPid -Force -ErrorAction SilentlyContinue
-            Write-Host "[orgflow] Stopped frontend (PID $Script:FrontendPid)" -ForegroundColor Yellow
+            Write-Host "[general-portal] Stopped frontend (PID $Script:FrontendPid)" -ForegroundColor Yellow
         }
     } | Out-Null
 }
 
-Write-Status "OrgFlow Dev Launcher"
+Write-Status "General Portal Dev Launcher"
 Write-Status "====================="
 
 if (Test-Path $EnvFile) {
@@ -153,7 +153,7 @@ if ($Profiles -eq "dev") {
 } elseif ($Profiles -eq "sqlite") {
     $dataDir = Join-Path $Root "data"
     if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
-    $dbFile = Join-Path $dataDir "orgflow.db"
+    $dbFile = Join-Path $dataDir "general-portal.db"
     $dbRelPath = Resolve-Path $dbFile -ErrorAction SilentlyContinue
     if ($dbRelPath) { Write-Status "SQLite database: $dbRelPath" }
 }
@@ -192,7 +192,7 @@ if (-not $FrontendOnly) {
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  OrgFlow is starting up!" -ForegroundColor Green
+Write-Host "  General Portal is starting up!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Url "Frontend:" "http://localhost:5173"
 Write-Url "Backend:" "http://localhost:8080/api/health"
@@ -206,12 +206,12 @@ try {
     while ($true) {
         Start-Sleep -Seconds 2
         if (-not (Get-Process -Id $backendProc.Id -ErrorAction SilentlyContinue)) {
-            Write-Host "[orgflow] Backend process exited." -ForegroundColor Yellow
+            Write-Host "[general-portal] Backend process exited." -ForegroundColor Yellow
             break
         }
     }
 } finally {
     if ($Script:BackendPid) { Stop-Process -Id $Script:BackendPid -Force -ErrorAction SilentlyContinue }
     if ($Script:FrontendPid) { Stop-Process -Id $Script:FrontendPid -Force -ErrorAction SilentlyContinue }
-    Write-Host "[orgflow] All services stopped." -ForegroundColor Yellow
+    Write-Host "[general-portal] All services stopped." -ForegroundColor Yellow
 }

@@ -1,8 +1,8 @@
-package com.orgflow.portal.repository;
+package com.generalportal.portal.repository;
 
-import com.orgflow.portal.entity.Membership;
-import com.orgflow.portal.entity.UserAccount;
-import com.orgflow.portal.entity.Workspace;
+import com.generalportal.portal.entity.Membership;
+import com.generalportal.portal.entity.UserAccount;
+import com.generalportal.portal.entity.Workspace;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

@@ -2,12 +2,12 @@ param([switch]$Force)
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "[orgflow] Stopping services..." -ForegroundColor Cyan
+Write-Host "[general-portal] Stopping services..." -ForegroundColor Cyan
 
 $found = $false
 
 $javaProcs = Get-Process -Name "java" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -match "spring-boot|PortalApplication|orgflow"
+    $_.CommandLine -match "spring-boot|PortalApplication|general-portal"
 }
 foreach ($p in $javaProcs) {
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
@@ -65,7 +65,7 @@ if ($remaining.Count -gt 0) {
 }
 
 if (-not $found) {
-    Write-Host "Nothing to stop. No OrgFlow processes found." -ForegroundColor Green
+    Write-Host "Nothing to stop. No General Portal processes found." -ForegroundColor Green
 } else {
-    Write-Host "[orgflow] All services stopped." -ForegroundColor Green
+    Write-Host "[general-portal] All services stopped." -ForegroundColor Green
 }

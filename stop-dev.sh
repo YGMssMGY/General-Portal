@@ -46,4 +46,4 @@ if $remaining; then
     exit 1
 fi
 
-echo "OrgFlow frontend/backend ports are stopped."
+echo "General Portal frontend/backend ports are stopped."

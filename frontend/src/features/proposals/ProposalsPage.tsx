@@ -6,11 +6,11 @@ import { Card } from "../../components/Card";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
+import { Button, TextInput, TextArea, Select, SelectItem, Form } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
 import { useProposals } from "../../hooks/useWorkspaceResources";
 import type { Proposal } from "../../types";
-import { statusBadgeClass } from "../../utils/classes";
 import { formatCurrency, formatDateTime, sentenceCase } from "../../utils/format";
 import { Add, Document } from "@carbon/icons-react";
 
@@ -21,8 +21,10 @@ const columns: ColumnDef<Proposal>[] = [
     sortable: true,
     render: (p) => (
       <div>
-        <p className="font-medium text-text-primary">{p.title}</p>
-        <p className="text-xs text-text-secondary">By {p.submittedBy}</p>
+        <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{p.title}</p>
+        <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
+          By {p.submittedBy}
+        </p>
       </div>
     ),
   },
@@ -31,7 +33,7 @@ const columns: ColumnDef<Proposal>[] = [
     key: "status",
     header: "Status",
     sortable: true,
-    render: (p) => <Badge className={statusBadgeClass(p.status)}>{sentenceCase(p.status)}</Badge>,
+    render: (p) => <Badge>{sentenceCase(p.status)}</Badge>,
   },
   {
     key: "budget",
@@ -99,18 +101,13 @@ export function ProposalsPage() {
         title="Proposals"
         description="Submit, review, and track proposals for events, purchases, and projects."
         actions={
-          <button
-            type="button"
-            className="flex h-9 items-center gap-2 border border-border-interactive bg-carbon-blue-60 px-4 text-sm font-medium text-white hover:bg-carbon-blue-70 transition-colors"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Add size={16} aria-hidden="true" />
+          <Button renderIcon={Add} onClick={() => setIsModalOpen(true)}>
             New Proposal
-          </button>
+          </Button>
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem" }}>
         <DataTable
           columns={columns}
           data={data as unknown as Record<string, unknown>[]}
@@ -120,28 +117,63 @@ export function ProposalsPage() {
 
         {selected ? (
           <Card padding="lg" className="h-fit">
-            <div className="mb-5 flex items-start justify-between gap-4">
+            <div
+              style={{
+                marginBottom: "1.25rem",
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "1rem",
+              }}
+            >
               <div>
-                <Badge className={statusBadgeClass(selected.status)}>
-                  {sentenceCase(selected.status)}
-                </Badge>
-                <h2 className="mt-3 text-lg font-semibold text-text-primary">{selected.title}</h2>
+                <Badge>{sentenceCase(selected.status)}</Badge>
+                <h2
+                  style={{
+                    marginTop: "0.75rem",
+                    fontSize: "1.125rem",
+                    fontWeight: 600,
+                    color: "var(--cds-text-primary)",
+                  }}
+                >
+                  {selected.title}
+                </h2>
               </div>
-              <Document size={24} className="text-text-secondary shrink-0" aria-hidden="true" />
+              <Document
+                size={24}
+                style={{ color: "var(--cds-text-secondary)", flexShrink: 0 }}
+                aria-hidden="true"
+              />
             </div>
-            <p className="text-sm text-text-secondary">{selected.summary}</p>
-            <dl className="mt-6 space-y-3 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Owner</dt>
-                <dd className="font-medium text-text-primary">{selected.submittedBy}</dd>
+            <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+              {selected.summary}
+            </p>
+            <dl
+              style={{
+                marginTop: "1.5rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+                fontSize: "0.875rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                <dt style={{ color: "var(--cds-text-secondary)" }}>Owner</dt>
+                <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+                  {selected.submittedBy}
+                </dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Type</dt>
-                <dd className="font-medium text-text-primary">{selected.type}</dd>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                <dt style={{ color: "var(--cds-text-secondary)" }}>Type</dt>
+                <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+                  {selected.type}
+                </dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-text-secondary">Budget</dt>
-                <dd className="font-medium text-text-primary">{formatCurrency(selected.budget)}</dd>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
+                <dt style={{ color: "var(--cds-text-secondary)" }}>Budget</dt>
+                <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+                  {formatCurrency(selected.budget)}
+                </dd>
               </div>
             </dl>
           </Card>
@@ -154,76 +186,70 @@ export function ProposalsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       >
-        <form className="grid gap-4" onSubmit={handleCreate}>
-          <label className="grid gap-1.5">
-            <span className="text-sm font-medium text-text-primary">Title</span>
-            <input
+        <Form onSubmit={handleCreate}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <TextInput
+              id="prop-title"
+              labelText="Title"
               required
-              className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
               value={form.title}
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
             />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Type</span>
-              <select
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <Select
+                id="prop-type"
+                labelText="Type"
                 value={form.type}
                 onChange={(e) =>
                   setForm((c) => ({ ...c, type: e.target.value as Proposal["type"] }))
                 }
               >
-                <option value="Event">Event</option>
-                <option value="Purchase">Purchase</option>
-                <option value="Project">Project</option>
-              </select>
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Budget</span>
-              <input
+                <SelectItem value="Event" text="Event" />
+                <SelectItem value="Purchase" text="Purchase" />
+                <SelectItem value="Project" text="Project" />
+              </Select>
+              <TextInput
+                id="prop-budget"
+                labelText="Budget"
+                type="number"
                 required
                 min="0"
                 step="0.01"
-                type="number"
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
                 value={form.budget}
                 onChange={(e) => setForm((c) => ({ ...c, budget: e.target.value }))}
               />
-            </label>
-          </div>
-          <label className="grid gap-1.5">
-            <span className="text-sm font-medium text-text-primary">Summary</span>
-            <textarea
+            </div>
+            <TextArea
+              id="prop-summary"
+              labelText="Summary"
               required
               rows={4}
-              className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive resize-y"
               value={form.summary}
               onChange={(e) => setForm((c) => ({ ...c, summary: e.target.value }))}
             />
-          </label>
-          {createError ? (
-            <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">
-              {createError}
-            </p>
-          ) : null}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              className="border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isCreating}
-              className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors"
-            >
-              {isCreating ? "Submitting..." : "Submit Proposal"}
-            </button>
+            {createError ? (
+              <p
+                style={{
+                  borderLeft: "4px solid var(--cds-support-error)",
+                  backgroundColor: "#fff1f1",
+                  padding: "0.5rem 0.75rem",
+                  fontSize: "0.875rem",
+                  color: "#a2191f",
+                }}
+              >
+                {createError}
+              </p>
+            ) : null}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+              <Button kind="secondary" type="button" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Submitting..." : "Submit Proposal"}
+              </Button>
+            </div>
           </div>
-        </form>
+        </Form>
       </Modal>
     </div>
   );

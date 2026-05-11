@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { Tile, Loading } from "@carbon/react";
 import { useAuth } from "../context/AuthContext";
 import type { UserRole } from "../types";
 
@@ -20,8 +21,16 @@ export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) 
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-skeleton-pulse rounded-full bg-surface-hover" />
+      <div
+        style={{
+          display: "flex",
+          minHeight: "100vh",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--cds-background)",
+        }}
+      >
+        <Loading withOverlay={false} />
       </div>
     );
   }
@@ -35,13 +44,28 @@ export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) 
     const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0;
     if (userLevel < requiredLevel) {
       return (
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="border border-border-subtle bg-surface p-8 text-center max-w-md">
-            <h2 className="text-xl font-semibold text-text-primary">Access Denied</h2>
-            <p className="mt-2 text-sm text-text-secondary">
+        <div
+          style={{
+            display: "flex",
+            minHeight: "60vh",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Tile style={{ padding: "2rem", textAlign: "center", maxWidth: "28rem" }}>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+              Access Denied
+            </h2>
+            <p
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "0.875rem",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
               You need at least {requiredRole} level access to view this page.
             </p>
-          </div>
+          </Tile>
         </div>
       );
     }

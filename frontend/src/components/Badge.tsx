@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Tag } from "@carbon/react";
 
 interface BadgeProps {
   children: ReactNode;
@@ -7,10 +8,8 @@ interface BadgeProps {
 
 export function Badge({ children, className = "" }: BadgeProps) {
   return (
-    <span
-      className={`inline-flex items-center border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${className}`}
-    >
+    <Tag className={className} type="outline">
       {children}
-    </span>
+    </Tag>
   );
 }

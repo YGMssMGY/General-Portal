@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:file:./data/orgflow-demo;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    url: jdbc:h2:file:./data/general-portal-demo;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     username: sa
     password:
   jpa:
@@ -11,12 +11,12 @@ spring:
   session:
     store-type: none
 
-orgflow:
+general-portal:
   security:
     auto-provision-users: true
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
     dev-auth:
-      username: ${DEV_AUTH_USERNAME:dev@orgflow.local}
+      username: ${DEV_AUTH_USERNAME:dev@generalportal.local}
       password: ${DEV_AUTH_PASSWORD:}
   seed:
     enabled: true

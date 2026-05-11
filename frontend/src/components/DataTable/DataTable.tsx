@@ -1,8 +1,18 @@
 import { useState, useMemo, type ReactNode } from "react";
-import { DataTableHeader } from "./DataTableHeader";
 import { DataTableRow } from "./DataTableRow";
 import { DataTableToolbar } from "./DataTableToolbar";
 import { DataTablePagination } from "./DataTablePagination";
+import {
+  TableContainer,
+  Table,
+  TableHead,
+  TableHeader,
+  TableRow as CarbonTableRow,
+  TableBody,
+  TableSelectAll,
+  TableSelectRow,
+} from "@carbon/react";
+import { ArrowUp, ArrowDown } from "@carbon/icons-react";
 
 export interface ColumnDef<T> {
   key: string;
@@ -97,7 +107,7 @@ export function DataTable({
   const end = Math.min(page * pageSize, sorted.length);
 
   return (
-    <div className="border border-border-subtle bg-surface">
+    <div style={{ border: "1px solid var(--cds-border-subtle)", background: "var(--cds-layer)" }}>
       {toolbar ? (
         <DataTableToolbar
           selectedCount={selected.size}
@@ -107,18 +117,37 @@ export function DataTable({
         </DataTableToolbar>
       ) : null}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[600px] text-left text-sm">
-          <DataTableHeader
-            columns={columns}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={handleSort}
-            selectable={selectable}
-            onToggleAll={toggleAll}
-            allSelected={paged.length > 0 && selected.size === paged.length}
-          />
-          <tbody>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <CarbonTableRow>
+              {selectable ? (
+                <TableSelectAll
+                  id="select-all"
+                  name="select-all"
+                  checked={paged.length > 0 && selected.size === paged.length}
+                  onSelect={toggleAll}
+                />
+              ) : null}
+              {columns.map((col) => (
+                <TableHeader
+                  key={col.key}
+                  isSortable={col.sortable}
+                  isSortHeader={sortKey === col.key}
+                  sortDirection={
+                    sortKey === col.key ? (sortDir === "asc" ? "ASC" : "DESC") : "NONE"
+                  }
+                  onClick={() => {
+                    if (col.sortable) handleSort(col.key);
+                  }}
+                  style={col.sortable ? { cursor: "pointer" } : undefined}
+                >
+                  {col.header}
+                </TableHeader>
+              ))}
+            </CarbonTableRow>
+          </TableHead>
+          <TableBody>
             {paged.map((item) => (
               <DataTableRow
                 key={String(item[keyField])}
@@ -129,12 +158,21 @@ export function DataTable({
                 onToggleSelect={() => toggleSelect(String(item[keyField]))}
               />
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {sorted.length === 0 ? (
-        <div className="p-8 text-center text-sm text-text-secondary">No items to display.</div>
+        <div
+          style={{
+            padding: "2rem",
+            textAlign: "center",
+            fontSize: "0.875rem",
+            color: "var(--cds-text-secondary)",
+          }}
+        >
+          No items to display.
+        </div>
       ) : null}
 
       <DataTablePagination

@@ -6,7 +6,6 @@ import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useFinanceTransactions } from "../../hooks/useWorkspaceResources";
 import type { FinanceTransaction } from "../../types";
-import { statusBadgeClass } from "../../utils/classes";
 import { formatCurrency, formatDateTime, sentenceCase } from "../../utils/format";
 
 const columns: ColumnDef<FinanceTransaction>[] = [
@@ -16,8 +15,10 @@ const columns: ColumnDef<FinanceTransaction>[] = [
     sortable: true,
     render: (tx) => (
       <div>
-        <p className="font-medium text-text-primary">{tx.title}</p>
-        <p className="text-xs text-text-secondary">By {tx.submittedBy}</p>
+        <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{tx.title}</p>
+        <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
+          By {tx.submittedBy}
+        </p>
       </div>
     ),
   },
@@ -26,9 +27,7 @@ const columns: ColumnDef<FinanceTransaction>[] = [
     key: "status",
     header: "Status",
     sortable: true,
-    render: (tx) => (
-      <Badge className={statusBadgeClass(tx.status)}>{sentenceCase(tx.status)}</Badge>
-    ),
+    render: (tx) => <Badge>{sentenceCase(tx.status)}</Badge>,
   },
   {
     key: "amount",
@@ -47,11 +46,9 @@ const columns: ColumnDef<FinanceTransaction>[] = [
 
 export function FinancePage() {
   const { data, error, isLoading, refetch } = useFinanceTransactions();
-
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Finance data is unavailable"} onRetry={refetch} />;
-
   const pending = data.filter((tx) => tx.status === "pending" || tx.status === "under_review");
   const totalPending = pending.reduce((s, tx) => s + tx.amount, 0);
   const approved = data
@@ -64,32 +61,79 @@ export function FinancePage() {
         title="Finance"
         description="Track reimbursements, approvals, budgets, and spending."
       />
-
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.025em",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Pending Review
           </p>
-          <p className="mt-2 text-3xl font-semibold text-text-primary">
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "1.875rem",
+              fontWeight: 600,
+              color: "var(--cds-text-primary)",
+            }}
+          >
             {formatCurrency(totalPending)}
           </p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.025em",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Approved Spend
           </p>
-          <p className="mt-2 text-3xl font-semibold text-carbon-blue-60">
+          <p
+            style={{ marginTop: "0.5rem", fontSize: "1.875rem", fontWeight: 600, color: "#0f62fe" }}
+          >
             {formatCurrency(approved)}
           </p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.025em",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Open Requests
           </p>
-          <p className="mt-2 text-3xl font-semibold text-text-primary">{pending.length}</p>
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "1.875rem",
+              fontWeight: 600,
+              color: "var(--cds-text-primary)",
+            }}
+          >
+            {pending.length}
+          </p>
         </Card>
       </div>
-
       <DataTable
         columns={columns}
         data={data as unknown as Record<string, unknown>[]}

@@ -7,14 +7,27 @@ import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useMembers } from "../../hooks/useWorkspaceResources";
 import type { Member } from "../../types";
 
+const avatarStyle: React.CSSProperties = {
+  width: "2rem",
+  height: "2rem",
+  flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#0043ce",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  color: "#ffffff",
+};
+
 const columns: ColumnDef<Member>[] = [
   {
     key: "name",
     header: "Member",
     sortable: true,
     render: (member) => (
-      <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-carbon-blue-60 text-xs font-semibold text-white">
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={avatarStyle}>
           {member.name
             .split(" ")
             .map((p) => p[0])
@@ -22,8 +35,8 @@ const columns: ColumnDef<Member>[] = [
             .slice(0, 2)}
         </div>
         <div>
-          <p className="font-medium text-text-primary">{member.name}</p>
-          <p className="text-xs text-text-secondary">{member.email}</p>
+          <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{member.name}</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>{member.email}</p>
         </div>
       </div>
     ),
@@ -33,19 +46,7 @@ const columns: ColumnDef<Member>[] = [
     key: "accessLabel",
     header: "Access",
     sortable: true,
-    render: (member) => (
-      <Badge
-        className={
-          member.accessLabel === "Admin"
-            ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
-            : member.accessLabel === "Officer"
-              ? "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
-              : "border-border-subtle bg-surface text-text-secondary"
-        }
-      >
-        {member.accessLabel}
-      </Badge>
-    ),
+    render: (member) => <Badge>{member.accessLabel}</Badge>,
   },
   { key: "taskCount", header: "Tasks", sortable: true, className: "text-right" },
   { key: "volunteerHours", header: "Hours", sortable: true, className: "text-right" },
@@ -53,40 +54,92 @@ const columns: ColumnDef<Member>[] = [
 
 export function MembersPage() {
   const { data, error, isLoading, refetch } = useMembers();
-
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Members are unavailable"} onRetry={refetch} />;
-
   const totalHours = data.reduce((total, m) => total + m.volunteerHours, 0);
 
   return (
     <div>
       <PageHeader title="Members" description="Manage people, roles, positions, and access." />
-
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.025em",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Total Members
           </p>
-          <p className="mt-2 text-3xl font-semibold text-text-primary">{data.length}</p>
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "1.875rem",
+              fontWeight: 600,
+              color: "var(--cds-text-primary)",
+            }}
+          >
+            {data.length}
+          </p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.025em",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Tracked Hours
           </p>
-          <p className="mt-2 text-3xl font-semibold text-text-primary">{totalHours}</p>
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "1.875rem",
+              fontWeight: 600,
+              color: "var(--cds-text-primary)",
+            }}
+          >
+            {totalHours}
+          </p>
         </Card>
         <Card padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <p
+            style={{
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.025em",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             Access Levels
           </p>
-          <p className="mt-2 text-3xl font-semibold text-text-primary">
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "1.875rem",
+              fontWeight: 600,
+              color: "var(--cds-text-primary)",
+            }}
+          >
             {new Set(data.map((m) => m.accessLabel)).size}
           </p>
         </Card>
       </div>
-
       <DataTable
         columns={columns}
         data={data as unknown as Record<string, unknown>[]}

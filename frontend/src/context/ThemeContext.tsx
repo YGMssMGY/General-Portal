@@ -24,15 +24,10 @@ function getStoredTheme(): Theme | null {
   return null;
 }
 
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme() || getSystemTheme());
 
   useEffect(() => {
-    applyTheme(theme);
     try {
       localStorage.setItem("theme", theme);
     } catch {

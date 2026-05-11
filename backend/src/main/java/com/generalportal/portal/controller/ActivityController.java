@@ -1,7 +1,7 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.ActivityDto;
-import com.orgflow.portal.service.ActivityService;
+import com.generalportal.portal.dto.Dtos.ActivityDto;
+import com.generalportal.portal.service.ActivityService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;

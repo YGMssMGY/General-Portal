@@ -1,7 +1,7 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.DashboardDto;
-import com.orgflow.portal.service.DashboardService;
+import com.generalportal.portal.dto.Dtos.DashboardDto;
+import com.generalportal.portal.service.DashboardService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

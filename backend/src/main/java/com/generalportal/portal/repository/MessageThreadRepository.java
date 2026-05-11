@@ -1,7 +1,7 @@
-package com.orgflow.portal.repository;
+package com.generalportal.portal.repository;
 
-import com.orgflow.portal.entity.MessageThread;
-import com.orgflow.portal.entity.Workspace;
+import com.generalportal.portal.entity.MessageThread;
+import com.generalportal.portal.entity.Workspace;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

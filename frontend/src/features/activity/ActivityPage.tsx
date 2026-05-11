@@ -15,6 +15,13 @@ export function ActivityPage() {
   const resourceCount = new Set(data.map((d) => d.resourceTitle)).size;
   const actorCount = new Set(data.map((d) => d.actorName)).size;
 
+  const metricCardStyle = (color: string): React.CSSProperties => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "0.75rem",
+  });
+
   return (
     <div>
       <PageHeader
@@ -22,56 +29,127 @@ export function ActivityPage() {
         description="Track contributions, progress, and workspace changes."
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
         <Card padding="lg">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <div style={metricCardStyle("#0f62fe")}>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.025em",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
               Items
             </span>
-            <ActivityIcon size={20} className="text-carbon-blue-60" aria-hidden="true" />
+            <ActivityIcon size={20} style={{ color: "#0f62fe" }} aria-hidden="true" />
           </div>
-          <p className="text-3xl font-semibold text-text-primary">{data.length}</p>
+          <p style={{ fontSize: "1.875rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            {data.length}
+          </p>
         </Card>
         <Card padding="lg">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <div style={metricCardStyle("#198038")}>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.025em",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
               Resources
             </span>
-            <ActivityIcon size={20} className="text-carbon-green-60" aria-hidden="true" />
+            <ActivityIcon size={20} style={{ color: "#198038" }} aria-hidden="true" />
           </div>
-          <p className="text-3xl font-semibold text-text-primary">{resourceCount}</p>
+          <p style={{ fontSize: "1.875rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            {resourceCount}
+          </p>
         </Card>
         <Card padding="lg">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <div style={metricCardStyle("#007d79")}>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.025em",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
               Contributors
             </span>
-            <ActivityIcon size={20} className="text-carbon-teal-60" aria-hidden="true" />
+            <ActivityIcon size={20} style={{ color: "#007d79" }} aria-hidden="true" />
           </div>
-          <p className="text-3xl font-semibold text-text-primary">{actorCount}</p>
+          <p style={{ fontSize: "1.875rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+            {actorCount}
+          </p>
         </Card>
       </div>
 
       <Card padding="lg">
-        <h2 className="mb-4 text-lg font-semibold text-text-primary font-condensed">
+        <h2
+          style={{
+            marginBottom: "1rem",
+            fontSize: "1.125rem",
+            fontWeight: 600,
+            color: "var(--cds-text-primary)",
+          }}
+        >
           Recent Activity
         </h2>
-        <div className="space-y-0">
+        <div>
           {data.map((item, i) => (
             <div
               key={item.id}
-              className={`flex gap-4 py-3 ${i < data.length - 1 ? "border-b border-border-subtle" : ""}`}
+              style={{
+                display: "flex",
+                gap: "1rem",
+                padding: "0.75rem 0",
+                borderBottom: i < data.length - 1 ? "1px solid var(--cds-border-subtle)" : "none",
+              }}
             >
-              <div className="mt-1 h-2 w-2 shrink-0 bg-carbon-blue-60" />
+              <div
+                style={{
+                  marginTop: "0.25rem",
+                  width: "0.5rem",
+                  height: "0.5rem",
+                  flexShrink: 0,
+                  background: "#0f62fe",
+                }}
+              />
               <div>
-                <p className="font-medium text-sm text-text-primary">
+                <p
+                  style={{
+                    fontWeight: 500,
+                    fontSize: "0.875rem",
+                    color: "var(--cds-text-primary)",
+                  }}
+                >
                   {item.actorName}{" "}
-                  <span className="font-normal text-text-secondary">{item.action}</span>
+                  <span style={{ fontWeight: 400, color: "var(--cds-text-secondary)" }}>
+                    {item.action}
+                  </span>
                 </p>
-                <p className="text-sm text-text-secondary">
+                <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
                   {item.resourceType}: {item.resourceTitle}
                 </p>
-                <p className="mt-0.5 text-xs text-text-placeholder">
+                <p
+                  style={{
+                    marginTop: "0.125rem",
+                    fontSize: "0.75rem",
+                    color: "var(--cds-text-placeholder)",
+                  }}
+                >
                   {formatDateTime(item.occurredAt)}
                 </p>
               </div>

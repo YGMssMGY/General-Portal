@@ -1,10 +1,10 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreatePublicEventRequest;
-import com.orgflow.portal.dto.Dtos.PublicEventDto;
-import com.orgflow.portal.entity.PublicEvent;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.PublicEventRepository;
+import com.generalportal.portal.dto.Dtos.CreatePublicEventRequest;
+import com.generalportal.portal.dto.Dtos.PublicEventDto;
+import com.generalportal.portal.entity.PublicEvent;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.PublicEventRepository;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

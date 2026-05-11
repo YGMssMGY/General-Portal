@@ -3,8 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { Badge } from "../../components/Badge";
 import { Card } from "../../components/Card";
 import { ErrorState, LoadingState } from "../../components/StateViews";
+import { Button, Search as CarbonSearch } from "@carbon/react";
 import { useSearch } from "../../hooks/useWorkspaceResources";
-import { Search, Document } from "@carbon/icons-react";
+import { Document } from "@carbon/icons-react";
 
 const categories = ["All", "Tasks", "Proposals", "Events", "Files", "Finance"];
 
@@ -29,69 +30,114 @@ export function SearchPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Card padding="lg">
-        <h1 className="text-xl font-semibold text-text-primary font-condensed">Search Workspace</h1>
-        <label className="relative mt-4 block">
-          <span className="sr-only">Search across workspace</span>
-          <Search
-            size={20}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
-            aria-hidden="true"
-          />
-          <input
-            className="w-full border border-border-subtle bg-surface py-2.5 pl-10 pr-4 text-sm text-text-primary outline-none placeholder:text-text-placeholder focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+        <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+          Search Workspace
+        </h1>
+        <div style={{ marginTop: "1rem" }}>
+          <CarbonSearch
+            id="workspace-search"
+            labelText="Search across workspace"
+            placeholder="Search proposals, tasks, events, files..."
+            size="lg"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search proposals, tasks, events, files..."
-            type="search"
           />
-        </label>
-        <div className="mt-4 flex flex-wrap gap-2">
+        </div>
+        <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           {categories.map((opt) => (
-            <button
+            <Button
               key={opt}
-              type="button"
-              className={`px-3 py-1 text-xs font-medium transition-colors ${
-                category === opt
-                  ? "bg-carbon-blue-60 text-white"
-                  : "border border-border-subtle text-text-secondary hover:bg-surface-hover"
-              }`}
+              kind={category === opt ? "primary" : "ghost"}
+              size="sm"
               onClick={() => setCategory(opt)}
             >
               {opt}
-            </button>
+            </Button>
           ))}
         </div>
       </Card>
 
       <section>
         {query ? (
-          <p className="mb-4 text-sm text-text-secondary">
-            Results for <span className="font-medium text-text-primary">&ldquo;{query}&rdquo;</span>
+          <p
+            style={{
+              marginBottom: "1rem",
+              fontSize: "0.875rem",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
+            Results for{" "}
+            <span style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
+              &ldquo;{query}&rdquo;
+            </span>
           </p>
         ) : null}
         {isLoading ? <LoadingState /> : null}
         {error ? <ErrorState message={error} onRetry={refetch} /> : null}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "1rem",
+          }}
+        >
           {filtered.map((result) => (
             <Card key={result.id} padding="lg">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Document size={16} className="text-text-secondary" aria-hidden="true" />
-                  <span className="text-xs font-semibold uppercase text-text-secondary">
+              <div
+                style={{
+                  marginBottom: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Document
+                    size={16}
+                    style={{ color: "var(--cds-text-secondary)" }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      color: "var(--cds-text-secondary)",
+                    }}
+                  >
                     {result.type}
                   </span>
                 </div>
-                <Badge className="border-border-subtle bg-surface text-text-secondary">
-                  {result.status}
-                </Badge>
+                <Badge>{result.status}</Badge>
               </div>
-              <h2 className="text-lg font-semibold text-text-primary">{result.title}</h2>
-              <p className="mt-2 text-sm text-text-secondary">{result.description}</p>
+              <h2
+                style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}
+              >
+                {result.title}
+              </h2>
+              <p
+                style={{
+                  marginTop: "0.5rem",
+                  fontSize: "0.875rem",
+                  color: "var(--cds-text-secondary)",
+                }}
+              >
+                {result.description}
+              </p>
             </Card>
           ))}
         </div>
         {!isLoading && !error && filtered.length === 0 && query ? (
-          <p className="border border-border-subtle bg-surface p-6 text-sm text-text-secondary text-center">
+          <p
+            style={{
+              border: "1px solid var(--cds-border-subtle)",
+              background: "var(--cds-layer)",
+              padding: "1.5rem",
+              fontSize: "0.875rem",
+              color: "var(--cds-text-secondary)",
+              textAlign: "center",
+            }}
+          >
             No results found.
           </p>
         ) : null}

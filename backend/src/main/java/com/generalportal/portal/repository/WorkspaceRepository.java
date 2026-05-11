@@ -1,6 +1,6 @@
-package com.orgflow.portal.repository;
+package com.generalportal.portal.repository;
 
-import com.orgflow.portal.entity.Workspace;
+import com.generalportal.portal.entity.Workspace;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
