@@ -1,6 +1,5 @@
 import { Outlet, Link } from "react-router-dom";
 import { Button } from "@carbon/react";
-import { Launch } from "@carbon/icons-react";
 
 const navLinkStyle: React.CSSProperties = {
   padding: "0.5rem 0.75rem",

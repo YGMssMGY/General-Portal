@@ -56,7 +56,10 @@ function RealBridge({ children }: { children: ReactNode }) {
       error: real.error,
       login: real.login,
       logout: real.logout,
-      hasPermission: () => true,
+      hasPermission: (permission: string) => {
+        if (!real.user?.permissions) return false;
+        return real.user.permissions.includes(permission);
+      },
       role: real.user?.role ?? null,
     }),
     [real.user, real.isAuthenticated, real.isLoading, real.error, real.login, real.logout],

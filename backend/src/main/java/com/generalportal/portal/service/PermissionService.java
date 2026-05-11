@@ -117,7 +117,7 @@ public class PermissionService {
         }
 
         Membership membership = membershipRepository.save(new Membership(workspace, user, "Member", "Member", 0, 0));
-        permissionGrantRepository.saveAll(Objects.requireNonNull(Permissions.demoPermissions().stream()
+        permissionGrantRepository.saveAll(Objects.requireNonNull(Permissions.memberPermissions().stream()
             .map(permission -> new PermissionGrant(membership, permission))
             .toList()));
         return membership;
