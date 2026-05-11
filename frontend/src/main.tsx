@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
-import "@carbon/react/es/index";
+import "@carbon/styles/css/styles.css";
 
 async function bootstrap() {
   if (import.meta.env.DEV) {
