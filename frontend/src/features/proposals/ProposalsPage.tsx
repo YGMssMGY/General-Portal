@@ -10,53 +10,20 @@ import { Button, TextInput, TextArea, Select, SelectItem, Form } from "@carbon/r
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
 import { useProposals } from "../../hooks/useWorkspaceResources";
-import type { Proposal } from "../../types";
-import { formatCurrency, formatDateTime, sentenceCase } from "../../utils/format";
-import { Add, Document } from "@carbon/icons-react";
-
-const columns: ColumnDef<Proposal>[] = [
-  {
-    key: "title",
-    header: "Title",
-    sortable: true,
-    render: (p) => (
-      <div>
-        <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{p.title}</p>
-        <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
-          By {p.submittedBy}
-        </p>
-      </div>
-    ),
-  },
-  { key: "type", header: "Type", sortable: true },
-  {
-    key: "status",
-    header: "Status",
-    sortable: true,
-    render: (p) => <Badge>{sentenceCase(p.status)}</Badge>,
-  },
-  {
-    key: "budget",
-    header: "Budget",
-    sortable: true,
-    render: (p) => formatCurrency(p.budget),
-    className: "text-right font-medium",
-  },
-  {
-    key: "submittedAt",
-    header: "Date",
-    sortable: true,
-    render: (p) => formatDateTime(p.submittedAt),
-  },
-];
+import type { Proposal, ResourceStatus } from "../../types";
+import { formatCurrency, formatDateTime } from "../../utils/format";
+import { Add, Document, Edit, TrashCan } from "@carbon/icons-react";
 
 export function ProposalsPage() {
   const { user } = useAuth();
   const { data, error, isLoading, refetch } = useProposals();
   const [selectedId, setSelectedId] = useState<string>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProposal, setEditingProposal] = useState<Proposal>();
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string>();
+  const [deleteTarget, setDeleteTarget] = useState<Proposal>();
+  const [isDeleting, setIsDeleting] = useState(false);
   const [form, setForm] = useState({
     title: "",
     type: "Event" as Proposal["type"],
@@ -64,30 +31,148 @@ export function ProposalsPage() {
     summary: "",
   });
 
+  const columns: ColumnDef<Proposal>[] = useMemo(
+    () => [
+      {
+        key: "title",
+        header: "Title",
+        sortable: true,
+        render: (p) => (
+          <div>
+            <p style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{p.title}</p>
+            <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
+              By {p.submittedBy}
+            </p>
+          </div>
+        ),
+      },
+      { key: "type", header: "Type", sortable: true },
+      {
+        key: "status",
+        header: "Status",
+        sortable: true,
+        render: (p) => (
+          <Select
+            id={`prop-status-${p.id}`}
+            labelText=""
+            hideLabel
+            size="sm"
+            value={p.status}
+            onChange={async (e) => {
+              const newStatus = e.target.value as ResourceStatus;
+              try {
+                await workspaceApi.updateProposal(p.id, { status: newStatus });
+                refetch();
+              } catch {}
+            }}
+          >
+            <SelectItem value="draft" text="Draft" />
+            <SelectItem value="submitted" text="Submitted" />
+            <SelectItem value="under_review" text="Under Review" />
+            <SelectItem value="approved" text="Approved" />
+            <SelectItem value="rejected" text="Rejected" />
+          </Select>
+        ),
+      },
+      {
+        key: "budget",
+        header: "Budget",
+        sortable: true,
+        render: (p) => formatCurrency(p.budget),
+        className: "text-right font-medium",
+      },
+      {
+        key: "submittedAt",
+        header: "Date",
+        sortable: true,
+        render: (p) => formatDateTime(p.submittedAt),
+      },
+      {
+        key: "actions",
+        header: "",
+        render: (p) => (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <Button
+              kind="ghost"
+              size="sm"
+              renderIcon={Edit}
+              iconDescription="Edit"
+              hasIconOnly
+              onClick={() => {
+                setEditingProposal(p);
+                setForm({
+                  title: p.title,
+                  type: p.type,
+                  budget: String(p.budget),
+                  summary: p.summary,
+                });
+                setIsModalOpen(true);
+              }}
+            />
+            <Button
+              kind="ghost"
+              size="sm"
+              renderIcon={TrashCan}
+              iconDescription="Delete"
+              hasIconOnly
+              onClick={() => setDeleteTarget(p)}
+            />
+          </div>
+        ),
+      },
+    ],
+    [refetch],
+  );
+
   const selected = useMemo(() => {
     if (!data) return undefined;
     return data.find((p) => p.id === selectedId);
   }, [data, selectedId]);
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+  function openCreateModal() {
+    setEditingProposal(undefined);
+    setForm({ title: "", type: "Event", budget: "0", summary: "" });
+    setIsModalOpen(true);
+  }
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateError(undefined);
     setIsCreating(true);
     try {
-      await workspaceApi.createProposal({
+      const payload = {
         title: form.title,
         type: form.type,
         submittedBy: user?.displayName ?? "Demo User",
         budget: Number(form.budget),
         summary: form.summary,
-      });
-      setForm({ title: "", type: "Event", budget: "0", summary: "" });
+      };
+      if (editingProposal) {
+        await workspaceApi.updateProposal(editingProposal.id, payload);
+      } else {
+        await workspaceApi.createProposal(payload);
+      }
       setIsModalOpen(false);
+      setEditingProposal(undefined);
       refetch();
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not create proposal");
+      setCreateError(e instanceof Error ? e.message : "Could not save proposal");
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await workspaceApi.deleteProposal(deleteTarget.id);
+      setDeleteTarget(undefined);
+      refetch();
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Could not delete proposal");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -101,7 +186,7 @@ export function ProposalsPage() {
         title="Proposals"
         description="Submit, review, and track proposals for events, purchases, and projects."
         actions={
-          <Button renderIcon={Add} onClick={() => setIsModalOpen(true)}>
+          <Button renderIcon={Add} onClick={openCreateModal}>
             New Proposal
           </Button>
         }
@@ -127,7 +212,7 @@ export function ProposalsPage() {
               }}
             >
               <div>
-                <Badge>{sentenceCase(selected.status)}</Badge>
+                <Badge>{selected.status}</Badge>
                 <h2
                   style={{
                     marginTop: "0.75rem",
@@ -181,12 +266,15 @@ export function ProposalsPage() {
       </div>
 
       <Modal
-        title="New Proposal"
-        description="Submit a proposal for review."
+        title={editingProposal ? "Edit Proposal" : "New Proposal"}
+        description={editingProposal ? "Update proposal details." : "Submit a proposal for review."}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingProposal(undefined);
+        }}
       >
-        <Form onSubmit={handleCreate}>
+        <Form onSubmit={handleSave}>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <TextInput
               id="prop-title"
@@ -241,15 +329,41 @@ export function ProposalsPage() {
               </p>
             ) : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-              <Button kind="secondary" type="button" onClick={() => setIsModalOpen(false)}>
+              <Button
+                kind="secondary"
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingProposal(undefined);
+                }}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isCreating}>
-                {isCreating ? "Submitting..." : "Submit Proposal"}
+                {isCreating ? "Saving..." : editingProposal ? "Save Changes" : "Submit Proposal"}
               </Button>
             </div>
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Delete Proposal"
+        description="This action cannot be undone."
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(undefined)}
+      >
+        <p style={{ marginBottom: "1rem", color: "var(--cds-text-secondary)" }}>
+          Delete &quot;{deleteTarget?.title}&quot;?
+        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+          <Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+            Cancel
+          </Button>
+          <Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
       </Modal>
     </div>
   );

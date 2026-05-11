@@ -9,40 +9,19 @@ import { Button, TextInput, Select, SelectItem, Form } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useTasks } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../context/AuthContext";
-import type { Priority, Task } from "../../types";
-import { formatDate, sentenceCase } from "../../utils/format";
-import { Add } from "@carbon/icons-react";
-
-const columns: ColumnDef<Task>[] = [
-  { key: "title", header: "Title", sortable: true },
-  { key: "project", header: "Project", sortable: true },
-  {
-    key: "status",
-    header: "Status",
-    sortable: true,
-    render: (task) => <Badge>{sentenceCase(task.status)}</Badge>,
-  },
-  {
-    key: "priority",
-    header: "Priority",
-    sortable: true,
-    render: (task) => <Badge>{task.priority}</Badge>,
-  },
-  {
-    key: "dueDate",
-    header: "Due Date",
-    sortable: true,
-    render: (task) => formatDate(task.dueDate),
-  },
-  { key: "assigneeName", header: "Assignee", sortable: true },
-];
+import type { Priority, Task, TaskStatus } from "../../types";
+import { formatDate } from "../../utils/format";
+import { Add, Edit, TrashCan } from "@carbon/icons-react";
 
 export function TasksPage() {
   const { data, error, isLoading, refetch } = useTasks();
   const { user } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task>();
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string>();
+  const [deleteTarget, setDeleteTarget] = useState<Task>();
+  const [isDeleting, setIsDeleting] = useState(false);
   const [taskForm, setTaskForm] = useState({
     title: "",
     priority: "normal" as Priority,
@@ -51,30 +30,138 @@ export function TasksPage() {
     assigneeName: "",
   });
 
-  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
+  const columns: ColumnDef<Task>[] = useMemo(
+    () => [
+      { key: "title", header: "Title", sortable: true },
+      { key: "project", header: "Project", sortable: true },
+      {
+        key: "status",
+        header: "Status",
+        sortable: true,
+        render: (task) => (
+          <Select
+            id={`status-${task.id}`}
+            labelText=""
+            hideLabel
+            size="sm"
+            value={task.status}
+            onChange={async (e) => {
+              const newStatus = e.target.value as TaskStatus;
+              try {
+                await workspaceApi.updateTask(task.id, { status: newStatus });
+                refetch();
+              } catch {
+                /* silently fail */
+              }
+            }}
+          >
+            <SelectItem value="todo" text="Todo" />
+            <SelectItem value="in_progress" text="In Progress" />
+            <SelectItem value="blocked" text="Blocked" />
+            <SelectItem value="done" text="Done" />
+          </Select>
+        ),
+      },
+      {
+        key: "priority",
+        header: "Priority",
+        sortable: true,
+        render: (task) => <Badge>{task.priority}</Badge>,
+      },
+      {
+        key: "dueDate",
+        header: "Due Date",
+        sortable: true,
+        render: (task) => formatDate(task.dueDate),
+      },
+      { key: "assigneeName", header: "Assignee", sortable: true },
+      {
+        key: "actions",
+        header: "",
+        render: (task) => (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <Button
+              kind="ghost"
+              size="sm"
+              renderIcon={Edit}
+              iconDescription="Edit"
+              hasIconOnly
+              onClick={() => {
+                setEditingTask(task);
+                setTaskForm({
+                  title: task.title,
+                  priority: task.priority,
+                  project: task.project,
+                  dueDate: task.dueDate?.slice(0, 10) ?? "",
+                  assigneeName: task.assigneeName,
+                });
+                setIsTaskModalOpen(true);
+              }}
+            />
+            <Button
+              kind="ghost"
+              size="sm"
+              renderIcon={TrashCan}
+              iconDescription="Delete"
+              hasIconOnly
+              onClick={() => setDeleteTarget(task)}
+            />
+          </div>
+        ),
+      },
+    ],
+    [refetch],
+  );
+
+  function openCreateModal() {
+    setEditingTask(undefined);
+    setTaskForm({
+      title: "",
+      priority: "normal",
+      project: "",
+      dueDate: new Date().toISOString().slice(0, 10),
+      assigneeName: "",
+    });
+    setIsTaskModalOpen(true);
+  }
+
+  async function handleSaveTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateError(undefined);
     setIsCreating(true);
     try {
-      await workspaceApi.createTask({
+      const payload = {
         ...taskForm,
         assigneeName: taskForm.assigneeName || user?.displayName || "Unassigned",
-      });
-      setTaskForm({
-        title: "",
-        priority: "normal",
-        project: "",
-        dueDate: new Date().toISOString().slice(0, 10),
-        assigneeName: "",
-      });
+      };
+      if (editingTask) {
+        await workspaceApi.updateTask(editingTask.id, payload);
+      } else {
+        await workspaceApi.createTask(payload);
+      }
       setIsTaskModalOpen(false);
+      setEditingTask(undefined);
+      refetch();
+    } catch (unknownError) {
+      setCreateError(unknownError instanceof Error ? unknownError.message : "Could not save task");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await workspaceApi.deleteTask(deleteTarget.id);
+      setDeleteTarget(undefined);
       refetch();
     } catch (unknownError) {
       setCreateError(
-        unknownError instanceof Error ? unknownError.message : "Could not create task",
+        unknownError instanceof Error ? unknownError.message : "Could not delete task",
       );
     } finally {
-      setIsCreating(false);
+      setIsDeleting(false);
     }
   }
 
@@ -88,7 +175,7 @@ export function TasksPage() {
         title="Tasks"
         description="Assign work, track progress, and keep every responsibility visible."
         actions={
-          <Button renderIcon={Add} onClick={() => setIsTaskModalOpen(true)}>
+          <Button renderIcon={Add} onClick={openCreateModal}>
             Add Task
           </Button>
         }
@@ -103,12 +190,15 @@ export function TasksPage() {
       />
 
       <Modal
-        title="Add Task"
-        description="Create a task in the workspace."
+        title={editingTask ? "Edit Task" : "Add Task"}
+        description={editingTask ? "Update task details." : "Create a task in the workspace."}
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        onClose={() => {
+          setIsTaskModalOpen(false);
+          setEditingTask(undefined);
+        }}
       >
-        <Form onSubmit={handleCreateTask}>
+        <Form onSubmit={handleSaveTask}>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <TextInput
               id="task-title"
@@ -170,15 +260,41 @@ export function TasksPage() {
               </p>
             ) : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-              <Button kind="secondary" type="button" onClick={() => setIsTaskModalOpen(false)}>
+              <Button
+                kind="secondary"
+                type="button"
+                onClick={() => {
+                  setIsTaskModalOpen(false);
+                  setEditingTask(undefined);
+                }}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isCreating}>
-                {isCreating ? "Creating..." : "Create Task"}
+                {isCreating ? "Saving..." : editingTask ? "Save Changes" : "Create Task"}
               </Button>
             </div>
           </div>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Delete Task"
+        description="This action cannot be undone."
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(undefined)}
+      >
+        <p style={{ marginBottom: "1rem", color: "var(--cds-text-secondary)" }}>
+          Are you sure you want to delete &quot;{deleteTarget?.title}&quot;?
+        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+          <Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+            Cancel
+          </Button>
+          <Button kind="danger" onClick={handleDeleteTask} disabled={isDeleting}>
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
       </Modal>
     </div>
   );
