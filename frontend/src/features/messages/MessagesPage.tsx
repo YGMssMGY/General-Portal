@@ -1,15 +1,29 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Badge } from "../../components/Badge";
+import { Modal } from "../../components/Modal";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useMessageThreads } from "../../hooks/useWorkspaceResources";
+import { workspaceApi } from "../../api/workspaceApi";
+import { useAuth } from "../../context/AuthContext";
 import type { MessageThread } from "../../types";
-import { formatDateTime, sentenceCase } from "../../utils/format";
-import { Tag, Button } from "@carbon/react";
+import { formatDateTime } from "../../utils/format";
+import { Tag, Button, TextInput, TextArea, Select, SelectItem, Form } from "@carbon/react";
+import { Add, TrashCan, Send } from "@carbon/icons-react";
 
 export function MessagesPage() {
+  const { user } = useAuth();
   const { data, error, isLoading, refetch } = useMessageThreads();
   const [selectedId, setSelectedId] = useState<string>();
   const [contextFilter, setContextFilter] = useState<"all" | "event" | "task">("all");
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [replyBody, setReplyBody] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<MessageThread>();
+  const [composeForm, setComposeForm] = useState({
+    title: "",
+    context: "general" as MessageThread["context"],
+    participants: "",
+    body: "",
+  });
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -20,6 +34,44 @@ export function MessagesPage() {
     if (!filtered.length) return undefined;
     return filtered.find((t) => t.id === selectedId) ?? filtered[0];
   }, [filtered, selectedId]);
+
+  async function handleCompose(event: FormEvent) {
+    event.preventDefault();
+    try {
+      await workspaceApi.sendMessage({
+        title: composeForm.title,
+        context: composeForm.context,
+        participants: composeForm.participants
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        body: composeForm.body,
+      });
+      setComposeForm({ title: "", context: "general", participants: "", body: "" });
+      setIsComposeOpen(false);
+      refetch();
+    } catch {}
+  }
+
+  async function handleReply(event: FormEvent) {
+    event.preventDefault();
+    if (!selected || !replyBody.trim()) return;
+    try {
+      await workspaceApi.replyToThread(selected.id, replyBody);
+      setReplyBody("");
+      refetch();
+    } catch {}
+  }
+
+  async function handleArchive() {
+    if (!deleteTarget) return;
+    try {
+      await workspaceApi.archiveThread(deleteTarget.id);
+      setDeleteTarget(undefined);
+      if (selectedId === deleteTarget.id) setSelectedId(undefined);
+      refetch();
+    } catch {}
+  }
 
   if (isLoading) return <LoadingState />;
   if (error || !data)
@@ -37,9 +89,19 @@ export function MessagesPage() {
     <div style={sidebarStyle}>
       <aside style={{ borderRight: "1px solid var(--cds-border-subtle)" }}>
         <div style={{ borderBottom: "1px solid var(--cds-border-subtle)", padding: "1rem" }}>
-          <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
-            Messages
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+              Messages
+            </h1>
+            <Button
+              kind="ghost"
+              size="sm"
+              renderIcon={Add}
+              iconDescription="Compose"
+              hasIconOnly
+              onClick={() => setIsComposeOpen(true)}
+            />
+          </div>
           <p
             style={{
               marginTop: "0.25rem",
@@ -124,7 +186,7 @@ export function MessagesPage() {
                   justifyContent: "space-between",
                 }}
               >
-                <Badge>{sentenceCase(thread.status)}</Badge>
+                <Badge>{thread.status}</Badge>
                 {thread.unreadCount > 0 ? <Tag type="blue">{thread.unreadCount}</Tag> : null}
               </div>
             </button>
@@ -140,13 +202,33 @@ export function MessagesPage() {
       </aside>
 
       <section style={{ display: "flex", flexDirection: "column", minHeight: "500px" }}>
-        <div style={{ borderBottom: "1px solid var(--cds-border-subtle)", padding: "1rem" }}>
-          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
-            {selected?.title}
-          </h2>
-          <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-            {selected?.participants.join(", ")}
-          </p>
+        <div
+          style={{
+            borderBottom: "1px solid var(--cds-border-subtle)",
+            padding: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+              {selected?.title}
+            </h2>
+            <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+              {selected?.participants.join(", ")}
+            </p>
+          </div>
+          {selected ? (
+            <Button
+              kind="ghost"
+              size="sm"
+              renderIcon={TrashCan}
+              iconDescription="Archive"
+              hasIconOnly
+              onClick={() => setDeleteTarget(selected)}
+            />
+          ) : null}
         </div>
         <div
           className="scrollbar-soft"
@@ -187,6 +269,30 @@ export function MessagesPage() {
               <p style={{ fontSize: "0.875rem", color: "var(--cds-text-primary)" }}>{msg.body}</p>
             </div>
           ))}
+          {selected ? (
+            <form
+              onSubmit={handleReply}
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                paddingTop: "0.5rem",
+                borderTop: "1px solid var(--cds-border-subtle)",
+              }}
+            >
+              <TextInput
+                id="reply-body"
+                labelText=""
+                hideLabel
+                placeholder="Type a reply..."
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Button type="submit" renderIcon={Send} disabled={!replyBody.trim()}>
+                Reply
+              </Button>
+            </form>
+          ) : null}
         </div>
       </section>
 
@@ -224,7 +330,7 @@ export function MessagesPage() {
           <div>
             <dt style={{ color: "var(--cds-text-secondary)" }}>Status</dt>
             <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
-              {selected ? sentenceCase(selected.status) : ""}
+              {selected?.status}
             </dd>
           </div>
           <div>
@@ -235,6 +341,84 @@ export function MessagesPage() {
           </div>
         </dl>
       </aside>
+
+      <Modal
+        title="New Thread"
+        description="Start a conversation."
+        isOpen={isComposeOpen}
+        onClose={() => setIsComposeOpen(false)}
+      >
+        <Form onSubmit={handleCompose}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <TextInput
+              id="thread-title"
+              labelText="Subject"
+              required
+              value={composeForm.title}
+              onChange={(e) => setComposeForm((c) => ({ ...c, title: e.target.value }))}
+            />
+            <Select
+              id="thread-context"
+              labelText="Context"
+              value={composeForm.context}
+              onChange={(e) =>
+                setComposeForm((c) => ({
+                  ...c,
+                  context: e.target.value as MessageThread["context"],
+                }))
+              }
+            >
+              <SelectItem value="general" text="General" />
+              <SelectItem value="task" text="Task" />
+              <SelectItem value="event" text="Event" />
+              <SelectItem value="proposal" text="Proposal" />
+              <SelectItem value="file" text="File" />
+            </Select>
+            <TextInput
+              id="thread-recipients"
+              labelText="Recipients (comma-separated)"
+              required
+              value={composeForm.participants}
+              onChange={(e) => setComposeForm((c) => ({ ...c, participants: e.target.value }))}
+            />
+            <TextArea
+              id="thread-body"
+              labelText="Message"
+              rows={4}
+              required
+              value={composeForm.body}
+              onChange={(e) => setComposeForm((c) => ({ ...c, body: e.target.value }))}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+              <Button kind="secondary" type="button" onClick={() => setIsComposeOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" renderIcon={Send}>
+                Send
+              </Button>
+            </div>
+          </div>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Archive Thread"
+        description="This will remove the thread from view."
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(undefined)}
+      >
+        <p style={{ marginBottom: "1rem", color: "var(--cds-text-secondary)" }}>
+          Archive &quot;{deleteTarget?.title}&quot;?
+        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+          <Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+            Cancel
+          </Button>
+          <Button kind="danger" onClick={handleArchive}>
+            Archive
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
