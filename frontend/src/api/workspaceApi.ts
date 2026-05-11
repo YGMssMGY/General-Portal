@@ -13,7 +13,7 @@ import type {
   WorkspaceFile,
   WorkspaceSettings,
 } from "../types";
-import { API_ORIGIN, fetchJson, jsonBody } from "./httpClient";
+import { API_BASE_URL, fetchJson, jsonBody } from "./httpClient";
 
 export const workspaceApi = {
   getCurrentUser: () => fetchJson<UserProfile>("/auth/me"),
@@ -34,5 +34,5 @@ export const workspaceApi = {
   getActivity: () => fetchJson<ActivityItem[]>("/activity"),
   getSettings: () => fetchJson<WorkspaceSettings>("/settings"),
   search: (query: string) => fetchJson<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
-  getMicrosoftLoginUrl: () => `${API_ORIGIN}/oauth2/authorization/microsoft`,
+  getMicrosoftLoginUrl: () => `${API_BASE_URL}/oauth2/authorization/microsoft`,
 };

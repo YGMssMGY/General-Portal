@@ -1,7 +1,8 @@
 import { useAsyncData } from "../../hooks/useAsyncData";
 import { fetchJson } from "../../api/httpClient";
 import { LoadingState, ErrorState } from "../../components/StateViews";
-import { CarbonIcon } from "../../components/CarbonIcon";
+import { Tile } from "@carbon/react";
+import { Folder } from "@carbon/icons-react";
 
 interface Photo {
   id: string;
@@ -11,43 +12,68 @@ interface Photo {
 }
 
 export function PhotoGallery() {
-  const { data, error, isLoading, refetch } = useAsyncData(
-    () => fetchJson<Photo[]>("/photos"),
-    [],
-  );
+  const { data, error, isLoading, refetch } = useAsyncData(() => fetchJson<Photo[]>("/photos"), []);
 
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Photos unavailable"} onRetry={refetch} />;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">
-      <div className="mb-8">
-        <h1 className="text-expressive-04 text-text-primary">Photo Gallery</h1>
-        <p className="mt-2 text-expressive-01 text-text-secondary max-w-2xl">
+    <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "3rem 1rem" }}>
+      <div style={{ marginBottom: "2rem" }}>
+        <h1 style={{ fontSize: "2rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+          Photo Gallery
+        </h1>
+        <p
+          style={{
+            marginTop: "0.5rem",
+            fontSize: "1rem",
+            color: "var(--cds-text-secondary)",
+            maxWidth: "42rem",
+          }}
+        >
           Moments captured from our events, workshops, and community activities.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: "1rem",
+        }}
+      >
         {data.map((photo) => (
-          <figure
-            key={photo.id}
-            className="group border border-border-subtle bg-surface transition-colors hover:border-border-strong"
-          >
-            <div className="flex aspect-[4/3] items-center justify-center bg-carbon-gray-20">
-              <CarbonIcon
-                name="Folder"
+          <Tile key={photo.id}>
+            <div
+              style={{
+                aspectRatio: "4/3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "var(--cds-layer-accent)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <Folder
                 size={40}
-                className="text-carbon-gray-40"
+                style={{ color: "var(--cds-text-placeholder)" }}
                 aria-hidden="true"
               />
             </div>
-            <figcaption className="p-3">
-              <p className="text-sm font-medium text-text-primary">{photo.title}</p>
-              <p className="mt-0.5 text-xs text-text-placeholder">{photo.date}</p>
-            </figcaption>
-          </figure>
+            <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--cds-text-primary)" }}>
+              {photo.title}
+            </p>
+            <p
+              style={{
+                marginTop: "0.125rem",
+                fontSize: "0.75rem",
+                color: "var(--cds-text-placeholder)",
+              }}
+            >
+              {photo.date}
+            </p>
+          </Tile>
         ))}
       </div>
     </div>

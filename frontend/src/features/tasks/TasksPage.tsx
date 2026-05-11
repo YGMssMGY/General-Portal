@@ -5,11 +5,11 @@ import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
+import { Button, TextInput, Select, SelectItem, Form } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useTasks } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../context/AuthContext";
 import type { Priority, Task } from "../../types";
-import { priorityBadgeClass } from "../../utils/classes";
 import { formatDate, sentenceCase } from "../../utils/format";
 import { Add } from "@carbon/icons-react";
 
@@ -20,27 +20,13 @@ const columns: ColumnDef<Task>[] = [
     key: "status",
     header: "Status",
     sortable: true,
-    render: (task) => (
-      <Badge
-        className={
-          task.status === "in_progress"
-            ? "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-60"
-            : task.status === "blocked"
-              ? "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60"
-              : task.status === "done"
-                ? "border-carbon-green-30 bg-carbon-green-10 text-carbon-green-60"
-                : "border-border-subtle bg-surface text-text-secondary"
-        }
-      >
-        {sentenceCase(task.status)}
-      </Badge>
-    ),
+    render: (task) => <Badge>{sentenceCase(task.status)}</Badge>,
   },
   {
     key: "priority",
     header: "Priority",
     sortable: true,
-    render: (task) => <Badge className={priorityBadgeClass(task.priority)}>{task.priority}</Badge>,
+    render: (task) => <Badge>{task.priority}</Badge>,
   },
   {
     key: "dueDate",
@@ -102,14 +88,9 @@ export function TasksPage() {
         title="Tasks"
         description="Assign work, track progress, and keep every responsibility visible."
         actions={
-          <button
-            type="button"
-            className="flex h-9 items-center gap-2 border border-border-interactive bg-carbon-blue-60 px-4 text-sm font-medium text-white hover:bg-carbon-blue-70 transition-colors"
-            onClick={() => setIsTaskModalOpen(true)}
-          >
-            <Add size={16} aria-hidden="true" />
+          <Button renderIcon={Add} onClick={() => setIsTaskModalOpen(true)}>
             Add Task
-          </button>
+          </Button>
         }
       />
 
@@ -127,85 +108,77 @@ export function TasksPage() {
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
       >
-        <form className="grid gap-4" onSubmit={handleCreateTask}>
-          <label className="grid gap-1.5">
-            <span className="text-sm font-medium text-text-primary">Title</span>
-            <input
+        <Form onSubmit={handleCreateTask}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <TextInput
+              id="task-title"
+              labelText="Title"
               required
-              className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
               value={taskForm.title}
               onChange={(e) => setTaskForm((c) => ({ ...c, title: e.target.value }))}
             />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Project</span>
-              <input
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <TextInput
+                id="task-project"
+                labelText="Project"
                 required
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
                 value={taskForm.project}
                 onChange={(e) => setTaskForm((c) => ({ ...c, project: e.target.value }))}
               />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Assignee</span>
-              <input
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+              <TextInput
+                id="task-assignee"
+                labelText="Assignee"
                 value={taskForm.assigneeName}
                 onChange={(e) => setTaskForm((c) => ({ ...c, assigneeName: e.target.value }))}
                 placeholder={user?.name}
               />
-            </label>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Due date</span>
-              <input
-                required
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <TextInput
+                id="task-due-date"
+                labelText="Due date"
                 type="date"
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+                required
                 value={taskForm.dueDate}
                 onChange={(e) => setTaskForm((c) => ({ ...c, dueDate: e.target.value }))}
               />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-sm font-medium text-text-primary">Priority</span>
-              <select
-                className="border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-border-interactive focus:ring-1 focus:ring-border-interactive"
+              <Select
+                id="task-priority"
+                labelText="Priority"
                 value={taskForm.priority}
                 onChange={(e) =>
                   setTaskForm((c) => ({ ...c, priority: e.target.value as Priority }))
                 }
               >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </label>
+                <SelectItem value="low" text="Low" />
+                <SelectItem value="normal" text="Normal" />
+                <SelectItem value="medium" text="Medium" />
+                <SelectItem value="high" text="High" />
+              </Select>
+            </div>
+            {createError ? (
+              <p
+                style={{
+                  borderLeft: "4px solid var(--cds-support-error)",
+                  backgroundColor: "#fff1f1",
+                  padding: "0.5rem 0.75rem",
+                  fontSize: "0.875rem",
+                  color: "#a2191f",
+                }}
+              >
+                {createError}
+              </p>
+            ) : null}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+              <Button kind="secondary" type="button" onClick={() => setIsTaskModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create Task"}
+              </Button>
+            </div>
           </div>
-          {createError ? (
-            <p className="border-l-4 border-danger bg-carbon-red-10 px-3 py-2 text-sm text-carbon-red-70">
-              {createError}
-            </p>
-          ) : null}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              className="border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
-              onClick={() => setIsTaskModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isCreating}
-              className="bg-carbon-blue-60 px-4 py-2 text-sm font-medium text-white hover:bg-carbon-blue-70 disabled:opacity-60 transition-colors"
-            >
-              {isCreating ? "Creating..." : "Create Task"}
-            </button>
-          </div>
-        </form>
+        </Form>
       </Modal>
     </div>
   );

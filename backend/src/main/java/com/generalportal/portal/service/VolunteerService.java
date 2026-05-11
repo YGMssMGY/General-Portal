@@ -1,10 +1,10 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreateVolunteerSlotRequest;
-import com.orgflow.portal.dto.Dtos.VolunteerSlotDto;
-import com.orgflow.portal.entity.VolunteerSlot;
-import com.orgflow.portal.repository.VolunteerSlotRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.CreateVolunteerSlotRequest;
+import com.generalportal.portal.dto.Dtos.VolunteerSlotDto;
+import com.generalportal.portal.entity.VolunteerSlot;
+import com.generalportal.portal.repository.VolunteerSlotRepository;
+import com.generalportal.portal.security.Permissions;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

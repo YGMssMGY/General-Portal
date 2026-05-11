@@ -1,7 +1,7 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.UserDto;
-import com.orgflow.portal.service.AuthService;
+import com.generalportal.portal.dto.Dtos.UserDto;
+import com.generalportal.portal.service.AuthService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

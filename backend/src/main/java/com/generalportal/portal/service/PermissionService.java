@@ -1,14 +1,14 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.entity.Membership;
-import com.orgflow.portal.entity.PermissionGrant;
-import com.orgflow.portal.entity.UserAccount;
-import com.orgflow.portal.exception.PermissionDeniedException;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.MembershipRepository;
-import com.orgflow.portal.repository.PermissionGrantRepository;
-import com.orgflow.portal.repository.UserAccountRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.entity.Membership;
+import com.generalportal.portal.entity.PermissionGrant;
+import com.generalportal.portal.entity.UserAccount;
+import com.generalportal.portal.exception.PermissionDeniedException;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.MembershipRepository;
+import com.generalportal.portal.repository.PermissionGrantRepository;
+import com.generalportal.portal.repository.UserAccountRepository;
+import com.generalportal.portal.security.Permissions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -41,7 +41,7 @@ public class PermissionService {
         UserAccountRepository userAccountRepository,
         MembershipRepository membershipRepository,
         PermissionGrantRepository permissionGrantRepository,
-        @Value("${orgflow.security.auto-provision-users:true}") boolean autoProvisionUsers
+        @Value("${general-portal.security.auto-provision-users:true}") boolean autoProvisionUsers
     ) {
         this.currentUserService = currentUserService;
         this.userAccountRepository = userAccountRepository;
@@ -111,7 +111,7 @@ public class PermissionService {
         return userAccountRepository.save(new UserAccount(email, displayName, null));
     }
 
-    private Membership provisionMembership(com.orgflow.portal.entity.Workspace workspace, UserAccount user) {
+    private Membership provisionMembership(com.generalportal.portal.entity.Workspace workspace, UserAccount user) {
         if (!autoProvisionUsers) {
             throw new ResourceNotFoundException("Membership");
         }

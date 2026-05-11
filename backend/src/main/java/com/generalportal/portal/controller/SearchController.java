@@ -1,7 +1,7 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.SearchResultDto;
-import com.orgflow.portal.service.SearchService;
+import com.generalportal.portal.dto.Dtos.SearchResultDto;
+import com.generalportal.portal.service.SearchService;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;

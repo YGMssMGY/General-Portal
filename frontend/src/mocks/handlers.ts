@@ -46,10 +46,7 @@ export const handlers = [
     if (body.username && body.password) {
       return HttpResponse.json({ status: "ok", message: "Dev login successful" });
     }
-    return HttpResponse.json(
-      { error: "Invalid dev credentials." },
-      { status: 401 },
-    );
+    return HttpResponse.json({ error: "Invalid dev credentials." }, { status: 401 });
   }),
 
   http.get("/api/dashboard", async () => {

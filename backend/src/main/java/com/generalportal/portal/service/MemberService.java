@@ -1,11 +1,11 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.MemberDto;
-import com.orgflow.portal.dto.Dtos.UpdateMemberRequest;
-import com.orgflow.portal.entity.Membership;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.MembershipRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.MemberDto;
+import com.generalportal.portal.dto.Dtos.UpdateMemberRequest;
+import com.generalportal.portal.entity.Membership;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.MembershipRepository;
+import com.generalportal.portal.security.Permissions;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

@@ -1,7 +1,8 @@
 import { useAsyncData } from "../../hooks/useAsyncData";
 import { fetchJson } from "../../api/httpClient";
 import { LoadingState, ErrorState } from "../../components/StateViews";
-import { CarbonIcon } from "../../components/CarbonIcon";
+import { Tile, Tag } from "@carbon/react";
+import { Calendar } from "@carbon/icons-react";
 import type { PublicEvent } from "../../mocks/data";
 
 export function EventGallery() {
@@ -15,41 +16,82 @@ export function EventGallery() {
     return <ErrorState message={error ?? "Events unavailable"} onRetry={refetch} />;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">
-      <div className="mb-8">
-        <h1 className="text-expressive-04 text-text-primary">Past Events</h1>
-        <p className="mt-2 text-expressive-01 text-text-secondary max-w-2xl">
+    <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "3rem 1rem" }}>
+      <div style={{ marginBottom: "2rem" }}>
+        <h1 style={{ fontSize: "2rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+          Past Events
+        </h1>
+        <p
+          style={{
+            marginTop: "0.5rem",
+            fontSize: "1rem",
+            color: "var(--cds-text-secondary)",
+            maxWidth: "42rem",
+          }}
+        >
           A look back at our events, workshops, and community gatherings.
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          gap: "1.5rem",
+        }}
+      >
         {data.map((event) => (
-          <article
-            key={event.id}
-            className="group border border-border-subtle bg-surface transition-colors hover:border-border-strong"
-          >
-            <div className="flex h-48 items-center justify-center bg-carbon-gray-20">
-              <CarbonIcon
-                name="Calendar"
+          <Tile key={event.id}>
+            <div
+              style={{
+                height: "12rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "var(--cds-layer-accent)",
+                marginBottom: "1.25rem",
+              }}
+            >
+              <Calendar
                 size={48}
-                className="text-carbon-gray-40"
+                style={{ color: "var(--cds-text-placeholder)" }}
                 aria-hidden="true"
               />
             </div>
-            <div className="p-5">
-              <span className="inline-block border border-border-subtle px-2 py-0.5 text-xs text-text-secondary">
-                {event.category}
-              </span>
-              <h2 className="mt-3 text-expressive-02 font-semibold text-text-primary">
-                {event.title}
-              </h2>
-              <p className="mt-2 text-productive-02 text-text-secondary line-clamp-2">
-                {event.description}
-              </p>
-              <p className="mt-3 text-xs text-text-placeholder">{event.date}</p>
-            </div>
-          </article>
+            <Tag type="outline">{event.category}</Tag>
+            <h2
+              style={{
+                marginTop: "0.75rem",
+                fontSize: "1.25rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+              }}
+            >
+              {event.title}
+            </h2>
+            <p
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "0.875rem",
+                color: "var(--cds-text-secondary)",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {event.description}
+            </p>
+            <p
+              style={{
+                marginTop: "0.75rem",
+                fontSize: "0.75rem",
+                color: "var(--cds-text-placeholder)",
+              }}
+            >
+              {event.date}
+            </p>
+          </Tile>
         ))}
       </div>
     </div>

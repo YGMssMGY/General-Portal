@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:sqlite:../data/orgflow.db
+    url: jdbc:sqlite:../data/general-portal.db
     driver-class-name: org.sqlite.JDBC
     username: sa
     password: sa
@@ -13,10 +13,10 @@ spring:
       hibernate:
         format_sql: true
 
-orgflow:
+general-portal:
   security:
     dev-auth:
-      username: ${DEV_AUTH_USERNAME:dev@orgflow.local}
+      username: ${DEV_AUTH_USERNAME:dev@generalportal.local}
       password: ${DEV_AUTH_PASSWORD:}
   seed:
     enabled: true

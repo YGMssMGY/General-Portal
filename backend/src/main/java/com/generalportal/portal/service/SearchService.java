@@ -1,12 +1,12 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.SearchResultDto;
-import com.orgflow.portal.repository.EventRepository;
-import com.orgflow.portal.repository.FinanceTransactionRepository;
-import com.orgflow.portal.repository.ProposalRepository;
-import com.orgflow.portal.repository.TaskRepository;
-import com.orgflow.portal.repository.WorkspaceFileRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.SearchResultDto;
+import com.generalportal.portal.repository.EventRepository;
+import com.generalportal.portal.repository.FinanceTransactionRepository;
+import com.generalportal.portal.repository.ProposalRepository;
+import com.generalportal.portal.repository.TaskRepository;
+import com.generalportal.portal.repository.WorkspaceFileRepository;
+import com.generalportal.portal.security.Permissions;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;

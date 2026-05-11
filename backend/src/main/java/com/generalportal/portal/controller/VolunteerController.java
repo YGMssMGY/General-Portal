@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.VolunteerSlotDto;
-import com.orgflow.portal.dto.Dtos.CreateVolunteerSlotRequest;
-import com.orgflow.portal.service.VolunteerService;
+import com.generalportal.portal.dto.Dtos.VolunteerSlotDto;
+import com.generalportal.portal.dto.Dtos.CreateVolunteerSlotRequest;
+import com.generalportal.portal.service.VolunteerService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

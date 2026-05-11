@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.FinanceTransactionDto;
-import com.orgflow.portal.dto.Dtos.CreateFinanceTransactionRequest;
-import com.orgflow.portal.service.FinanceService;
+import com.generalportal.portal.dto.Dtos.FinanceTransactionDto;
+import com.generalportal.portal.dto.Dtos.CreateFinanceTransactionRequest;
+import com.generalportal.portal.service.FinanceService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

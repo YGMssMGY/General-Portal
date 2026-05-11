@@ -1,4 +1,4 @@
-# OrgFlow &mdash; General Portal
+# General Portal
 
 A dual-purpose club management and student council platform with a public showcase
 and a private, role-based admin dashboard.
@@ -10,7 +10,7 @@ and a private, role-based admin dashboard.
 
 ## Project Overview
 
-OrgFlow General Portal powers the **Developers&apos; Club** and **Student Council**
+General Portal powers the **Developers&apos; Club** and **Student Council**
 through a single shared web application. Public visitors browse past events, photo
 galleries, and organizational information. Authenticated members enter the admin
 dashboard where a strict role hierarchy (Teacher &rarr; President &rarr; VP &rarr; Members
@@ -24,17 +24,17 @@ to preview and navigate every page.
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Spring Boot 3.3.5, Java 21, Spring Security OAuth2, Spring Data JPA |
-| **Auth** | Microsoft Entra ID (OAuth2), Dev Login Filter (dev-mode only) |
-| **Database** | PostgreSQL 16, SQLite 3, H2 (demo fallback) |
-| **Cache** | Caffeine (simple), Redis (optional) |
-| **Frontend** | React 18, Vite 6, TypeScript, Tailwind CSS 3 |
-| **Mocking** | Mock Service Worker (MSW) |
-| **Icons** | Carbon Design System (`@carbon/icons-react`) |
-| **Testing** | JUnit 5, Mockito, Spring Boot Test |
-| **Build** | Maven, npm |
+| Layer        | Technology                                                          |
+| ------------ | ------------------------------------------------------------------- |
+| **Backend**  | Spring Boot 3.3.5, Java 21, Spring Security OAuth2, Spring Data JPA |
+| **Auth**     | Microsoft Entra ID (OAuth2), Dev Login Filter (dev-mode only)       |
+| **Database** | PostgreSQL 16, SQLite 3, H2 (demo fallback)                         |
+| **Cache**    | Caffeine (simple), Redis (optional)                                 |
+| **Frontend** | React 18, Vite 6, TypeScript, Tailwind CSS 3                        |
+| **Mocking**  | Mock Service Worker (MSW)                                           |
+| **Icons**    | Carbon Design System (`@carbon/icons-react`)                        |
+| **Testing**  | JUnit 5, Mockito, Spring Boot Test                                  |
+| **Build**    | Maven, npm                                                          |
 
 ---
 
@@ -42,7 +42,7 @@ to preview and navigate every page.
 
 ```
 ├── backend/                          # Spring Boot backend
-│   ├── src/main/java/com/orgflow/portal/
+│   ├── src/main/java/com/generalportal/portal/
 │   │   ├── config/                   # Security, Swagger, CORS config
 │   │   ├── controller/               # REST controllers (17 endpoints)
 │   │   ├── dto/                      # Data Transfer Objects
@@ -89,6 +89,7 @@ to preview and navigate every page.
 ## Quick Start
 
 ### Prerequisites
+
 - **Java 17+** (21 recommended)
 - **Node.js 18+**
 - **Maven** (bundled in `.tools/`, or system PATH, or set `MVN_CMD`)
@@ -103,7 +104,7 @@ cd General-Portal
 # Copy environment template
 Copy-Item .env.example .env.local
 
-# Start everything with SQLite (auto-creates data/orgflow.db)
+# Start everything with SQLite (auto-creates data/general-portal.db)
 .\start-dev.ps1 -DatabaseProvider sqlite
 ```
 
@@ -133,12 +134,12 @@ chmod +x start-dev.sh
 
 ## Available Profiles
 
-| Profile | Database | Requires | Persistence | Use Case |
-|---------|----------|----------|-------------|----------|
-| `dev` (default) | PostgreSQL | PostgreSQL 16 at `localhost:5432` | Yes | Full development |
-| `sqlite` | SQLite | Nothing (file auto-created) | Yes | Quick dev / demo |
-| `demo` | H2 in-memory | Nothing | No (lost on restart) | Quick test / fallback |
-| `redis` | Redis add-on | Redis at `localhost:6379` | &mdash; | Cache & session |
+| Profile         | Database     | Requires                          | Persistence          | Use Case              |
+| --------------- | ------------ | --------------------------------- | -------------------- | --------------------- |
+| `dev` (default) | PostgreSQL   | PostgreSQL 16 at `localhost:5432` | Yes                  | Full development      |
+| `sqlite`        | SQLite       | Nothing (file auto-created)       | Yes                  | Quick dev / demo      |
+| `demo`          | H2 in-memory | Nothing                           | No (lost on restart) | Quick test / fallback |
+| `redis`         | Redis add-on | Redis at `localhost:6379`         | &mdash;              | Cache & session       |
 
 ---
 
@@ -153,12 +154,12 @@ VITE_API_URL=http://localhost:8080/api
 VITE_DEV_AUTH=false              # Set to "true" to show developer login form
 
 # Database (PostgreSQL)
-POSTGRES_URL=jdbc:postgresql://localhost:5432/orgflow
-POSTGRES_USER=orgflow
+POSTGRES_URL=jdbc:postgresql://localhost:5432/general_portal
+POSTGRES_USER=general_portal
 POSTGRES_PASSWORD=yourpassword
 
 # Dev Authentication
-DEV_AUTH_USERNAME=dev@orgflow.local
+DEV_AUTH_USERNAME=dev@general-portal.local
 DEV_AUTH_PASSWORD=your-dev-password
 
 # Microsoft Entra ID (OAuth2)
@@ -175,12 +176,12 @@ REDIS_PORT=6379
 
 ## URLs After Startup
 
-| Service | URL |
-|---------|-----|
-| **Frontend** | http://localhost:5173 |
+| Service            | URL                              |
+| ------------------ | -------------------------------- |
+| **Frontend**       | http://localhost:5173            |
 | **Backend Health** | http://localhost:8080/api/health |
-| **API Docs** | http://localhost:8080/api-docs |
-| **API Docs** | http://localhost:8080/api-docs |
+| **API Docs**       | http://localhost:8080/api-docs   |
+| **API Docs**       | http://localhost:8080/api-docs   |
 
 ---
 
@@ -202,6 +203,7 @@ Grade Rep  ─── View events, messages, activity only
 ```
 
 Role enforcement happens at two levels:
+
 1. **Method security** (`@PreAuthorize`) on every controller endpoint
 2. **Role hierarchy** (`RoleHierarchyImpl`) for inherited permissions
 
@@ -214,14 +216,14 @@ Role enforcement happens at two levels:
 ```powershell
 cd backend
 
-# With bundled Maven
-..\tools\apache-maven-3.9.11\bin\mvn.cmd test
+# Run tests
+mvn test
 
 # With SQLite profile
-..\tools\apache-maven-3.9.11\bin\mvn.cmd test -Dspring.profiles.active=sqlite
+mvn test "-Dspring.profiles.active=sqlite"
 
 # With H2 profile
-..\tools\apache-maven-3.9.11\bin\mvn.cmd test -Dspring.profiles.active=demo
+mvn test "-Dspring.profiles.active=demo"
 ```
 
 ### Frontend
@@ -238,15 +240,18 @@ npm run check-format   # Verify formatting (CI)
 ## Authentication Modes
 
 ### 1. Dev Login (local development)
+
 Set `DEV_AUTH_USERNAME` and `DEV_AUTH_PASSWORD` in `.env.local`. The frontend
 shows a Developer Login form when `VITE_DEV_AUTH=true`. The backend `DevLoginFilter`
 is only active in `dev`, `demo`, `local`, and `sqlite` profiles.
 
 ### 2. Microsoft Entra ID (production)
-Set `ORGFLOW_DEMO_MODE=false` and provide real `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`,
+
+Set `GENERAL_PORTAL_DEMO_MODE=false` and provide real `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`,
 and `MICROSOFT_CLIENT_SECRET` values. Redirect URI: `http://localhost:8080/login/oauth2/code/microsoft`
 
 ### 3. Frontend-Only (MSW Mock Mode)
+
 The frontend uses Mock Service Worker to intercept all API calls. No backend, no
 database, and no authentication are required. Simply run `npm run dev` from `frontend/`.
 
@@ -254,13 +259,13 @@ database, and no authentication are required. Simply run `npm run dev` from `fro
 
 ## Common Issues
 
-| Issue | Solution |
-|-------|----------|
-| *PostgreSQL connection refused* | Use `-DatabaseProvider sqlite` or `-BackendProfile demo` |
-| *Maven not found* | The bundled Maven is in `.tools/`. Clone with `git` (not ZIP download). |
-| *Port 8080 / 5173 already in use* | Run `.\stop-dev.ps1` to clean up old processes. |
-| *SQLite database locked* | Stop the backend, delete `data/orgflow.db`, restart. |
-| *Frontend shows "Network error"* | Start the backend first, or run `npm run dev` from `frontend/` for MSW mock mode. |
+| Issue                             | Solution                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| _PostgreSQL connection refused_   | Use `-DatabaseProvider sqlite` or `-BackendProfile demo`                          |
+| _Maven not found_                 | The bundled Maven is in `.tools/`. Clone with `git` (not ZIP download).           |
+| _Port 8080 / 5173 already in use_ | Run `.\stop-dev.ps1` to clean up old processes.                                   |
+| _SQLite database locked_          | Stop the backend, delete `data/general-portal.db`, restart.                       |
+| _Frontend shows "Network error"_  | Start the backend first, or run `npm run dev` from `frontend/` for MSW mock mode. |
 
 ---
 

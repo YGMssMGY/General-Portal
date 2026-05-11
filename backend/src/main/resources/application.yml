@@ -1,9 +1,10 @@
 server:
   port: 8080
+  address: 127.0.0.1
 
 spring:
   application:
-    name: orgflow-portal
+    name: general-portal
   profiles:
     default: dev
   jpa:
@@ -43,14 +44,14 @@ spring:
             user-info-uri: https://graph.microsoft.com/oidc/userinfo
             user-name-attribute: sub
 
-orgflow:
+general-portal:
   microsoft:
     graph-base-url: ${MICROSOFT_GRAPH_BASE_URL:https://graph.microsoft.com/v1.0}
   security:
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
-    auto-provision-users: ${ORGFLOW_AUTO_PROVISION_USERS:true}
+    auto-provision-users: ${GENERAL_PORTAL_AUTO_PROVISION_USERS:true}
     dev-auth:
       username: ${DEV_AUTH_USERNAME:}
       password: ${DEV_AUTH_PASSWORD:}
   seed:
-    enabled: ${ORGFLOW_SEED_ENABLED:true}
+    enabled: ${GENERAL_PORTAL_SEED_ENABLED:true}

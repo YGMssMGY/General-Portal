@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.MemberDto;
-import com.orgflow.portal.dto.Dtos.UpdateMemberRequest;
-import com.orgflow.portal.service.MemberService;
+import com.generalportal.portal.dto.Dtos.MemberDto;
+import com.generalportal.portal.dto.Dtos.UpdateMemberRequest;
+import com.generalportal.portal.service.MemberService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Page;

@@ -1,7 +1,7 @@
 spring:
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/orgflow}
-    username: ${POSTGRES_USER:orgflow}
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/generalportal}
+    username: ${POSTGRES_USER:generalportal}
     password: ${POSTGRES_PASSWORD:}
   jpa:
     hibernate:
@@ -11,12 +11,12 @@ spring:
   session:
     store-type: none
 
-orgflow:
+general-portal:
   security:
-    auto-provision-users: ${ORGFLOW_AUTO_PROVISION_USERS:true}
+    auto-provision-users: ${GENERAL_PORTAL_AUTO_PROVISION_USERS:true}
     frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
     dev-auth:
-      username: ${DEV_AUTH_USERNAME:dev@orgflow.local}
+      username: ${DEV_AUTH_USERNAME:dev@generalportal.local}
       password: ${DEV_AUTH_PASSWORD:}
   seed:
-    enabled: ${ORGFLOW_SEED_ENABLED:true}
+    enabled: ${GENERAL_PORTAL_SEED_ENABLED:true}

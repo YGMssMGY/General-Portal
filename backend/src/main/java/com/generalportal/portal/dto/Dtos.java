@@ -1,4 +1,4 @@
-package com.orgflow.portal.dto;
+package com.generalportal.portal.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;

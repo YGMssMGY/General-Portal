@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.WorkspaceFileDto;
-import com.orgflow.portal.dto.Dtos.CreateWorkspaceFileRequest;
-import com.orgflow.portal.service.FileService;
+import com.generalportal.portal.dto.Dtos.WorkspaceFileDto;
+import com.generalportal.portal.dto.Dtos.CreateWorkspaceFileRequest;
+import com.generalportal.portal.service.FileService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

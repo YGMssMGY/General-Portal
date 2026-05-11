@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.CreatePhotoRequest;
-import com.orgflow.portal.dto.Dtos.PhotoDto;
-import com.orgflow.portal.service.PhotoService;
+import com.generalportal.portal.dto.Dtos.CreatePhotoRequest;
+import com.generalportal.portal.dto.Dtos.PhotoDto;
+import com.generalportal.portal.service.PhotoService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

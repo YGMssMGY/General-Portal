@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  OrgFlow Health Check" -ForegroundColor Cyan
+Write-Host "  General Portal Health Check" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 

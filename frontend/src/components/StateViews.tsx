@@ -1,13 +1,21 @@
+import { InlineLoading, Button, Tile } from "@carbon/react";
+
 interface LoadingStateProps {
   label?: string;
 }
 
 export function LoadingState({ label = "Loading data" }: LoadingStateProps) {
   return (
-    <div className="flex min-h-48 items-center justify-center border border-border-subtle bg-surface p-8 text-sm text-text-secondary">
-      <div className="h-5 w-5 animate-skeleton-pulse rounded-full border-2 border-border-interactive border-t-transparent" />
-      <span className="ml-3">{label}</span>
-    </div>
+    <Tile
+      style={{
+        minHeight: "12rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <InlineLoading description={label} />
+    </Tile>
   );
 }
 
@@ -18,19 +26,19 @@ interface ErrorStateProps {
 
 export function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
-    <div className="border-l-4 border-danger bg-surface p-4">
-      <p className="text-sm font-semibold text-text-primary">Could not load data</p>
-      <p className="mt-1 text-sm text-text-secondary">{message}</p>
+    <Tile style={{ borderLeft: "4px solid var(--cds-support-error)" }}>
+      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+        Could not load data
+      </p>
+      <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+        {message}
+      </p>
       {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-3 border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
-        >
+        <Button kind="tertiary" size="sm" onClick={onRetry} style={{ marginTop: "0.75rem" }}>
           Try again
-        </button>
+        </Button>
       ) : null}
-    </div>
+    </Tile>
   );
 }
 
@@ -41,9 +49,13 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
-    <div className="border border-border-subtle bg-surface p-8 text-center">
-      <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
-      <p className="mt-2 text-sm text-text-secondary">{description}</p>
-    </div>
+    <Tile style={{ textAlign: "center", padding: "2rem" }}>
+      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
+        {title}
+      </h2>
+      <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+        {description}
+      </p>
+    </Tile>
   );
 }

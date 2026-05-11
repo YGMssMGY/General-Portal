@@ -1,10 +1,10 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.MessageThreadDto;
-import com.orgflow.portal.entity.MessageThread;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.MessageThreadRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.MessageThreadDto;
+import com.generalportal.portal.entity.MessageThread;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.MessageThreadRepository;
+import com.generalportal.portal.security.Permissions;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;

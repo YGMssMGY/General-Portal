@@ -1,4 +1,4 @@
-package com.orgflow.portal.exception;
+package com.generalportal.portal.exception;
 
 public class PermissionDeniedException extends RuntimeException {
     public PermissionDeniedException(String permission) {

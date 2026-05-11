@@ -1,51 +1,87 @@
 import { Outlet, Link } from "react-router-dom";
-import { CarbonIcon } from "../../components/CarbonIcon";
+import { Button } from "@carbon/react";
+import { Launch } from "@carbon/icons-react";
+
+const navLinkStyle: React.CSSProperties = {
+  padding: "0.5rem 0.75rem",
+  fontSize: "0.875rem",
+  color: "var(--cds-text-secondary)",
+  textDecoration: "none",
+};
 
 export function PublicLayout() {
   return (
-    <div className="min-h-screen bg-background text-text-primary">
-      <header className="sticky top-0 z-40 border-b border-border-subtle bg-surface/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--cds-background)",
+        color: "var(--cds-text-primary)",
+      }}
+    >
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          borderBottom: "1px solid var(--cds-border-subtle)",
+          background: "var(--cds-layer)",
+        }}
+      >
+        <div
+          style={{
+            margin: "0 auto",
+            maxWidth: "80rem",
+            display: "flex",
+            height: "3.5rem",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 1rem",
+          }}
+        >
           <Link
             to="/"
-            className="flex items-center gap-3 text-text-primary hover:text-text-primary"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              color: "var(--cds-text-primary)",
+              textDecoration: "none",
+            }}
           >
-            <div className="flex h-8 w-8 items-center justify-center bg-carbon-blue-60 text-sm font-semibold text-white">
+            <div
+              style={{
+                width: "2rem",
+                height: "2rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#0043ce",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                color: "#ffffff",
+              }}
+            >
               CP
             </div>
-            <span className="text-lg font-semibold font-condensed">Club Portal</span>
+            <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>Club Portal</span>
           </Link>
-          <nav className="flex items-center gap-1">
-            <Link
-              to="/"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
+          <nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <Link to="/" style={navLinkStyle}>
               Home
             </Link>
-            <Link
-              to="/events"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
+            <Link to="/events" style={navLinkStyle}>
               Events
             </Link>
-            <Link
-              to="/photos"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
+            <Link to="/photos" style={navLinkStyle}>
               Photos
             </Link>
-            <Link
-              to="/about"
-              className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
+            <Link to="/about" style={navLinkStyle}>
               About
             </Link>
-            <Link
-              to="/admin"
-              className="ml-2 flex items-center gap-1.5 border border-border-interactive px-3 py-1.5 text-sm font-medium text-border-interactive hover:bg-carbon-blue-10 transition-colors"
-            >
-              <CarbonIcon name="Launch" size={14} aria-hidden="true" />
-              Admin
+            <Link to="/admin" style={{ marginLeft: "0.5rem" }}>
+              <Button kind="tertiary" size="sm" renderIcon={Launch}>
+                Admin
+              </Button>
             </Link>
           </nav>
         </div>
@@ -53,9 +89,11 @@ export function PublicLayout() {
       <main>
         <Outlet />
       </main>
-      <footer className="border-t border-border-subtle bg-surface">
-        <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
-          <p className="text-sm text-text-secondary">
+      <footer
+        style={{ borderTop: "1px solid var(--cds-border-subtle)", background: "var(--cds-layer)" }}
+      >
+        <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "2rem 1rem" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
             &copy; {new Date().getFullYear()} Developers' Club &amp; Student Council. All rights
             reserved.
           </p>

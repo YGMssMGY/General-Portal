@@ -1,12 +1,12 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.CreateProposalRequest;
-import com.orgflow.portal.dto.Dtos.ProposalDto;
-import com.orgflow.portal.dto.Dtos.UpdateProposalRequest;
-import com.orgflow.portal.entity.Proposal;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.ProposalRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.CreateProposalRequest;
+import com.generalportal.portal.dto.Dtos.ProposalDto;
+import com.generalportal.portal.dto.Dtos.UpdateProposalRequest;
+import com.generalportal.portal.entity.Proposal;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.ProposalRepository;
+import com.generalportal.portal.security.Permissions;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;

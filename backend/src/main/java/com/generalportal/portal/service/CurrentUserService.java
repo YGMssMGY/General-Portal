@@ -1,10 +1,10 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.entity.UserAccount;
-import com.orgflow.portal.entity.Workspace;
-import com.orgflow.portal.exception.ResourceNotFoundException;
-import com.orgflow.portal.repository.UserAccountRepository;
-import com.orgflow.portal.repository.WorkspaceRepository;
+import com.generalportal.portal.entity.UserAccount;
+import com.generalportal.portal.entity.Workspace;
+import com.generalportal.portal.exception.ResourceNotFoundException;
+import com.generalportal.portal.repository.UserAccountRepository;
+import com.generalportal.portal.repository.WorkspaceRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CurrentUserService {
-    private static final String DEFAULT_WORKSPACE_NAME = "OrgFlow Workspace";
+    private static final String DEFAULT_WORKSPACE_NAME = "General Portal Workspace";
 
     private final UserAccountRepository userAccountRepository;
     private final WorkspaceRepository workspaceRepository;

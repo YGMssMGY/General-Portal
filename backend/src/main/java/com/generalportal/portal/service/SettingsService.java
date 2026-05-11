@@ -1,9 +1,9 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.UpdateSettingsRequest;
-import com.orgflow.portal.dto.Dtos.WorkspaceSettingsDto;
-import com.orgflow.portal.repository.WorkspaceSettingsRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.UpdateSettingsRequest;
+import com.generalportal.portal.dto.Dtos.WorkspaceSettingsDto;
+import com.generalportal.portal.repository.WorkspaceSettingsRepository;
+import com.generalportal.portal.security.Permissions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

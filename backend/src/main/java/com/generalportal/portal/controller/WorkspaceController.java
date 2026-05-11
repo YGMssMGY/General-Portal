@@ -1,7 +1,7 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.entity.Workspace;
-import com.orgflow.portal.service.CurrentUserService;
+import com.generalportal.portal.entity.Workspace;
+import com.generalportal.portal.service.CurrentUserService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

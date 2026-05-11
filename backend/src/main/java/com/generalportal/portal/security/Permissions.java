@@ -1,4 +1,4 @@
-package com.orgflow.portal.security;
+package com.generalportal.portal.security;
 
 import java.util.List;
 

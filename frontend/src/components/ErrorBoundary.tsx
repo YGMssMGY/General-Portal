@@ -27,15 +27,51 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
-          <Warning size={48} className="text-danger" aria-hidden="true" />
-          <h1 className="mt-6 text-xl font-semibold text-text-primary">Something went wrong</h1>
-          <p className="mt-2 max-w-md text-center text-sm text-text-secondary">
+        <div
+          style={{
+            display: "flex",
+            minHeight: "100vh",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "var(--cds-background)",
+            padding: "1.5rem",
+          }}
+        >
+          <Warning size={48} style={{ color: "var(--cds-support-error)" }} aria-hidden="true" />
+          <h1
+            style={{
+              marginTop: "1.5rem",
+              fontSize: "1.25rem",
+              fontWeight: 600,
+              color: "var(--cds-text-primary)",
+            }}
+          >
+            Something went wrong
+          </h1>
+          <p
+            style={{
+              marginTop: "0.5rem",
+              maxWidth: "28rem",
+              textAlign: "center",
+              fontSize: "0.875rem",
+              color: "var(--cds-text-secondary)",
+            }}
+          >
             An unexpected error occurred. Please refresh the page to try again.
           </p>
           <button
             type="button"
-            className="mt-6 border border-border-subtle bg-surface px-5 py-2 text-sm font-medium text-text-primary hover:bg-surface-hover transition-colors"
+            style={{
+              marginTop: "1.5rem",
+              border: "1px solid var(--cds-border-subtle)",
+              background: "var(--cds-layer)",
+              padding: "0.5rem 1.25rem",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              color: "var(--cds-text-primary)",
+              cursor: "pointer",
+            }}
             onClick={() => {
               this.setState({ hasError: false, error: null });
               window.location.reload();

@@ -1,9 +1,9 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.CreateTaskRequest;
-import com.orgflow.portal.dto.Dtos.TaskDto;
-import com.orgflow.portal.dto.Dtos.UpdateTaskRequest;
-import com.orgflow.portal.service.TaskService;
+import com.generalportal.portal.dto.Dtos.CreateTaskRequest;
+import com.generalportal.portal.dto.Dtos.TaskDto;
+import com.generalportal.portal.dto.Dtos.UpdateTaskRequest;
+import com.generalportal.portal.service.TaskService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

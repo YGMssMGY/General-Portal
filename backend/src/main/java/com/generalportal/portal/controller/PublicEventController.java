@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.CreatePublicEventRequest;
-import com.orgflow.portal.dto.Dtos.PublicEventDto;
-import com.orgflow.portal.service.PublicEventService;
+import com.generalportal.portal.dto.Dtos.CreatePublicEventRequest;
+import com.generalportal.portal.dto.Dtos.PublicEventDto;
+import com.generalportal.portal.service.PublicEventService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

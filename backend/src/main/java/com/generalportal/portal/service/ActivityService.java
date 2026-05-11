@@ -1,8 +1,8 @@
-package com.orgflow.portal.service;
+package com.generalportal.portal.service;
 
-import com.orgflow.portal.dto.Dtos.ActivityDto;
-import com.orgflow.portal.repository.ActivityLogRepository;
-import com.orgflow.portal.security.Permissions;
+import com.generalportal.portal.dto.Dtos.ActivityDto;
+import com.generalportal.portal.repository.ActivityLogRepository;
+import com.generalportal.portal.security.Permissions;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;

@@ -1,23 +1,33 @@
 import { BrowserRouter } from "react-router-dom";
-import { ThemeProvider } from "./context/ThemeContext";
+import { Theme } from "@carbon/react";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { DemoAuthProvider } from "./context/DemoAuthContext";
 import { AuthProvider } from "./context/AuthContext";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppRoutes } from "./routes/AppRoutes";
 
+function ThemedApp() {
+  const { theme } = useTheme();
+  return (
+    <Theme theme={theme === "dark" ? "g100" : "g10"}>
+      <DemoAuthProvider>
+        <AuthProvider>
+          <WorkspaceProvider>
+            <AppRoutes />
+          </WorkspaceProvider>
+        </AuthProvider>
+      </DemoAuthProvider>
+    </Theme>
+  );
+}
+
 export function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
         <ThemeProvider>
-          <DemoAuthProvider>
-            <AuthProvider>
-              <WorkspaceProvider>
-                <AppRoutes />
-              </WorkspaceProvider>
-            </AuthProvider>
-          </DemoAuthProvider>
+          <ThemedApp />
         </ThemeProvider>
       </ErrorBoundary>
     </BrowserRouter>

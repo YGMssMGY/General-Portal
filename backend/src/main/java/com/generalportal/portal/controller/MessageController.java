@@ -1,8 +1,8 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
-import com.orgflow.portal.dto.Dtos.CreateMessageRequest;
-import com.orgflow.portal.dto.Dtos.MessageThreadDto;
-import com.orgflow.portal.service.MessageService;
+import com.generalportal.portal.dto.Dtos.CreateMessageRequest;
+import com.generalportal.portal.dto.Dtos.MessageThreadDto;
+import com.generalportal.portal.service.MessageService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;

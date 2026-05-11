@@ -1,4 +1,4 @@
-package com.orgflow.portal.controller;
+package com.generalportal.portal.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public class SwaggerController {
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">")
             .append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">")
-            .append("<title>OrgFlow API</title>")
+            .append("<title>General Portal API</title>")
             .append("<style>")
             .append("*{box-sizing:border-box;margin:0;padding:0}")
             .append("body{font-family:system-ui,sans-serif;background:#f4f4f4;color:#161616;padding:24px}")
@@ -59,7 +59,7 @@ public class SwaggerController {
             .append(".g{background:#198038;color:#fff}.p{background:#0f62fe;color:#fff}.pa{background:#f1c21b;color:#161616}.d{background:#da1e28;color:#fff}")
             .append(".path{font-family:monospace;word-break:break-all}")
             .append("</style></head><body>")
-            .append("<h1>OrgFlow API</h1>")
+            .append("<h1>General Portal API</h1>")
             .append("<p style=\"color:#525252;margin-bottom:16px\">Auto-discovered endpoints &middot; <a href=\"").append(baseUrl).append("/api/health\">health check</a></p>");
 
         grouped.keySet().stream().sorted().forEach(controller -> {

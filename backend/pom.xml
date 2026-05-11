@@ -11,11 +11,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.orgflow</groupId>
+    <groupId>com.generalportal</groupId>
     <artifactId>portal</artifactId>
     <version>0.1.0</version>
-    <name>orgflow-portal</name>
-    <description>OrgFlow workspace MVP API</description>
+    <name>general-portal</name>
+    <description>General Portal workspace MVP API</description>
 
     <properties>
         <java.version>21</java.version>

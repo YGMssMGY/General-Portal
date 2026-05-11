@@ -14,9 +14,13 @@ const columns: ColumnDef<WorkspaceFile>[] = [
     header: "Name",
     sortable: true,
     render: (file) => (
-      <div className="flex items-center gap-3">
-        <Document size={20} className="text-text-secondary shrink-0" aria-hidden="true" />
-        <span className="font-medium text-text-primary">{file.name}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <Document
+          size={20}
+          style={{ color: "var(--cds-text-secondary)", flexShrink: 0 }}
+          aria-hidden="true"
+        />
+        <span style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>{file.name}</span>
       </div>
     ),
   },
@@ -33,7 +37,6 @@ const columns: ColumnDef<WorkspaceFile>[] = [
 
 export function FilesPage() {
   const { data, error, isLoading, refetch } = useFiles();
-
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Files are unavailable"} onRetry={refetch} />;
@@ -44,19 +47,42 @@ export function FilesPage() {
         title="Files"
         description="Store files and keep documents linked to workspace context."
       />
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
         {data.slice(0, 4).map((file) => (
           <Card key={file.id} padding="lg">
-            <Document size={24} className="text-carbon-blue-60" aria-hidden="true" />
-            <h2 className="mt-3 font-medium text-text-primary text-sm truncate">{file.name}</h2>
-            <p className="mt-1 text-xs text-text-secondary">
-              {file.sizeLabel} &middot; {file.fileType}
+            <Document size={24} style={{ color: "#0f62fe" }} aria-hidden="true" />
+            <h2
+              style={{
+                marginTop: "0.75rem",
+                fontWeight: 500,
+                color: "var(--cds-text-primary)",
+                fontSize: "0.875rem",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {file.name}
+            </h2>
+            <p
+              style={{
+                marginTop: "0.25rem",
+                fontSize: "0.75rem",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
+              {file.sizeLabel} · {file.fileType}
             </p>
           </Card>
         ))}
       </div>
-
       <DataTable
         columns={columns}
         data={data as unknown as Record<string, unknown>[]}

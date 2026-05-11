@@ -9,36 +9,36 @@ SKIP_FRONTEND="${SKIP_FRONTEND:-false}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
 
-echo -e "${CYAN}[orgflow] Production Launcher${NC}"
-echo -e "${CYAN}[orgflow] =====================${NC}"
+echo -e "${CYAN}[general-portal] Production Launcher${NC}"
+echo -e "${CYAN}[general-portal] =====================${NC}"
 
 if [ ! -f "$ENV_FILE" ]; then
-    echo -e "${RED}[orgflow] ERROR: .env.production not found${NC}"
+    echo -e "${RED}[general-portal] ERROR: .env.production not found${NC}"
     exit 1
 fi
 
 set -a; source "$ENV_FILE"; set +a
 
-if [ "${ORGFLOW_DEMO_MODE:-}" = "true" ]; then
-    echo -e "${RED}[orgflow] ERROR: ORGFLOW_DEMO_MODE=true not allowed in production${NC}"
+if [ "${GENERAL_PORTAL_DEMO_MODE:-}" = "true" ]; then
+    echo -e "${RED}[general-portal] ERROR: GENERAL_PORTAL_DEMO_MODE=true not allowed in production${NC}"
     exit 1
 fi
 
 if [ "${MICROSOFT_CLIENT_ID:-demo-client-id}" = "demo-client-id" ] || [ -z "${MICROSOFT_CLIENT_ID:-}" ]; then
-    echo -e "${RED}[orgflow] ERROR: MICROSOFT_CLIENT_ID not configured${NC}"
+    echo -e "${RED}[general-portal] ERROR: MICROSOFT_CLIENT_ID not configured${NC}"
     exit 1
 fi
 
 if [ -n "${DEV_AUTH_PASSWORD:-}" ]; then
-    echo -e "${RED}[orgflow] ERROR: DEV_AUTH_PASSWORD must be empty in production${NC}"
+    echo -e "${RED}[general-portal] ERROR: DEV_AUTH_PASSWORD must be empty in production${NC}"
     exit 1
 fi
 
 if ! command -v java &>/dev/null; then
-    echo -e "${RED}[orgflow] ERROR: Java not found${NC}"
+    echo -e "${RED}[general-portal] ERROR: Java not found${NC}"
     exit 1
 fi
-echo -e "${CYAN}[orgflow] Java: $(command -v java)${NC}"
+echo -e "${CYAN}[general-portal] Java: $(command -v java)${NC}"
 
 MVN_CMD=""
 if [ -n "${MVN_CMD:-}" ] && [ -x "$MVN_CMD" ]; then
@@ -51,39 +51,39 @@ elif [ -d "$ROOT/.tools" ]; then
     done
 fi
 if [ -z "$MVN_CMD" ]; then
-    echo -e "${RED}[orgflow] ERROR: Maven not found${NC}"
+    echo -e "${RED}[general-portal] ERROR: Maven not found${NC}"
     exit 1
 fi
-echo -e "${CYAN}[orgflow] Maven: $MVN_CMD${NC}"
+echo -e "${CYAN}[general-portal] Maven: $MVN_CMD${NC}"
 
-echo -e "${CYAN}[orgflow] Building backend JAR...${NC}"
+echo -e "${CYAN}[general-portal] Building backend JAR...${NC}"
 "$MVN_CMD" package -DskipTests -q -f "$BACKEND_DIR/pom.xml"
 
 JAR=$(find "$BACKEND_DIR/target" -maxdepth 1 -name "*.jar" ! -name "*sources*" ! -name "*javadoc*" | head -1)
 if [ -z "$JAR" ]; then
-    echo -e "${RED}[orgflow] ERROR: No JAR found${NC}"
+    echo -e "${RED}[general-portal] ERROR: No JAR found${NC}"
     exit 1
 fi
-echo -e "${CYAN}[orgflow] JAR: $(basename "$JAR")${NC}"
+echo -e "${CYAN}[general-portal] JAR: $(basename "$JAR")${NC}"
 
-echo -e "${CYAN}[orgflow] Starting backend (prod)...${NC}"
+echo -e "${CYAN}[general-portal] Starting backend (prod)...${NC}"
 java -jar "$JAR" --spring.profiles.active=default &
 BACKEND_PID=$!
-echo -e "${GREEN}[orgflow] Backend PID: $BACKEND_PID${NC}"
+echo -e "${GREEN}[general-portal] Backend PID: $BACKEND_PID${NC}"
 
 if [ "$SKIP_FRONTEND" != "true" ]; then
     if ! command -v npm &>/dev/null; then
-        echo -e "${RED}[orgflow] ERROR: npm not found${NC}"
+        echo -e "${RED}[general-portal] ERROR: npm not found${NC}"
         exit 1
     fi
-    echo -e "${CYAN}[orgflow] Building frontend...${NC}"
+    echo -e "${CYAN}[general-portal] Building frontend...${NC}"
     (cd "$FRONTEND_DIR" && npm run build)
-    echo -e "${GREEN}[orgflow] Frontend built to frontend/dist/${NC}"
+    echo -e "${GREEN}[general-portal] Frontend built to frontend/dist/${NC}"
 fi
 
 echo ""
 echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}  OrgFlow PRODUCTION started!${NC}"
+echo -e "${GREEN}  General Portal PRODUCTION started!${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo -e "  Backend: http://localhost:8080"
 echo -e "  Health:  http://localhost:8080/api/health"
