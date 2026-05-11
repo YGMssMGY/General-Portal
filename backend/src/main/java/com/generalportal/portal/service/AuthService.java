@@ -44,7 +44,12 @@ public class AuthService {
         permissionService.require(Permissions.DASHBOARD_READ);
         var user = currentUserService.currentUser();
         var workspace = currentUserService.currentWorkspace();
-        return new UserDto(user.getId(), user.getDisplayName(), user.getEmail(), user.getAvatarUrl(), workspace.getId(), permissionService.currentPermissions());
+        var perms = permissionService.currentPermissions();
+        String role = userAccountRepository.findMembershipForUser(user.getId(), workspace.getId())
+            .map(m -> m.getPosition().toLowerCase())
+            .orElse("member");
+        return new UserDto(user.getId(), user.getDisplayName(), user.getEmail(), user.getAvatarUrl(),
+            workspace.getId(), workspace.getName(), role, perms);
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +66,7 @@ public class AuthService {
                 .toList()
         ).orElse(List.of());
 
-        return new UserDto(user.getId(), user.getDisplayName(), user.getEmail(), user.getAvatarUrl(), workspace.getId(), perms);
+        return new UserDto(user.getId(), user.getDisplayName(), user.getEmail(), user.getAvatarUrl(),
+            workspace.getId(), workspace.getName(), role, perms);
     }
 }
