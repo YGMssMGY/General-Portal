@@ -15,7 +15,7 @@ public final class Dtos {
     private Dtos() {
     }
 
-    public record UserDto(UUID id, String name, String email, String avatarUrl, UUID workspaceId, List<String> permissions) {
+    public record UserDto(UUID id, String displayName, String email, String avatarUrl, UUID workspaceId, String workspaceName, String role, List<String> permissions) {
     }
 
     public record DashboardMetricDto(String label, String value, String tone, String icon) {
