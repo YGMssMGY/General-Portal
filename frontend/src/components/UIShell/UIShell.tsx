@@ -33,9 +33,8 @@ import {
   Asleep,
   Light,
 } from "@carbon/icons-react";
+import { useSession } from "@hono/auth-js/react";
 import { useTheme } from "../../context/ThemeContext";
-import { useAuth } from "../../context/AuthContext";
-import { RoleSwitcher } from "../RoleSwitcher";
 import type { ComponentType, ElementType } from "react";
 
 interface NavItem {
@@ -93,15 +92,17 @@ const roleLevels: Record<string, number> = {
 
 export function UIShell() {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { data: session } = useSession();
+  const sessionUser = session?.user as any;
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const config = useMemo(() => getClientConfig(), []);
 
   const userRoleLevel = useMemo(() => {
-    return user?.role ? roleLevels[user.role] || 1 : 1;
-  }, [user?.role]);
+    const role = sessionUser?.role;
+    return role ? roleLevels[role] || 1 : 1;
+  }, [sessionUser?.role]);
 
   const filteredConfig = useMemo(() => {
     return navConfig
@@ -185,9 +186,7 @@ export function UIShell() {
               >
                 {theme === "dark" ? <Light size={20} /> : <Asleep size={20} />}
               </HeaderGlobalAction>
-              <div className="cds--header__global">
-                <RoleSwitcher />
-              </div>
+              <div className="cds--header__global" />
             </HeaderGlobalBar>
             <SideNav
               aria-label="Side navigation"
