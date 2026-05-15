@@ -14,23 +14,20 @@
     "build": "npm run build -w backend && npm run build -w frontend",
     "build:backend": "npm run build -w backend",
     "build:frontend": "npm run build -w frontend",
-    "db:start": "docker compose up -d postgres",
-    "db:stop": "docker compose down",
     "db:migrate": "npm run db:migrate -w backend",
     "db:seed": "npm run db:seed -w backend",
     "db:reset": "npm run db:reset -w backend",
     "db:setup": "npm run db:migrate && npm run db:seed",
-    "db:up": "npm run db:start && npm run db:setup",
     "format": "prettier --write \"**/*.{ts,tsx,css,json}\"",
     "check-format": "prettier --check \"**/*.{ts,tsx,css,json}\""
   },
   "devDependencies": {
+    "@auth/core": "^0.41.2",
     "concurrently": "^9.1.2",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@auth/core": "^0.34.3",
-    "@prisma/client": "^6.19.3"
+    "@prisma/client": "^7.8.0"
   }
 }

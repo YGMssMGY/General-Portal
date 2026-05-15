@@ -45,15 +45,16 @@ function getAuthConfig(): AuthConfig {
         async authorize(credentials) {
           const username = credentials?.username as string;
           const password = credentials?.password as string;
-          if (
-            username === env.DEV_AUTH_USERNAME &&
-            password === env.DEV_AUTH_PASSWORD
-          ) {
+          if (password !== env.DEV_AUTH_PASSWORD) return null;
+          if (!username?.includes("@")) return null;
+          try {
             const user = await prisma.userAccount.findUnique({
               where: { email: username },
             });
             if (user)
               return { id: user.id, email: user.email, name: user.displayName };
+          } catch {
+            // DB not available
           }
           return null;
         },

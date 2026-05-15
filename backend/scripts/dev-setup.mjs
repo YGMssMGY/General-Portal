@@ -1,12 +1,11 @@
 import { execSync } from "child_process";
-import { existsSync, unlinkSync } from "fs";
+import { existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 
-// Prisma needs DATABASE_URL in the environment
 process.env["DATABASE_URL"] = process.env["DATABASE_URL"] || "file:./dev.db";
 
 const dbPath = resolve(root, "prisma", "dev.db");
@@ -16,12 +15,7 @@ if (existsSync(dbPath)) {
 } else {
   console.log("[dev-setup] Creating and seeding fresh SQLite database...");
   try {
-    execSync("npx prisma migrate dev --name init --skip-generate", {
-      cwd: root,
-      stdio: "inherit",
-      env: process.env,
-    });
-    execSync("npx prisma db seed", {
+    execSync("npx prisma migrate dev --name init", {
       cwd: root,
       stdio: "inherit",
       env: process.env,
