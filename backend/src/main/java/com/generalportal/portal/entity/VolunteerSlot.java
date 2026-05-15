@@ -76,4 +76,12 @@ public class VolunteerSlot extends AuditableEntity {
     public int getHours() {
         return hours;
     }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public void setFilled(int filled) {
+        this.filled = filled;
+    }
 }

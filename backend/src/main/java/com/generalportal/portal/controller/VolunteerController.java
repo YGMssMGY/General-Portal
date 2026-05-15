@@ -2,6 +2,7 @@ package com.generalportal.portal.controller;
 
 import com.generalportal.portal.dto.Dtos.VolunteerSlotDto;
 import com.generalportal.portal.dto.Dtos.CreateVolunteerSlotRequest;
+import com.generalportal.portal.dto.Dtos.UpdateVolunteerSlotRequest;
 import com.generalportal.portal.service.VolunteerService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +42,15 @@ public class VolunteerController {
     public ResponseEntity<VolunteerSlotDto> createSlot(@Valid @RequestBody CreateVolunteerSlotRequest request) {
         VolunteerSlotDto slot = volunteerService.createSlot(request);
         return ResponseEntity.created(Objects.requireNonNull(URI.create("/api/volunteers/slots/" + slot.id()))).body(slot);
+    }
+
+    @PatchMapping("/slots/{id}")
+    @PreAuthorize("hasAuthority('volunteers:write')")
+    public ResponseEntity<VolunteerSlotDto> updateVolunteerSlot(
+        @PathVariable UUID id,
+        @Valid @RequestBody UpdateVolunteerSlotRequest request
+    ) {
+        return ResponseEntity.ok(volunteerService.updateSlot(id, request));
     }
 
     @DeleteMapping("/slots/{id}")

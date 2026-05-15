@@ -31,9 +31,8 @@ if ($env:GENERAL_PORTAL_DEMO_MODE -eq "true") {
     exit 1
 }
 
-if ($env:MICROSOFT_CLIENT_ID -eq "demo-client-id" -or [string]::IsNullOrEmpty($env:MICROSOFT_CLIENT_ID)) {
-    Write-Host "[general-portal] ERROR: MICROSOFT_CLIENT_ID is not configured for production." -ForegroundColor Red
-    exit 1
+if ([string]::IsNullOrEmpty($env:MICROSOFT_CLIENT_ID)) {
+    Write-Host "[general-portal] WARNING: MICROSOFT_CLIENT_ID is not set. OAuth2 login will be disabled." -ForegroundColor Yellow
 }
 
 if ($env:DEV_AUTH_PASSWORD) {
@@ -88,7 +87,7 @@ Write-Host "[general-portal] JAR: $($jar.Name)" -ForegroundColor Cyan
 
 Write-Host "[general-portal] Starting backend (prod profile) on port 8080..." -ForegroundColor Cyan
 $proc = Start-Process -FilePath "java" `
-    -ArgumentList @("-jar", $jar.FullName, "--spring.profiles.active=default") `
+    -ArgumentList @("-jar", $jar.FullName, "--spring.profiles.active=dev") `
     -WorkingDirectory $BackendDir -PassThru -WindowStyle Minimized
 Write-Host "[general-portal] Backend PID: $($proc.Id)" -ForegroundColor Green
 

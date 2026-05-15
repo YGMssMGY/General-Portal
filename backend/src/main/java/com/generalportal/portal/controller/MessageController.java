@@ -1,6 +1,8 @@
 package com.generalportal.portal.controller;
 
 import com.generalportal.portal.dto.Dtos.CreateMessageRequest;
+import com.generalportal.portal.dto.Dtos.CreateThreadRequest;
+import com.generalportal.portal.dto.Dtos.MessageDto;
 import com.generalportal.portal.dto.Dtos.MessageThreadDto;
 import com.generalportal.portal.service.MessageService;
 import jakarta.validation.Valid;
@@ -12,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,10 +43,31 @@ public class MessageController {
         return messageService.getThread(threadId);
     }
 
+    @PostMapping("/threads")
+    @PreAuthorize("hasAuthority('messages:write')")
+    public ResponseEntity<MessageThreadDto> createThread(@Valid @RequestBody CreateThreadRequest request) {
+        MessageThreadDto thread = messageService.createThread(request);
+        return ResponseEntity.created(Objects.requireNonNull(URI.create("/api/messages/threads/" + thread.id()))).body(thread);
+    }
+
     @PostMapping("/threads/{threadId}/messages")
     @PreAuthorize("hasAuthority('messages:write')")
     public ResponseEntity<MessageThreadDto> sendMessage(@PathVariable UUID threadId, @Valid @RequestBody CreateMessageRequest request) {
         MessageThreadDto thread = messageService.sendMessage(threadId, request.body());
         return ResponseEntity.created(Objects.requireNonNull(URI.create("/api/messages/threads/" + threadId))).body(thread);
+    }
+
+    @PostMapping("/threads/{threadId}/reply")
+    @PreAuthorize("hasAuthority('messages:write')")
+    public ResponseEntity<MessageDto> replyToThread(@PathVariable UUID threadId, @Valid @RequestBody CreateMessageRequest request) {
+        MessageDto message = messageService.replyToThread(threadId, request.body());
+        return ResponseEntity.created(Objects.requireNonNull(URI.create("/api/messages/threads/" + threadId))).body(message);
+    }
+
+    @DeleteMapping("/threads/{threadId}")
+    @PreAuthorize("hasAuthority('messages:write')")
+    public ResponseEntity<Void> archiveThread(@PathVariable UUID threadId) {
+        messageService.archiveThread(threadId);
+        return ResponseEntity.noContent().build();
     }
 }

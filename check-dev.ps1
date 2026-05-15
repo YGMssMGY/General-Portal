@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("postgres", "sqlite", "auto")]
+    [ValidateSet("postgres", "auto")]
     [string]$DatabaseProvider = "auto"
 )
 
@@ -36,7 +36,7 @@ try {
 
 if ($DatabaseProvider -eq "auto") {
     $pg = Test-NetConnection localhost -Port 5432 -WarningAction SilentlyContinue
-    if ($pg.TcpTestSucceeded) { $DatabaseProvider = "postgres" } else { $DatabaseProvider = "sqlite" }
+    if ($pg.TcpTestSucceeded) { $DatabaseProvider = "postgres" }
 }
 
 if ($DatabaseProvider -eq "postgres") {
@@ -47,7 +47,7 @@ if ($DatabaseProvider -eq "postgres") {
         Write-Row -Service "PostgreSQL" -Status "Not Running" -Details "localhost:5432"
     }
 } else {
-    Write-Row -Service "PostgreSQL" -Status "Skipped" -Details "Using SQLite"
+    Write-Row -Service "H2" -Status "Running" -Details "embedded (no external DB needed)"
 }
 
 $redis = Test-NetConnection localhost -Port 6379 -WarningAction SilentlyContinue

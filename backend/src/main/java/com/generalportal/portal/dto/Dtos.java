@@ -179,6 +179,10 @@ public final class Dtos {
 
     public record CreateVolunteerSlotRequest(@NotBlank String title, @NotBlank String eventName, @NotNull Instant startsAt, @Min(1) int capacity, @Min(1) int hours) {}
 
+    public record UpdateVolunteerSlotRequest(Integer capacity, Integer filled) {}
+
+    public record CreateThreadRequest(@NotBlank String title, @NotBlank String context, List<String> participants, @NotBlank String body) {}
+
     public record CreateFinanceTransactionRequest(@NotBlank String title, @NotBlank String category, @NotNull @DecimalMin("0.01") BigDecimal amount) {}
 
     public record CreateMessageRequest(@NotBlank String body) {}

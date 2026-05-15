@@ -67,8 +67,10 @@ public class MessageThread extends AuditableEntity {
         participants.add(new MessageParticipant(this, name));
     }
 
-    public void addMessage(String authorName, String body, Instant sentAt) {
-        messages.add(new Message(this, authorName, body, sentAt));
+    public Message addMessage(String authorName, String body, Instant sentAt) {
+        var message = new Message(this, authorName, body, sentAt);
+        messages.add(message);
+        return message;
     }
 
     public String getTitle() {

@@ -1,5 +1,7 @@
 package com.generalportal.portal.service;
 
+import com.generalportal.portal.dto.Dtos.CreateThreadRequest;
+import com.generalportal.portal.dto.Dtos.MessageDto;
 import com.generalportal.portal.dto.Dtos.MessageThreadDto;
 import com.generalportal.portal.entity.MessageThread;
 import com.generalportal.portal.exception.ResourceNotFoundException;
@@ -50,5 +52,40 @@ public class MessageService {
         thread.setPreview(body.length() > 80 ? body.substring(0, 80) + "..." : body);
         thread.setLastMessageAt(Instant.now());
         return DtoMapper.toMessageThreadDto(thread);
+    }
+
+    @Transactional
+    public MessageThreadDto createThread(CreateThreadRequest request) {
+        permissionService.require(Permissions.MESSAGES_WRITE);
+        var workspace = currentUserService.currentWorkspace();
+        var thread = new MessageThread(workspace, request.title(), request.context(), "active", "", 0, Instant.now());
+        if (request.participants() != null) {
+            request.participants().forEach(thread::addParticipant);
+        }
+        String authorName = currentUserService.currentUser().getDisplayName();
+        thread.addMessage(authorName, request.body(), Instant.now());
+        thread.setPreview(request.body().length() > 80 ? request.body().substring(0, 80) + "..." : request.body());
+        thread.setLastMessageAt(Instant.now());
+        return DtoMapper.toMessageThreadDto(messageThreadRepository.save(thread));
+    }
+
+    @Transactional
+    public MessageDto replyToThread(UUID threadId, String body) {
+        permissionService.require(Permissions.MESSAGES_WRITE);
+        MessageThread thread = messageThreadRepository.findById(Objects.requireNonNull(threadId))
+            .orElseThrow(() -> new ResourceNotFoundException("MessageThread " + threadId));
+        String authorName = currentUserService.currentUser().getDisplayName();
+        var message = thread.addMessage(authorName, body, Instant.now());
+        thread.setPreview(body.length() > 80 ? body.substring(0, 80) + "..." : body);
+        thread.setLastMessageAt(Instant.now());
+        return DtoMapper.toMessageDto(message);
+    }
+
+    @Transactional
+    public void archiveThread(UUID threadId) {
+        permissionService.require(Permissions.MESSAGES_WRITE);
+        var thread = messageThreadRepository.findById(Objects.requireNonNull(threadId))
+            .orElseThrow(() -> new ResourceNotFoundException("MessageThread " + threadId));
+        messageThreadRepository.delete(thread);
     }
 }

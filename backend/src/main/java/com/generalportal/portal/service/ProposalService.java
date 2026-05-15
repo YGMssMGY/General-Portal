@@ -48,4 +48,12 @@ public class ProposalService {
         proposal.setStatus(request.status());
         return DtoMapper.toProposalDto(proposal);
     }
+
+    @Transactional
+    public void deleteProposal(UUID id) {
+        permissionService.require(Permissions.PROPOSALS_WRITE);
+        var proposal = proposalRepository.findById(Objects.requireNonNull(id))
+            .orElseThrow(() -> new ResourceNotFoundException("Proposal"));
+        proposalRepository.delete(proposal);
+    }
 }

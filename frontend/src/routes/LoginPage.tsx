@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tile, Button } from "@carbon/react";
+import { Tile } from "@carbon/react";
 import { useAuth } from "../context/AuthContext";
 import { DevLoginForm } from "../components/DevLoginForm";
-import { workspaceApi } from "../api/workspaceApi";
+import { getClientConfig } from "../config/clientConfig";
 
 export function LoginPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const config = getClientConfig();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -40,7 +41,7 @@ export function LoginPage() {
             color: "#ffffff",
           }}
         >
-          CP
+          {config.shortName}
         </div>
         <h1
           style={{
@@ -51,7 +52,7 @@ export function LoginPage() {
             color: "var(--cds-text-primary)",
           }}
         >
-          Club Portal
+          {config.displayName}
         </h1>
         <p
           style={{
@@ -61,26 +62,8 @@ export function LoginPage() {
             color: "var(--cds-text-secondary)",
           }}
         >
-          Sign in with your Microsoft account to access the admin portal.
+          {config.description}
         </p>
-
-        <div style={{ marginTop: "1rem", textAlign: "center" }}>
-          <Button
-            kind="primary"
-            onClick={() => {
-              window.location.href = workspaceApi.getMicrosoftLoginUrl();
-            }}
-            disabled
-            style={{ width: "100%" }}
-          >
-            Sign in with Microsoft
-          </Button>
-          <p
-            style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}
-          >
-            OAuth2 not configured — use developer login below
-          </p>
-        </div>
 
         <DevLoginForm />
       </Tile>

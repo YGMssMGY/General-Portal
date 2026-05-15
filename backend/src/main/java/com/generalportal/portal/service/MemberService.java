@@ -43,4 +43,12 @@ public class MemberService {
         membership.updatePosition(request.position(), request.accessLabel());
         return DtoMapper.toMemberDto(membership, List.of());
     }
+
+    @Transactional
+    public void removeMember(UUID id) {
+        permissionService.require(Permissions.MEMBERS_WRITE);
+        var membership = membershipRepository.findById(Objects.requireNonNull(id))
+            .orElseThrow(() -> new ResourceNotFoundException("Member"));
+        membershipRepository.delete(membership);
+    }
 }

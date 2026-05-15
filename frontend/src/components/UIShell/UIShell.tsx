@@ -15,6 +15,7 @@ import {
   SkipToContent,
   Content,
 } from "@carbon/react";
+import { getClientConfig } from "../../config/clientConfig";
 import {
   Dashboard,
   Document,
@@ -96,6 +97,7 @@ export function UIShell() {
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const config = useMemo(() => getClientConfig(), []);
 
   const userRoleLevel = useMemo(() => {
     return user?.role ? roleLevels[user.role] || 1 : 1;
@@ -135,15 +137,15 @@ export function UIShell() {
         onClickSideNavExpand: () => void;
       }) => (
         <>
-          <Header aria-label="Club Portal">
+          <Header aria-label={config.displayName}>
             <SkipToContent />
             <HeaderMenuButton
               aria-label={isSideNavExpanded ? "Close menu" : "Open menu"}
               onClick={onClickSideNavExpand}
               isActive={isSideNavExpanded}
             />
-            <HeaderName as={Link} to="/admin" prefix="CP">
-              Club Portal
+            <HeaderName as={Link} to="/admin" prefix={config.shortName}>
+              {config.displayName}
             </HeaderName>
             <HeaderGlobalBar>
               {searchOpen ? (

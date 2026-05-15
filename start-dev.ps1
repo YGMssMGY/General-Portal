@@ -1,6 +1,6 @@
 param(
-    [ValidateSet("postgres", "sqlite")]
-    [string]$DatabaseProvider = "postgres",
+    [ValidateSet("postgres", "h2")]
+    [string]$DatabaseProvider = "h2",
     [ValidateSet("dev", "demo")]
     [string]$BackendProfile,
     [switch]$WithRedis,
@@ -141,24 +141,16 @@ if (-not $FrontendOnly) {
 $Profiles = ""
 if ($BackendProfile) {
     $Profiles = $BackendProfile
-} else {
-    switch ($DatabaseProvider) {
-        "postgres" { $Profiles = "dev" }
-        "sqlite"   { $Profiles = "sqlite" }
-    }
+} elseif ($DatabaseProvider -eq "postgres") {
+    $Profiles = "dev"
 }
+# Default (h2): no profile override needed — application.yml defaults to "demo" (H2)
 
 if ($Profiles -eq "dev") {
     if (-not (Test-PortOpen -Port 5432)) {
-        Write-ErrorMsg "PostgreSQL not on localhost:5432. Start PostgreSQL or use -DatabaseProvider sqlite."
+        Write-ErrorMsg "PostgreSQL not on localhost:5432. Start PostgreSQL or omit -DatabaseProvider for H2."
         exit 1
     }
-} elseif ($Profiles -eq "sqlite") {
-    $dataDir = Join-Path $Root "data"
-    if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
-    $dbFile = Join-Path $dataDir "general-portal.db"
-    $dbRelPath = Resolve-Path $dbFile -ErrorAction SilentlyContinue
-    if ($dbRelPath) { Write-Status "SQLite database: $dbRelPath" }
 }
 
 if ($WithRedis) {
