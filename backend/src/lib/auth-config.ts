@@ -25,12 +25,17 @@ function getAuthConfig(): AuthConfig {
           username === env.DEV_AUTH_USERNAME &&
           password === env.DEV_AUTH_PASSWORD
         ) {
-          const user = await ensureDevUser(username);
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.displayName,
-          };
+          try {
+            const user = await ensureDevUser(username);
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.displayName,
+            };
+          } catch (e) {
+            console.error("[auth] Failed to provision dev user:", e);
+            return null;
+          }
         }
 
         return null;
