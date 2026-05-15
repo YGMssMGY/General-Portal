@@ -30,7 +30,13 @@ export function LoginPage() {
         redirect: false,
       });
       if (result?.error) {
-        setError(result.error === "CredentialsSignin" ? "Invalid credentials" : result.error);
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid username or password");
+        } else if (result.error === "Configuration") {
+          setError("Server configuration error. Make sure the database is running.");
+        } else {
+          setError(result.error);
+        }
       } else {
         window.location.href = "/admin";
       }
@@ -94,7 +100,13 @@ export function LoginPage() {
 
         {error && (
           <div style={{ marginTop: "1rem" }}>
-            <InlineNotification kind="error" title="Login failed" subtitle={error} onClose={() => setError(null)} lowContrast />
+            <InlineNotification
+              kind="error"
+              title="Login failed"
+              subtitle={error}
+              onClose={() => setError(null)}
+              lowContrast
+            />
           </div>
         )}
 
@@ -118,7 +130,12 @@ export function LoginPage() {
               disabled={loading}
             />
           </div>
-          <Button type="submit" kind="primary" style={{ marginTop: "1.5rem", width: "100%" }} disabled={loading}>
+          <Button
+            type="submit"
+            kind="primary"
+            style={{ marginTop: "1.5rem", width: "100%" }}
+            disabled={loading}
+          >
             {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
