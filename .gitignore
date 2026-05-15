@@ -81,7 +81,9 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
-.output
+backend/dist
+data/
+!data/.gitkeep
 
 # Gatsby files
 .cache/
@@ -168,10 +170,8 @@ hs_err_pid*
 replay_pid*
 
 target
-AGENTS.md
+node_modules/.cache
 opencode.json
 .opencode
 docs
 
-# SQLite database files
-data/*.db
