@@ -1,49 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-stop_port() {
-    local port="$1"
-    local pids=""
+echo -e "\033[0;36m[general-portal] Stopping services...\033[0m"
 
-    if command -v lsof &>/dev/null; then
-        pids=$(lsof -ti ":$port" -sTCP:LISTEN 2>/dev/null || true)
+PORTS=(3001 5173)
+FOUND=false
+
+for PORT in "${PORTS[@]}"; do
+    PID=$(lsof -ti :$PORT 2>/dev/null || true)
+    if [ -n "$PID" ]; then
+        kill -9 $PID 2>/dev/null || true
+        echo -e "\033[0;33m  Stopped PID $PID on port $PORT\033[0m"
+        FOUND=true
     fi
-
-    if [ -z "$pids" ] && command -v ss &>/dev/null; then
-        pids=$(ss -tlnp 2>/dev/null | grep ":$port " | sed -E 's/.*pid=([0-9]+).*/\1/' | sort -u || true)
-    fi
-
-    if [ -z "$pids" ] && command -v netstat &>/dev/null; then
-        pids=$(netstat -tlnp 2>/dev/null | grep ":$port " | awk '{split($NF,a,"/"); print a[1]}' | sort -u || true)
-    fi
-
-    for pid in $pids; do
-        kill "$pid" 2>/dev/null || true
-    done
-}
-
-ports=(5173 8080)
-stopped_any=false
-
-for port in "${ports[@]}"; do
-    stop_port "$port"
 done
+
+# Also kill tsx / vite node processes
+pkill -f "tsx watch.*index.ts" 2>/dev/null || true
+pkill -f "vite" 2>/dev/null || true
 
 sleep 2
 
-remaining=false
-for port in "${ports[@]}"; do
-    if command -v lsof &>/dev/null && lsof -ti ":$port" -sTCP:LISTEN &>/dev/null; then
-        remaining=true
-        echo "WARNING: Some listeners are still present on port $port" >&2
-    elif command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -q ":$port "; then
-        remaining=true
-        echo "WARNING: Some listeners are still present on port $port" >&2
-    fi
-done
-
-if $remaining; then
-    exit 1
+if [ "$FOUND" = false ]; then
+    echo -e "\033[0;32mNothing to stop. No General Portal processes found.\033[0m"
+else
+    echo -e "\033[0;32m[general-portal] All services stopped.\033[0m"
 fi
-
-echo "General Portal frontend/backend ports are stopped."

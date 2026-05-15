@@ -5,31 +5,16 @@ $found = $false
 
 Write-Host "[general-portal] Stopping production services..." -ForegroundColor Cyan
 
-$javaProcs = Get-Process -Name "java" -ErrorAction SilentlyContinue | Where-Object {
-    $_.CommandLine -match "general-portal|PortalApplication|portal.*\.jar"
-}
-foreach ($p in $javaProcs) {
-    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-    Write-Host "  Stopped backend PID $($p.Id)" -ForegroundColor Yellow
-    $found = $true
-}
-
-$portProcs = @()
-foreach ($line in (netstat -ano | Select-String -Pattern ":8080\s")) {
-    $parts = ($line.Line -split "\s+") | Where-Object { $_ -ne "" }
-    if ($parts.Count -ge 5 -and $parts[3] -eq "LISTENING") {
-        $procId = [int]$parts[4]
-        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-        Write-Host "  Stopped process PID $procId on port 8080" -ForegroundColor Yellow
-        $found = $true
-    }
-}
-
-if ($Force) {
-    Get-Process -Name "java" -ErrorAction SilentlyContinue | ForEach-Object {
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-        Write-Host "  Force-stopped PID $($_.Id)" -ForegroundColor Red
-        $found = $true
+$ports = @(3001, 5173)
+foreach ($port in $ports) {
+    foreach ($line in (netstat -ano | Select-String -Pattern ":$port\s")) {
+        $parts = ($line.Line -split "\s+") | Where-Object { $_ -ne "" }
+        if ($parts.Count -ge 5 -and $parts[3] -eq "LISTENING") {
+            $procId = [int]$parts[4]
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Write-Host "  Stopped PID $procId on port $port" -ForegroundColor Yellow
+            $found = $true
+        }
     }
 }
 

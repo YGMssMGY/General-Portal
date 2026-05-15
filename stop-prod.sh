@@ -5,17 +5,12 @@ echo "Stopping production services..."
 
 FOUND=false
 
-JAVA_PIDS=$(pgrep -f "portal.*\.jar|general-portal" 2>/dev/null || true)
-if [ -n "$JAVA_PIDS" ]; then
-    echo "$JAVA_PIDS" | while read p; do
-        kill "$p" 2>/dev/null && echo "  Stopped backend PID $p" && FOUND=true
-    done
-fi
-
-PORT_PID=$(lsof -ti:8080 2>/dev/null || true)
-if [ -n "$PORT_PID" ]; then
-    kill "$PORT_PID" 2>/dev/null && echo "  Stopped process PID $PORT_PID on port 8080" && FOUND=true
-fi
+for PORT in 3001 5173; do
+    PID=$(lsof -ti :$PORT 2>/dev/null || true)
+    if [ -n "$PID" ]; then
+        kill "$PID" 2>/dev/null && echo "  Stopped PID $PID on port $PORT" && FOUND=true
+    fi
+done
 
 sleep 2
 
