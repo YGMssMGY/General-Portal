@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/files", async (c) => {
   const wid = c.get("workspaceId");
-  const items = await prisma.workspaceFile.findMany({
+  const items = await db.workspaceFile.findMany({
     where: { workspaceId: wid },
     orderBy: { createdAt: "desc" },
   });
@@ -14,7 +14,7 @@ route.get("/files", async (c) => {
 
 route.delete("/files/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.workspaceFile.delete({
+  await db.workspaceFile.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
   return c.body(null, 204);

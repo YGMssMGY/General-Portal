@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -11,7 +11,7 @@ route.get("/search", async (c) => {
   const query = q.trim();
 
   const [tasks, proposals, events, files, finance] = await Promise.all([
-    prisma.taskItem.findMany({
+    db.taskItem.findMany({
       where: {
         workspaceId: wid,
         OR: [
@@ -22,7 +22,7 @@ route.get("/search", async (c) => {
       },
       take: 5,
     }),
-    prisma.proposal.findMany({
+    db.proposal.findMany({
       where: {
         workspaceId: wid,
         OR: [
@@ -32,21 +32,21 @@ route.get("/search", async (c) => {
       },
       take: 5,
     }),
-    prisma.eventItem.findMany({
+    db.eventItem.findMany({
       where: {
         workspaceId: wid,
         title: { contains: query, mode: "insensitive" },
       },
       take: 5,
     }),
-    prisma.workspaceFile.findMany({
+    db.workspaceFile.findMany({
       where: {
         workspaceId: wid,
         name: { contains: query, mode: "insensitive" },
       },
       take: 5,
     }),
-    prisma.financeTransaction.findMany({
+    db.financeTransaction.findMany({
       where: {
         workspaceId: wid,
         OR: [

@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/messages/threads", async (c) => {
   const wid = c.get("workspaceId");
-  const items = await prisma.messageThread.findMany({
+  const items = await db.messageThread.findMany({
     where: { workspaceId: wid },
     include: {
       participants: true,
@@ -19,7 +19,7 @@ route.get("/messages/threads", async (c) => {
 route.post("/messages/threads", async (c) => {
   const wid = c.get("workspaceId");
   const body = await c.req.json();
-  const item = await prisma.messageThread.create({
+  const item = await db.messageThread.create({
     data: {
       workspaceId: wid,
       title: body.title,
@@ -48,7 +48,7 @@ route.post("/messages/threads/:id/reply", async (c) => {
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
-  const msg = await prisma.message.create({
+  const msg = await db.message.create({
     data: {
       threadId: id,
       authorName: body.authorName || "Unknown",
@@ -56,7 +56,7 @@ route.post("/messages/threads/:id/reply", async (c) => {
       sentAt: new Date(),
     },
   });
-  await prisma.messageThread.update({
+  await db.messageThread.update({
     where: { id, workspaceId: wid },
     data: { preview: body.body?.slice(0, 100), lastMessageAt: new Date() },
   });
@@ -65,7 +65,7 @@ route.post("/messages/threads/:id/reply", async (c) => {
 
 route.delete("/messages/threads/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.messageThread.update({
+  await db.messageThread.update({
     where: { id: c.req.param("id"), workspaceId: wid },
     data: { status: "archived" },
   });

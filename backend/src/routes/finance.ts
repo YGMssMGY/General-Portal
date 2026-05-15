@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/finance/transactions", async (c) => {
   const wid = c.get("workspaceId");
-  const items = await prisma.financeTransaction.findMany({
+  const items = await db.financeTransaction.findMany({
     where: { workspaceId: wid },
     orderBy: { occurredAt: "desc" },
   });
@@ -15,7 +15,7 @@ route.get("/finance/transactions", async (c) => {
 route.post("/finance/transactions", async (c) => {
   const wid = c.get("workspaceId");
   const body = await c.req.json();
-  const item = await prisma.financeTransaction.create({
+  const item = await db.financeTransaction.create({
     data: {
       workspaceId: wid,
       title: body.title,
@@ -41,7 +41,7 @@ route.patch("/finance/transactions/:id", async (c) => {
   if (body.submittedBy !== undefined) data.submittedBy = body.submittedBy;
   if (body.occurredAt !== undefined)
     data.occurredAt = new Date(body.occurredAt);
-  const item = await prisma.financeTransaction.update({
+  const item = await db.financeTransaction.update({
     where: { id, workspaceId: wid },
     data,
   });
@@ -50,7 +50,7 @@ route.patch("/finance/transactions/:id", async (c) => {
 
 route.delete("/finance/transactions/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.financeTransaction.delete({
+  await db.financeTransaction.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
   return c.body(null, 204);

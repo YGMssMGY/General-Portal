@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/members", async (c) => {
   const wid = c.get("workspaceId");
-  const memberships = await prisma.membership.findMany({
+  const memberships = await db.membership.findMany({
     where: { workspaceId: wid },
     include: {
       user: true,
@@ -39,7 +39,7 @@ route.patch("/members/:id", async (c) => {
   if (body.taskCount !== undefined) data.taskCount = body.taskCount;
   if (body.volunteerHours !== undefined)
     data.volunteerHours = body.volunteerHours;
-  const item = await prisma.membership.update({
+  const item = await db.membership.update({
     where: { id, workspaceId: wid },
     data,
     include: { user: true, permissions: { select: { permission: true } } },
@@ -49,7 +49,7 @@ route.patch("/members/:id", async (c) => {
 
 route.delete("/members/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.membership.delete({
+  await db.membership.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
   return c.body(null, 204);

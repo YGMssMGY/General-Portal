@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getAuthUser } from "@hono/auth-js";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -11,7 +11,7 @@ route.get("/me", async (c) => {
     return c.json({ error: "Not authenticated" }, 401);
   }
 
-  const membership = await prisma.membership.findFirst({
+  const membership = await db.membership.findFirst({
     where: { userId: token.id },
     include: {
       workspace: { select: { id: true, name: true, description: true } },
