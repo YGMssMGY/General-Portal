@@ -1,51 +1,18 @@
 param(
-    [ValidateSet("postgres", "h2")]
-    [string]$DatabaseProvider = "h2",
-    [ValidateSet("dev", "demo")]
-    [string]$BackendProfile,
-    [switch]$WithRedis,
+    [switch]$Postgres,
     [switch]$FrontendOnly
 )
 
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$BackendDir = Join-Path $Root "backend"
-$FrontendDir = Join-Path $Root "frontend"
 $EnvFile = Join-Path $Root ".env.local"
-
-$Script:BackendPid = $null
-$Script:FrontendPid = $null
+$Script:BackendProc = $null
+$Script:FrontendProc = $null
 
 function Write-Status { param([string]$Msg) Write-Host "[general-portal] $Msg" -ForegroundColor Cyan }
 function Write-ErrorMsg { param([string]$Msg) Write-Host "[general-portal] ERROR: $Msg" -ForegroundColor Red }
 function Write-Url { param([string]$Label, [string]$Url) Write-Host "  $Label  $Url" -ForegroundColor Green }
-
-function Resolve-Command {
-    param([string[]]$Names, [string]$EnvVar, [string[]]$FallbackPaths)
-    foreach ($Name in $Names) {
-        $cmd = Get-Command $Name -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
-    }
-    if ($EnvVar) {
-        $homePath = [Environment]::GetEnvironmentVariable($EnvVar, "Process")
-        if (-not $homePath) { $homePath = [Environment]::GetEnvironmentVariable($EnvVar, "User") }
-        if (-not $homePath) { $homePath = [Environment]::GetEnvironmentVariable($EnvVar, "Machine") }
-        if ($homePath) {
-            foreach ($Name in $Names) {
-                $candidate = Join-Path $homePath "bin\$Name"
-                if (Test-Path $candidate) { return $candidate }
-            }
-        }
-    }
-    foreach ($FallbackPath in $FallbackPaths) {
-        foreach ($Name in $Names) {
-            $candidate = Join-Path $Root "$FallbackPath\bin\$Name"
-            if (Test-Path $candidate) { return $candidate }
-        }
-    }
-    return $null
-}
 
 function Test-PortOpen {
     param([int]$Port)
@@ -57,7 +24,6 @@ function Test-PortOpen {
 }
 
 function Register-Cleanup {
-    [Console]::TreatControlCAsInput = $false
     $null = Register-ObjectEvent -InputObject ([Console]) -EventName CancelKeyPress -Action {
         Write-Host ""
         Write-Host "[general-portal] Ctrl+C detected — stopping services..." -ForegroundColor Yellow
@@ -84,119 +50,59 @@ if (Test-Path $EnvFile) {
     }
 }
 
-$JavaCmd = $null
-$javaHome = [Environment]::GetEnvironmentVariable("JAVA_HOME", "Process")
-if (-not $javaHome) { $javaHome = [Environment]::GetEnvironmentVariable("JAVA_HOME", "User") }
-if (-not $javaHome) { $javaHome = [Environment]::GetEnvironmentVariable("JAVA_HOME", "Machine") }
-if ($javaHome) {
-    $c = Join-Path $javaHome "bin\java.exe"
-    if (Test-Path $c) { $JavaCmd = $c }
-    if (-not $JavaCmd) { $c = Join-Path $javaHome "bin\java"; if (Test-Path $c) { $JavaCmd = $c } }
-}
-if (-not $JavaCmd) {
-    $c = Get-Command "java.exe" -ErrorAction SilentlyContinue
-    if (-not $c) { $c = Get-Command "java" -ErrorAction SilentlyContinue }
-    if ($c) { $JavaCmd = $c.Source }
-}
-if (-not $JavaCmd) {
-    Write-ErrorMsg "Java not found. Set JAVA_HOME or add Java to PATH."
+$nodeVer = & node -v 2>&1
+if (-not $nodeVer) {
+    Write-ErrorMsg "Node.js not found. Install Node.js 18+."
     exit 1
 }
-try {
-    $v = & $JavaCmd -version 2>&1 | Out-String
-    if ($v -match 'version "(\d+)') { Write-Status "Java $($Matches[1]) detected" }
-} catch { Write-Status "Java detected (version unknown)" }
+Write-Status "Node.js $nodeVer"
 
-$Maven = $null
-$mvnEnv = [Environment]::GetEnvironmentVariable("MVN_CMD", "Process")
-if (-not $mvnEnv) { $mvnEnv = [Environment]::GetEnvironmentVariable("MVN_CMD", "User") }
-if ($mvnEnv -and (Test-Path $mvnEnv)) { $Maven = $mvnEnv }
-if (-not $Maven) {
-    $toolsDir = Join-Path $Root ".tools"
-    if (Test-Path $toolsDir) {
-        $mavenDirs = Get-ChildItem -Path $toolsDir -Directory -Filter "maven*" -ErrorAction SilentlyContinue
-        foreach ($dir in $mavenDirs) {
-            $c = Join-Path $dir.FullName "bin\mvn.cmd"
-            if (Test-Path $c) { $Maven = $c; break }
-        }
-    }
-}
-if (-not $Maven) { $Maven = Resolve-Command -Names @("mvn.cmd", "mvn") }
-if (-not $Maven) {
-    Write-ErrorMsg "Maven not found. Set MVN_CMD, add to PATH, or restore .tools/maven/*."
-    exit 1
-}
-Write-Status "Maven: $Maven"
+$npmVer = & npm -v 2>&1
+Write-Status "npm v$npmVer"
 
-if (-not $FrontendOnly) {
-    $NpmCmd = Resolve-Command -Names @("npm.cmd", "npm") -EnvVar "NODE_HOME"
-    if (-not $NpmCmd) { $NpmCmd = Resolve-Command -Names @("npm.cmd", "npm") -EnvVar "NVM_HOME" }
-    if (-not $NpmCmd) {
-        Write-ErrorMsg "npm not found. Install Node.js or set NODE_HOME."
-        exit 1
-    }
-    Write-Status "npm: $NpmCmd"
-}
-
-$Profiles = ""
-if ($BackendProfile) {
-    $Profiles = $BackendProfile
-} elseif ($DatabaseProvider -eq "postgres") {
-    $Profiles = "dev"
-}
-# Default (h2): no profile override needed — application.yml defaults to "demo" (H2)
-
-if ($Profiles -eq "dev") {
-    if (-not (Test-PortOpen -Port 5432)) {
-        Write-ErrorMsg "PostgreSQL not on localhost:5432. Start PostgreSQL or omit -DatabaseProvider for H2."
+if ($Postgres) {
+    if (Test-PortOpen -Port 5432) {
+        Write-Status "PostgreSQL detected on localhost:5432"
+    } else {
+        Write-ErrorMsg "PostgreSQL not on localhost:5432. Start PostgreSQL or omit -Postgres for SQLite mode."
         exit 1
     }
 }
 
-if ($WithRedis) {
-    $Profiles = "$Profiles,redis"
-    if (-not (Test-PortOpen -Port 6379)) {
-        Write-ErrorMsg "Redis not on localhost:6379. Start Redis or omit -WithRedis."
-        exit 1
-    }
-}
-
-if (Test-PortOpen -Port 8080) { Write-ErrorMsg "Port 8080 in use. Run .\stop-dev.ps1 first."; exit 1 }
-if (Test-PortOpen -Port 5173) { Write-ErrorMsg "Port 5173 in use. Run .\stop-dev.ps1 first."; exit 1 }
-
-Write-Status "Spring profiles: $Profiles"
+if (Test-PortOpen -Port 3001) { Write-ErrorMsg "Port 3001 in use."; exit 1 }
+if (Test-PortOpen -Port 5173) { Write-ErrorMsg "Port 5173 in use."; exit 1 }
 
 Register-Cleanup
 
-Write-Status "Starting backend on port 8080..."
-$backendProc = Start-Process -FilePath $Maven `
-    -ArgumentList @("spring-boot:run", "-Dspring-boot.run.profiles=$Profiles") `
-    -WorkingDirectory $BackendDir -PassThru -WindowStyle Minimized
+Write-Status "Starting Hono backend (port 3001)..."
+$backendProc = Start-Process -FilePath "npx.cmd" `
+    -ArgumentList @("tsx", "watch", "src/index.ts") `
+    -WorkingDirectory (Join-Path $Root "backend") -PassThru -WindowStyle Minimized `
+    -NoNewWindow:$false
 $Script:BackendProc = $backendProc
-Write-Status "Backend PID: $($Script:BackendProc.Id)"
 
-Write-Status "Waiting for backend to be ready..."
+Write-Status "Waiting for backend..."
 $backendReady = $false
 for ($i = 0; $i -lt 60; $i++) {
     try {
-        $r = Invoke-WebRequest -Uri "http://localhost:8080/api/health" -UseBasicParsing -TimeoutSec 2
+        $r = Invoke-WebRequest -Uri "http://localhost:3001/api/health" -UseBasicParsing -TimeoutSec 2
         if ($r.StatusCode -eq 200) { $backendReady = $true; break }
     } catch {}
     Start-Sleep -Seconds 2
 }
 if (-not $backendReady) {
-    Write-ErrorMsg "Backend did not become ready within 120s. Check backend logs."
+    Write-ErrorMsg "Backend did not start within 120s."
     exit 1
 }
-Write-Status "Backend is healthy."
+Write-Status "Backend healthy on port 3001."
 
 if (-not $FrontendOnly) {
-    Write-Status "Starting frontend on port 5173..."
-    $frontendProc = Start-Process -FilePath $NpmCmd `
-        -ArgumentList @("run", "dev") `
-        -WorkingDirectory $FrontendDir -PassThru -WindowStyle Minimized
+    Write-Status "Starting Vite frontend (port 5173)..."
+    $frontendProc = Start-Process -FilePath "npx.cmd" `
+        -ArgumentList @("vite") `
+        -WorkingDirectory (Join-Path $Root "frontend") -PassThru -WindowStyle Minimized `
+        -NoNewWindow:$false
     $Script:FrontendProc = $frontendProc
-    Write-Status "Frontend PID: $($Script:FrontendProc.Id)"
 }
 
 Write-Host ""
@@ -204,8 +110,7 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "  General Portal is starting up!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Url "Frontend:" "http://localhost:5173"
-Write-Url "Backend:" "http://localhost:8080/api/health"
-Write-Url "API Docs:" "http://localhost:8080/api-docs"
+Write-Url "Backend:" "http://localhost:3001/api/health"
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press Ctrl+C to stop all services." -ForegroundColor Yellow

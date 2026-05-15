@@ -1,8 +1,3 @@
-param(
-    [ValidateSet("postgres", "auto")]
-    [string]$DatabaseProvider = "auto"
-)
-
 $ErrorActionPreference = "Stop"
 
 Write-Host ""
@@ -21,33 +16,17 @@ function Write-Row {
 }
 
 try {
-    $javaOut = & java -version 2>&1 | Select-String "version"
-    Write-Row -Service "Java" -Status "Running" -Details $javaOut.ToString().Trim()
-} catch {
-    Write-Row -Service "Java" -Status "Not Running" -Details "Install Java 17+"
-}
-
-try {
     $nodeOut = & node --version 2>&1
     Write-Row -Service "Node.js" -Status "Running" -Details $nodeOut.Trim()
 } catch {
     Write-Row -Service "Node.js" -Status "Not Running" -Details "Install Node.js 18+"
 }
 
-if ($DatabaseProvider -eq "auto") {
-    $pg = Test-NetConnection localhost -Port 5432 -WarningAction SilentlyContinue
-    if ($pg.TcpTestSucceeded) { $DatabaseProvider = "postgres" }
-}
-
-if ($DatabaseProvider -eq "postgres") {
-    $pg = Test-NetConnection localhost -Port 5432 -WarningAction SilentlyContinue
-    if ($pg.TcpTestSucceeded) {
-        Write-Row -Service "PostgreSQL" -Status "Running" -Details "localhost:5432"
-    } else {
-        Write-Row -Service "PostgreSQL" -Status "Not Running" -Details "localhost:5432"
-    }
+$pg = Test-NetConnection localhost -Port 5432 -WarningAction SilentlyContinue
+if ($pg.TcpTestSucceeded) {
+    Write-Row -Service "PostgreSQL" -Status "Running" -Details "localhost:5432"
 } else {
-    Write-Row -Service "H2" -Status "Running" -Details "embedded (no external DB needed)"
+    Write-Row -Service "PostgreSQL" -Status "Not Running" -Details "optional, needed for prod"
 }
 
 $redis = Test-NetConnection localhost -Port 6379 -WarningAction SilentlyContinue
@@ -58,17 +37,17 @@ if ($redis.TcpTestSucceeded) {
 }
 
 try {
-    $backend = Invoke-WebRequest -Uri "http://localhost:8080/api/health" -UseBasicParsing -TimeoutSec 3
-    Write-Row -Service "Backend" -Status "Running" -Details "HTTP $($backend.StatusCode)"
+    $backend = Invoke-WebRequest -Uri "http://localhost:3001/api/health" -UseBasicParsing -TimeoutSec 3
+    Write-Row -Service "Backend (Hono)" -Status "Running" -Details "HTTP $($backend.StatusCode) :3001"
 } catch {
-    Write-Row -Service "Backend" -Status "Not Running" -Details "http://localhost:8080"
+    Write-Row -Service "Backend (Hono)" -Status "Not Running" -Details "http://localhost:3001"
 }
 
 try {
     $frontend = Invoke-WebRequest -Uri "http://localhost:5173" -UseBasicParsing -TimeoutSec 3
-    Write-Row -Service "Frontend" -Status "Running" -Details "HTTP $($frontend.StatusCode)"
+    Write-Row -Service "Frontend (Vite)" -Status "Running" -Details "HTTP $($frontend.StatusCode) :5173"
 } catch {
-    Write-Row -Service "Frontend" -Status "Not Running" -Details "http://localhost:5173"
+    Write-Row -Service "Frontend (Vite)" -Status "Not Running" -Details "http://localhost:5173"
 }
 
 Write-Host ""
