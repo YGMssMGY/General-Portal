@@ -82,7 +82,7 @@ export function MessagesPage() {
     background: "var(--cds-layer)",
     display: "grid",
     gridTemplateColumns: "320px 1fr 260px",
-    minHeight: "calc(100vh - 6rem)",
+    minHeight: "calc(100vh - 10rem)",
   };
 
   return (

@@ -311,10 +311,10 @@ export function FinancePage() {
               <p
                 style={{
                   borderLeft: "4px solid var(--cds-support-error)",
-                  backgroundColor: "#fff1f1",
+                  backgroundColor: "var(--cds-layer)",
                   padding: "0.5rem 0.75rem",
                   fontSize: "0.875rem",
-                  color: "#a2191f",
+                  color: "var(--cds-support-error)",
                 }}
               >
                 {createError}

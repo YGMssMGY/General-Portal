@@ -137,7 +137,7 @@ export function UIShell() {
         isSideNavExpanded: boolean;
         onClickSideNavExpand: () => void;
       }) => (
-        <>
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
           <Header aria-label={config.displayName}>
             <SkipToContent />
             <HeaderMenuButton
@@ -222,10 +222,10 @@ export function UIShell() {
               </SideNavItems>
             </SideNav>
           </Header>
-          <Content id="main-content">
+          <Content id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <Outlet />
           </Content>
-        </>
+        </div>
       )}
     />
   );
