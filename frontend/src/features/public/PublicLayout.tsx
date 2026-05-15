@@ -1,5 +1,6 @@
 import { Outlet, Link } from "react-router-dom";
 import { Button } from "@carbon/react";
+import { getClientConfig } from "../../config/clientConfig";
 
 const navLinkStyle: React.CSSProperties = {
   padding: "0.5rem 0.75rem",
@@ -9,6 +10,8 @@ const navLinkStyle: React.CSSProperties = {
 };
 
 export function PublicLayout() {
+  const config = getClientConfig();
+
   return (
     <div
       style={{
@@ -60,9 +63,9 @@ export function PublicLayout() {
                 color: "#ffffff",
               }}
             >
-              CP
+              {config.shortName}
             </div>
-            <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>Club Portal</span>
+            <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>{config.displayName}</span>
           </Link>
           <nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
             <Link to="/" style={navLinkStyle}>
@@ -93,8 +96,7 @@ export function PublicLayout() {
       >
         <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "2rem 1rem" }}>
           <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-            &copy; {new Date().getFullYear()} Developers' Club &amp; Student Council. All rights
-            reserved.
+            &copy; {new Date().getFullYear()} {config.displayName}. All rights reserved.
           </p>
         </div>
       </footer>

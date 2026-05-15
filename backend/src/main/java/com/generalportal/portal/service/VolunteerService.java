@@ -1,7 +1,9 @@
 package com.generalportal.portal.service;
 
 import com.generalportal.portal.dto.Dtos.CreateVolunteerSlotRequest;
+import com.generalportal.portal.dto.Dtos.UpdateVolunteerSlotRequest;
 import com.generalportal.portal.dto.Dtos.VolunteerSlotDto;
+import com.generalportal.portal.exception.ResourceNotFoundException;
 import com.generalportal.portal.entity.VolunteerSlot;
 import com.generalportal.portal.repository.VolunteerSlotRepository;
 import com.generalportal.portal.security.Permissions;
@@ -42,5 +44,19 @@ public class VolunteerService {
     public void deleteSlot(UUID id) {
         permissionService.require(Permissions.VOLUNTEERS_WRITE);
         volunteerSlotRepository.deleteById(Objects.requireNonNull(id));
+    }
+
+    @Transactional
+    public VolunteerSlotDto updateSlot(UUID id, UpdateVolunteerSlotRequest request) {
+        permissionService.require(Permissions.VOLUNTEERS_WRITE);
+        var slot = volunteerSlotRepository.findById(Objects.requireNonNull(id))
+            .orElseThrow(() -> new ResourceNotFoundException("VolunteerSlot"));
+        if (request.capacity() != null) {
+            slot.setCapacity(request.capacity());
+        }
+        if (request.filled() != null) {
+            slot.setFilled(request.filled());
+        }
+        return DtoMapper.toVolunteerSlotDto(slot);
     }
 }

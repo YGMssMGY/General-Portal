@@ -113,13 +113,13 @@ public class SecurityConfig {
         boolean isDevProfile = activeProfiles.isEmpty()
             || activeProfiles.contains("dev")
             || activeProfiles.contains("demo")
-            || activeProfiles.contains("local")
-            || activeProfiles.contains("sqlite");
+            || activeProfiles.contains("local");
 
-        if (!isDevProfile && ("demo-client-id".equals(oauth2ClientId) || oauth2ClientId.isEmpty())) {
-            throw new IllegalStateException(
-                "Production requires real Microsoft OAuth2 credentials. " +
-                "Set MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET environment variables."
+        if (!isDevProfile && (oauth2ClientId == null || oauth2ClientId.isEmpty())) {
+            logger.warn(
+                "Microsoft OAuth2 credentials not configured. " +
+                "Set MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET for SSO login. " +
+                "Dev login will be used as fallback."
             );
         }
     }

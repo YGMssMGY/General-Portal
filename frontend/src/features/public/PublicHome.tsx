@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button, Tile } from "@carbon/react";
 import { ArrowRight, Calendar, Group, Launch } from "@carbon/icons-react";
+import { getClientConfig } from "../../config/clientConfig";
 
 const features = [
   {
@@ -23,6 +24,8 @@ const features = [
 ];
 
 export function PublicHome() {
+  const config = getClientConfig();
+
   return (
     <div>
       <section
@@ -42,7 +45,7 @@ export function PublicHome() {
                 color: "var(--cds-text-primary)",
               }}
             >
-              Developers' Club &amp; Student Council
+              {config.displayName}
             </h1>
             <p
               style={{
@@ -53,8 +56,7 @@ export function PublicHome() {
                 maxWidth: "42rem",
               }}
             >
-              Building a community of innovators, leaders, and creators. Explore our events, meet
-              our members, and see what we've accomplished together.
+              {config.tagline}
             </p>
             <div style={{ marginTop: "2rem", display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
               <Link to="/events">

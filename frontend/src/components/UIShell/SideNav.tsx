@@ -1,4 +1,5 @@
 import { SideNavItem } from "./SideNavItem";
+import { getClientConfig } from "../../config/clientConfig";
 
 const adminNavItems = [
   { label: "Dashboard", to: "/admin", icon: "Dashboard" as const, end: true },
@@ -20,6 +21,8 @@ interface SideNavProps {
 }
 
 export function SideNav({ isOpen, onNavigate }: SideNavProps) {
+  const config = getClientConfig();
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border-subtle bg-surface transition-transform lg:translate-x-0 ${
@@ -28,10 +31,12 @@ export function SideNav({ isOpen, onNavigate }: SideNavProps) {
     >
       <div className="flex h-12 items-center gap-3 border-b border-border-subtle px-4">
         <div className="flex h-8 w-8 items-center justify-center bg-carbon-blue-60 text-sm font-semibold text-white">
-          CP
+          {config.shortName}
         </div>
         <div>
-          <p className="text-sm font-semibold text-text-primary leading-tight">Club Portal</p>
+          <p className="text-sm font-semibold text-text-primary leading-tight">
+            {config.displayName}
+          </p>
           <p className="text-xs text-text-secondary">Workspace</p>
         </div>
       </div>
