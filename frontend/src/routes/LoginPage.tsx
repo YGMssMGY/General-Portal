@@ -1,20 +1,47 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tile } from "@carbon/react";
-import { useAuth } from "../context/AuthContext";
-import { DevLoginForm } from "../components/DevLoginForm";
+import { Tile, Button, TextInput, InlineNotification } from "@carbon/react";
+import { useSession, signIn } from "@hono/auth-js/react";
 import { getClientConfig } from "../config/clientConfig";
 
 export function LoginPage() {
-  const { isAuthenticated } = useAuth();
+  const { data: session, status } = useSession();
   const navigate = useNavigate();
   const config = getClientConfig();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (status === "authenticated") {
       navigate("/admin", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [status, navigate]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await signIn("credentials", {
+        username,
+        password,
+        redirect: false,
+      });
+      if (result?.error) {
+        setError(result.error === "CredentialsSignin" ? "Invalid credentials" : result.error);
+      } else {
+        window.location.href = "/admin";
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (status === "loading") return null;
 
   return (
     <div
@@ -65,7 +92,36 @@ export function LoginPage() {
           {config.description}
         </p>
 
-        <DevLoginForm />
+        {error && (
+          <div style={{ marginTop: "1rem" }}>
+            <InlineNotification kind="error" title="Login failed" subtitle={error} onClose={() => setError(null)} lowContrast />
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ marginTop: "1.5rem" }}>
+          <TextInput
+            id="username"
+            labelText="Username"
+            value={username}
+            onChange={(e: any) => setUsername(e.target.value)}
+            placeholder="dev@generalportal.local"
+            disabled={loading}
+          />
+          <div style={{ marginTop: "1rem" }}>
+            <TextInput
+              id="password"
+              labelText="Password"
+              type="password"
+              value={password}
+              onChange={(e: any) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              disabled={loading}
+            />
+          </div>
+          <Button type="submit" kind="primary" style={{ marginTop: "1.5rem", width: "100%" }} disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
       </Tile>
     </div>
   );

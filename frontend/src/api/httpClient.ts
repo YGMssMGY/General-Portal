@@ -46,9 +46,9 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 export async function fetchPage<T>(path: string, init?: RequestInit): Promise<T[]> {
-  type PageResponse = { content: T[] };
-  const page = await fetchJson<PageResponse>(path, init);
-  return page.content;
+  const data = await fetchJson<T[] | { content: T[] }>(path, init);
+  if (Array.isArray(data)) return data;
+  return data.content;
 }
 
 export function jsonBody<TBody extends object>(body: TBody): RequestInit {

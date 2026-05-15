@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { Tile, Loading } from "@carbon/react";
-import { useAuth } from "../context/AuthContext";
+import { useSession } from "@hono/auth-js/react";
 import type { UserRole } from "../types";
 
 interface ProtectedRouteProps {
@@ -16,9 +16,9 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 };
 
 export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { data: session, status } = useSession();
 
-  if (isLoading) {
+  if (status === "loading") {
     return (
       <div
         style={{
@@ -34,12 +34,14 @@ export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) 
     );
   }
 
-  if (!isAuthenticated) {
+  if (status !== "authenticated" || !session?.user) {
     return <Navigate to="/login" replace />;
   }
 
+  const userRole = (session.user as any).role as UserRole | undefined;
+
   if (requiredRole) {
-    const userLevel = user?.role ? (ROLE_HIERARCHY[user.role] ?? 0) : 0;
+    const userLevel = userRole ? (ROLE_HIERARCHY[userRole] ?? 0) : 0;
     const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0;
     if (userLevel < requiredLevel) {
       return (
