@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tile, Button, TextInput, InlineNotification } from "@carbon/react";
 import { useSession, signIn } from "@hono/auth-js/react";
+import { LoadingState } from "../components/StateViews";
 import { getClientConfig } from "../config/clientConfig";
 
 export function LoginPage() {
@@ -47,7 +48,7 @@ export function LoginPage() {
     }
   }
 
-  if (status === "loading") return null;
+  if (status === "loading") return <LoadingState label="Checking session..." />;
 
   return (
     <div

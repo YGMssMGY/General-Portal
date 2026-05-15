@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Tile, Tag, Button, ClickableTile } from "@carbon/react";
 import { Card } from "../../components/Card";
+import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useAuth } from "../../context/AuthContext";
 import { useDashboard } from "../../hooks/useWorkspaceResources";
@@ -117,45 +118,26 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div
-        style={{
-          marginBottom: "1.5rem",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: "1rem",
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
-            Good morning, {(user?.displayName ?? "").split(" ")[0]}
-          </h1>
-          <p
-            style={{
-              marginTop: "0.25rem",
-              fontSize: "0.875rem",
-              color: "var(--cds-text-secondary)",
-            }}
-          >
-            Here is what is happening in your workspace today.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          {quickActions.map((action) => (
-            <Button
-              key={action.label}
-              as={Link}
-              to={action.to}
-              kind="tertiary"
-              size="sm"
-              renderIcon={action.icon}
-            >
-              {action.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title={`Good morning, ${(user?.displayName ?? "").split(" ")[0]}`}
+        description="Here is what is happening in your workspace today."
+        actions={
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {quickActions.map((action) => (
+              <Button
+                key={action.label}
+                as={Link}
+                to={action.to}
+                kind="tertiary"
+                size="sm"
+                renderIcon={action.icon}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        }
+      />
 
       <div
         style={{
