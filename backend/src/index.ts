@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -6,6 +9,11 @@ import { env } from "./lib/env.js";
 import { authConfig } from "./lib/auth-config.js";
 import { errorHandler } from "./middleware/error.js";
 import { requireWorkspace } from "./middleware/auth.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = resolve(__dirname, "..", "..");
+dotenv.config({ path: resolve(root, ".env.local") });
+dotenv.config({ path: resolve(root, ".env") });
 
 const app = new Hono();
 
@@ -19,10 +27,10 @@ app.use(
 
 app.use(authConfig);
 
-app.use("/api/auth/*", authHandler());
-
 import healthRoute from "./routes/health.js";
 import authRoute from "./routes/auth.js";
+
+app.use("/api/auth/*", authHandler());
 import dashboardRoute from "./routes/dashboard.js";
 import tasksRoute from "./routes/tasks.js";
 import proposalsRoute from "./routes/proposals.js";
@@ -36,9 +44,11 @@ import activityRoute from "./routes/activity.js";
 import searchRoute from "./routes/search.js";
 import settingsRoute from "./routes/settings.js";
 import publicRoute from "./routes/public.js";
+import docsRoute from "./routes/docs.js";
 
 app.route("/api", healthRoute);
 app.route("/api", authRoute);
+app.route("/api", docsRoute);
 
 app.use("/api/dashboard", requireWorkspace);
 app.use("/api/tasks", requireWorkspace);

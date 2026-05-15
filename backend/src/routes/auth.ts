@@ -4,7 +4,7 @@ import { prisma } from "../lib/db.js";
 
 const route = new Hono();
 
-route.get("/auth/me", async (c) => {
+route.get("/me", async (c) => {
   const auth = await getAuthUser(c);
   const token = auth?.token as any;
   if (!token?.id) {
