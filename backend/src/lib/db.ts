@@ -35,3 +35,5 @@ export const db = new Proxy(_prisma, {
     return v;
   },
 });
+
+export const prisma = _prisma;

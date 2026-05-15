@@ -111,6 +111,9 @@ const quickActions = [
 export function DashboardPage() {
   const { user } = useAuth();
   const { data, error, isLoading, refetch } = useDashboard();
+  const greeting = ((h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"))(
+    new Date().getHours(),
+  );
 
   if (isLoading) return <LoadingState />;
   if (error || !data)
@@ -119,7 +122,7 @@ export function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title={`Good morning, ${(user?.displayName ?? "").split(" ")[0]}`}
+        title={`${greeting}, ${(user?.displayName ?? "").split(" ")[0]}`}
         description="Here is what is happening in your workspace today."
         actions={
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
