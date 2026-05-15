@@ -67,12 +67,14 @@ function getAuthConfig(): AuthConfig {
     basePath: "/api/auth",
     trustHost: true,
     adapter: PrismaAdapter(db),
-    session: { strategy: "database" },
+    session: { strategy: "jwt" },
     providers,
     callbacks: {
-      async session({ session, user }) {
-        if (session.user) {
-          (session.user as any).id = user.id;
+      async jwt({ token, user }) {
+        if (user?.id) {
+          (token as any).id = user.id;
+          (token as any).email = user.email;
+          (token as any).name = user.name;
           try {
             const membership = await db.membership.findFirst({
               where: { userId: user.id },
@@ -82,21 +84,31 @@ function getAuthConfig(): AuthConfig {
               },
             });
             if (membership) {
-              (session.user as any).workspaceId = membership.workspace.id;
-              (session.user as any).workspaceName = membership.workspace.name;
-              (session.user as any).role = membership.accessLabel.toLowerCase();
-              (session.user as any).permissions = membership.permissions.map(
+              (token as any).workspaceId = membership.workspace.id;
+              (token as any).workspaceName = membership.workspace.name;
+              (token as any).role = membership.accessLabel.toLowerCase();
+              (token as any).permissions = membership.permissions.map(
                 (p) => p.permission,
               );
-              return session;
+              return token;
             }
           } catch {
-            // DB not available
+            /* DB not available */
           }
-          (session.user as any).workspaceId = "ws-default";
-          (session.user as any).workspaceName = "General Portal";
-          (session.user as any).role = "admin";
-          (session.user as any).permissions = ["*"];
+          (token as any).workspaceId = "ws-default";
+          (token as any).workspaceName = "General Portal";
+          (token as any).role = "admin";
+          (token as any).permissions = ["*"];
+        }
+        return token;
+      },
+      async session({ session, token }) {
+        if (session.user) {
+          (session.user as any).id = (token as any).id || token.sub;
+          (session.user as any).workspaceId = (token as any).workspaceId;
+          (session.user as any).workspaceName = (token as any).workspaceName;
+          (session.user as any).role = (token as any).role;
+          (session.user as any).permissions = (token as any).permissions || [];
         }
         return session;
       },
