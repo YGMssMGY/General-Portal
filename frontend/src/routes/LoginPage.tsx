@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tile, Button, TextInput, InlineNotification } from "@carbon/react";
+import { Tile, Button, TextInput, InlineNotification, Stack } from "@carbon/react";
 import { useSession, signIn } from "@hono/auth-js/react";
 import { LoadingState } from "../components/StateViews";
 import { getClientConfig } from "../config/clientConfig";
+
+const providers = [
+  { id: "github", label: "GitHub" },
+  { id: "google", label: "Google" },
+  { id: "microsoft", label: "Microsoft" },
+];
 
 export function LoginPage() {
   const { data: session, status } = useSession();
@@ -25,19 +31,11 @@ export function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const result = await signIn("credentials", {
-        username,
-        password,
-        redirect: false,
-      });
+      const result = await signIn("credentials", { username, password, redirect: false });
       if (result?.error) {
-        if (result.error === "CredentialsSignin") {
-          setError("Invalid username or password");
-        } else if (result.error === "Configuration") {
-          setError("Server configuration error. Make sure the database is running.");
-        } else {
-          setError(result.error);
-        }
+        setError(
+          result.error === "CredentialsSignin" ? "Invalid username or password" : result.error,
+        );
       } else {
         window.location.href = "/admin";
       }
@@ -69,7 +67,7 @@ export function LoginPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#0043ce",
+            background: "var(--cds-button-primary)",
             fontSize: "1.125rem",
             fontWeight: 600,
             color: "#ffffff",
@@ -111,35 +109,50 @@ export function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ marginTop: "1.5rem" }}>
-          <TextInput
-            id="username"
-            labelText="Username"
-            value={username}
-            onChange={(e: any) => setUsername(e.target.value)}
-            placeholder="dev@generalportal.local"
-            disabled={loading}
-          />
-          <div style={{ marginTop: "1rem" }}>
-            <TextInput
-              id="password"
-              labelText="Password"
-              type="password"
-              value={password}
-              onChange={(e: any) => setPassword(e.target.value)}
-              placeholder="Enter password"
+        <Stack gap={5} style={{ marginTop: "1.5rem" }}>
+          {providers.map((p) => (
+            <Button
+              key={p.id}
+              kind="tertiary"
+              style={{ width: "100%" }}
+              onClick={() => signIn(p.id, { redirect: true })}
               disabled={loading}
-            />
+            >
+              {p.label === "Microsoft" ? "Sign in with Microsoft" : `Sign in with ${p.label}`}
+            </Button>
+          ))}
+
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ flex: 1, height: "1px", background: "var(--cds-border-subtle)" }} />
+            <span style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>or</span>
+            <div style={{ flex: 1, height: "1px", background: "var(--cds-border-subtle)" }} />
           </div>
-          <Button
-            type="submit"
-            kind="primary"
-            style={{ marginTop: "1.5rem", width: "100%" }}
-            disabled={loading}
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
+
+          <form onSubmit={handleSubmit}>
+            <Stack gap={5}>
+              <TextInput
+                id="username"
+                labelText="Username"
+                value={username}
+                onChange={(e: any) => setUsername(e.target.value)}
+                placeholder="dev@generalportal.local"
+                disabled={loading}
+              />
+              <TextInput
+                id="password"
+                labelText="Password"
+                type="password"
+                value={password}
+                onChange={(e: any) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                disabled={loading}
+              />
+              <Button type="submit" kind="primary" style={{ width: "100%" }} disabled={loading}>
+                {loading ? "Signing in..." : "Dev Sign In"}
+              </Button>
+            </Stack>
+          </form>
+        </Stack>
       </Tile>
     </div>
   );

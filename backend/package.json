@@ -9,10 +9,12 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "predev": "node scripts/dev-setup.mjs",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:use:prod": "node -e \"require('fs').copyFileSync('prisma/schema.prod.prisma','prisma/schema.prisma')\""
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

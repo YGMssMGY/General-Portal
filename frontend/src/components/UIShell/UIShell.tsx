@@ -15,7 +15,7 @@ import {
   SkipToContent,
   Content,
 } from "@carbon/react";
-import { getClientConfig } from "../../config/clientConfig";
+import { getClientConfig, type ClientConfig } from "../../config/clientConfig";
 import {
   Dashboard,
   Document,
@@ -32,8 +32,9 @@ import {
   Launch,
   Asleep,
   Light,
+  Logout,
 } from "@carbon/icons-react";
-import { useSession } from "@hono/auth-js/react";
+import { useSession, signOut } from "@hono/auth-js/react";
 import { useTheme } from "../../context/ThemeContext";
 import type { ComponentType, ElementType } from "react";
 
@@ -43,6 +44,7 @@ interface NavItem {
   icon: ComponentType<any>;
   end?: boolean;
   minRole?: string;
+  featureFlag?: keyof ClientConfig["features"];
 }
 
 interface NavGroup {
@@ -63,10 +65,16 @@ const navConfig: NavGroup[] = [
     items: [
       { label: "Tasks", to: "/admin/tasks", icon: Task },
       { label: "Events", to: "/admin/events", icon: Calendar },
-      { label: "Proposals", to: "/admin/proposals", icon: Document },
-      { label: "Volunteers", to: "/admin/volunteers", icon: User },
-      { label: "Finance", to: "/admin/finance", icon: Money, minRole: "officer" },
-      { label: "Files", to: "/admin/files", icon: Folder },
+      { label: "Proposals", to: "/admin/proposals", icon: Document, featureFlag: "showProposals" },
+      { label: "Volunteers", to: "/admin/volunteers", icon: User, featureFlag: "showVolunteers" },
+      {
+        label: "Finance",
+        to: "/admin/finance",
+        icon: Money,
+        minRole: "officer",
+        featureFlag: "showFinance",
+      },
+      { label: "Files", to: "/admin/files", icon: Folder, featureFlag: "showFiles" },
     ],
   },
   {
@@ -76,9 +84,27 @@ const navConfig: NavGroup[] = [
   {
     title: "Administration",
     items: [
-      { label: "Members", to: "/admin/members", icon: Group, minRole: "officer" },
-      { label: "Activity", to: "/admin/activity", icon: Activity, minRole: "officer" },
-      { label: "Settings", to: "/admin/settings", icon: Settings, minRole: "president" },
+      {
+        label: "Members",
+        to: "/admin/members",
+        icon: Group,
+        minRole: "officer",
+        featureFlag: "showMembers",
+      },
+      {
+        label: "Activity",
+        to: "/admin/activity",
+        icon: Activity,
+        minRole: "officer",
+        featureFlag: "showActivity",
+      },
+      {
+        label: "Settings",
+        to: "/admin/settings",
+        icon: Settings,
+        minRole: "president",
+        featureFlag: "showSettings",
+      },
     ],
   },
 ];
@@ -98,6 +124,7 @@ export function UIShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const config = useMemo(() => getClientConfig(), []);
+  const features = config.features;
 
   const userRoleLevel = useMemo(() => {
     const role = sessionUser?.role;
@@ -109,12 +136,13 @@ export function UIShell() {
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
+          if (item.featureFlag && !features[item.featureFlag]) return false;
           if (!item.minRole) return true;
           return userRoleLevel >= (roleLevels[item.minRole] || 0);
         }),
       }))
       .filter((group) => group.items.length > 0);
-  }, [userRoleLevel]);
+  }, [userRoleLevel, features]);
 
   function handleSearchSubmit(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && searchValue.trim()) {
@@ -186,7 +214,12 @@ export function UIShell() {
               >
                 {theme === "dark" ? <Light size={20} /> : <Asleep size={20} />}
               </HeaderGlobalAction>
-              <div className="cds--header__global" />
+              <HeaderGlobalAction
+                aria-label="Sign out"
+                onClick={() => signOut({ redirect: true, callbackUrl: "/" })}
+              >
+                <Logout size={20} />
+              </HeaderGlobalAction>
             </HeaderGlobalBar>
             <SideNav
               aria-label="Side navigation"
