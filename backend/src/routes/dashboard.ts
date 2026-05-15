@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -10,17 +10,17 @@ route.get("/dashboard", async (c) => {
 
   const [taskCounts, tasks, upcomingEvents, recentActivity, financeSummary] =
     await Promise.all([
-      prisma.taskItem.groupBy({
+      db.taskItem.groupBy({
         by: ["status"],
         where: { workspaceId },
         _count: true,
       }),
-      prisma.taskItem.findMany({
+      db.taskItem.findMany({
         where: { workspaceId },
         orderBy: { dueDate: "asc" },
         take: 5,
       }),
-      prisma.eventItem.findMany({
+      db.eventItem.findMany({
         where: {
           workspaceId,
           startsAt: { gte: now },
@@ -28,12 +28,12 @@ route.get("/dashboard", async (c) => {
         orderBy: { startsAt: "asc" },
         take: 3,
       }),
-      prisma.activityLog.findMany({
+      db.activityLog.findMany({
         where: { workspaceId },
         orderBy: { occurredAt: "desc" },
         take: 5,
       }),
-      prisma.financeTransaction.groupBy({
+      db.financeTransaction.groupBy({
         by: ["status"],
         where: { workspaceId },
         _sum: { amount: true },

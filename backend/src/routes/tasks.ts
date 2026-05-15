@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -19,7 +19,7 @@ const updateSchema = createSchema.partial();
 
 route.get("/tasks", async (c) => {
   const wid = c.get("workspaceId");
-  const tasks = await prisma.taskItem.findMany({
+  const tasks = await db.taskItem.findMany({
     where: { workspaceId: wid },
     orderBy: { createdAt: "desc" },
   });
@@ -30,7 +30,7 @@ route.post("/tasks", async (c) => {
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
-  const task = await prisma.taskItem.create({
+  const task = await db.taskItem.create({
     data: {
       workspaceId: wid,
       title: parsed.title,
@@ -53,7 +53,7 @@ route.patch("/tasks/:id", async (c) => {
   const parsed = updateSchema.parse(body);
   const data: any = { ...parsed };
   if (parsed.dueDate) data.dueDate = new Date(parsed.dueDate);
-  const task = await prisma.taskItem.update({
+  const task = await db.taskItem.update({
     where: { id, workspaceId: wid },
     data,
   });
@@ -62,7 +62,7 @@ route.patch("/tasks/:id", async (c) => {
 
 route.delete("/tasks/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.taskItem.delete({
+  await db.taskItem.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
   return c.body(null, 204);

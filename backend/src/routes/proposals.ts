@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -22,7 +22,7 @@ const updateSchema = z.object({
 
 route.get("/proposals", async (c) => {
   const wid = c.get("workspaceId");
-  const items = await prisma.proposal.findMany({
+  const items = await db.proposal.findMany({
     where: { workspaceId: wid },
     orderBy: { submittedAt: "desc" },
   });
@@ -33,7 +33,7 @@ route.post("/proposals", async (c) => {
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
-  const item = await prisma.proposal.create({
+  const item = await db.proposal.create({
     data: {
       workspaceId: wid,
       title: parsed.title,
@@ -52,7 +52,7 @@ route.patch("/proposals/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const parsed = updateSchema.parse(body);
-  const item = await prisma.proposal.update({
+  const item = await db.proposal.update({
     where: { id, workspaceId: wid },
     data: parsed,
   });
@@ -61,7 +61,7 @@ route.patch("/proposals/:id", async (c) => {
 
 route.delete("/proposals/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.proposal.delete({
+  await db.proposal.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
   return c.body(null, 204);

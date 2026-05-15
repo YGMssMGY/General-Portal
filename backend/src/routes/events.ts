@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { prisma } from "../lib/db.js";
+import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -17,7 +17,7 @@ const createSchema = z.object({
 
 route.get("/events", async (c) => {
   const wid = c.get("workspaceId");
-  const items = await prisma.eventItem.findMany({
+  const items = await db.eventItem.findMany({
     where: { workspaceId: wid },
     include: { owners: true },
     orderBy: { createdAt: "desc" },
@@ -32,7 +32,7 @@ route.post("/events", async (c) => {
   const data: any = { ...fields };
   if (data.startsAt) data.startsAt = new Date(data.startsAt);
   if (data.endsAt) data.endsAt = new Date(data.endsAt);
-  const item = await prisma.eventItem.create({
+  const item = await db.eventItem.create({
     data: {
       workspaceId: wid,
       ...data,
@@ -53,7 +53,7 @@ route.patch("/events/:id", async (c) => {
   const data: any = { ...fields };
   if (fields.startsAt) data.startsAt = new Date(fields.startsAt);
   if (fields.endsAt) data.endsAt = new Date(fields.endsAt);
-  const item = await prisma.eventItem.update({
+  const item = await db.eventItem.update({
     where: { id, workspaceId: wid },
     data,
     include: { owners: true },
@@ -63,7 +63,7 @@ route.patch("/events/:id", async (c) => {
 
 route.delete("/events/:id", async (c) => {
   const wid = c.get("workspaceId");
-  await prisma.eventItem.delete({
+  await db.eventItem.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
   return c.body(null, 204);
