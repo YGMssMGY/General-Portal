@@ -17,7 +17,7 @@ import type {
 import { API_BASE_URL, fetchJson, fetchPage, jsonBody } from "./httpClient";
 
 export const workspaceApi = {
-  getCurrentUser: () => fetchJson<UserProfile>("/auth/me"),
+  getCurrentUser: () => fetchJson<UserProfile>("/me"),
   getDashboard: () => fetchJson<DashboardData>("/dashboard"),
   getTasks: () => fetchPage<Task>("/tasks"),
   createTask: (task: Pick<Task, "title" | "priority" | "project" | "dueDate" | "assigneeName">) =>

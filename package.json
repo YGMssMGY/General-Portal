@@ -2,9 +2,13 @@
   "name": "general-portal",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["frontend", "backend"],
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "concurrently -n be,fe -c cyan,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "stop": "node scripts/stop.mjs",
+    "dev": "node scripts/stop.mjs && concurrently -n be,fe -c cyan,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
     "build": "npm run build -w backend && npm run build -w frontend",

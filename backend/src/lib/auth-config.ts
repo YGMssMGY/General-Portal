@@ -40,6 +40,7 @@ function getAuthConfig(): AuthConfig {
 
   return {
     secret: env.AUTH_SECRET,
+    basePath: "/api/auth",
     trustHost: true,
     providers,
     session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
