@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { TableRow, TableCell, TableSelectRow } from "@carbon/react";
 import type { ColumnDef } from "./DataTable";
 
@@ -7,6 +8,7 @@ interface DataTableRowProps<T> {
   selectable: boolean;
   selected: boolean;
   onToggleSelect: () => void;
+  onRowClick?: () => void;
 }
 
 export function DataTableRow<T extends Record<string, unknown>>({
@@ -15,9 +17,18 @@ export function DataTableRow<T extends Record<string, unknown>>({
   selectable,
   selected,
   onToggleSelect,
+  onRowClick,
 }: DataTableRowProps<T>) {
+  const handleClick = useCallback(() => {
+    if (onRowClick) onRowClick();
+  }, [onRowClick]);
+
   return (
-    <TableRow isSelected={selected}>
+    <TableRow
+      isSelected={selected}
+      onClick={handleClick}
+      style={onRowClick ? { cursor: "pointer" } : undefined}
+    >
       {selectable ? (
         <TableSelectRow
           id={`row-${String(item.id)}`}

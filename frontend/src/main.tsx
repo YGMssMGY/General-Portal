@@ -1,19 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { SessionProvider } from "@hono/auth-js/react";
 import { App } from "./App";
 import "@carbon/styles/css/styles.css";
+import "./index.css";
 
-async function bootstrap() {
-  if (import.meta.env.DEV && import.meta.env.VITE_USE_MSW === "true") {
-    const { startMockService } = await import("./mocks/browser");
-    await startMockService();
-  }
-
-  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-    <React.StrictMode>
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <SessionProvider>
       <App />
-    </React.StrictMode>,
-  );
-}
-
-bootstrap();
+    </SessionProvider>
+  </React.StrictMode>,
+);

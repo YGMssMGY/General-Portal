@@ -7,7 +7,7 @@ export function NotFoundPage() {
     <div
       style={{
         display: "flex",
-        minHeight: "100%",
+        minHeight: "calc(100vh - 6rem)",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",

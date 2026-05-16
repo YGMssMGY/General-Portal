@@ -1,0 +1,124 @@
+import { Hono } from "hono";
+import { db } from "../lib/db.js";
+
+const route = new Hono();
+
+route.get("/dashboard", async (c) => {
+  const workspaceId = c.get("workspaceId");
+
+  const now = new Date();
+
+  const [
+    taskCounts,
+    tasks,
+    upcomingEvents,
+    recentActivity,
+    financeSummary,
+    overdueTaskCount,
+    unreadThreadCount,
+    pendingProposalsCount,
+    topMembers,
+  ] = await Promise.all([
+    db.taskItem.groupBy({
+      by: ["status"],
+      where: { workspaceId },
+      _count: true,
+    }),
+    db.taskItem.findMany({
+      where: { workspaceId },
+      orderBy: { dueDate: "asc" },
+      take: 5,
+    }),
+    db.eventItem.findMany({
+      where: {
+        workspaceId,
+        startsAt: { gte: now },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 3,
+    }),
+    db.activityLog.findMany({
+      where: { workspaceId },
+      orderBy: { occurredAt: "desc" },
+      take: 5,
+    }),
+    db.financeTransaction.groupBy({
+      by: ["status"],
+      where: { workspaceId },
+      _sum: { amount: true },
+    }),
+    db.taskItem.count({
+      where: {
+        workspaceId,
+        dueDate: { lt: now },
+        status: { not: "done" },
+      },
+    }),
+    db.messageThread.aggregate({
+      where: { workspaceId },
+      _sum: { unreadCount: true },
+    }),
+    db.proposal.count({
+      where: { workspaceId, status: "submitted" },
+    }),
+    db.membership.findMany({
+      where: { workspaceId },
+      orderBy: { taskCount: "desc" },
+      take: 1,
+      include: {
+        user: {
+          select: { id: true, displayName: true, email: true, avatarUrl: true },
+        },
+      },
+    }),
+  ]);
+
+  const metrics = [
+    {
+      label: "Total Tasks",
+      value: taskCounts.reduce((sum, g) => sum + g._count, 0),
+    },
+    {
+      label: "Upcoming Events",
+      value: upcomingEvents.length,
+    },
+    {
+      label: "Pending Proposals",
+      value: pendingProposalsCount,
+    },
+    {
+      label: "Pending Expenses",
+      value: financeSummary
+        .filter((f) => f.status === "pending")
+        .reduce((sum, f) => sum + (f._sum.amount?.toNumber() || 0), 0),
+    },
+  ];
+
+  return c.json({
+    metrics,
+    attention: tasks.filter(
+      (t) =>
+        t.status === "blocked" ||
+        (t.dueDate && t.dueDate < now && t.status !== "done"),
+    ),
+    myTasks: tasks,
+    upcomingEvents,
+    recentActivity,
+    overdueTaskCount,
+    unreadThreadCount: unreadThreadCount._sum.unreadCount || 0,
+    pendingProposalsCount,
+    topContributor:
+      topMembers.length > 0
+        ? {
+            id: topMembers[0].user.id,
+            displayName: topMembers[0].user.displayName,
+            email: topMembers[0].user.email,
+            avatarUrl: topMembers[0].user.avatarUrl,
+            taskCount: topMembers[0].taskCount,
+            volunteerHours: topMembers[0].volunteerHours,
+          }
+        : null,
+  });
+});
+
+export default route;
