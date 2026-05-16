@@ -62,7 +62,7 @@ function formatDateLabel(dateStr: string): string {
   }).format(d);
 }
 
-const contextIcon: Record<string, typeof Calendar> = {
+const contextIcon: Record<string, any> = {
   event: Calendar,
   task: Task,
   proposal: Document,
@@ -654,7 +654,10 @@ export function MessagesPage() {
                     }}
                   >
                     <span style={{ opacity: 0.7 }}>
-                      {(contextIcon[selected.context] ?? Document)({ size: 20 })}
+                      {(() => {
+                        const Icon = contextIcon[selected.context] || Document;
+                        return <Icon size={20} />;
+                      })()}
                     </span>
                     <span
                       style={{
@@ -747,7 +750,10 @@ export function MessagesPage() {
                     </h3>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <span style={{ opacity: 0.7 }}>
-                        {(contextIcon[selected.context] ?? Document)({ size: 16 })}
+                        {(() => {
+                          const Icon = contextIcon[selected.context] || Document;
+                          return <Icon size={16} />;
+                        })()}
                       </span>
                       <span
                         style={{
