@@ -1,18 +1,36 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
-import { Badge } from "../../components/Badge";
-import { Card } from "../../components/Card";
-import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
-import { Button, TextInput, TextArea, Select, SelectItem, Form } from "@carbon/react";
+import { Modal } from "../../components/Modal";
+import {
+  Button,
+  TextInput,
+  TextArea,
+  Select,
+  SelectItem,
+  Form,
+  Search,
+  Tag,
+  Tile,
+  Stack,
+  InlineNotification,
+  Grid,
+  Column,
+} from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
 import { useProposals } from "../../hooks/useWorkspaceResources";
-import type { Proposal, ResourceStatus } from "../../types";
+import type { Proposal } from "../../types";
 import { formatCurrency, formatDateTime } from "../../utils/format";
-import { Add, Document, Edit, TrashCan } from "@carbon/icons-react";
+import { Add, Edit, TrashCan, Document, Checkmark, Close } from "@carbon/icons-react";
+
+const typeTagColors: Record<string, string> = {
+  Event: "teal",
+  Purchase: "purple",
+  Project: "cyan",
+};
 
 export function ProposalsPage() {
   const { user } = useAuth();
@@ -24,12 +42,34 @@ export function ProposalsPage() {
   const [createError, setCreateError] = useState<string>();
   const [deleteTarget, setDeleteTarget] = useState<Proposal>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
   const [form, setForm] = useState({
     title: "",
     type: "Event" as Proposal["type"],
     budget: "0",
     summary: "",
+    submittedBy: "",
+    dateNeeded: "",
   });
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    return data.filter((p) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!p.title.toLowerCase().includes(q) && !p.submittedBy.toLowerCase().includes(q))
+          return false;
+      }
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (typeFilter !== "all" && p.type !== typeFilter) return false;
+      return true;
+    });
+  }, [data, searchQuery, statusFilter, typeFilter]);
 
   const columns: ColumnDef<Proposal>[] = useMemo(
     () => [
@@ -46,33 +86,24 @@ export function ProposalsPage() {
           </div>
         ),
       },
-      { key: "type", header: "Type", sortable: true },
+      {
+        key: "type",
+        header: "Type",
+        sortable: true,
+        render: (p) => (
+          <Tag type={typeTagColors[p.type] as "teal" | "purple" | "cyan"}>{p.type}</Tag>
+        ),
+      },
       {
         key: "status",
         header: "Status",
         sortable: true,
-        render: (p) => (
-          <Select
-            id={`prop-status-${p.id}`}
-            labelText=""
-            hideLabel
-            size="sm"
-            value={p.status}
-            onChange={async (e) => {
-              const newStatus = e.target.value as ResourceStatus;
-              try {
-                await workspaceApi.updateProposal(p.id, { status: newStatus });
-                refetch();
-              } catch {}
-            }}
-          >
-            <SelectItem value="draft" text="Draft" />
-            <SelectItem value="submitted" text="Submitted" />
-            <SelectItem value="under_review" text="Under Review" />
-            <SelectItem value="approved" text="Approved" />
-            <SelectItem value="rejected" text="Rejected" />
-          </Select>
-        ),
+        render: (p) => <Tag type="outline">{p.status.replace(/_/g, " ")}</Tag>,
+      },
+      {
+        key: "submittedBy",
+        header: "Submitted By",
+        sortable: true,
       },
       {
         key: "budget",
@@ -91,7 +122,7 @@ export function ProposalsPage() {
         key: "actions",
         header: "",
         render: (p) => (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <Stack orientation="horizontal" gap={3}>
             <Button
               kind="ghost"
               size="sm"
@@ -105,6 +136,8 @@ export function ProposalsPage() {
                   type: p.type,
                   budget: String(p.budget),
                   summary: p.summary,
+                  submittedBy: p.submittedBy,
+                  dateNeeded: "",
                 });
                 setIsModalOpen(true);
               }}
@@ -117,11 +150,11 @@ export function ProposalsPage() {
               hasIconOnly
               onClick={() => setDeleteTarget(p)}
             />
-          </div>
+          </Stack>
         ),
       },
     ],
-    [refetch],
+    [],
   );
 
   const selected = useMemo(() => {
@@ -131,7 +164,14 @@ export function ProposalsPage() {
 
   function openCreateModal() {
     setEditingProposal(undefined);
-    setForm({ title: "", type: "Event", budget: "0", summary: "" });
+    setForm({
+      title: "",
+      type: "Event",
+      budget: "0",
+      summary: "",
+      submittedBy: user?.displayName ?? "",
+      dateNeeded: "",
+    });
     setIsModalOpen(true);
   }
 
@@ -143,7 +183,7 @@ export function ProposalsPage() {
       const payload = {
         title: form.title,
         type: form.type,
-        submittedBy: user?.displayName ?? "Demo User",
+        submittedBy: (form.submittedBy || user?.displayName) ?? "Demo User",
         budget: Number(form.budget),
         summary: form.summary,
       };
@@ -176,6 +216,18 @@ export function ProposalsPage() {
     }
   }
 
+  async function handleApproveReject(id: string, status: "approved" | "rejected") {
+    setIsApproving(true);
+    try {
+      await workspaceApi.updateProposal(id, { status });
+      refetch();
+    } catch {
+      // silently fail
+    } finally {
+      setIsApproving(false);
+    }
+  }
+
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Proposals unavailable"} onRetry={refetch} />;
@@ -192,78 +244,176 @@ export function ProposalsPage() {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem" }}>
-        <DataTable
-          columns={columns}
-          data={data as unknown as Record<string, unknown>[]}
-          defaultSort={{ key: "submittedAt", direction: "desc" }}
-          pageSize={10}
+      <Stack orientation="horizontal" gap={5} className="cds--data-table-toolbar">
+        <Search
+          id="search-proposals"
+          labelText="Search proposals"
+          placeholder="Search by title or submitter"
+          size="sm"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
         />
+        <Select
+          id="filter-status"
+          labelText=""
+          hideLabel
+          size="sm"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <SelectItem value="all" text="All Statuses" />
+          <SelectItem value="draft" text="Draft" />
+          <SelectItem value="submitted" text="Submitted" />
+          <SelectItem value="under_review" text="Under Review" />
+          <SelectItem value="approved" text="Approved" />
+          <SelectItem value="rejected" text="Rejected" />
+        </Select>
+        <Select
+          id="filter-type"
+          labelText=""
+          hideLabel
+          size="sm"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <SelectItem value="all" text="All Types" />
+          <SelectItem value="Event" text="Event" />
+          <SelectItem value="Purchase" text="Purchase" />
+          <SelectItem value="Project" text="Project" />
+        </Select>
+        <Button renderIcon={Add} size="sm" onClick={openCreateModal}>
+          Add Proposal
+        </Button>
+      </Stack>
+
+      <Grid>
+        <Column lg={selected ? 12 : 16} md={16} sm={16}>
+          <Stack gap={6}>
+            <DataTable
+              columns={columns}
+              data={filtered as unknown as Record<string, unknown>[]}
+              defaultSort={{ key: "submittedAt", direction: "desc" }}
+              pageSize={10}
+              onRowClick={(item) => {
+                setSelectedId((prev) => (prev === item.id ? undefined : item.id));
+              }}
+            />
+          </Stack>
+        </Column>
 
         {selected ? (
-          <Card padding="lg" className="h-fit">
-            <div
-              style={{
-                marginBottom: "1.25rem",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: "1rem",
-              }}
-            >
-              <div>
-                <Badge>{selected.status}</Badge>
-                <h2
-                  style={{
-                    marginTop: "0.75rem",
-                    fontSize: "1.125rem",
-                    fontWeight: 600,
-                    color: "var(--cds-text-primary)",
-                  }}
-                >
-                  {selected.title}
-                </h2>
-              </div>
-              <Document
-                size={24}
-                style={{ color: "var(--cds-text-secondary)", flexShrink: 0 }}
-                aria-hidden="true"
-              />
-            </div>
-            <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-              {selected.summary}
-            </p>
-            <dl
-              style={{
-                marginTop: "1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.75rem",
-                fontSize: "0.875rem",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
-                <dt style={{ color: "var(--cds-text-secondary)" }}>Owner</dt>
-                <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
-                  {selected.submittedBy}
-                </dd>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
-                <dt style={{ color: "var(--cds-text-secondary)" }}>Type</dt>
-                <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
-                  {selected.type}
-                </dd>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
-                <dt style={{ color: "var(--cds-text-secondary)" }}>Budget</dt>
-                <dd style={{ fontWeight: 500, color: "var(--cds-text-primary)" }}>
-                  {formatCurrency(selected.budget)}
-                </dd>
-              </div>
-            </dl>
-          </Card>
+          <Column lg={4} md={0} sm={0}>
+            <Tile style={{ padding: "1.5rem" }}>
+              <Stack gap={5}>
+                <Stack orientation="horizontal" gap={5}>
+                  <Tag type="outline">{selected.status.replace(/_/g, " ")}</Tag>
+                  <Tag type={typeTagColors[selected.type] as "teal" | "purple" | "cyan"}>
+                    {selected.type}
+                  </Tag>
+                </Stack>
+
+                <div>
+                  <h2
+                    style={{
+                      fontSize: "1.125rem",
+                      fontWeight: 600,
+                      color: "var(--cds-text-primary)",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    {selected.title}
+                  </h2>
+                  <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                    {selected.summary}
+                  </p>
+                </div>
+
+                <Document
+                  size={20}
+                  style={{ color: "var(--cds-text-secondary)" }}
+                  aria-hidden="true"
+                />
+
+                <Stack gap={4}>
+                  <Stack
+                    orientation="horizontal"
+                    gap={5}
+                    style={{ justifyContent: "space-between" }}
+                  >
+                    <span style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                      Submitter
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {selected.submittedBy}
+                    </span>
+                  </Stack>
+                  <Stack
+                    orientation="horizontal"
+                    gap={5}
+                    style={{ justifyContent: "space-between" }}
+                  >
+                    <span style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                      Date
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {formatDateTime(selected.submittedAt)}
+                    </span>
+                  </Stack>
+                  <Stack
+                    orientation="horizontal"
+                    gap={5}
+                    style={{ justifyContent: "space-between" }}
+                  >
+                    <span style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                      Budget
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {formatCurrency(selected.budget)}
+                    </span>
+                  </Stack>
+                </Stack>
+
+                <Stack orientation="horizontal" gap={5}>
+                  <Button
+                    kind="primary"
+                    renderIcon={Checkmark}
+                    onClick={() => handleApproveReject(selected.id, "approved")}
+                    disabled={isApproving || selected.status === "approved"}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    kind="danger"
+                    renderIcon={Close}
+                    onClick={() => handleApproveReject(selected.id, "rejected")}
+                    disabled={isApproving || selected.status === "rejected"}
+                  >
+                    Reject
+                  </Button>
+                </Stack>
+              </Stack>
+            </Tile>
+          </Column>
         ) : null}
-      </div>
+      </Grid>
 
       <Modal
         title={editingProposal ? "Edit Proposal" : "New Proposal"}
@@ -275,7 +425,7 @@ export function ProposalsPage() {
         }}
       >
         <Form onSubmit={handleSave}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <Stack gap={5}>
             <TextInput
               id="prop-title"
               labelText="Title"
@@ -283,30 +433,54 @@ export function ProposalsPage() {
               value={form.title}
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
             />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <Select
-                id="prop-type"
-                labelText="Type"
-                value={form.type}
-                onChange={(e) =>
-                  setForm((c) => ({ ...c, type: e.target.value as Proposal["type"] }))
-                }
-              >
-                <SelectItem value="Event" text="Event" />
-                <SelectItem value="Purchase" text="Purchase" />
-                <SelectItem value="Project" text="Project" />
-              </Select>
-              <TextInput
-                id="prop-budget"
-                labelText="Budget"
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={form.budget}
-                onChange={(e) => setForm((c) => ({ ...c, budget: e.target.value }))}
-              />
-            </div>
+            <Grid>
+              <Column lg={8} md={8} sm={16}>
+                <Select
+                  id="prop-type"
+                  labelText="Type"
+                  value={form.type}
+                  onChange={(e) =>
+                    setForm((c) => ({ ...c, type: e.target.value as Proposal["type"] }))
+                  }
+                >
+                  <SelectItem value="Event" text="Event" />
+                  <SelectItem value="Purchase" text="Purchase" />
+                  <SelectItem value="Project" text="Project" />
+                </Select>
+              </Column>
+              <Column lg={8} md={8} sm={16}>
+                <TextInput
+                  id="prop-budget"
+                  labelText="Budget"
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={form.budget}
+                  onChange={(e) => setForm((c) => ({ ...c, budget: e.target.value }))}
+                />
+              </Column>
+            </Grid>
+            <Grid>
+              <Column lg={8} md={8} sm={16}>
+                <TextInput
+                  id="prop-submitted-by"
+                  labelText="Submitted By"
+                  required
+                  value={form.submittedBy}
+                  onChange={(e) => setForm((c) => ({ ...c, submittedBy: e.target.value }))}
+                />
+              </Column>
+              <Column lg={8} md={8} sm={16}>
+                <TextInput
+                  id="prop-date-needed"
+                  labelText="Date Needed"
+                  type="date"
+                  value={form.dateNeeded}
+                  onChange={(e) => setForm((c) => ({ ...c, dateNeeded: e.target.value }))}
+                />
+              </Column>
+            </Grid>
             <TextArea
               id="prop-summary"
               labelText="Summary"
@@ -316,19 +490,9 @@ export function ProposalsPage() {
               onChange={(e) => setForm((c) => ({ ...c, summary: e.target.value }))}
             />
             {createError ? (
-              <p
-                style={{
-                  borderLeft: "4px solid var(--cds-support-error)",
-                  backgroundColor: "#fff1f1",
-                  padding: "0.5rem 0.75rem",
-                  fontSize: "0.875rem",
-                  color: "#a2191f",
-                }}
-              >
-                {createError}
-              </p>
+              <InlineNotification kind="error" subtitle={createError} hideCloseButton lowContrast />
             ) : null}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+            <Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
               <Button
                 kind="secondary"
                 type="button"
@@ -342,8 +506,8 @@ export function ProposalsPage() {
               <Button type="submit" disabled={isCreating}>
                 {isCreating ? "Saving..." : editingProposal ? "Save Changes" : "Submit Proposal"}
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </Form>
       </Modal>
 
@@ -353,17 +517,19 @@ export function ProposalsPage() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(undefined)}
       >
-        <p style={{ marginBottom: "1rem", color: "var(--cds-text-secondary)" }}>
-          Delete &quot;{deleteTarget?.title}&quot;?
-        </p>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-          <Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
-            Cancel
-          </Button>
-          <Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
+        <Stack gap={5}>
+          <p style={{ color: "var(--cds-text-secondary)" }}>
+            Delete &quot;{deleteTarget?.title}&quot;?
+          </p>
+          <Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
+            <Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+              Cancel
+            </Button>
+            <Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </Stack>
+        </Stack>
       </Modal>
     </div>
   );

@@ -1,0 +1,39 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "predev": "node scripts/dev-setup.mjs",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force",
+    "db:studio": "prisma studio",
+    "db:use:prod": "node -e \"require('fs').copyFileSync('prisma/schema.prod.prisma','prisma/schema.prisma')\""
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.2",
+    "@auth/prisma-adapter": "^2.11.2",
+    "@hono/auth-js": "^1.1.1",
+    "@hono/node-server": "^2.0.2",
+    "@prisma/client": "^6.19.3",
+    "@scalar/hono-api-reference": "^0.10.16",
+    "dotenv": "^16.4.7",
+    "hono": "^4.12.18",
+    "vitest": "^4.1.6",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "prisma": "^6.6.0",
+    "tsx": "^4.19.4"
+  }
+}

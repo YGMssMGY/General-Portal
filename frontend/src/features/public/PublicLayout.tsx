@@ -16,6 +16,8 @@ export function PublicLayout() {
     <div
       style={{
         minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
         background: "var(--cds-background)",
         color: "var(--cds-text-primary)",
       }}
@@ -88,7 +90,7 @@ export function PublicLayout() {
           </nav>
         </div>
       </header>
-      <main>
+      <main style={{ flex: 1 }}>
         <Outlet />
       </main>
       <footer

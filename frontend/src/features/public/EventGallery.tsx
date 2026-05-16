@@ -3,7 +3,14 @@ import { fetchJson } from "../../api/httpClient";
 import { LoadingState, ErrorState } from "../../components/StateViews";
 import { Tile, Tag } from "@carbon/react";
 import { Calendar } from "@carbon/icons-react";
-import type { PublicEvent } from "../../mocks/data";
+
+interface PublicEvent {
+  id: string;
+  title: string;
+  eventDate: string;
+  description: string;
+  category: string;
+}
 
 export function EventGallery() {
   const { data, error, isLoading, refetch } = useAsyncData(
@@ -91,7 +98,7 @@ export function EventGallery() {
                 color: "var(--cds-text-placeholder)",
               }}
             >
-              {event.date}
+              {event.eventDate ? new Date(event.eventDate).toLocaleDateString() : ""}
             </p>
           </Tile>
         ))}

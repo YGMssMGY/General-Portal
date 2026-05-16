@@ -10,9 +10,7 @@ import {
   TableRow as CarbonTableRow,
   TableBody,
   TableSelectAll,
-  TableSelectRow,
 } from "@carbon/react";
-import { ArrowUp, ArrowDown } from "@carbon/icons-react";
 
 export interface ColumnDef<T> {
   key: string;
@@ -30,6 +28,7 @@ interface DataTableProps<T> {
   defaultSort?: { key: string; direction: "asc" | "desc" };
   toolbar?: ReactNode;
   pageSize?: number;
+  onRowClick?: (item: T) => void;
 }
 
 export function DataTable({
@@ -40,6 +39,7 @@ export function DataTable({
   defaultSort,
   toolbar,
   pageSize: defaultPageSize = 10,
+  onRowClick,
 }: DataTableProps<any>) {
   const [sortKey, setSortKey] = useState<string | null>(defaultSort?.key ?? null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(defaultSort?.direction ?? "asc");
@@ -156,6 +156,7 @@ export function DataTable({
                 selectable={selectable}
                 selected={selected.has(String(item[keyField]))}
                 onToggleSelect={() => toggleSelect(String(item[keyField]))}
+                onRowClick={onRowClick ? () => onRowClick(item) : undefined}
               />
             ))}
           </TableBody>

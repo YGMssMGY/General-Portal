@@ -120,6 +120,47 @@ export interface WorkspaceFile {
   linkedResource: string;
   sizeLabel: string;
   updatedAt: string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  mimeType?: string;
+  url?: string;
+  sizeBytes?: number;
+}
+
+export interface ActivityStats {
+  tasksCompleted: number;
+  tasksCompletedTrend: number;
+  overdueTasks: number;
+  volunteerHours: number;
+  taskCompletionTrend: { date: string; count: number }[];
+  openTasksByStatus: { status: string; count: number; percent: number }[];
+  topContributors: {
+    id: string;
+    name: string;
+    role: string;
+    completedTasks: number;
+    lastActive: string;
+    status: "Active" | "Offline";
+  }[];
+}
+
+export interface ModuleSettings {
+  tasks: boolean;
+  events: boolean;
+  finance: boolean;
+  volunteers: boolean;
+}
+
+export interface ApprovalRule {
+  id: string;
+  triggerType: string;
+  triggerValue: string;
+  approvers: string[];
+}
+
+export interface OrganizationSettings {
+  orgType: string;
+  primaryContact: string;
 }
 
 export interface Member {
@@ -162,6 +203,19 @@ export interface WorkspaceSettings {
   requireProposalApproval: boolean;
   allowMemberInvites: boolean;
   fiscalYearStart: string;
+}
+
+export interface FinanceSummary {
+  totalRevenue: number;
+  totalExpenses: number;
+  netBalance: number;
+  pendingCount: number;
+}
+
+export interface TrendDataPoint {
+  date: string;
+  revenue: number;
+  expenses: number;
 }
 
 export interface SearchResult {
