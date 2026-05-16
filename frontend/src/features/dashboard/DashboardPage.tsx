@@ -1,21 +1,12 @@
 import { Link } from "react-router-dom";
-import { Tile, Tag, Button, ClickableTile } from "@carbon/react";
+import { Tag, Button, ClickableTile } from "@carbon/react";
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useAuth } from "../../context/AuthContext";
 import { useDashboard } from "../../hooks/useWorkspaceResources";
 import { formatDate } from "../../utils/format";
-import {
-  ArrowRight,
-  Task,
-  Document,
-  Calendar,
-  Warning,
-  Add,
-  Chat,
-  Event,
-} from "@carbon/icons-react";
+import { ArrowRight, Task, Document, Calendar, Warning, Chat, Event } from "@carbon/icons-react";
 import type { DashboardMetric } from "../../types";
 import type { ComponentType } from "react";
 

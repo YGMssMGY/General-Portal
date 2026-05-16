@@ -4,14 +4,13 @@ import { Modal } from "../../components/Modal";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useMessageThreads } from "../../hooks/useWorkspaceResources";
 import { workspaceApi } from "../../api/workspaceApi";
-import { useAuth } from "../../context/AuthContext";
+
 import type { MessageThread } from "../../types";
 import { formatDateTime } from "../../utils/format";
 import { Tag, Button, TextInput, TextArea, Select, SelectItem, Form } from "@carbon/react";
 import { Add, TrashCan, Send } from "@carbon/icons-react";
 
 export function MessagesPage() {
-  const { user } = useAuth();
   const { data, error, isLoading, refetch } = useMessageThreads();
   const [selectedId, setSelectedId] = useState<string>();
   const [contextFilter, setContextFilter] = useState<"all" | "event" | "task">("all");

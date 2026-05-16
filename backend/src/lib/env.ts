@@ -1,21 +1,6 @@
-import dotenv from "dotenv";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = resolve(__dirname, "..", "..", "..");
-
-dotenv.config({ path: resolve(root, ".env.local") });
-dotenv.config({ path: resolve(root, ".env") });
-
-const dbUrl = process.env["DATABASE_URL"]?.startsWith("postgres")
-  ? process.env["DATABASE_URL"]
-  : "file:./dev.db";
-process.env["DATABASE_URL"] = dbUrl;
-
 export const env = {
   PORT: parseInt(process.env["BACKEND_PORT"] || "3001", 10),
-  DATABASE_URL: dbUrl,
+  DATABASE_URL: process.env["DATABASE_URL"] || "file:./dev.db",
   AUTH_SECRET:
     process.env["AUTH_SECRET"] || "dev-secret-change-in-production-abc123",
   AUTH_URL: process.env["AUTH_URL"] || "http://localhost:5173",

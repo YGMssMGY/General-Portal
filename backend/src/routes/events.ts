@@ -1,19 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../lib/db.js";
-import { z } from "zod";
 
 const route = new Hono();
-
-const createSchema = z.object({
-  title: z.string().min(1),
-  status: z.string().optional(),
-  startsAt: z.string().optional(),
-  endsAt: z.string().optional(),
-  progress: z.number().optional(),
-  budgetUsed: z.number().optional(),
-  budgetTotal: z.number().optional(),
-  owners: z.array(z.string()).optional(),
-});
 
 route.get("/events", async (c) => {
   const wid = c.get("workspaceId");
@@ -28,16 +16,18 @@ route.get("/events", async (c) => {
 route.post("/events", async (c) => {
   const wid = c.get("workspaceId");
   const body = await c.req.json();
-  const { owners, ...fields } = body;
-  const data: any = { ...fields };
-  if (data.startsAt) data.startsAt = new Date(data.startsAt);
-  if (data.endsAt) data.endsAt = new Date(data.endsAt);
   const item = await db.eventItem.create({
     data: {
       workspaceId: wid,
-      ...data,
-      owners: owners
-        ? { create: owners.map((o: string) => ({ ownerLabel: o })) }
+      title: body.title,
+      status: body.status || "pending",
+      startsAt: body.startsAt ? new Date(body.startsAt) : null,
+      endsAt: body.endsAt ? new Date(body.endsAt) : null,
+      progress: body.progress || 0,
+      budgetUsed: body.budgetUsed || 0,
+      budgetTotal: body.budgetTotal || 0,
+      owners: body.owners
+        ? { create: body.owners.map((o: string) => ({ ownerLabel: o })) }
         : undefined,
     },
     include: { owners: true },
@@ -49,7 +39,7 @@ route.patch("/events/:id", async (c) => {
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
-  const { owners, ...fields } = body;
+  const { owners: _, ...fields } = body;
   const data: any = { ...fields };
   if (fields.startsAt) data.startsAt = new Date(fields.startsAt);
   if (fields.endsAt) data.endsAt = new Date(fields.endsAt);
