@@ -10,9 +10,9 @@ import {
   TableRow as CarbonTableRow,
   TableBody,
   TableSelectAll,
-  TableSelectRow,
+  
 } from "@carbon/react";
-import { ArrowUp, ArrowDown } from "@carbon/icons-react";
+
 
 export interface ColumnDef<T> {
   key: string;

@@ -12,7 +12,7 @@ const providers = [
 ];
 
 export function LoginPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const navigate = useNavigate();
   const config = getClientConfig();
   const [username, setUsername] = useState("");

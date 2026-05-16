@@ -17,7 +17,7 @@ import { Add, Document, Edit, TrashCan } from "@carbon/icons-react";
 export function ProposalsPage() {
   const { user } = useAuth();
   const { data, error, isLoading, refetch } = useProposals();
-  const [selectedId, setSelectedId] = useState<string>();
+  const [selectedId, _setSelectedId] = useState<string>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProposal, setEditingProposal] = useState<Proposal>();
   const [isCreating, setIsCreating] = useState(false);

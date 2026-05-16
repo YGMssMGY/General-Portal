@@ -8,9 +8,7 @@ const root = resolve(__dirname, "..", "..");
 dotenv.config({ path: resolve(root, ".env.local") });
 dotenv.config({ path: resolve(root, ".env") });
 
-const dbUrl = process.env["DATABASE_URL"]?.startsWith("postgres")
-  ? process.env["DATABASE_URL"]
-  : "file:./dev.db";
+const dbUrl = "file:./dev.db";
 process.env["DATABASE_URL"] = dbUrl;
 
 const { serve } = await import("@hono/node-server");

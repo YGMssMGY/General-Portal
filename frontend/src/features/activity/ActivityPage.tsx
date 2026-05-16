@@ -15,7 +15,7 @@ export function ActivityPage() {
   const resourceCount = new Set(data.map((d) => d.resourceTitle)).size;
   const actorCount = new Set(data.map((d) => d.actorName)).size;
 
-  const metricCardStyle = (color: string): React.CSSProperties => ({
+  const metricCardStyle = (_color: string): React.CSSProperties => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
