@@ -300,7 +300,7 @@ export function FinancePage() {
 
       {/* Summary Cards */}
       <Grid style={{ marginBottom: "1.5rem" }}>
-        <Column lg={4} md={4} sm={8}>
+        <Column lg={4} md={4} sm={4}>
           <Tile
             style={{
               padding: "1.25rem",
@@ -354,7 +354,7 @@ export function FinancePage() {
             </Stack>
           </Tile>
         </Column>
-        <Column lg={4} md={4} sm={8}>
+        <Column lg={4} md={4} sm={4}>
           <Tile
             style={{
               padding: "1.25rem",
@@ -408,7 +408,7 @@ export function FinancePage() {
             </Stack>
           </Tile>
         </Column>
-        <Column lg={4} md={4} sm={8}>
+        <Column lg={4} md={4} sm={4}>
           <Tile
             style={{
               padding: "1.25rem",
@@ -462,7 +462,7 @@ export function FinancePage() {
             </Stack>
           </Tile>
         </Column>
-        <Column lg={4} md={4} sm={8}>
+        <Column lg={4} md={4} sm={4}>
           <Tile
             style={{
               padding: "1.25rem",
@@ -743,7 +743,7 @@ export function FinancePage() {
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
             />
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <Select
                   id="fin-category"
                   labelText="Category"
@@ -759,7 +759,7 @@ export function FinancePage() {
                   <SelectItem value="Other" text="Other" />
                 </Select>
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <NumberInput
                   id="fin-amount"
                   label="Amount"
@@ -770,7 +770,7 @@ export function FinancePage() {
               </Column>
             </Grid>
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <Select
                   id="fin-type"
                   labelText="Type"
@@ -786,7 +786,7 @@ export function FinancePage() {
                   <SelectItem value="revenue" text="Revenue" />
                 </Select>
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <Select
                   id="fin-status"
                   labelText="Status"
@@ -801,7 +801,7 @@ export function FinancePage() {
               </Column>
             </Grid>
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="fin-date"
                   labelText="Date"
@@ -811,7 +811,7 @@ export function FinancePage() {
                   onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
                 />
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="fin-notes"
                   labelText="Notes"

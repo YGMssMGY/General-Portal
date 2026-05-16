@@ -16,9 +16,17 @@
     "build:backend": "npm run build -w backend",
     "build:frontend": "npm run build -w frontend",
     "db:migrate": "npm run db:migrate -w backend",
+    "db:migrate:dev": "npm run db:migrate -w backend",
+    "db:migrate:prod": "npm run db:migrate:prod -w backend",
     "db:seed": "npm run db:seed -w backend",
+    "db:seed:dev": "npm run db:seed -w backend",
+    "db:seed:prod": "npm run db:seed:prod -w backend",
     "db:reset": "npm run db:reset -w backend",
+    "db:reset:dev": "npm run db:reset -w backend",
+    "db:reset:prod": "npm run db:reset:prod -w backend",
     "db:setup": "npm run db:migrate && npm run db:seed",
+    "db:setup:dev": "npm run db:migrate:dev && npm run db:seed:dev",
+    "db:setup:prod": "npm run db:migrate:prod && npm run db:seed:prod",
     "format": "prettier --write \"**/*.{ts,tsx,css,json}\"",
     "check-format": "prettier --check \"**/*.{ts,tsx,css,json}\"",
     "lint": "eslint .",
@@ -31,6 +39,7 @@
   "devDependencies": {
     "@auth/core": "^0.41.2",
     "@eslint/js": "^10.0.1",
+    "@prisma/client": "^6.19.3",
     "concurrently": "^9.1.2",
     "eslint": "^9.39.4",
     "eslint-plugin-import": "^2.32.0",
@@ -38,8 +47,5 @@
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3"
-  },
-  "dependencies": {
-    "@prisma/client": "^7.8.0"
   }
 }

@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Button } from "@carbon/react";
 import { Warning } from "@carbon/icons-react";
 
 interface Props {
@@ -60,25 +61,15 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             An unexpected error occurred. Please refresh the page to try again.
           </p>
-          <button
-            type="button"
-            style={{
-              marginTop: "1.5rem",
-              border: "1px solid var(--cds-border-subtle)",
-              background: "var(--cds-layer)",
-              padding: "0.5rem 1.25rem",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              color: "var(--cds-text-primary)",
-              cursor: "pointer",
-            }}
+          <Button
+            style={{ marginTop: "1.5rem" }}
             onClick={() => {
               this.setState({ hasError: false, error: null });
               window.location.reload();
             }}
           >
             Reload Page
-          </button>
+          </Button>
         </div>
       );
     }

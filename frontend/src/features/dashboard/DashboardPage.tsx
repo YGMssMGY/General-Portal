@@ -27,10 +27,10 @@ const metricLinks: Record<string, string> = {
 };
 
 const toneIconColors: Record<string, string> = {
-  primary: "#0f62fe",
-  secondary: "#007d79",
-  tertiary: "#198038",
-  danger: "#da1e28",
+  primary: "var(--cds-support-info)",
+  secondary: "var(--cds-support-success)",
+  tertiary: "var(--cds-support-success)",
+  danger: "var(--cds-support-error)",
   neutral: "var(--cds-text-secondary)",
 };
 

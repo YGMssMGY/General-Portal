@@ -70,23 +70,33 @@ export function PublicLayout() {
             <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>{config.displayName}</span>
           </Link>
           <nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <Link to="/" style={navLinkStyle}>
-              Home
-            </Link>
-            <Link to="/events" style={navLinkStyle}>
-              Events
-            </Link>
-            <Link to="/photos" style={navLinkStyle}>
-              Photos
-            </Link>
-            <Link to="/about" style={navLinkStyle}>
-              About
-            </Link>
-            <Link to="/login" style={{ marginLeft: "0.5rem" }}>
-              <Button kind="tertiary" size="sm">
-                Sign In
-              </Button>
-            </Link>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Link to="/" style={navLinkStyle}>
+                Home
+              </Link>
+              <Link to="/events" style={navLinkStyle}>
+                Events
+              </Link>
+              <Link to="/photos" style={navLinkStyle}>
+                Photos
+              </Link>
+              <Link to="/about" style={navLinkStyle}>
+                About
+              </Link>
+              <Link to="/login" style={{ marginLeft: "0.5rem" }}>
+                <Button kind="tertiary" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
           </nav>
         </div>
       </header>

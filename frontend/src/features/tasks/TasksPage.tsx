@@ -87,10 +87,11 @@ function KanbanCard({ task, onClick }: { task: Task; onClick: () => void }) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={style}
+      style={{ ...style, cursor: "pointer", outline: "none" }}
       onClick={onClick}
       role="button"
       tabIndex={0}
+      onFocus={() => {}}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onClick();
       }}
@@ -350,10 +351,11 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
   return (
     <div
       style={{
-        position: "absolute",
+        position: "fixed",
         top: 0,
         right: 0,
         width: "400px",
+        maxWidth: "100vw",
         height: "100%",
         background: "var(--cds-layer-01)",
         borderLeft: "1px solid var(--cds-border-subtle)",

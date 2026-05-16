@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { Tile, Loading } from "@carbon/react";
+import { Tile } from "@carbon/react";
 import { useSession } from "@hono/auth-js/react";
+import { LoadingState } from "../components/StateViews";
 import type { UserRole } from "../types";
 
 interface ProtectedRouteProps {
@@ -29,7 +30,7 @@ export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) 
           background: "var(--cds-background)",
         }}
       >
-        <Loading withOverlay={false} />
+        <LoadingState />
       </div>
     );
   }

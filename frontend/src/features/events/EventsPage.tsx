@@ -227,7 +227,7 @@ export function EventsPage() {
       {upcoming.length > 0 ? (
         <Grid style={{ marginBottom: "1.5rem" }}>
           {upcoming.map((event) => (
-            <Column lg={8} md={8} sm={16} key={event.id}>
+            <Column lg={8} md={8} sm={4} key={event.id}>
               <Tile style={{ padding: "1.5rem" }}>
                 <Stack gap={5}>
                   <Stack
@@ -675,7 +675,7 @@ export function EventsPage() {
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
             />
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <Select
                   id="evt-status"
                   labelText="Status"
@@ -687,7 +687,7 @@ export function EventsPage() {
                   <SelectItem value="completed" text="Completed" />
                 </Select>
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="evt-progress"
                   labelText="Progress (%)"
@@ -700,7 +700,7 @@ export function EventsPage() {
               </Column>
             </Grid>
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="evt-start"
                   labelText="Start Date"
@@ -710,7 +710,7 @@ export function EventsPage() {
                   onChange={(e) => setForm((c) => ({ ...c, startsAt: e.target.value }))}
                 />
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="evt-end"
                   labelText="End Date"
@@ -721,7 +721,7 @@ export function EventsPage() {
               </Column>
             </Grid>
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="evt-budget"
                   labelText="Total Budget"
@@ -731,7 +731,7 @@ export function EventsPage() {
                   onChange={(e) => setForm((c) => ({ ...c, budgetTotal: Number(e.target.value) }))}
                 />
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="evt-owners"
                   labelText="Coordinators (comma-separated)"

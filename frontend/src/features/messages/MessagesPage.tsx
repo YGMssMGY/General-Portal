@@ -166,7 +166,7 @@ export function MessagesPage() {
     <div>
       <Grid fullWidth style={{ minHeight: "calc(100vh - 10rem)" }}>
         {/* Thread List — left panel */}
-        <Column lg={4} md={0} sm={0}>
+        <Column lg={4} md={4} sm={4}>
           <Tile
             style={{
               height: "100%",
@@ -615,7 +615,7 @@ export function MessagesPage() {
         </Column>
 
         {/* Context Panel — right panel */}
-        <Column lg={4} md={0} sm={0}>
+        <Column lg={4} md={4} sm={4}>
           <Tile
             style={{
               height: "100%",
