@@ -287,7 +287,7 @@ export function ProposalsPage() {
       </Stack>
 
       <Grid>
-        <Column lg={selected ? 12 : 16} md={16} sm={16}>
+        <Column lg={selected ? 12 : 16} md={16} sm={4}>
           <Stack gap={6}>
             <DataTable
               columns={columns}
@@ -434,7 +434,7 @@ export function ProposalsPage() {
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
             />
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <Select
                   id="prop-type"
                   labelText="Type"
@@ -448,7 +448,7 @@ export function ProposalsPage() {
                   <SelectItem value="Project" text="Project" />
                 </Select>
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="prop-budget"
                   labelText="Budget"
@@ -462,7 +462,7 @@ export function ProposalsPage() {
               </Column>
             </Grid>
             <Grid>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="prop-submitted-by"
                   labelText="Submitted By"
@@ -471,7 +471,7 @@ export function ProposalsPage() {
                   onChange={(e) => setForm((c) => ({ ...c, submittedBy: e.target.value }))}
                 />
               </Column>
-              <Column lg={8} md={8} sm={16}>
+              <Column lg={8} md={8} sm={4}>
                 <TextInput
                   id="prop-date-needed"
                   labelText="Date Needed"

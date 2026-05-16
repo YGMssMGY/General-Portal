@@ -29,21 +29,12 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
         }}
       >
         <div>
-          <h1
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: 600,
-              lineHeight: "1.75rem",
-              color: "var(--cds-text-primary)",
-            }}
-          >
-            {title}
-          </h1>
+          <h1 className="cds--productive-heading-03">{title}</h1>
           {description ? (
             <p
+              className="cds--type-body-01"
               style={{
                 marginTop: "0.25rem",
-                fontSize: "0.875rem",
                 color: "var(--cds-text-secondary)",
               }}
             >
