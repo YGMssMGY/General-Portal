@@ -175,3 +175,6 @@ opencode.json
 .opencode
 docs
 
+# Uploaded files
+backend/uploads/*
+

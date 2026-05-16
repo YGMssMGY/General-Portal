@@ -1,11 +1,14 @@
 import type {
   ActivityItem,
+  ActivityStats,
+  ApprovalRule,
   DashboardData,
   EventItem,
   FinanceTransaction,
   Member,
   Message,
   MessageThread,
+  ModuleSettings,
   Proposal,
   SearchResult,
   Task,
@@ -30,11 +33,35 @@ export const workspaceApi = {
   getVolunteerSlots: () => fetchPage<VolunteerSlot>("/volunteers/slots"),
   getFinanceTransactions: () => fetchPage<FinanceTransaction>("/finance/transactions"),
   getMessageThreads: () => fetchPage<MessageThread>("/messages/threads"),
-  getFiles: () => fetchPage<WorkspaceFile>("/files"),
+  getFiles: (type?: string) =>
+    fetchPage<WorkspaceFile>(type ? `/files?type=${encodeURIComponent(type)}` : "/files"),
+  uploadFile: (formData: FormData) =>
+    fetchJson<WorkspaceFile>("/files", { method: "POST", body: formData }),
+  getFileDownloadUrl: (id: string) => `${API_BASE_URL}/files/${id}/download`,
   getMembers: () => fetchPage<Member>("/members"),
   getActivity: () => fetchPage<ActivityItem>("/activity"),
+  getActivityStats: () => fetchJson<ActivityStats>("/activity/stats"),
   getSettings: () => fetchJson<WorkspaceSettings>("/settings"),
-  search: (query: string) => fetchJson<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
+  search: (query: string, type?: string, limit?: number, offset?: number) => {
+    const params = new URLSearchParams({ q: query });
+    if (type && type !== "All") params.set("type", type);
+    if (limit != null) params.set("limit", String(limit));
+    if (offset != null) params.set("offset", String(offset));
+    return fetchJson<SearchResult[]>(`/search?${params.toString()}`);
+  },
+  getModules: () => fetchJson<ModuleSettings>("/modules"),
+  updateModule: (module: string, enabled: boolean) =>
+    fetchJson<ModuleSettings>("/modules", {
+      method: "PATCH",
+      ...jsonBody({ [module]: enabled }),
+    }),
+  getApprovalRules: () => fetchPage<ApprovalRule>("/modules/rules"),
+  createApprovalRule: (rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approvers">) =>
+    fetchJson<ApprovalRule>("/modules/rules", { method: "POST", ...jsonBody(rule) }),
+  deleteApprovalRule: (id: string) => fetchJson<void>(`/modules/rules/${id}`, { method: "DELETE" }),
+  uploadLogo: (formData: FormData) =>
+    fetchJson<{ url: string }>("/workspace/logo", { method: "POST", body: formData }),
+  getWorkspaceLogo: () => fetchJson<{ url: string }>("/workspace/logo"),
   getMicrosoftLoginUrl: () => `${API_BASE_URL}/oauth2/authorization/microsoft`,
   updateTask: (id: string, updates: Partial<Task>) =>
     fetchJson<Task>(`/tasks/${id}`, { method: "PATCH", ...jsonBody(updates) }),
@@ -78,6 +105,46 @@ export const workspaceApi = {
   updateMember: (id: string, updates: Partial<Member>) =>
     fetchJson<Member>(`/members/${id}`, { method: "PATCH", ...jsonBody(updates) }),
   removeMember: (id: string) => fetchJson<void>(`/members/${id}`, { method: "DELETE" }),
+  getVolunteerStats: () =>
+    fetchJson<{
+      totalHoursThisMonth: number;
+      activeVolunteers: number;
+      topContributor: { name: string; hours: number };
+    }>("/volunteers/stats"),
+  getSlotSignups: (slotId: string) =>
+    fetchJson<Array<{ id: string; userId: string; userName: string; status: string }>>(
+      `/volunteers/slots/${slotId}/signups`,
+    ),
+  createSlotSignup: (slotId: string, userId: string) =>
+    fetchJson<void>(`/volunteers/slots/${slotId}/signups`, {
+      method: "POST",
+      ...jsonBody({ userId }),
+    }),
+  searchMembers: (params: { q?: string; limit?: number; offset?: number }) =>
+    fetchJson<{ members: Member[]; total: number }>(
+      `/members?${new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null)) as Record<
+          string,
+          string
+        >,
+      ).toString()}`,
+    ),
+  getRoles: () =>
+    fetchJson<
+      Array<{
+        id: string;
+        name: string;
+        description: string;
+        count: number;
+        permissions: string[];
+      }>
+    >("/roles"),
+  createRole: (role: { name: string; description: string; permissions: string[] }) =>
+    fetchJson<void>("/roles", { method: "POST", ...jsonBody(role) }),
+  markThreadRead: (threadId: string) =>
+    fetchJson<void>(`/messages/threads/${threadId}/read`, { method: "PATCH" }),
+  getFinanceSummary: () => fetchJson<any>("/finance/summary"),
+  getFinanceTrends: (days: number) => fetchJson<any[]>(`/finance/trends?days=${days}`),
   updateSettings: (settings: Partial<WorkspaceSettings>) =>
     fetchJson<WorkspaceSettings>("/settings", { method: "PATCH", ...jsonBody(settings) }),
 };

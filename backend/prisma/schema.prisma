@@ -119,6 +119,9 @@ model Workspace {
   settings            WorkspaceSettings?
   publicEvents        PublicEvent[]
   photos              Photo[]
+  trendSnapshots      TrendSnapshot[]
+  modules             WorkspaceModule[]
+  approvalRules       ApprovalRule[]
 }
 
 model UserAccount {
@@ -215,11 +218,15 @@ model TaskItem {
   assigneeName  String?
   progress      Int        @default(0)
   blockedReason String?
+  position      Int        @default(0)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+  subtasks    TaskSubtask[]
+  comments    TaskComment[]
+  attachments TaskAttachment[]
 }
 
 model Proposal {
@@ -229,6 +236,7 @@ model Proposal {
   status       String   @default("submitted")
   submittedBy  String
   submittedAt  DateTime
+  dateNeeded   DateTime?
   budget       Decimal  @default(0)
   summary      String?
   createdAt    DateTime @default(now())
@@ -236,6 +244,7 @@ model Proposal {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+  attachments ProposalAttachment[]
 }
 
 model EventItem {
@@ -278,6 +287,7 @@ model VolunteerSlot {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+  signups     VolunteerSignup[]
 }
 
 model FinanceTransaction {
@@ -287,12 +297,15 @@ model FinanceTransaction {
   status      String   @default("pending")
   submittedBy String
   amount      Decimal  @default(0)
+  type        String   @default("expense")
+  notes       String?
   occurredAt  DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+  attachments FinanceAttachment[]
 }
 
 model MessageThread {
@@ -332,6 +345,7 @@ model Message {
 
   thread   MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   threadId String
+  attachments MessageAttachment[]
 }
 
 model WorkspaceFile {
@@ -370,6 +384,8 @@ model WorkspaceSettings {
   requireProposalApproval Boolean         @default(false)
   allowMemberInvites      Boolean         @default(true)
   fiscalYearStart         String          @default("January")
+  organizationType        String?
+  primaryContactEmail     String?
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 
@@ -398,6 +414,129 @@ model Photo {
   imageUrl    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+}
+
+model TaskSubtask {
+  id        String   @id @default(uuid())
+  title     String
+  completed Boolean  @default(false)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task   TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+}
+
+model TaskComment {
+  id         String   @id @default(uuid())
+  authorName String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  task   TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+}
+
+model TaskAttachment {
+  id         String   @id @default(uuid())
+  name       String
+  fileType   String
+  sizeLabel  String?
+  storageKey String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  task   TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+}
+
+model ProposalAttachment {
+  id         String   @id @default(uuid())
+  name       String
+  fileType   String
+  sizeLabel  String?
+  storageKey String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  proposalId String
+}
+
+model VolunteerSignup {
+  id          String   @id @default(uuid())
+  memberName  String
+  status      String   @default("registered")
+  hoursLogged Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  slot   VolunteerSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  slotId String
+}
+
+model FinanceAttachment {
+  id         String   @id @default(uuid())
+  name       String
+  fileType   String
+  sizeLabel  String?
+  storageKey String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  transaction   FinanceTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  transactionId String
+}
+
+model MessageAttachment {
+  id         String   @id @default(uuid())
+  name       String
+  fileType   String
+  sizeLabel  String?
+  storageKey String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+}
+
+model TrendSnapshot {
+  id          String   @id @default(uuid())
+  metricKey   String
+  metricValue Float
+  recordedAt  DateTime
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+}
+
+model WorkspaceModule {
+  id         String   @id @default(uuid())
+  moduleKey  String
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  @@unique([workspaceId, moduleKey])
+}
+
+model ApprovalRule {
+  id           String   @id @default(uuid())
+  triggerType  String
+  triggerValue String
+  approverIds  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String

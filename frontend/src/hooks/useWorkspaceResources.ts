@@ -25,12 +25,20 @@ export function useFinanceTransactions() {
   return useAsyncData(() => workspaceApi.getFinanceTransactions(), []);
 }
 
+export function useFinanceSummary() {
+  return useAsyncData(() => workspaceApi.getFinanceSummary(), []);
+}
+
+export function useFinanceTrends(days = 7) {
+  return useAsyncData(() => workspaceApi.getFinanceTrends(days), [days]);
+}
+
 export function useMessageThreads() {
   return useAsyncData(() => workspaceApi.getMessageThreads(), []);
 }
 
-export function useFiles() {
-  return useAsyncData(() => workspaceApi.getFiles(), []);
+export function useFiles(type?: string) {
+  return useAsyncData(() => workspaceApi.getFiles(type), [type]);
 }
 
 export function useMembers() {
@@ -41,10 +49,25 @@ export function useActivity() {
   return useAsyncData(() => workspaceApi.getActivity(), []);
 }
 
+export function useActivityStats() {
+  return useAsyncData(() => workspaceApi.getActivityStats(), []);
+}
+
 export function useSettings() {
   return useAsyncData(() => workspaceApi.getSettings(), []);
 }
 
-export function useSearch(query: string) {
-  return useAsyncData(() => workspaceApi.search(query), [query]);
+export function useModules() {
+  return useAsyncData(() => workspaceApi.getModules(), []);
+}
+
+export function useApprovalRules() {
+  return useAsyncData(() => workspaceApi.getApprovalRules(), []);
+}
+
+export function useSearch(query: string, type?: string, limit?: number, offset?: number) {
+  return useAsyncData(
+    () => workspaceApi.search(query, type, limit, offset),
+    [query, type, limit, offset],
+  );
 }
