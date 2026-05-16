@@ -45,6 +45,13 @@ function getAuthConfig(): AuthConfig {
           if (credentials?.password !== env.DEV_AUTH_PASSWORD) return null;
           const email = credentials?.username as string;
           if (!email?.includes("@")) return null;
+          try {
+            const user = await db.userAccount.findUnique({ where: { email } });
+            if (user)
+              return { id: user.id, email: user.email, name: user.displayName };
+          } catch {
+            /* DB not available */
+          }
           return { id: email, email, name: email.split("@")[0] };
         },
       }),

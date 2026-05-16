@@ -5,7 +5,7 @@ import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
-import { Button, TextInput, Select, SelectItem, Form } from "@carbon/react";
+import { Button, TextInput, Select, SelectItem, Form, FilterableMultiSelect } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useTasks } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +22,13 @@ export function TasksPage() {
   const [createError, setCreateError] = useState<string>();
   const [deleteTarget, setDeleteTarget] = useState<Task>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const memberOptions = [
+    "Chris Rivera",
+    "Sarah Jenkins",
+    "Maya Chen",
+    "Jordan Diaz",
+    "Dev Admin",
+  ].map((n) => ({ id: n, label: n }));
   const [taskForm, setTaskForm] = useState({
     title: "",
     priority: "normal" as Priority,
@@ -215,12 +222,22 @@ export function TasksPage() {
                 value={taskForm.project}
                 onChange={(e) => setTaskForm((c) => ({ ...c, project: e.target.value }))}
               />
-              <TextInput
+              <FilterableMultiSelect
                 id="task-assignee"
-                labelText="Assignee"
-                value={taskForm.assigneeName}
-                onChange={(e) => setTaskForm((c) => ({ ...c, assigneeName: e.target.value }))}
-                placeholder={user?.displayName}
+                titleText="Assignee"
+                placeholder="Search members..."
+                items={memberOptions}
+                initialSelectedItems={
+                  taskForm.assigneeName
+                    ? taskForm.assigneeName.split(", ").map((n) => ({ id: n, label: n }))
+                    : []
+                }
+                onChange={({ selectedItems }: any) =>
+                  setTaskForm((c) => ({
+                    ...c,
+                    assigneeName: selectedItems.map((s: any) => s.label).join(", "),
+                  }))
+                }
               />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
