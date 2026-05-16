@@ -689,7 +689,7 @@ export function TasksPage() {
 
   const memberOptions = useMemo(
     () =>
-      members.map((m) => ({
+      (members || []).map((m) => ({
         id: m.id,
         label: (m as any).displayName || m.user?.displayName || "Unknown",
       })),
