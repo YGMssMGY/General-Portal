@@ -7,7 +7,6 @@ import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { env } from "./env.js";
 import { db } from "./db.js";
-import { prisma } from "./db.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
 
@@ -43,20 +42,10 @@ function getAuthConfig(): AuthConfig {
           password: { label: "Password", type: "password" },
         },
         async authorize(credentials) {
-          const username = credentials?.username as string;
-          const password = credentials?.password as string;
-          if (password !== env.DEV_AUTH_PASSWORD) return null;
-          if (!username?.includes("@")) return null;
-          try {
-            const user = await prisma.userAccount.findUnique({
-              where: { email: username },
-            });
-            if (user)
-              return { id: user.id, email: user.email, name: user.displayName };
-          } catch {
-            // DB not available
-          }
-          return null;
+          if (credentials?.password !== env.DEV_AUTH_PASSWORD) return null;
+          const email = credentials?.username as string;
+          if (!email?.includes("@")) return null;
+          return { id: email, email, name: email.split("@")[0] };
         },
       }),
     );
@@ -78,26 +67,18 @@ function getAuthConfig(): AuthConfig {
           try {
             const membership = await db.membership.findFirst({
               where: { userId: user.id },
-              include: {
-                workspace: { select: { id: true, name: true } },
-                permissions: { select: { permission: true } },
-              },
             });
             if (membership) {
-              (token as any).workspaceId = membership.workspace.id;
-              (token as any).workspaceName = membership.workspace.name;
-              (token as any).role = membership.accessLabel.toLowerCase();
-              (token as any).permissions = membership.permissions.map(
-                (p) => p.permission,
-              );
-              return token;
+              (token as any).workspaceId = (membership as any).workspaceId;
+              (token as any).role = membership.accessLabel?.toLowerCase();
             }
           } catch {
             /* DB not available */
           }
-          (token as any).workspaceId = "ws-default";
+          (token as any).workspaceId =
+            (token as any).workspaceId || "ws-default";
           (token as any).workspaceName = "General Portal";
-          (token as any).role = "admin";
+          (token as any).role = (token as any).role || "admin";
           (token as any).permissions = ["*"];
         }
         return token;
