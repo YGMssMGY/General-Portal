@@ -1,50 +1,67 @@
 import dotenv from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { authHandler } from "@hono/auth-js";
-import { env } from "./lib/env.js";
-import { authConfig } from "./lib/auth-config.js";
-import { errorHandler } from "./middleware/error.js";
-import { requireWorkspace } from "./middleware/auth.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..", "..");
+
 dotenv.config({ path: resolve(root, ".env.local") });
 dotenv.config({ path: resolve(root, ".env") });
 
+const dbUrl = process.env["DATABASE_URL"]?.startsWith("postgres")
+  ? process.env["DATABASE_URL"]
+  : "file:./dev.db";
+process.env["DATABASE_URL"] = dbUrl;
+
+const { serve } = await import("@hono/node-server");
+const { Hono } = await import("hono");
+const { cors } = await import("hono/cors");
+const { authHandler } = await import("@hono/auth-js");
+const { env } = await import("./lib/env.js");
+const { authConfig } = await import("./lib/auth-config.js");
+const { errorHandler } = await import("./middleware/error.js");
+const { requireWorkspace } = await import("./middleware/auth.js");
+
 const app = new Hono();
-
-app.use(
-  "*",
-  cors({
-    origin: env.FRONTEND_ORIGIN,
-    credentials: true,
-  }),
-);
-
+app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
 app.use(authConfig);
-
-import healthRoute from "./routes/health.js";
-import authRoute from "./routes/auth.js";
-
 app.use("/api/auth/*", authHandler());
-import dashboardRoute from "./routes/dashboard.js";
-import tasksRoute from "./routes/tasks.js";
-import proposalsRoute from "./routes/proposals.js";
-import eventsRoute from "./routes/events.js";
-import volunteersRoute from "./routes/volunteers.js";
-import financeRoute from "./routes/finance.js";
-import messagesRoute from "./routes/messages.js";
-import filesRoute from "./routes/files.js";
-import membersRoute from "./routes/members.js";
-import activityRoute from "./routes/activity.js";
-import searchRoute from "./routes/search.js";
-import settingsRoute from "./routes/settings.js";
-import publicRoute from "./routes/public.js";
-import docsRoute from "./routes/docs.js";
+
+const [
+  { default: healthRoute },
+  { default: authRoute },
+  { default: dashboardRoute },
+  { default: tasksRoute },
+  { default: proposalsRoute },
+  { default: eventsRoute },
+  { default: volunteersRoute },
+  { default: financeRoute },
+  { default: messagesRoute },
+  { default: filesRoute },
+  { default: membersRoute },
+  { default: activityRoute },
+  { default: searchRoute },
+  { default: settingsRoute },
+  { default: publicRoute },
+  { default: docsRoute },
+] = await Promise.all([
+  import("./routes/health.js"),
+  import("./routes/auth.js"),
+  import("./routes/dashboard.js"),
+  import("./routes/tasks.js"),
+  import("./routes/proposals.js"),
+  import("./routes/events.js"),
+  import("./routes/volunteers.js"),
+  import("./routes/finance.js"),
+  import("./routes/messages.js"),
+  import("./routes/files.js"),
+  import("./routes/members.js"),
+  import("./routes/activity.js"),
+  import("./routes/search.js"),
+  import("./routes/settings.js"),
+  import("./routes/public.js"),
+  import("./routes/docs.js"),
+]);
 
 app.route("/api", healthRoute);
 app.route("/api", authRoute);
@@ -79,16 +96,8 @@ app.route("/api", publicRoute);
 
 app.onError(errorHandler);
 
-serve(
-  {
-    fetch: app.fetch,
-    port: env.PORT,
-  },
-  (info) => {
-    console.log(
-      `[backend] Hono server running on http://localhost:${info.port}`,
-    );
-  },
-);
+serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+  console.log(`[backend] Hono server running on http://localhost:${info.port}`);
+});
 
 export default app;

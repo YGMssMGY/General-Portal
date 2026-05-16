@@ -8,14 +8,17 @@ const root = resolve(__dirname, "..", "..", "..");
 dotenv.config({ path: resolve(root, ".env.local") });
 dotenv.config({ path: resolve(root, ".env") });
 
+const dbUrl = process.env["DATABASE_URL"]?.startsWith("postgres")
+  ? process.env["DATABASE_URL"]
+  : "file:./dev.db";
+process.env["DATABASE_URL"] = dbUrl;
+
 export const env = {
   PORT: parseInt(process.env["BACKEND_PORT"] || "3001", 10),
-  DATABASE_URL: process.env["DATABASE_URL"] || "file:./dev.db",
+  DATABASE_URL: dbUrl,
   AUTH_SECRET:
     process.env["AUTH_SECRET"] || "dev-secret-change-in-production-abc123",
   AUTH_URL: process.env["AUTH_URL"] || "http://localhost:5173",
-  DEV_AUTH_USERNAME:
-    process.env["DEV_AUTH_USERNAME"] || "dev@generalportal.local",
   DEV_AUTH_PASSWORD: process.env["DEV_AUTH_PASSWORD"] || "devpass123",
   FRONTEND_ORIGIN: process.env["FRONTEND_ORIGIN"] || "http://localhost:5173",
   CLIENT_NAME: process.env["CLIENT_NAME"] || "developers",
@@ -26,6 +29,4 @@ export const env = {
   MICROSOFT_TENANT_ID: process.env["MICROSOFT_TENANT_ID"] || "common",
   MICROSOFT_CLIENT_ID: process.env["MICROSOFT_CLIENT_ID"] || "",
   MICROSOFT_CLIENT_SECRET: process.env["MICROSOFT_CLIENT_SECRET"] || "",
-  REDIS_HOST: process.env["REDIS_HOST"] || "localhost",
-  REDIS_PORT: parseInt(process.env["REDIS_PORT"] || "6379", 10),
 };
