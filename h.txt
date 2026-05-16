@@ -1,0 +1,11 @@
+HTTP/1.1 302 Found
+access-control-allow-credentials: true
+location: http://localhost:5173/admin
+vary: Origin
+set-cookie: authjs.callback-url=http%3A%2F%2Flocalhost%3A5173%2Fadmin; Path=/; HttpOnly; SameSite=Lax
+set-cookie: authjs.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiYVEzTUIyX016aFQ0REcyZUxoemcxV2hpaklrbHg0Z3JwNEdkVV8tdVlGb25mRmVTNGNRZFVZWVRfdzl0SVRxS0NPTzNlMFMyS281Z0tIalJhSFB5encifQ..S_MbI5goW6ssmQFUJFuwUw.uyTDvA3LBqL9Kc04omKJMrHrq5zOFUBbR4cqu1S775cBY9i05F6hKfFxBwKG8ue0FdlPamdbyjqSmsrp2w1dU8f7O0LIjkfA9Ka8_09Yc2B88VEhmEohNkjyV_YHyvhmW9pyiqlKfsajuXjO1StFJs5sPDn7v54vJ673rOmMFvkcys1Gyp7M8lTpX5cBMxp4Gt2VPeQzxPm9RomJQgvmhMtjC6L-9RpGdT-1JKtiD1ozlFgh-wnR2M7UZuZtjUHqNyVPQ8FduFKGEiohQClbDSMGcYdavUqA9Ze58fjwwKceCtLpRtLPsXEUpTMCDd9sDKAs3f2zxyoio_b9Tswit-_SdpxyHhM_2CzaYRfO8D5QalOKvjYjJ_GhptgbE4AmuSr3Ua1XwI37Z5xETrS_7oj4HES045X1aW8pZuX3AIgCSq2Wtw4JbEhb4rv1r6Vq2PhYr5JLrrXjoT26-LKSXA.lgB9iy-Dgq4P3nUqAz2si6kBy-Xm1cfaPwR2Le9gZIg; Path=/; Expires=Mon, 15 Jun 2026 04:35:27 GMT; HttpOnly; SameSite=Lax
+Date: Sat, 16 May 2026 04:35:27 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+
