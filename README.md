@@ -1,274 +1,158 @@
 # General Portal
 
-A dual-purpose club management and student council platform with a public showcase
-and a private, role-based admin dashboard.
+A dual-purpose club management dashboard for **Developers' Club** and **Student Council** with a public showcase and a role-based admin dashboard.
 
-**Stack:** Java 21 &bull; Spring Boot 3.3.5 &bull; React 18 &bull; Vite 6 &bull; TypeScript &bull; Tailwind CSS 3
-**Databases:** PostgreSQL &bull; SQLite &bull; H2 &bull; Redis (optional)
-
----
-
-## Project Overview
-
-General Portal powers the **Developers&apos; Club** and **Student Council**
-through a single shared web application. Public visitors browse past events, photo
-galleries, and organizational information. Authenticated members enter the admin
-dashboard where a strict role hierarchy (Teacher &rarr; President &rarr; VP &rarr; Members
-&rarr; Grade Reps) controls feature visibility and write access.
-
-The frontend works **completely offline** during development thanks to Mock Service
-Worker (MSW) &mdash; no backend, no database, and no internet connection are required
-to preview and navigate every page.
+**Stack:** Hono + Prisma + React 18 + Vite + TypeScript + IBM Carbon Design System  
+**Database:** SQLite (dev) / PostgreSQL (prod)  
+**Auth:** @hono/auth-js (JWT) with dev credentials + OAuth2 (GitHub, Google, Microsoft)
 
 ---
 
-## Tech Stack
+## Quick Start
 
-| Layer        | Technology                                                          |
-| ------------ | ------------------------------------------------------------------- |
-| **Backend**  | Spring Boot 3.3.5, Java 21, Spring Security OAuth2, Spring Data JPA |
-| **Auth**     | Microsoft Entra ID (OAuth2), Dev Login Filter (dev-mode only)       |
-| **Database** | PostgreSQL 16, SQLite 3, H2 (demo fallback)                         |
-| **Cache**    | Caffeine (simple), Redis (optional)                                 |
-| **Frontend** | React 18, Vite 6, TypeScript, Tailwind CSS 3                        |
-| **Mocking**  | Mock Service Worker (MSW)                                           |
-| **Icons**    | Carbon Design System (`@carbon/icons-react`)                        |
-| **Testing**  | JUnit 5, Mockito, Spring Boot Test                                  |
-| **Build**    | Maven, npm                                                          |
+```bash
+npm install
+npm run dev
+```
+
+Opens `http://localhost:5173`. Login with `dev.admin@generalportal.local` / `devpass123`.
+
+### Dev Accounts
+
+| Email                               | Role      |
+| ----------------------------------- | --------- |
+| `dev.admin@generalportal.local`     | Admin     |
+| `dev.president@generalportal.local` | President |
+| `dev.officer@generalportal.local`   | Officer   |
+| `dev.member@generalportal.local`    | Member    |
+
+All use password from `DEV_AUTH_PASSWORD` (default `devpass123`).
+
+---
+
+## Architecture
+
+```
+root package.json  (workspaces: ["frontend", "backend"])
+├── frontend/   Vite + React 18 + Carbon Design System  → port 5173
+├── backend/    Hono + Prisma + @hono/auth-js          → port 3001
+└── node_modules/  (hoisted)
+
+Vite proxy: /api/* → localhost:3001
+```
+
+### Database
+
+| Mode        | Database   | File                                                  |
+| ----------- | ---------- | ----------------------------------------------------- |
+| Development | SQLite     | `backend/prisma/dev.db` (or `dev-stuco.db` for stuco) |
+| Production  | PostgreSQL | via `schema.prod.prisma`                              |
+
+The dev database resets on every `npm run dev` — fresh migration + seed data.
+
+### Multi-Client
+
+`VITE_CLIENT_NAME=developers|stuco` controls:
+
+- Brand name and logo initials
+- Favicon (`frontend/public/developers.png` or `stuco.png`)
+- Feature flag visibility in sidebar
+- Separate database file (`dev.db` vs `dev-stuco.db`)
+
+---
+
+## Commands
+
+```bash
+npm run dev          # Start both servers (kills ports 3001,5173 first)
+npm run stop         # Kill ports 3001,5173
+npm run build        # TypeScript build for backend + frontend
+npm run format       # Prettier
+npx eslint "backend/src/**/*.ts" "frontend/src/**/*.{ts,tsx}"
+
+npm run test -w backend    # 10 tests (Hono app.request)
+npm run test -w frontend   # 20 tests (vitest + @testing-library/react)
+```
 
 ---
 
 ## Project Structure
 
 ```
-├── backend/                          # Spring Boot backend
-│   ├── src/main/java/com/generalportal/portal/
-│   │   ├── config/                   # Security, Swagger, CORS config
-│   │   ├── controller/               # REST controllers (17 endpoints)
-│   │   ├── dto/                      # Data Transfer Objects
-│   │   ├── entity/                   # JPA entities (16 tables)
-│   │   ├── exception/                # Global exception handler
-│   │   ├── repository/               # Spring Data repositories
-│   │   ├── security/                 # OAuth2, dev-auth filter
-│   │   └── service/                  # Business logic
-│   ├── src/main/resources/
-│   │   ├── application.yml           # Main configuration
-│   │   ├── application-dev.yml       # PostgreSQL dev profile
-│   │   ├── application-sqlite.yml    # SQLite profile
-│   │   ├── application-demo.yml      # H2 fallback profile
-│   │   ├── application-redis.yml     # Redis add-on profile
-│   │   └── db/migration/             # Flyway database migrations
-│   ├── data/                         # SQLite database file location
-│   └── pom.xml
-├── frontend/                         # React + Vite frontend
-│   ├── src/
-│   │   ├── api/                      # HTTP client + API service
-│   │   ├── components/               # Reusable components (DataTable, Modal, etc.)
-│   │   ├── context/                  # React contexts (Auth, Theme, Workspace)
-│   │   ├── features/                 # Feature pages (dashboard, tasks, etc.)
-│   │   ├── hooks/                    # Custom React hooks
-│   │   ├── mocks/                    # MSW handlers & mock data generators
-│   │   ├── routes/                   # Route definitions + auth guards
-│   │   ├── types/                    # TypeScript type definitions
-│   │   └── utils/                    # Formatting, class name utilities
-│   ├── public/                       # Static assets, MSW service worker
-│   └── package.json
-├── data/                             # Shared SQLite database directory
-│   └── .gitkeep
-├── .tools/                           # Bundled Maven (portable, no system setup)
-├── start-dev.ps1                     # Windows dev launcher
-├── start-dev.sh                      # Linux/macOS dev launcher
-├── stop-dev.ps1                      # Stop script
-├── check-dev.ps1                     # Health check script
-├── .env.example                      # Environment variable template
-└── README.md                         # This file
+backend/
+├── prisma/
+│   ├── schema.prisma       # SQLite schema (dev)
+│   ├── schema.prod.prisma  # PostgreSQL schema (swap for prod)
+│   └── seed.ts             # Seed data (5 users, sample tasks/events/etc)
+├── src/
+│   ├── index.ts            # Server entry — sets DATABASE_URL, dynamic imports
+│   ├── lib/
+│   │   ├── env.ts          # Typed env access
+│   │   ├── db.ts           # PrismaClient with safe error proxy
+│   │   └── auth-config.ts  # Auth.js providers + callbacks
+│   ├── middleware/
+│   │   └── auth.ts         # requireWorkspace middleware
+│   └── routes/             # 15 route modules
+│       ├── auth.ts, dashboard.ts, tasks.ts, proposals.ts
+│       ├── events.ts, volunteers.ts, finance.ts, messages.ts
+│       ├── files.ts, members.ts, activity.ts, search.ts
+│       ├── settings.ts, public.ts, docs.ts
+│       └── health.ts
+└── scripts/dev-setup.mjs   # DB reset + seed on dev start
+
+frontend/
+├── src/
+│   ├── api/httpClient.ts       # fetchJson with retry (2x on 5xx)
+│   ├── config/clientConfig.ts  # Multi-client branding config
+│   ├── context/                # Auth, Theme, Workspace contexts
+│   ├── components/             # UIShell, Card, PageHeader, DataTable, etc.
+│   ├── features/               # 12 admin pages + 4 public pages
+│   └── routes/                 # AppRoutes, LoginPage, ProtectedRoute
+└── public/
+    ├── developers.png          # Favicon for Developers' Club
+    └── stuco.png               # Favicon for Student Council
 ```
 
 ---
 
-## Quick Start
+## API Endpoints
 
-### Prerequisites
+All endpoints under `/api/*` are proxied by Vite to the Hono backend:
 
-- **Java 17+** (21 recommended)
-- **Node.js 18+**
-- **Maven** (bundled in `.tools/`, or system PATH, or set `MVN_CMD`)
-
-### Zero-Setup Start (SQLite &mdash; no database install!)
-
-```powershell
-# Clone the repo
-git clone <repo-url>
-cd General-Portal
-
-# Copy environment template
-Copy-Item .env.example .env.local
-
-# Start everything with SQLite (auto-creates data/general-portal.db)
-.\start-dev.ps1 -DatabaseProvider sqlite
-```
-
-### Start with PostgreSQL
-
-```powershell
-# Requires PostgreSQL running on localhost:5432
-.\start-dev.ps1 -DatabaseProvider postgres
-```
-
-### Start with H2 (in-memory, no persistence)
-
-```powershell
-.\start-dev.ps1 -BackendProfile demo
-```
-
-### Linux / macOS
-
-```bash
-chmod +x start-dev.sh
-./start-dev.sh -d sqlite        # SQLite
-./start-dev.sh -d postgres      # PostgreSQL
-./start-dev.sh -b demo          # H2
-```
-
----
-
-## Available Profiles
-
-| Profile         | Database     | Requires                          | Persistence          | Use Case              |
-| --------------- | ------------ | --------------------------------- | -------------------- | --------------------- |
-| `dev` (default) | PostgreSQL   | PostgreSQL 16 at `localhost:5432` | Yes                  | Full development      |
-| `sqlite`        | SQLite       | Nothing (file auto-created)       | Yes                  | Quick dev / demo      |
-| `demo`          | H2 in-memory | Nothing                           | No (lost on restart) | Quick test / fallback |
-| `redis`         | Redis add-on | Redis at `localhost:6379`         | &mdash;              | Cache & session       |
+| Method       | Path                        | Description                                                     |
+| ------------ | --------------------------- | --------------------------------------------------------------- |
+| GET          | `/api/health`               | Health check                                                    |
+| GET          | `/api/auth/session`         | Current session                                                 |
+| GET          | `/api/me`                   | Current user profile                                            |
+| GET          | `/api/dashboard`            | Dashboard metrics + attention items + tasks + events + activity |
+| GET/POST     | `/api/tasks`                | List / create tasks                                             |
+| PATCH/DELETE | `/api/tasks/:id`            | Update / delete task                                            |
+| GET/POST     | `/api/proposals`            | List / create proposals                                         |
+| GET/POST     | `/api/events`               | List / create events                                            |
+| GET/POST     | `/api/volunteers/slots`     | List / create volunteer slots                                   |
+| GET/POST     | `/api/finance/transactions` | List / create transactions                                      |
+| GET/POST     | `/api/messages/threads`     | List / create message threads                                   |
+| GET/POST     | `/api/files`                | List / upload files                                             |
+| GET/PATCH    | `/api/members`              | List / update members                                           |
+| GET          | `/api/activity`             | Activity feed                                                   |
+| GET          | `/api/search`               | Cross-resource search                                           |
+| GET/PATCH    | `/api/settings`             | Workspace settings                                              |
+| GET          | `/api/events/public`        | Public events (no auth)                                         |
+| GET          | `/api/photos`               | Photos (no auth)                                                |
 
 ---
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` and customize:
+Copy `.env.example` to `.env.local`:
 
-```ini
-# Frontend
-FRONTEND_ORIGIN=http://localhost:5173
-VITE_API_URL=http://localhost:8080/api
-VITE_DEV_AUTH=false              # Set to "true" to show developer login form
-
-# Database (PostgreSQL)
-POSTGRES_URL=jdbc:postgresql://localhost:5432/general_portal
-POSTGRES_USER=general_portal
-POSTGRES_PASSWORD=yourpassword
-
-# Dev Authentication
-DEV_AUTH_USERNAME=dev@general-portal.local
-DEV_AUTH_PASSWORD=your-dev-password
-
-# Microsoft Entra ID (OAuth2)
-MICROSOFT_TENANT_ID=common
-MICROSOFT_CLIENT_ID=
-MICROSOFT_CLIENT_SECRET=
-
-# Redis (optional)
-REDIS_HOST=localhost
-REDIS_PORT=6379
+```bash
+cp .env.example .env.local
 ```
 
----
+Key variables:
 
-## URLs After Startup
-
-| Service            | URL                              |
-| ------------------ | -------------------------------- |
-| **Frontend**       | http://localhost:5173            |
-| **Backend Health** | http://localhost:8080/api/health |
-| **API Docs**       | http://localhost:8080/api-docs   |
-| **API Docs**       | http://localhost:8080/api-docs   |
-
----
-
-## Role Hierarchy
-
-The portal enforces a linear role hierarchy. Higher roles inherit all permissions
-of lower roles:
-
-```
-Teacher Advisor  ─── Full access (admin)
-    │
-President  ─── Manage members, tasks, events, proposals, volunteers, files
-    │
-Vice President  ─── Manage tasks, events, volunteers, files
-    │
-Member  ─── View all (dashboard, tasks, events, messages, files)
-    │
-Grade Rep  ─── View events, messages, activity only
-```
-
-Role enforcement happens at two levels:
-
-1. **Method security** (`@PreAuthorize`) on every controller endpoint
-2. **Role hierarchy** (`RoleHierarchyImpl`) for inherited permissions
-
----
-
-## Running Tests
-
-### Backend
-
-```powershell
-cd backend
-
-# Run tests
-mvn test
-
-# With SQLite profile
-mvn test "-Dspring.profiles.active=sqlite"
-
-# With H2 profile
-mvn test "-Dspring.profiles.active=demo"
-```
-
-### Frontend
-
-```powershell
-cd frontend
-npm run build          # TypeScript type-check + Vite production build
-npm run format         # Prettier code formatting
-npm run check-format   # Verify formatting (CI)
-```
-
----
-
-## Authentication Modes
-
-### 1. Dev Login (local development)
-
-Set `DEV_AUTH_USERNAME` and `DEV_AUTH_PASSWORD` in `.env.local`. The frontend
-shows a Developer Login form when `VITE_DEV_AUTH=true`. The backend `DevLoginFilter`
-is only active in `dev`, `demo`, `local`, and `sqlite` profiles.
-
-### 2. Microsoft Entra ID (production)
-
-Set `GENERAL_PORTAL_DEMO_MODE=false` and provide real `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`,
-and `MICROSOFT_CLIENT_SECRET` values. Redirect URI: `http://localhost:8080/login/oauth2/code/microsoft`
-
-### 3. Frontend-Only (MSW Mock Mode)
-
-The frontend uses Mock Service Worker to intercept all API calls. No backend, no
-database, and no authentication are required. Simply run `npm run dev` from `frontend/`.
-
----
-
-## Common Issues
-
-| Issue                             | Solution                                                                          |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| _PostgreSQL connection refused_   | Use `-DatabaseProvider sqlite` or `-BackendProfile demo`                          |
-| _Maven not found_                 | The bundled Maven is in `.tools/`. Clone with `git` (not ZIP download).           |
-| _Port 8080 / 5173 already in use_ | Run `.\stop-dev.ps1` to clean up old processes.                                   |
-| _SQLite database locked_          | Stop the backend, delete `data/general-portal.db`, restart.                       |
-| _Frontend shows "Network error"_  | Start the backend first, or run `npm run dev` from `frontend/` for MSW mock mode. |
-
----
-
-## License
-
-This project is for internal club use. All rights reserved.
+- `VITE_CLIENT_NAME=developers|stuco` — Client branding
+- `DATABASE_URL` — SQLite (dev) or PostgreSQL (prod)
+- `DEV_AUTH_PASSWORD` — Dev credentials login
+- `GITHUB_ID` / `GOOGLE_ID` / `MICROSOFT_CLIENT_ID` — OAuth2 providers (optional)
