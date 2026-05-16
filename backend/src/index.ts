@@ -8,7 +8,10 @@ const root = resolve(__dirname, "..", "..");
 dotenv.config({ path: resolve(root, ".env.local") });
 dotenv.config({ path: resolve(root, ".env") });
 
-const dbUrl = "file:./dev.db";
+const clientName =
+  process.env["CLIENT_NAME"] || process.env["VITE_CLIENT_NAME"] || "developers";
+const dbFile = clientName === "stuco" ? "dev-stuco.db" : "dev.db";
+const dbUrl = `file:./${dbFile}`;
 process.env["DATABASE_URL"] = dbUrl;
 
 const { serve } = await import("@hono/node-server");
@@ -71,15 +74,17 @@ app.use("/api/proposals", requireWorkspace);
 app.use("/api/events", requireWorkspace);
 app.use("/api/volunteers", requireWorkspace);
 app.use("/api/finance", requireWorkspace);
-app.use("/api/messages", requireWorkspace);
+app.use("/api/messages/*", requireWorkspace);
 app.use("/api/files", requireWorkspace);
 app.use("/api/members", requireWorkspace);
 app.use("/api/activity", requireWorkspace);
 app.use("/api/search", requireWorkspace);
 app.use("/api/settings", requireWorkspace);
-app.use("/api/roles", requireWorkspace);
-app.use("/api/modules", requireWorkspace);
-app.use("/api/workspace", requireWorkspace);
+app.use("/api/roles/*", requireWorkspace);
+
+app.use("/api/modules/*", requireWorkspace);
+
+app.use("/api/workspace/*", requireWorkspace);
 
 app.route("/api", dashboardRoute);
 app.route("/api", tasksRoute);
