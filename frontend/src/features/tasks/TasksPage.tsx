@@ -1,15 +1,23 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
-import { Button, TextInput, Select, SelectItem, Form, FilterableMultiSelect } from "@carbon/react";
+import {
+  Button,
+  TextInput,
+  Select,
+  SelectItem,
+  Form,
+  FilterableMultiSelect,
+  InlineNotification,
+} from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useTasks } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../context/AuthContext";
-import type { Priority, Task, TaskStatus } from "../../types";
+import type { Priority, Task, TaskStatus, Member } from "../../types";
 import { formatDate } from "../../utils/format";
 import { Add, Edit, TrashCan } from "@carbon/icons-react";
 
@@ -22,13 +30,25 @@ export function TasksPage() {
   const [createError, setCreateError] = useState<string>();
   const [deleteTarget, setDeleteTarget] = useState<Task>();
   const [isDeleting, setIsDeleting] = useState(false);
-  const memberOptions = [
-    "Chris Rivera",
-    "Sarah Jenkins",
-    "Maya Chen",
-    "Jordan Diaz",
-    "Dev Admin",
-  ].map((n) => ({ id: n, label: n }));
+  const [members, setMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    workspaceApi
+      .getMembers()
+      .then(setMembers)
+      .catch(() => {});
+  }, []);
+
+  const memberOptions = useMemo(
+    () =>
+      members.map((m) => ({
+        id: m.id,
+        label: (m as any).displayName || m.user?.displayName || "Unknown",
+      })),
+    [members],
+  );
+
+  const [selectedAssignees, setSelectedAssignees] = useState<{ id: string; label: string }[]>([]);
   const [taskForm, setTaskForm] = useState({
     title: "",
     priority: "normal" as Priority,
@@ -102,6 +122,11 @@ export function TasksPage() {
                   dueDate: task.dueDate?.slice(0, 10) ?? "",
                   assigneeName: task.assigneeName,
                 });
+                setSelectedAssignees(
+                  task.assigneeName
+                    ? task.assigneeName.split(", ").map((n) => ({ id: n, label: n }))
+                    : [],
+                );
                 setIsTaskModalOpen(true);
               }}
             />
@@ -129,6 +154,7 @@ export function TasksPage() {
       dueDate: new Date().toISOString().slice(0, 10),
       assigneeName: "",
     });
+    setSelectedAssignees([]);
     setIsTaskModalOpen(true);
   }
 
@@ -223,21 +249,23 @@ export function TasksPage() {
                 onChange={(e) => setTaskForm((c) => ({ ...c, project: e.target.value }))}
               />
               <FilterableMultiSelect
+                key={isTaskModalOpen ? "open" : "closed"}
                 id="task-assignee"
                 titleText="Assignee"
                 placeholder="Search members..."
                 items={memberOptions}
-                initialSelectedItems={
-                  taskForm.assigneeName
-                    ? taskForm.assigneeName.split(", ").map((n) => ({ id: n, label: n }))
-                    : []
-                }
-                onChange={({ selectedItems }: any) =>
+                selectedItems={selectedAssignees}
+                onChange={({
+                  selectedItems,
+                }: {
+                  selectedItems: { id: string; label: string }[];
+                }) => {
+                  setSelectedAssignees(selectedItems);
                   setTaskForm((c) => ({
                     ...c,
-                    assigneeName: selectedItems.map((s: any) => s.label).join(", "),
-                  }))
-                }
+                    assigneeName: selectedItems.map((s) => s.label).join(", "),
+                  }));
+                }}
               />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -264,17 +292,12 @@ export function TasksPage() {
               </Select>
             </div>
             {createError ? (
-              <p
-                style={{
-                  borderLeft: "4px solid var(--cds-support-error)",
-                  backgroundColor: "var(--cds-layer)",
-                  padding: "0.5rem 0.75rem",
-                  fontSize: "0.875rem",
-                  color: "var(--cds-support-error)",
-                }}
-              >
-                {createError}
-              </p>
+              <InlineNotification
+                kind="error"
+                title={createError}
+                lowContrast
+                onClose={() => setCreateError(undefined)}
+              />
             ) : null}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
               <Button
