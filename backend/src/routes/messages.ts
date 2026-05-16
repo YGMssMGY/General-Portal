@@ -9,7 +9,10 @@ route.get("/messages/threads", async (c) => {
     where: { workspaceId: wid },
     include: {
       participants: true,
-      messages: { orderBy: { sentAt: "asc" } },
+      messages: {
+        orderBy: { sentAt: "asc" },
+        include: { attachments: true },
+      },
     },
     orderBy: { lastMessageAt: "desc" },
   });
@@ -35,11 +38,25 @@ route.post("/messages/threads", async (c) => {
               authorName: body.authorName || "System",
               body: body.body,
               sentAt: new Date(),
+              ...(body.attachmentIds?.length
+                ? {
+                    attachments: {
+                      create: body.attachmentIds.map((fileId: string) => ({
+                        name: body.attachmentNames?.[fileId] || "Attachment",
+                        fileType: "Other",
+                        storageKey: fileId,
+                      })),
+                    },
+                  }
+                : {}),
             },
           }
         : undefined,
     },
-    include: { participants: true, messages: true },
+    include: {
+      participants: true,
+      messages: { include: { attachments: true } },
+    },
   });
   return c.json(item, 201);
 });
@@ -54,13 +71,34 @@ route.post("/messages/threads/:id/reply", async (c) => {
       authorName: body.authorName || "Unknown",
       body: body.body,
       sentAt: new Date(),
+      ...(body.attachmentIds?.length
+        ? {
+            attachments: {
+              create: body.attachmentIds.map((fileId: string) => ({
+                name: body.attachmentNames?.[fileId] || "Attachment",
+                fileType: "Other",
+                storageKey: fileId,
+              })),
+            },
+          }
+        : {}),
     },
+    include: { attachments: true },
   });
   await db.messageThread.update({
     where: { id, workspaceId: wid },
     data: { preview: body.body?.slice(0, 100), lastMessageAt: new Date() },
   });
   return c.json(msg, 201);
+});
+
+route.patch("/messages/threads/:id/read", async (c) => {
+  const wid = c.get("workspaceId");
+  await db.messageThread.update({
+    where: { id: c.req.param("id"), workspaceId: wid },
+    data: { unreadCount: 0 },
+  });
+  return c.body(null, 204);
 });
 
 route.delete("/messages/threads/:id", async (c) => {

@@ -38,12 +38,13 @@ describe("LoginPage", () => {
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
   });
 
-  it("has a Sign In button", () => {
+  it("has sign in buttons", () => {
     render(
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /sign in/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: /dev sign in/i })).toBeInTheDocument();
   });
 });

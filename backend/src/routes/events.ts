@@ -5,8 +5,13 @@ const route = new Hono();
 
 route.get("/events", async (c) => {
   const wid = c.get("workspaceId");
+  const status = c.req.query("status");
+  const dateFrom = c.req.query("dateFrom");
+  const where: any = { workspaceId: wid };
+  if (status) where.status = status;
+  if (dateFrom) where.startsAt = { gte: new Date(dateFrom) };
   const items = await db.eventItem.findMany({
-    where: { workspaceId: wid },
+    where,
     include: { owners: true },
     orderBy: { createdAt: "desc" },
   });
@@ -43,6 +48,15 @@ route.patch("/events/:id", async (c) => {
   const data: any = { ...fields };
   if (fields.startsAt) data.startsAt = new Date(fields.startsAt);
   if (fields.endsAt) data.endsAt = new Date(fields.endsAt);
+
+  // Handle owner updates: delete existing and recreate
+  if (body.owners) {
+    await db.eventOwner.deleteMany({ where: { eventId: id } });
+    await db.eventOwner.createMany({
+      data: body.owners.map((o: string) => ({ eventId: id, ownerLabel: o })),
+    });
+  }
+
   const item = await db.eventItem.update({
     where: { id, workspaceId: wid },
     data,

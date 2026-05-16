@@ -77,6 +77,9 @@ app.use("/api/members", requireWorkspace);
 app.use("/api/activity", requireWorkspace);
 app.use("/api/search", requireWorkspace);
 app.use("/api/settings", requireWorkspace);
+app.use("/api/roles", requireWorkspace);
+app.use("/api/modules", requireWorkspace);
+app.use("/api/workspace", requireWorkspace);
 
 app.route("/api", dashboardRoute);
 app.route("/api", tasksRoute);

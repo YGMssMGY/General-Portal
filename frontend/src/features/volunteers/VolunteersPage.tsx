@@ -1,16 +1,37 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
-import { Card } from "../../components/Card";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
-import { Button, TextInput, Form, NumberInput } from "@carbon/react";
+import {
+  Button,
+  TextInput,
+  NumberInput,
+  Form,
+  Grid,
+  Column,
+  Tile,
+  ProgressBar,
+  Tag,
+} from "@carbon/react";
+import { Add, Edit, TrashCan, Time, UserAvatar, StarFilled, Calendar } from "@carbon/icons-react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useVolunteerSlots } from "../../hooks/useWorkspaceResources";
 import type { VolunteerSlot } from "../../types";
 import { formatDate } from "../../utils/format";
-import { Add, Edit, TrashCan } from "@carbon/icons-react";
+
+function getSlotStatus(slot: VolunteerSlot): "Full" | "Checked In" | "Registered" {
+  if (slot.filled >= slot.capacity) return "Full";
+  if (new Date(slot.startsAt) < new Date()) return "Checked In";
+  return "Registered";
+}
+
+const statusColorMap: Record<string, "blue" | "green" | "gray"> = {
+  Registered: "blue",
+  "Checked In": "green",
+  Full: "gray",
+};
 
 export function VolunteersPage() {
   const { data, error, isLoading, refetch } = useVolunteerSlots();
@@ -20,14 +41,26 @@ export function VolunteersPage() {
   const [createError, setCreateError] = useState<string>();
   const [deleteTarget, setDeleteTarget] = useState<VolunteerSlot>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [stats, setStats] = useState<{
+    totalHoursThisMonth: number;
+    activeVolunteers: number;
+    topContributor: { name: string; hours: number };
+  } | null>(null);
   const [form, setForm] = useState({
     title: "",
     eventName: "",
-    capacity: 0,
+    capacity: 1,
     filled: 0,
-    startsAt: "",
+    startsAt: new Date().toISOString().slice(0, 10),
     hours: 0,
   });
+
+  useEffect(() => {
+    workspaceApi
+      .getVolunteerStats()
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, []);
 
   const columns: ColumnDef<VolunteerSlot>[] = useMemo(
     () => [
@@ -43,40 +76,65 @@ export function VolunteersPage() {
         key: "filled",
         header: "Capacity",
         sortable: true,
-        render: (slot) => (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <NumberInput
-              id={`cap-${slot.id}`}
-              label=""
-              hideLabel
-              size="sm"
-              value={slot.filled}
-              min={0}
-              max={slot.capacity}
-              onChange={async (_e, { value }) => {
-                try {
-                  await workspaceApi.updateVolunteerSlot(slot.id, { filled: Number(value) });
-                  refetch();
-                } catch {}
-              }}
-              style={{ width: "80px" }}
-            />
-            <span
+        render: (slot) => {
+          const pct = slot.capacity > 0 ? Math.round((slot.filled / slot.capacity) * 100) : 0;
+          return (
+            <div
               style={{
-                color:
-                  slot.filled >= slot.capacity
-                    ? "var(--cds-support-error)"
-                    : "var(--cds-text-secondary)",
-                fontSize: "0.875rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                minWidth: "140px",
               }}
             >
-              /{slot.capacity}
-            </span>
-          </div>
-        ),
-        className: "text-right",
+              <div
+                style={{
+                  flex: 1,
+                  height: "8px",
+                  background: "var(--cds-layer)",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${pct}%`,
+                    height: "100%",
+                    background:
+                      pct >= 100
+                        ? "var(--cds-support-error)"
+                        : pct >= 75
+                          ? "var(--cds-support-warning)"
+                          : "var(--cds-support-success)",
+                    borderRadius: "4px",
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 500,
+                  color: "var(--cds-text-secondary)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {slot.filled}/{slot.capacity}
+              </span>
+            </div>
+          );
+        },
       },
       { key: "hours", header: "Hours", sortable: true, className: "text-right" },
+      {
+        key: "status",
+        header: "Status",
+        sortable: false,
+        render: (slot) => {
+          const status = getSlotStatus(slot);
+          return <Tag type={statusColorMap[status]}>{status}</Tag>;
+        },
+      },
       {
         key: "actions",
         header: "",
@@ -113,8 +171,35 @@ export function VolunteersPage() {
         ),
       },
     ],
-    [refetch],
+    [],
   );
+
+  const totalFilled = data?.reduce((s, slot) => s + slot.filled, 0) ?? 0;
+  const totalHours = data?.reduce((s, slot) => s + slot.hours * slot.filled, 0) ?? 0;
+
+  const upcomingSlots = useMemo(
+    () =>
+      (data ?? [])
+        .filter((s) => new Date(s.startsAt) >= new Date())
+        .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+        .slice(0, 4),
+    [data],
+  );
+
+  const hoursByMember = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const slot of data ?? []) {
+      const key = slot.eventName;
+      map.set(key, (map.get(key) ?? 0) + slot.hours * slot.filled);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, hours]) => ({ name, hours }));
+  }, [data]);
+
+  const maxMemberHours =
+    hoursByMember.length > 0 ? Math.max(...hoursByMember.map((m) => m.hours)) : 1;
 
   function openCreateModal() {
     setEditingSlot(undefined);
@@ -166,9 +251,6 @@ export function VolunteersPage() {
   if (isLoading) return <LoadingState />;
   if (error || !data)
     return <ErrorState message={error ?? "Volunteer data unavailable"} onRetry={refetch} />;
-  const totalSlots = data.length;
-  const totalFilled = data.reduce((s, slot) => s + slot.filled, 0);
-  const totalHours = data.reduce((s, slot) => s + slot.hours * slot.filled, 0);
 
   return (
     <div>
@@ -181,85 +263,293 @@ export function VolunteersPage() {
           </Button>
         }
       />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "1rem",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <Card padding="lg">
-          <p
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.025em",
-              color: "var(--cds-text-secondary)",
-            }}
-          >
-            Total Slots
-          </p>
-          <p
-            style={{
-              marginTop: "0.5rem",
-              fontSize: "1.875rem",
-              fontWeight: 600,
-              color: "var(--cds-text-primary)",
-            }}
-          >
-            {totalSlots}
-          </p>
-        </Card>
-        <Card padding="lg">
-          <p
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.025em",
-              color: "var(--cds-text-secondary)",
-            }}
-          >
-            Filled
-          </p>
-          <p
-            style={{ marginTop: "0.5rem", fontSize: "1.875rem", fontWeight: 600, color: "#0f62fe" }}
-          >
-            {totalFilled}
-          </p>
-        </Card>
-        <Card padding="lg">
-          <p
-            style={{
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.025em",
-              color: "var(--cds-text-secondary)",
-            }}
-          >
-            Volunteer Hours
-          </p>
-          <p
-            style={{
-              marginTop: "0.5rem",
-              fontSize: "1.875rem",
-              fontWeight: 600,
-              color: "var(--cds-text-primary)",
-            }}
-          >
-            {totalHours}
-          </p>
-        </Card>
-      </div>
-      <DataTable
-        columns={columns}
-        data={data as unknown as Record<string, unknown>[]}
-        defaultSort={{ key: "startsAt", direction: "asc" }}
-        pageSize={10}
-      />
+
+      <Grid style={{ marginBottom: "1.5rem" }}>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
+            <div
+              style={{
+                position: "absolute",
+                top: "0.75rem",
+                right: "0.75rem",
+                opacity: 0.12,
+              }}
+            >
+              <Time size={48} />
+            </div>
+            <p
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.025em",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
+              Total Hours This Month
+            </p>
+            <p
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "1.875rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+              }}
+            >
+              {stats?.totalHoursThisMonth ?? totalHours}
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 400,
+                  color: "var(--cds-text-secondary)",
+                  marginLeft: "0.5rem",
+                }}
+              >
+                hrs
+              </span>
+            </p>
+          </Tile>
+        </Column>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
+            <div
+              style={{
+                position: "absolute",
+                top: "0.75rem",
+                right: "0.75rem",
+                opacity: 0.12,
+              }}
+            >
+              <UserAvatar size={48} />
+            </div>
+            <p
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.025em",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
+              Active Volunteers
+            </p>
+            <p
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "1.875rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+              }}
+            >
+              {stats?.activeVolunteers ?? totalFilled}
+            </p>
+          </Tile>
+        </Column>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
+            <div
+              style={{
+                position: "absolute",
+                top: "0.75rem",
+                right: "0.75rem",
+                opacity: 0.12,
+              }}
+            >
+              <StarFilled size={48} />
+            </div>
+            <p
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.025em",
+                color: "var(--cds-text-secondary)",
+              }}
+            >
+              Top Contributor
+            </p>
+            <p
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "1.875rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+              }}
+            >
+              {stats?.topContributor?.name ?? "—"}
+            </p>
+            {stats?.topContributor ? (
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--cds-text-secondary)",
+                  marginTop: "0.25rem",
+                }}
+              >
+                {stats.topContributor.hours} hours contributed
+              </p>
+            ) : null}
+          </Tile>
+        </Column>
+      </Grid>
+
+      <Grid>
+        <Column lg={12} md={8} sm={4}>
+          {upcomingSlots.length > 0 ? (
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h2
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  color: "var(--cds-text-primary)",
+                  marginBottom: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <Calendar size={20} />
+                Upcoming Slots
+              </h2>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                  gap: "0.75rem",
+                }}
+              >
+                {upcomingSlots.map((slot) => {
+                  const pct =
+                    slot.capacity > 0 ? Math.round((slot.filled / slot.capacity) * 100) : 0;
+                  return (
+                    <Tile key={slot.id} style={{ padding: "1.25rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          marginBottom: "0.75rem",
+                        }}
+                      >
+                        <div>
+                          <p
+                            style={{
+                              fontWeight: 600,
+                              color: "var(--cds-text-primary)",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            {slot.title}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--cds-text-secondary)",
+                              marginTop: "0.125rem",
+                            }}
+                          >
+                            {slot.eventName}
+                          </p>
+                        </div>
+                        <Tag type={pct >= 100 ? "red" : pct >= 75 ? "warm-gray" : "green"}>
+                          {slot.filled}/{slot.capacity}
+                        </Tag>
+                      </div>
+                      <ProgressBar
+                        value={slot.filled}
+                        max={slot.capacity || 1}
+                        label="Capacity"
+                        hideLabel
+                        size="small"
+                      />
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginTop: "0.5rem",
+                          fontSize: "0.75rem",
+                          color: "var(--cds-text-secondary)",
+                        }}
+                      >
+                        <span>{formatDate(slot.startsAt)}</span>
+                        <span>{slot.hours}h each</span>
+                      </div>
+                    </Tile>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          <DataTable
+            columns={columns}
+            data={data as unknown as Record<string, unknown>[]}
+            defaultSort={{ key: "startsAt", direction: "asc" }}
+            pageSize={10}
+          />
+        </Column>
+
+        <Column lg={4} md={8} sm={4}>
+          <Tile style={{ padding: "1.25rem" }}>
+            <h2
+              style={{
+                fontSize: "1rem",
+                fontWeight: 600,
+                color: "var(--cds-text-primary)",
+                marginBottom: "1rem",
+              }}
+            >
+              Hours by Activity
+            </h2>
+            {hoursByMember.length === 0 ? (
+              <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                No hours recorded yet.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {hoursByMember.map((member) => {
+                  const pct = Math.round((member.hours / maxMemberHours) * 100);
+                  return (
+                    <div key={member.name}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: "0.25rem",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <span style={{ color: "var(--cds-text-primary)", fontWeight: 500 }}>
+                          {member.name}
+                        </span>
+                        <span style={{ color: "var(--cds-text-secondary)" }}>{member.hours}h</span>
+                      </div>
+                      <div
+                        style={{
+                          height: "6px",
+                          background: "var(--cds-layer)",
+                          borderRadius: "3px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${pct}%`,
+                            height: "100%",
+                            background: "var(--cds-border-interactive)",
+                            borderRadius: "3px",
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Tile>
+        </Column>
+      </Grid>
 
       <Modal
         title={editingSlot ? "Edit Slot" : "Add Volunteer Slot"}
@@ -293,7 +583,7 @@ export function VolunteersPage() {
               value={form.startsAt}
               onChange={(e) => setForm((c) => ({ ...c, startsAt: e.target.value }))}
             />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <NumberInput
                 id="slot-capacity"
                 label="Capacity"
@@ -302,16 +592,8 @@ export function VolunteersPage() {
                 onChange={(_e, { value }) => setForm((c) => ({ ...c, capacity: Number(value) }))}
               />
               <NumberInput
-                id="slot-filled"
-                label="Filled"
-                value={form.filled}
-                min={0}
-                max={form.capacity}
-                onChange={(_e, { value }) => setForm((c) => ({ ...c, filled: Number(value) }))}
-              />
-              <NumberInput
                 id="slot-hours"
-                label="Hours"
+                label="Hours per Slot"
                 value={form.hours}
                 min={0}
                 onChange={(_e, { value }) => setForm((c) => ({ ...c, hours: Number(value) }))}
