@@ -1,145 +1,96 @@
-# SYSTEM MODE
-This repository runs in:
-> DETACHED FULL-STACK AGENT MODE (SELF-HEALING ENABLED)
-All agent actions must follow:
-PLAN → EXECUTE → VERIFY → REPAIR → REPORT
-No step skipping allowed.
-# QUICK COMMANDS
+# AGENTS.md — General Portal
+
+## Quick start
+
 ```powershell
-# Start
-.\start-dev.ps1
-.\start-dev.ps1 -BackendProfile demo
-.\start-dev.ps1 -WithRedis
-# Health check (MANDATORY after every change cycle)
-.\check-dev.ps1
-# Stop
-.\stop-dev.ps1
-# Backend tests
-cd backend
-..\.tools\apache-maven-3.9.11\bin\mvn.cmd test
-# Frontend build (verification gate)
-cd frontend
-npm run build
+# Everything from root (npm workspaces)
+npm install          # hoists deps for frontend/ + backend/
+npm run dev          # kills ports 3001,5173 → SQLite reset+seed → Hono (:3001) + Vite (:5173)
+npm run stop         # kills ports 3001,5173
+npm run build        # tsc (backend) + tsc -b && vite build (frontend)
+npm run test -w backend    # 10 vitest tests
+npm run test -w frontend   # 20 vitest tests
+npm run format       # prettier --write
+npx eslint "backend/src/**/*.ts" "frontend/src/**/*.{ts,tsx}"
 ```
-# ARCHITECTURE TRUTH MODEL
+
+## Architecture
+
 ```
-frontend/   React 18 + Vite + TypeScript
-backend/    Spring Boot 3.3.5 + Java 21
-design/     stitch_orgflow_workspace_dashboard (reference only, legacy)
+root package.json  (workspaces: ["frontend", "backend"])
+├── frontend/   Vite + React 18 + Carbon Design System  → port 5173
+├── backend/    Hono + Prisma + @hono/auth-js  → port 3001
+└── node_modules/  (hoisted)
+
+Vite proxy: /api/* → localhost:3001
 ```
-### SYSTEM RULES:
-* Frontend = UI + state only
-* Backend = business logic only
-* API = contract boundary
-* No cross-layer logic allowed
-# API CONTRACT RULE (CRITICAL)
-* Frontend MUST ONLY call `/api/**`
-* Backend MUST NOT be directly exposed
-* All routing must pass through Vite proxy (dev) or gateway (prod)
-* No hardcoded backend URLs allowed
-# SELF-HEALING SYSTEM (CORE FEATURE)
-## FAILURE DETECTION TRIGGERS
-Agent MUST detect and react to:
-### 1. Build Failure
-* frontend build fails → STOP + diagnose
-* backend compile fails → STOP + diagnose
-### 2. API Drift
-* frontend calls endpoint not present in backend
-* backend exposes endpoint not mapped in frontend
-### 3. Contract Mismatch
-* DTO mismatch
-* renamed controller not reflected in frontend
-### 4. Route Failure
-* missing React route
-* broken navigation path
-## SELF-HEALING LOOP
-If ANY failure is detected:
-### STEP 1 — DIAGNOSE
-* identify root cause
-* classify:
-  * frontend issue
-  * backend issue
-  * contract issue
-  * routing issue
-### STEP 2 — ISOLATE IMPACT
-* list all affected files
-* trace dependency chain
-* identify upstream/downstream impact
-### STEP 3 — GENERATE FIX PLAN
-* minimal fix strategy ONLY
-* no unrelated refactors
-* no “cleanup improvements”
-### STEP 4 — APPLY FIX
-* apply smallest possible change
-* maintain contract integrity
-### STEP 5 — VERIFY
-Run:
-* backend compile
-* frontend build
-* API sanity check
-* route validation
-### STEP 6 — REPORT
-Must include:
-* root cause
-* fix applied
-* validation result
-* remaining risks
-# CODEBASE DISCIPLINE RULES
-## ❌ FORBIDDEN
-* silent fixes without reporting
-* untracked API changes
-* renaming without updating both frontend + backend
-* introducing new architecture patterns
-* modifying unrelated modules
-## ✅ REQUIRED
-* traceable changes
-* dependency-aware modifications
-* contract-first updates
-* explicit reporting
-# DEPENDENCY RULE
-All changes MUST respect:
-Frontend → API → Backend → DB
-No reverse dependency allowed.
-# VERIFICATION GATES
-Every change cycle MUST pass:
-### Backend
-* Maven build success
-* Spring context loads
-### Frontend
-* TypeScript compile success
-* Vite build success
-### Integration
-* API endpoint consistency check
-* route resolution check
-If any gate fails → SELF-HEAL LOOP MUST TRIGGER.
-# ENVIRONMENT RULES
-* `.env.local` is authoritative runtime config
-* no hardcoded URLs
-* no hardcoded ports
-* no secrets in frontend
-Profiles:
-* dev → PostgreSQL
-* demo → H2
-* redis → cache/session layer
-# TESTING RULES
-* backend: Mockito + H2 only
-* frontend: build-time validation only
-* no missing test execution allowed in backend pipeline
-# TOOLCHAIN CONSTRAINTS
-* Maven: `C:\maven\bin\mvn.cmd` (system PATH)
-* Java 21 required
-* PostgreSQL expected unless demo mode enabled
-# QUALITY BAR
-All agent output must be:
-* deterministic
-* reproducible
-* dependency-aware
-* contract-safe
-* minimal-change oriented
-# FINAL SYSTEM GUARANTEE
-This system guarantees:
-* zero silent failures
-* automatic detection of broken API contracts
-* enforced frontend/backend consistency
-* controlled refactor behavior
-* self-healing recovery loop on failure
+
+- **No Java, no Spring Boot, no Docker.** SQLite for dev (`file:./dev.db`), PostgreSQL for prod (swap `schema.prod.prisma`).
+- **Auth:** `@hono/auth-js` with JWT strategy. Dev credentials provider active when `DEV_AUTH_PASSWORD` is set. OAuth2 (GitHub, Google, Microsoft) optional.
+- **Database resets every `npm run dev`.** `dev-setup.mjs` deletes `dev.db`, runs migration + seed fresh.
+- **Multi-client:** `VITE_CLIENT_NAME=developers|stuco` controls brand, feature flags, favicon.
+
+## Key files
+
+| Path                                   | Role                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| `backend/src/index.ts`                 | Server entry — sets `DATABASE_URL`, dynamic imports, registers routes    |
+| `backend/src/lib/env.ts`               | Typed env access (reads from `process.env`, no dotenv)                   |
+| `backend/src/lib/db.ts`                | Lazy `PrismaClient` (safe proxy catches DB errors → returns `[]`/`null`) |
+| `backend/src/lib/auth-config.ts`       | Auth.js providers + callbacks                                            |
+| `backend/src/routes/*.ts`              | 15 Hono route modules (health, auth, dashboard, CRUD per resource)       |
+| `backend/prisma/schema.prisma`         | SQLite schema (19 models + Account/Session/VerificationToken)            |
+| `backend/prisma/schema.prod.prisma`    | PostgreSQL schema (swap for prod)                                        |
+| `frontend/src/config/clientConfig.ts`  | Multi-client branding config                                             |
+| `frontend/src/hooks/useClientTheme.ts` | Sets favicon, title, CSS vars                                            |
+| `frontend/src/api/httpClient.ts`       | `fetchJson()` with retry (2x on 5xx/network err)                         |
+
+## Critical gotchas
+
+1. **`DATABASE_URL` must be set before PrismaClient is created.** `index.ts` sets `process.env["DATABASE_URL"]` before any dynamic imports. `env.ts` must NOT call `dotenv.config()` — it would overwrite the URL. Loading `.env.local` is centralized in `index.ts` only.
+2. **`env-url-basepath-redundant` warning** — safe to ignore. Caused by explicit `basePath: "/api/auth"` plus `AUTH_URL` env var.
+3. **Module execution order matters.** PrismaClient is created lazily on first access (via `db.ts` Proxy). If you change this, make sure `DATABASE_URL` is already set.
+4. **Credentials sign-in requires JWT strategy.** `session: { strategy: "database" }` crashes with `UnsupportedStrategy` when using credentials provider.
+5. **`authorize()` should avoid DB queries** if possible (makes login resilient). The JWT callback enriches the token with workspace data — falls back to defaults if DB is unavailable.
+6. **SQLite schema differences** vs PostgreSQL: remove `@db.Text`, change `cuid()` → `uuid()`. These are handled in `schema.prisma` (SQLite) while `schema.prod.prisma` keeps the PostgreSQL version.
+7. **`npm run dev` resets the database every time.** `dev.db` is deleted and re-created with fresh seed data. Don't keep state across restarts.
+8. **Safe DB proxy** (`db.ts`) silently returns `[]`/`null`/`0` on Prisma errors instead of crashing. This can hide bugs — check server logs for `[db] Query failed` warnings.
+
+## Dev login accounts
+
+All use password from `DEV_AUTH_PASSWORD` (default `devpass123`):
+
+| Email                               | Role      |
+| ----------------------------------- | --------- |
+| `dev.admin@generalportal.local`     | Admin     |
+| `dev.president@generalportal.local` | President |
+| `dev.officer@generalportal.local`   | Officer   |
+| `dev.member@generalportal.local`    | Member    |
+
+## UI conventions
+
+- Use Carbon components (`Grid`, `Row`, `Column`, `Stack`, `Tile`, `DataTable`, `Modal`, `InlineNotification`) — not inline `style={{}}`.
+- All admin pages use `PageHeader` for title + actions.
+- Multi-client feature flags in `clientConfig.ts` control sidebar nav visibility.
+- Time-aware greeting in DashboardPage (`Good morning/afternoon/evening`).
+- Logout button in UIShell header global bar.
+
+## Testing
+
+```powershell
+npm run test -w backend    # 10 tests (health, auth, env, error middleware)
+npm run test -w frontend   # 20 tests (Card, PageHeader, StateViews, PublicHome, LoginPage, clientConfig)
+```
+
+- Backend tests use Hono's `app.request()` (no real DB needed for unit tests).
+- Frontend tests use vitest + jsdom + @testing-library/react.
+- No E2E tests (no Playwright config).
+
+## Verification gates (after every change)
+
+1. `npm run build -w backend` — 0 TS errors
+2. `npm run build -w frontend` — 0 TS errors
+3. `npx eslint "backend/src/**/*.ts" "frontend/src/**/*.{ts,tsx}"` — 0 errors
+4. `npm run test -w backend` — all pass
+5. `npm run test -w frontend` — all pass
+6. Quick smoke: `npm run dev`, hit `/api/health` → 200
