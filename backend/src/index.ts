@@ -139,7 +139,7 @@ app.route("/api", kudosRoute);
 app.route("/api", budgetRoute);
 app.route("/api", meetingsRoute);
 app.route("/api", archiveRoute);
-app.route("/api", publicApiRoute);
+if (env.API_KEY) app.route("/api", publicApiRoute);
 app.route("/api", adminRoute);
 
 app.onError(errorHandler);
