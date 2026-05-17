@@ -1,9 +1,12 @@
-import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { useMemo, useState, useEffect, useRef, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { Badge } from "../../components/Badge";
 import { Modal } from "../../components/Modal";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useMessageThreads } from "../../hooks/useWorkspaceResources";
 import { workspaceApi } from "../../api/workspaceApi";
+import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
+import { EmojiPicker } from "../../components/EmojiPicker/EmojiPicker";
 
 import type { MessageThread, UserProfile } from "../../types";
 import { formatDateTime } from "../../utils/format";
@@ -20,7 +23,7 @@ import {
   Tile,
   Search,
 } from "@carbon/react";
-import { Add, Send, TrashCan, Calendar, Task, Document } from "@carbon/icons-react";
+import { Add, Send, TrashCan, Calendar, Task, Document, FaceActivated } from "@carbon/icons-react";
 
 function computeDateDivider(prevSentAt: string | null, currentSentAt: string): string | null {
   if (!prevSentAt) return null;
@@ -79,6 +82,8 @@ export function MessagesPage() {
   const [replyBody, setReplyBody] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<MessageThread>();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const replyInputRef = useRef<HTMLInputElement>(null);
   const [composeForm, setComposeForm] = useState({
     title: "",
     context: "general" as MessageThread["context"],
@@ -133,8 +138,11 @@ export function MessagesPage() {
       setComposeForm({ title: "", context: "general", participants: "", body: "" });
       setIsComposeOpen(false);
       refetch();
+      toast.success("Message sent");
     } catch (e) {
-      setComposeError(e instanceof Error ? e.message : "Could not send message");
+      const msg = e instanceof Error ? e.message : "Could not send message";
+      setComposeError(msg);
+      toast.error(msg);
     }
   }
 
@@ -145,7 +153,10 @@ export function MessagesPage() {
       await workspaceApi.replyToThread(selected.id, replyBody);
       setReplyBody("");
       refetch();
-    } catch {}
+      toast.success("Reply sent");
+    } catch {
+      toast.error("Could not send reply");
+    }
   }
 
   async function handleArchive() {
@@ -155,7 +166,10 @@ export function MessagesPage() {
       setDeleteTarget(undefined);
       if (selectedId === deleteTarget.id) setSelectedId(undefined);
       refetch();
-    } catch {}
+      toast.success("Thread archived");
+    } catch {
+      toast.error("Could not archive thread");
+    }
   }
 
   if (isLoading) return <LoadingState />;
@@ -554,7 +568,7 @@ export function MessagesPage() {
                             >
                               <span style={{ fontWeight: 500 }}>{msg.authorName}</span>
                             </div>
-                            <p>{msg.body}</p>
+                            <MarkdownRenderer>{msg.body}</MarkdownRenderer>
                             <p
                               style={{
                                 fontSize: "0.6875rem",
@@ -580,15 +594,38 @@ export function MessagesPage() {
                     padding: "0.75rem 1rem",
                     borderTop: "1px solid var(--cds-border-subtle)",
                     alignItems: "flex-end",
+                    position: "relative",
                   }}
                 >
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+                    <div style={{ position: "relative" }}>
+                      <Button
+                        kind="ghost"
+                        size="sm"
+                        renderIcon={FaceActivated}
+                        hasIconOnly
+                        iconDescription="Emoji"
+                        type="button"
+                        onClick={() => setShowEmojiPicker((v) => !v)}
+                      />
+                      {showEmojiPicker ? (
+                        <EmojiPicker
+                          onSelect={(emoji) => {
+                            setReplyBody((prev) => prev + emoji);
+                            setShowEmojiPicker(false);
+                            replyInputRef.current?.focus();
+                          }}
+                          onClose={() => setShowEmojiPicker(false)}
+                        />
+                      ) : null}
+                    </div>
                     <TextInput
                       id="reply-body"
                       labelText=""
                       hideLabel
                       placeholder="Type a reply..."
                       value={replyBody}
+                      ref={replyInputRef}
                       onChange={(e) => setReplyBody(e.target.value)}
                     />
                   </div>

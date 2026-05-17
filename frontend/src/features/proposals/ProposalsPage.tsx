@@ -1,9 +1,11 @@
 import { useMemo, useState, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
+import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
 import {
   Button,
   TextInput,
@@ -189,14 +191,18 @@ export function ProposalsPage() {
       };
       if (editingProposal) {
         await workspaceApi.updateProposal(editingProposal.id, payload);
+        toast.success("Proposal updated");
       } else {
         await workspaceApi.createProposal(payload);
+        toast.success("Proposal created");
       }
       setIsModalOpen(false);
       setEditingProposal(undefined);
       refetch();
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not save proposal");
+      const msg = e instanceof Error ? e.message : "Could not save proposal";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsCreating(false);
     }
@@ -209,8 +215,11 @@ export function ProposalsPage() {
       await workspaceApi.deleteProposal(deleteTarget.id);
       setDeleteTarget(undefined);
       refetch();
+      toast.success("Proposal deleted");
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not delete proposal");
+      const msg = e instanceof Error ? e.message : "Could not delete proposal";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -221,8 +230,9 @@ export function ProposalsPage() {
     try {
       await workspaceApi.updateProposal(id, { status });
       refetch();
+      toast.success(`Proposal ${status}`);
     } catch {
-      // silently fail
+      toast.error(`Could not ${status} proposal`);
     } finally {
       setIsApproving(false);
     }
@@ -323,9 +333,9 @@ export function ProposalsPage() {
                   >
                     {selected.title}
                   </h2>
-                  <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-                    {selected.summary}
-                  </p>
+                  <div style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                    <MarkdownRenderer>{selected.summary}</MarkdownRenderer>
+                  </div>
                 </div>
 
                 <Document

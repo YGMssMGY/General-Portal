@@ -1,9 +1,12 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
+import { SimpleBarChart } from "@carbon/charts-react";
+import "@carbon/charts/styles.css";
 import {
   Button,
   TextInput,
@@ -198,9 +201,6 @@ export function VolunteersPage() {
       .map(([name, hours]) => ({ name, hours }));
   }, [data]);
 
-  const maxMemberHours =
-    hoursByMember.length > 0 ? Math.max(...hoursByMember.map((m) => m.hours)) : 1;
-
   function openCreateModal() {
     setEditingSlot(undefined);
     setForm({
@@ -221,14 +221,18 @@ export function VolunteersPage() {
     try {
       if (editingSlot) {
         await workspaceApi.updateVolunteerSlot(editingSlot.id, form);
+        toast.success("Volunteer slot updated");
       } else {
         await workspaceApi.createVolunteerSlot(form);
+        toast.success("Volunteer slot created");
       }
       setIsModalOpen(false);
       setEditingSlot(undefined);
       refetch();
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not save slot");
+      const msg = e instanceof Error ? e.message : "Could not save slot";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsCreating(false);
     }
@@ -241,8 +245,11 @@ export function VolunteersPage() {
       await workspaceApi.deleteVolunteerSlot(deleteTarget.id);
       setDeleteTarget(undefined);
       refetch();
+      toast.success("Volunteer slot deleted");
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not delete slot");
+      const msg = e instanceof Error ? e.message : "Could not delete slot";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -506,46 +513,18 @@ export function VolunteersPage() {
                 No hours recorded yet.
               </p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                {hoursByMember.map((member) => {
-                  const pct = Math.round((member.hours / maxMemberHours) * 100);
-                  return (
-                    <div key={member.name}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "0.25rem",
-                          fontSize: "0.875rem",
-                        }}
-                      >
-                        <span style={{ color: "var(--cds-text-primary)", fontWeight: 500 }}>
-                          {member.name}
-                        </span>
-                        <span style={{ color: "var(--cds-text-secondary)" }}>{member.hours}h</span>
-                      </div>
-                      <div
-                        style={{
-                          height: "6px",
-                          background: "var(--cds-layer)",
-                          borderRadius: "3px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${pct}%`,
-                            height: "100%",
-                            background: "var(--cds-border-interactive)",
-                            borderRadius: "3px",
-                            transition: "width 0.3s ease",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <SimpleBarChart
+                data={hoursByMember.map((m) => ({ group: "Hours", key: m.name, value: m.hours }))}
+                options={{
+                  axes: {
+                    bottom: { mapsTo: "key", visible: false },
+                    left: { mapsTo: "value", visible: false },
+                  },
+                  toolbar: { enabled: false },
+                  height: "200px",
+                  legend: { enabled: false },
+                }}
+              />
             )}
           </Tile>
         </Column>

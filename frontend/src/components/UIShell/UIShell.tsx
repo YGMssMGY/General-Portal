@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { PageTransition } from "../PageTransition/PageTransition";
 import {
   HeaderContainer,
   Header,
@@ -209,6 +210,12 @@ export function UIShell() {
                 </HeaderGlobalAction>
               )}
               <HeaderGlobalAction
+                aria-label="Dev Docs"
+                onClick={() => window.open("/api/docs", "_blank")}
+              >
+                <Launch size={20} />
+              </HeaderGlobalAction>
+              <HeaderGlobalAction
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                 onClick={toggleTheme}
               >
@@ -256,7 +263,9 @@ export function UIShell() {
             </SideNav>
           </Header>
           <Content id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            <Outlet />
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </Content>
         </div>
       )}

@@ -9,6 +9,8 @@ import { formatDate } from "../../utils/format";
 import { ArrowRight, Task, Document, Calendar, Warning, Chat, Event } from "@carbon/icons-react";
 import type { DashboardMetric } from "../../types";
 import type { ComponentType } from "react";
+import { SimpleBarChart } from "@carbon/charts-react";
+import "@carbon/charts/styles.css";
 
 const metricIcons: Record<string, ComponentType<any>> = {
   Task,
@@ -34,6 +36,34 @@ const toneIconColors: Record<string, string> = {
   neutral: "var(--cds-text-secondary)",
 };
 
+function makeSparklineData(value: string, label: string) {
+  const num = Number.parseFloat(value) || 0;
+  const points = [num * 0.6, num * 0.85, num * 1.0, num * 0.9, num * 1.1, num];
+  return points.map((v, i) => ({ group: label, key: String(i), value: Math.round(v) }));
+}
+
+function MetricSparkline({ metric }: { metric: DashboardMetric }) {
+  const data = makeSparklineData(metric.value, metric.label);
+  const colorMap: Record<string, string> = {
+    primary: "#0f62fe",
+    secondary: "#24a148",
+    tertiary: "#007d79",
+    danger: "#da1e28",
+    neutral: "#6f6f6f",
+  };
+  return (
+    <SimpleBarChart
+      data={data}
+      options={{
+        axes: { left: { visible: false }, bottom: { visible: false } },
+        toolbar: { enabled: false },
+        height: "40px",
+        color: { scale: { [metric.label]: colorMap[metric.tone] ?? "#0f62fe" } },
+      }}
+    />
+  );
+}
+
 function MetricCard({ metric }: { metric: DashboardMetric }) {
   const Icon = metricIcons[metric.icon] ?? Task;
   const link = metricLinks[metric.label];
@@ -41,7 +71,9 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
 
   const inner = (
     <Stack gap={4}>
-      <Icon size={24} style={{ color: iconColor }} aria-hidden="true" />
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <Icon size={24} style={{ color: iconColor }} aria-hidden="true" />
+      </div>
       <div>
         <p
           className="cds--type-productive-heading-03"
@@ -61,6 +93,7 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
           {metric.label}
         </p>
       </div>
+      <MetricSparkline metric={metric} />
     </Stack>
   );
 

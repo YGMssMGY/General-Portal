@@ -7,6 +7,12 @@ import { env } from "./lib/env.js";
 import { authConfig } from "./lib/auth-config.js";
 import { errorHandler } from "./middleware/error.js";
 import { requireWorkspace } from "./middleware/auth.js";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const frontendDist = resolve(__dirname, "../../frontend/dist");
 
 const app = new Hono();
 
@@ -67,15 +73,10 @@ app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
 app.route("/api", adminRoute);
 
-app.use("/*", serveStatic({ root: "../frontend/dist" }));
+app.use("/*", serveStatic({ root: frontendDist }));
 
-app.get("*", async (c) => {
-  const { readFileSync } = await import("fs");
-  const { resolve, dirname } = await import("path");
-  const { fileURLToPath } = await import("url");
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const indexPath = resolve(__dirname, "../../frontend/dist/index.html");
-  return c.html(readFileSync(indexPath, "utf-8"));
+app.get("*", (c) => {
+  return c.html(readFileSync(resolve(frontendDist, "index.html"), "utf-8"));
 });
 
 app.onError(errorHandler);

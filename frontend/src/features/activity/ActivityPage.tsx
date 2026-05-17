@@ -11,16 +11,8 @@ import {
   Document,
   Edit,
 } from "@carbon/icons-react";
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { SimpleBarChart } from "@carbon/charts-react";
+import "@carbon/charts/styles.css";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Card } from "../../components/Card";
@@ -28,8 +20,6 @@ import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useActivity, useActivityStats } from "../../hooks/useWorkspaceResources";
 import { formatDateTime } from "../../utils/format";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const activityTypeIcon: Record<string, typeof Document> = {
   task: Task,
@@ -99,45 +89,25 @@ export function ActivityPage() {
 
   const chartData = useMemo(() => {
     const trend = stats?.taskCompletionTrend ?? [];
-    return {
-      labels: trend.map((d) => {
-        const date = new Date(d.date);
-        return date.toLocaleDateString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        });
-      }),
-      datasets: [
-        {
-          label: "Tasks Completed",
-          data: trend.map((d) => d.count),
-          backgroundColor: "#0f62fe",
-          borderRadius: 4,
-          maxBarThickness: 32,
-        },
-      ],
-    };
+    return trend.map((d) => {
+      const date = new Date(d.date);
+      const label = date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      return { group: "Tasks Completed", key: label, value: d.count };
+    });
   }, [stats]);
 
   const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { backgroundColor: "var(--cds-layer-02)" },
+    title: "Task Completion Trend (Last 7 Days)",
+    axes: {
+      bottom: { mapsTo: "key", title: "Date" },
+      left: { mapsTo: "value", title: "Tasks Completed" },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { stepSize: 1, color: "var(--cds-text-secondary)" },
-        grid: { color: "var(--cds-border-subtle)" },
-      },
-      x: {
-        ticks: { color: "var(--cds-text-secondary)" },
-        grid: { display: false },
-      },
-    },
+    height: "220px",
+    toolbar: { enabled: false },
   };
 
   if (isLoading) return <LoadingState />;
@@ -311,10 +281,8 @@ export function ActivityPage() {
           >
             Task Completion Trend (Last 7 Days)
           </h2>
-          {stats?.taskCompletionTrend && stats.taskCompletionTrend.length > 0 ? (
-            <div style={{ height: "220px" }}>
-              <Bar data={chartData} options={chartOptions} />
-            </div>
+          {chartData.length > 0 ? (
+            <SimpleBarChart data={chartData} options={chartOptions} />
           ) : (
             <div
               style={{

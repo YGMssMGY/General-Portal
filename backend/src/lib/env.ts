@@ -19,3 +19,18 @@ export const env = {
 
 export const IS_PRODUCTION =
   (process.env["NODE_ENV"] || "development") === "production";
+
+/* ── DATABASE_URL vs schema provider validation ── */
+const url = env.DATABASE_URL;
+if (url.startsWith("postgresql://") || url.startsWith("postgres://")) {
+  console.warn(
+    '[env] DATABASE_URL points to PostgreSQL. Ensure schema.prisma uses `provider = "postgresql"`.',
+  );
+  console.warn(
+    "  → Run `npm run db:use:prod` to swap schema for PostgreSQL before migrating.",
+  );
+} else if (!url.startsWith("file:")) {
+  console.warn(
+    "[env] DATABASE_URL has an unexpected format (expected `file:` for SQLite or `postgresql://` for PostgreSQL).",
+  );
+}

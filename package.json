@@ -46,5 +46,9 @@
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3"
+  },
+  "dependencies": {
+    "@carbon/charts-react": "^1.27.11",
+    "@emoji-mart/react": "^1.1.1"
   }
 }
