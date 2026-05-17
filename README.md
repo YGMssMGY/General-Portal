@@ -4,7 +4,8 @@ A dual-purpose club management dashboard for **Developers' Club** and **Student 
 
 **Stack:** Hono + Prisma + React 18 + Vite + TypeScript + IBM Carbon Design System  
 **Database:** SQLite (dev) / PostgreSQL (prod)  
-**Auth:** @hono/auth-js (JWT) with dev credentials + OAuth2 (GitHub, Google, Microsoft)
+**Auth:** @hono/auth-js (JWT) with dev credentials + Microsoft OAuth2  
+**Real-time:** WebSocket with presence, live notifications, activity feed
 
 ---
 
@@ -19,14 +20,14 @@ Opens `http://localhost:5173`. Login with `dev.admin@generalportal.local` / `dev
 
 ### Dev Accounts
 
-| Email                               | Role      |
-| ----------------------------------- | --------- |
-| `dev.admin@generalportal.local`     | Admin     |
-| `dev.president@generalportal.local` | President |
-| `dev.officer@generalportal.local`   | Officer   |
-| `dev.member@generalportal.local`    | Member    |
+| Email                               | Role      | Password     |
+| ----------------------------------- | --------- | ------------ |
+| `dev.admin@generalportal.local`     | Admin     | `devpass123` |
+| `dev.president@generalportal.local` | President | `devpass123` |
+| `dev.officer@generalportal.local`   | Officer   | `devpass123` |
+| `dev.member@generalportal.local`    | Member    | `devpass123` |
 
-All use password from `DEV_AUTH_PASSWORD` (default `devpass123`).
+Custom accounts can be created via **Admin > Accounts** with any username and password.
 
 ---
 
@@ -34,125 +35,116 @@ All use password from `DEV_AUTH_PASSWORD` (default `devpass123`).
 
 ```
 root package.json  (workspaces: ["frontend", "backend"])
-├── frontend/   Vite + React 18 + Carbon Design System  → port 5173
-├── backend/    Hono + Prisma + @hono/auth-js          → port 3001
+├── frontend/   Vite + React 18 + Carbon DS  → port 5173
+├── backend/    Hono + Prisma + @hono/auth-js → port 3001
 └── node_modules/  (hoisted)
 
 Vite proxy: /api/* → localhost:3001
+WebSocket:  ws://localhost:3001/ws
 ```
 
 ### Database
 
-| Mode        | Database   | File                                                  |
-| ----------- | ---------- | ----------------------------------------------------- |
-| Development | SQLite     | `backend/prisma/dev.db` (or `dev-stuco.db` for stuco) |
-| Production  | PostgreSQL | via `schema.prod.prisma`                              |
+| Mode        | Database   | File                                        |
+| ----------- | ---------- | ------------------------------------------- |
+| Development | SQLite     | `backend/prisma/dev.db` (or `dev-stuco.db`) |
+| Production  | PostgreSQL | via `schema.prod.prisma`                    |
 
-The dev database resets on every `npm run dev` — fresh migration + seed data.
+Database persists across restarts. Custom-created users survive `npm run dev`.
 
 ### Multi-Client
 
-`VITE_CLIENT_NAME=developers|stuco` controls:
+`VITE_CLIENT_NAME=developers|stuco` controls branding, favicon, feature flags, and separate database file.
 
-- Brand name and logo initials
-- Favicon (`frontend/public/developers.png` or `stuco.png`)
-- Feature flag visibility in sidebar
-- Separate database file (`dev.db` vs `dev-stuco.db`)
+---
+
+## Key Features
+
+### Admin Dashboard (14 pages)
+
+| Page           | Features                                                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**  | Contextual greeting (time-aware), 5-column metrics, attention items, tasks, events timeline, activity feed, top contributors widget, motivational quotes |
+| **Tasks**      | Kanban board with drag-and-drop (`@dnd-kit`), list view, detail drawer with subtasks/comments/attachments, DataToolbar search+filter                     |
+| **Proposals**  | Multi-step approval workflow (Member → Officer → President → Approved), approval history timeline, detail panel with approve/reject                      |
+| **Events**     | Upcoming cards with progress bars, QR attendance check-in, detail tabs, budget tracking                                                                  |
+| **Volunteers** | Stats summary, capacity bars, hours-by-member, signups, hours from events                                                                                |
+| **Finance**    | 4 summary cards with trends, budget lifecycle (request→approve→spend→reconcile), color-coded amounts, chart                                              |
+| **Messages**   | 3-column layout (threads, conversation, context panel), chat bubbles, date dividers, markdown support, emoji picker                                      |
+| **Files**      | Type-aware icons, drag-drop upload, image preview, OneDrive tab                                                                                          |
+| **Members**    | Role management, pagination, CSV import, member search                                                                                                   |
+| **Meetings**   | Create with agenda, RSVP system, minutes editor, action item extraction                                                                                  |
+| **Activity**   | Charts (Carbon-native), progress bars, live activity feed, WebSocket updates                                                                             |
+| **Search**     | Debounced search, category filters, keyboard navigation, type icons                                                                                      |
+| **Settings**   | Teams webhook URL, term archive/management, module toggles, logo upload                                                                                  |
+| **Accounts**   | Your profile, XP/level/streak, leaderboard, kudos, admin user creation                                                                                   |
+
+### Production-Grade Infrastructure
+
+| Feature              | What it does                                                         |
+| -------------------- | -------------------------------------------------------------------- |
+| **WebSocket**        | Real-time updates, live presence indicators, instant notifications   |
+| **Notifications**    | Bell icon with unread badge, Teams webhook integration, smart digest |
+| **Audit Log**        | Tamper-evident log for financial + approval actions, CSV export      |
+| **Rate Limiting**    | 100 req/15s API, 10 req/15s auth with `Retry-After` headers          |
+| **Security Headers** | Helmet middleware, CORS restricted, CSP enabled                      |
+| **Public API**       | `/api/v1/*` with API key auth, paginated responses, HMAC webhooks    |
+| **Gamification**     | XP, levels, streaks, kudos, leaderboard, engagement scoring          |
+| **Auto-Pilot**       | Hourly nudges for overdue tasks, pending proposals, low RSVPs        |
+| **Succession**       | One-click term handoff with data archive + roll-over                 |
 
 ---
 
 ## Commands
 
 ```bash
-npm run dev          # Start both servers (kills ports 3001,5173 first)
+npm run dev          # Start both servers
 npm run stop         # Kill ports 3001,5173
 npm run build        # TypeScript build for backend + frontend
+npm run start        # Production build + serve
+
+npm run test -w backend    # 41 tests
+npm run test -w frontend   # 68 tests (109 total)
+
 npm run format       # Prettier
 npx eslint "backend/src/**/*.ts" "frontend/src/**/*.{ts,tsx}"
-
-npm run test -w backend    # 10 tests (Hono app.request)
-npm run test -w frontend   # 20 tests (vitest + @testing-library/react)
 ```
 
 ---
 
-## Project Structure
+## Tests (109 total)
 
-```
-backend/
-├── prisma/
-│   ├── schema.prisma       # SQLite schema (dev)
-│   ├── schema.prod.prisma  # PostgreSQL schema (swap for prod)
-│   └── seed.ts             # Seed data (5 users, sample tasks/events/etc)
-├── src/
-│   ├── index.ts            # Server entry — sets DATABASE_URL, dynamic imports
-│   ├── lib/
-│   │   ├── env.ts          # Typed env access
-│   │   ├── db.ts           # PrismaClient with safe error proxy
-│   │   └── auth-config.ts  # Auth.js providers + callbacks
-│   ├── middleware/
-│   │   └── auth.ts         # requireWorkspace middleware
-│   └── routes/             # 15 route modules
-│       ├── auth.ts, dashboard.ts, tasks.ts, proposals.ts
-│       ├── events.ts, volunteers.ts, finance.ts, messages.ts
-│       ├── files.ts, members.ts, activity.ts, search.ts
-│       ├── settings.ts, public.ts, docs.ts
-│       └── health.ts
-└── scripts/dev-setup.mjs   # DB reset + seed on dev start
-
-frontend/
-├── src/
-│   ├── api/httpClient.ts       # fetchJson with retry (2x on 5xx)
-│   ├── config/clientConfig.ts  # Multi-client branding config
-│   ├── context/                # Auth, Theme, Workspace contexts
-│   ├── components/             # UIShell, Card, PageHeader, DataTable, etc.
-│   ├── features/               # 12 admin pages + 4 public pages
-│   └── routes/                 # AppRoutes, LoginPage, ProtectedRoute
-└── public/
-    ├── developers.png          # Favicon for Developers' Club
-    └── stuco.png               # Favicon for Student Council
-```
+| Suite        | Tests | What's covered                                                                                                                                                                                                                                                                      |
+| ------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**  | 41    | All 15 route modules (health, auth, dashboard, tasks, proposals, events, volunteers, finance, messages, files, members, activity, search, settings, public) + budget, meetings, archive, notifications, gamification + rate-limit middleware + WebSocket lib + env + error handling |
+| **Frontend** | 68    | All components (Card, PageHeader, StateViews, ErrorBoundary, PageTransition), pages (LoginPage, PublicHome, DashboardPage, AccountsPage, AdminUserManager, MeetingsPage), hooks (useWebSocket, useNotifications), API (httpClient, workspaceApi), config (clientConfig)             |
 
 ---
 
 ## API Endpoints
 
-All endpoints under `/api/*` are proxied by Vite to the Hono backend:
-
-| Method       | Path                        | Description                                                     |
-| ------------ | --------------------------- | --------------------------------------------------------------- |
-| GET          | `/api/health`               | Health check                                                    |
-| GET          | `/api/auth/session`         | Current session                                                 |
-| GET          | `/api/me`                   | Current user profile                                            |
-| GET          | `/api/dashboard`            | Dashboard metrics + attention items + tasks + events + activity |
-| GET/POST     | `/api/tasks`                | List / create tasks                                             |
-| PATCH/DELETE | `/api/tasks/:id`            | Update / delete task                                            |
-| GET/POST     | `/api/proposals`            | List / create proposals                                         |
-| GET/POST     | `/api/events`               | List / create events                                            |
-| GET/POST     | `/api/volunteers/slots`     | List / create volunteer slots                                   |
-| GET/POST     | `/api/finance/transactions` | List / create transactions                                      |
-| GET/POST     | `/api/messages/threads`     | List / create message threads                                   |
-| GET/POST     | `/api/files`                | List / upload files                                             |
-| GET/PATCH    | `/api/members`              | List / update members                                           |
-| GET          | `/api/activity`             | Activity feed                                                   |
-| GET          | `/api/search`               | Cross-resource search                                           |
-| GET/PATCH    | `/api/settings`             | Workspace settings                                              |
-| GET          | `/api/events/public`        | Public events (no auth)                                         |
-| GET          | `/api/photos`               | Photos (no auth)                                                |
+| Area              | Endpoints                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------- |
+| **Auth**          | `GET /api/auth/session`, `GET /api/me`                                                                                                                              |
+| **Dashboard**     | `GET /api/dashboard`                                                                                                                                                |
+| **CRUD**          | `GET/POST /api/tasks`, `/api/proposals`, `/api/events`, `/api/volunteers/slots`, `/api/finance/transactions`, `/api/messages/threads`, `/api/files`, `/api/members` |
+| **Workflow**      | `POST /api/proposals/:id/approve                                                                                                                                    | reject`, `GET /api/proposals/:id/approval-history` |
+| **Budget**        | `GET/POST /api/budget`, `PATCH /api/budget/:id/approve                                                                                                              | spend                                              | reconcile` |
+| **Meetings**      | `GET/POST /api/meetings`, `POST /api/meetings/:id/rsvp`                                                                                                             |
+| **Notifications** | `GET /api/notifications`, `PATCH /api/notifications/:id/read`                                                                                                       |
+| **Gamification**  | `POST /api/gamification/check-streak`, `GET /api/gamification/leaderboard`                                                                                          |
+| **Audit**         | `GET /api/audit`, `GET /api/audit/export`                                                                                                                           |
+| **Archive**       | `POST /api/archive/end-term`, `GET /api/archive`                                                                                                                    |
+| **Public API**    | `GET /api/v1/tasks`, `/api/v1/events`, `/api/v1/proposals` (API key required)                                                                                       |
+| **Presence**      | `GET /api/presence`                                                                                                                                                 |
 
 ---
 
-## Environment Variables
+## Verification Gates
 
-Copy `.env.example` to `.env.local`:
-
-```bash
-cp .env.example .env.local
-```
-
-Key variables:
-
-- `VITE_CLIENT_NAME=developers|stuco` — Client branding
-- `DATABASE_URL` — SQLite (dev) or PostgreSQL (prod)
-- `DEV_AUTH_PASSWORD` — Dev credentials login
-- `GITHUB_ID` / `GOOGLE_ID` / `MICROSOFT_CLIENT_ID` — OAuth2 providers (optional)
+1. `npm run build -w backend` — 0 TS errors
+2. `npm run build -w frontend` — 0 TS errors
+3. `npx eslint "backend/src/**/*.ts" "frontend/src/**/*.{ts,tsx}"` — 0 errors
+4. `npm run test -w backend` — 41/41 pass
+5. `npm run test -w frontend` — 68/68 pass
+6. Quick smoke: `npm run dev`, hit `/api/health` → 200
