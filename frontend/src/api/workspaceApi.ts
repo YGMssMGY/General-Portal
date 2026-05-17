@@ -149,4 +149,5 @@ export const workspaceApi = {
     fetchJson<WorkspaceSettings>("/settings", { method: "PATCH", ...jsonBody(settings) }),
   createAdminUser: (data: { email: string; displayName: string; password: string; role: string }) =>
     fetchJson<void>("/admin/users", { method: "POST", ...jsonBody(data) }),
+  getAdminUsers: () => fetchJson<any[]>("/admin/users"),
 };

@@ -5,7 +5,7 @@
 ```powershell
 # Everything from root (npm workspaces)
 npm install          # hoists deps for frontend/ + backend/
-npm run dev          # kills ports 3001,5173 → SQLite reset+seed → Hono (:3001) + Vite (:5173)
+npm run dev          # kills ports 3001,5173 → migrations + seed → Hono (:3001) + Vite (:5173)
 npm run stop         # kills ports 3001,5173
 npm run build        # tsc (backend) + tsc -b && vite build (frontend)
 npm run test -w backend    # 10 vitest tests
@@ -27,38 +27,43 @@ Vite proxy: /api/* → localhost:3001
 
 - **No Java, no Spring Boot, no Docker.** SQLite for dev (`file:./dev.db`), PostgreSQL for prod (swap `schema.prod.prisma`).
 - **Auth:** `@hono/auth-js` with JWT strategy. Dev credentials provider active when `DEV_AUTH_PASSWORD` is set. OAuth2 (GitHub, Google, Microsoft) optional.
-- **Database resets every `npm run dev`.** `dev-setup.mjs` deletes `dev.db`, runs migration + seed fresh.
-- **Multi-client:** `VITE_CLIENT_NAME=developers|stuco` controls brand, feature flags, favicon.
+- **Production:** Only Microsoft OAuth2. Dev credentials and other OAuth2 providers are disabled when `NODE_ENV=production`.
+- **Database persists across dev restarts.** `dev-setup.mjs` runs pending migrations on existing DB; does NOT delete it. Seeded users are always created fresh by the seed script.
+- **Multi-client:** `VITE_CLIENT_NAME=developers|stuco` controls brand, feature flags, favicon, and separate database file (`dev.db` vs `dev-stuco.db`).
 
 ## Key files
 
-| Path                                   | Role                                                                     |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `backend/src/index.ts`                 | Server entry — sets `DATABASE_URL`, dynamic imports, registers routes    |
-| `backend/src/lib/env.ts`               | Typed env access (reads from `process.env`, no dotenv)                   |
-| `backend/src/lib/db.ts`                | Lazy `PrismaClient` (safe proxy catches DB errors → returns `[]`/`null`) |
-| `backend/src/lib/auth-config.ts`       | Auth.js providers + callbacks                                            |
-| `backend/src/routes/*.ts`              | 15 Hono route modules (health, auth, dashboard, CRUD per resource)       |
-| `backend/prisma/schema.prisma`         | SQLite schema (19 models + Account/Session/VerificationToken)            |
-| `backend/prisma/schema.prod.prisma`    | PostgreSQL schema (swap for prod)                                        |
-| `frontend/src/config/clientConfig.ts`  | Multi-client branding config                                             |
-| `frontend/src/hooks/useClientTheme.ts` | Sets favicon, title, CSS vars                                            |
-| `frontend/src/api/httpClient.ts`       | `fetchJson()` with retry (2x on 5xx/network err)                         |
+| Path                                   | Role                                                               |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| `backend/src/index.ts`                 | Dev entry — sets `DATABASE_URL`, dynamic imports, registers routes |
+| `backend/src/prod.ts`                  | Production entry — same + serves frontend `dist/` + SPA fallback   |
+| `backend/src/lib/env.ts`               | Typed env access (reads from `process.env`, no dotenv)             |
+| `backend/src/lib/db.ts`                | PrismaClient singleton (globalThis guard for hot-reload)           |
+| `backend/src/lib/auth-config.ts`       | Auth.js providers + callbacks (production-aware)                   |
+| `backend/src/routes/*.ts`              | 15 Hono route modules + admin.ts (admin-only user creation)        |
+| `backend/prisma/schema.prisma`         | SQLite schema (19 models + Account/Session/VerificationToken)      |
+| `backend/prisma/schema.prod.prisma`    | PostgreSQL schema (swap for prod)                                  |
+| `backend/scripts/dev-setup.mjs`        | Dev DB setup — runs migrations, seeds on fresh DB only             |
+| `backend/scripts/manage-accounts.mjs`  | CLI tool: `create-admin`, `create-user`, `list`, `delete`          |
+| `frontend/src/config/clientConfig.ts`  | Multi-client branding config                                       |
+| `frontend/src/hooks/useClientTheme.ts` | Sets favicon, title, CSS vars                                      |
+| `frontend/src/api/httpClient.ts`       | `fetchJson()` with retry (2x on 5xx/network err)                   |
 
 ## Critical gotchas
 
 1. **`DATABASE_URL` must be set before PrismaClient is created.** `index.ts` sets `process.env["DATABASE_URL"]` before any dynamic imports. `env.ts` must NOT call `dotenv.config()` — it would overwrite the URL. Loading `.env.local` is centralized in `index.ts` only.
 2. **`env-url-basepath-redundant` warning** — safe to ignore. Caused by explicit `basePath: "/api/auth"` plus `AUTH_URL` env var.
-3. **Module execution order matters.** PrismaClient is created lazily on first access (via `db.ts` Proxy). If you change this, make sure `DATABASE_URL` is already set.
-4. **Credentials sign-in requires JWT strategy.** `session: { strategy: "database" }` crashes with `UnsupportedStrategy` when using credentials provider.
-5. **`authorize()` should avoid DB queries** if possible (makes login resilient). The JWT callback enriches the token with workspace data — falls back to defaults if DB is unavailable.
-6. **SQLite schema differences** vs PostgreSQL: remove `@db.Text`, change `cuid()` → `uuid()`. These are handled in `schema.prisma` (SQLite) while `schema.prod.prisma` keeps the PostgreSQL version.
-7. **`npm run dev` resets the database every time.** `dev.db` is deleted and re-created with fresh seed data. Don't keep state across restarts.
-8. **Safe DB proxy** (`db.ts`) silently returns `[]`/`null`/`0` on Prisma errors instead of crashing. This can hide bugs — check server logs for `[db] Query failed` warnings.
+3. **Module execution order matters.** All backend imports after DATABASE_URL are dynamic (`await import()`) to ensure the env var is set first.
+4. **Credentials sign-in requires JWT strategy.** `session: { strategy: "database" }` crashes with `UnsupportedStrategy`.
+5. **Custom passwords stored in DB.** Admin-created users get their own password. Seeded users fall back to `DEV_AUTH_PASSWORD`. Usernames don't require `@` — "jeff" works.
+6. **SQLite schema differences** vs PostgreSQL: remove `@db.Text`, change `cuid()` → `uuid()`. Handled in `schema.prisma` (SQLite) vs `schema.prod.prisma` (PostgreSQL).
+7. **Database persists across restarts.** `dev-setup.mjs` does NOT delete the DB. Custom-created users and data survive `npm run dev` restarts.
+8. **No safe DB proxy.** `db` is just `prisma` directly. Errors throw and must be caught explicitly.
+9. **PrismaClient uses globalThis singleton.** Survives `tsx watch` hot-reloads without creating duplicate connections.
 
 ## Dev login accounts
 
-All use password from `DEV_AUTH_PASSWORD` (default `devpass123`):
+Seeded users (password from `DEV_AUTH_PASSWORD`, default `devpass123`):
 
 | Email                               | Role      |
 | ----------------------------------- | --------- |
@@ -67,6 +72,19 @@ All use password from `DEV_AUTH_PASSWORD` (default `devpass123`):
 | `dev.officer@generalportal.local`   | Officer   |
 | `dev.member@generalportal.local`    | Member    |
 
+Custom accounts can be created via **Admin → Accounts** page with any username and password.
+
+## Production deployment
+
+```powershell
+npm run db:use:prod           # swap schema.prisma → PostgreSQL version
+npm run db:push:prod          # push schema to PostgreSQL
+npm run db:seed:prod          # seed data
+NODE_ENV=production npm start # builds + starts on :3001
+# Login: Microsoft OAuth2 only, no dev credentials
+# Frontend static files served by the backend at /
+```
+
 ## UI conventions
 
 - Use Carbon components (`Grid`, `Row`, `Column`, `Stack`, `Tile`, `DataTable`, `Modal`, `InlineNotification`) — not inline `style={{}}`.
@@ -74,6 +92,8 @@ All use password from `DEV_AUTH_PASSWORD` (default `devpass123`):
 - Multi-client feature flags in `clientConfig.ts` control sidebar nav visibility.
 - Time-aware greeting in DashboardPage (`Good morning/afternoon/evening`).
 - Logout button in UIShell header global bar.
+- Page transition animations via framer-motion (`PageTransition` component).
+- Toast notifications via react-hot-toast on CRUD operations.
 
 ## Testing
 
