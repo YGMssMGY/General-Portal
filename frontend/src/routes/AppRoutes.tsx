@@ -18,6 +18,7 @@ import { SearchPage } from "../features/search/SearchPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { TasksPage } from "../features/tasks/TasksPage";
 import { VolunteersPage } from "../features/volunteers/VolunteersPage";
+import { AccountsPage } from "../features/accounts/AccountsPage";
 import { LoginPage } from "./LoginPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -49,6 +50,7 @@ export function AppRoutes() {
         <Route path="admin/messages" element={<MessagesPage />} />
         <Route path="admin/files" element={<FilesPage />} />
         <Route path="admin/members" element={<MembersPage />} />
+        <Route path="admin/accounts" element={<AccountsPage />} />
         <Route path="admin/search" element={<SearchPage />} />
         <Route path="admin/activity" element={<ActivityPage />} />
         <Route

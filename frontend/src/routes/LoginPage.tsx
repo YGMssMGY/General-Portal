@@ -5,9 +5,7 @@ import { useSession, signIn } from "@hono/auth-js/react";
 import { LoadingState } from "../components/StateViews";
 import { getClientConfig } from "../config/clientConfig";
 
-const allProviders = [
-  { id: "microsoft", label: "Microsoft" },
-];
+const allProviders = [{ id: "microsoft", label: "Microsoft" }];
 const visibleProviders = import.meta.env.PROD
   ? allProviders.filter((p) => p.id === "microsoft")
   : allProviders;
@@ -90,7 +88,17 @@ export function LoginPage() {
             color: "#ffffff",
           }}
         >
-          {config.shortName}
+          {config.favicon ? (
+            <img
+              src={config.favicon}
+              alt={config.shortName}
+              style={{ width: "3rem", height: "3rem", borderRadius: "4px" }}
+            />
+          ) : (
+            <span style={{ fontSize: "1.125rem", fontWeight: 600, color: "#ffffff" }}>
+              {config.shortName}
+            </span>
+          )}
         </div>
         <h1
           style={{

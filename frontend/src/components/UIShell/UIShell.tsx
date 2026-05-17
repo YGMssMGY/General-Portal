@@ -85,6 +85,7 @@ const navConfig: NavGroup[] = [
   {
     title: "Administration",
     items: [
+      { label: "Accounts", to: "/admin/accounts", icon: User },
       {
         label: "Members",
         to: "/admin/members",

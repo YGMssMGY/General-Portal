@@ -52,21 +52,29 @@ export function PublicLayout() {
               textDecoration: "none",
             }}
           >
-            <div
-              style={{
-                width: "2rem",
-                height: "2rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#0043ce",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                color: "#ffffff",
-              }}
-            >
-              {config.shortName}
-            </div>
+            {config.favicon ? (
+              <img
+                src={config.favicon}
+                alt={config.shortName}
+                style={{ width: "2rem", height: "2rem", borderRadius: "2px" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "2rem",
+                  height: "2rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#0043ce",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "#ffffff",
+                }}
+              >
+                {config.shortName}
+              </div>
+            )}
             <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>{config.displayName}</span>
           </Link>
           <nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
