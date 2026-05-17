@@ -6,8 +6,6 @@ import { LoadingState } from "../components/StateViews";
 import { getClientConfig } from "../config/clientConfig";
 
 const allProviders = [
-  { id: "github", label: "GitHub" },
-  { id: "google", label: "Google" },
   { id: "microsoft", label: "Microsoft" },
 ];
 const visibleProviders = import.meta.env.PROD
