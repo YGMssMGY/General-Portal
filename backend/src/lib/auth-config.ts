@@ -51,13 +51,16 @@ function getAuthConfig(): AuthConfig {
             password: { label: "Password", type: "password" },
           },
           async authorize(credentials) {
-            if (credentials?.password !== env.DEV_AUTH_PASSWORD) return null;
             const email = credentials?.username as string;
+            const pw = credentials?.password as string;
             if (!email?.includes("@")) return null;
             try {
               const user = await db.userAccount.findUnique({
                 where: { email },
               });
+              if (user?.password) {
+                if (pw !== user.password) return null;
+              } else if (pw !== env.DEV_AUTH_PASSWORD) return null;
               if (user)
                 return {
                   id: user.id,

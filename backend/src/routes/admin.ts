@@ -80,6 +80,7 @@ const rolePerms: Record<string, string[]> = {
 const createUserSchema = z.object({
   email: z.string().min(1),
   displayName: z.string().min(1),
+  password: z.string().min(1),
   role: z.enum(["admin", "president", "officer", "member"]),
 });
 
@@ -101,7 +102,11 @@ route.post("/admin/users", async (c) => {
     }
 
     const user = await db.userAccount.create({
-      data: { email: parsed.email, displayName: parsed.displayName },
+      data: {
+        email: parsed.email,
+        displayName: parsed.displayName,
+        password: parsed.password,
+      },
     });
 
     const label = parsed.role.charAt(0).toUpperCase() + parsed.role.slice(1);

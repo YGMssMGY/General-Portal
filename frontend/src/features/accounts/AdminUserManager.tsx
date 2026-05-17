@@ -35,6 +35,7 @@ export function AdminUserManager() {
       await workspaceApi.createAdminUser({
         email: username.trim(),
         displayName: displayName.trim(),
+        password: password.trim(),
         role,
       });
       setNotification({

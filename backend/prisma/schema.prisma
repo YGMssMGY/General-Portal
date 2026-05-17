@@ -128,6 +128,7 @@ model UserAccount {
   id            String    @id @default(uuid())
   email         String    @unique
   displayName   String
+  password      String?
   emailVerified DateTime?
   avatarUrl     String?
   createdAt     DateTime  @default(now())
