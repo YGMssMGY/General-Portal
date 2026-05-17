@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import toast from "react-hot-toast";
 import {
   Search,
   Button,
@@ -135,8 +136,11 @@ export function FilesPage() {
       setUploadItems([]);
       setIsUploadOpen(false);
       refetch();
+      toast.success("Files uploaded");
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Upload failed");
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      setUploadError(msg);
+      toast.error(msg);
     } finally {
       setIsUploading(false);
     }
@@ -150,7 +154,9 @@ export function FilesPage() {
       if (selectedFile?.id === deleteTarget.id) setSelectedFile(null);
       setDeleteTarget(null);
       refetch();
+      toast.success("File deleted");
     } catch {
+      toast.error("Could not delete file");
     } finally {
       setIsDeleting(false);
     }

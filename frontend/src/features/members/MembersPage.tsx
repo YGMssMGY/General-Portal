@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Badge } from "../../components/Badge";
@@ -166,8 +167,11 @@ export function MembersPage() {
       setFormPosition("");
       setFormRole("Member");
       refetch();
+      toast.success("Member added");
     } catch (e) {
-      setAddError(e instanceof Error ? e.message : "Could not add member");
+      const msg = e instanceof Error ? e.message : "Could not add member";
+      setAddError(msg);
+      toast.error(msg);
     }
   }
 
@@ -178,7 +182,9 @@ export function MembersPage() {
       await workspaceApi.removeMember(deleteTarget.id);
       setDeleteTarget(undefined);
       refetch();
+      toast.success("Member removed");
     } catch {
+      toast.error("Could not remove member");
     } finally {
       setIsDeleting(false);
     }

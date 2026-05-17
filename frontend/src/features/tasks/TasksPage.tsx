@@ -1,10 +1,12 @@
 import { useMemo, useState, useEffect, useCallback, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
+import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
 import {
   Button,
   TextInput,
@@ -20,6 +22,8 @@ import {
   Grid,
   Column,
 } from "@carbon/react";
+import { SimpleBarChart } from "@carbon/charts-react";
+import "@carbon/charts/styles.css";
 import {
   DndContext,
   DragOverlay,
@@ -32,7 +36,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { workspaceApi } from "../../api/workspaceApi";
-import { useTasks } from "../../hooks/useWorkspaceResources";
+import { useTasks, useActivityStats } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../context/AuthContext";
 import type { Priority, Task, TaskStatus, Member } from "../../types";
 import { formatDate } from "../../utils/format";
@@ -43,9 +47,7 @@ import {
   Close,
   Calendar,
   Folder,
-  CheckboxChecked,
   Chat,
-  Attachment,
   Locked,
   View,
   Menu,
@@ -472,7 +474,7 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
             </div>
           </div>
 
-          {/* Subtasks placeholder */}
+          {/* Description */}
           <div>
             <h3
               className="cds--type-heading-01"
@@ -483,13 +485,13 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
                 marginBottom: "0.75rem",
               }}
             >
-              <CheckboxChecked size={16} /> Subtasks
+              Description
             </h3>
             <div
               className="cds--type-body-01"
-              style={{ color: "var(--cds-text-secondary)", padding: "0.5rem 0" }}
+              style={{ color: "var(--cds-text-primary)", padding: "0.5rem 0" }}
             >
-              Subtask management will be available in a future update.
+              <MarkdownRenderer>{task.title}</MarkdownRenderer>
             </div>
           </div>
 
@@ -511,27 +513,6 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
               style={{ color: "var(--cds-text-secondary)", padding: "0.5rem 0" }}
             >
               Comments will be available in a future update.
-            </div>
-          </div>
-
-          {/* Attachments placeholder */}
-          <div>
-            <h3
-              className="cds--type-heading-01"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <Attachment size={16} /> Attachments
-            </h3>
-            <div
-              className="cds--type-body-01"
-              style={{ color: "var(--cds-text-secondary)", padding: "0.5rem 0" }}
-            >
-              Attachments will be available in a future update.
             </div>
           </div>
         </Stack>
@@ -663,6 +644,7 @@ function DataToolbar({
 
 export function TasksPage() {
   const { data, error, isLoading, refetch } = useTasks();
+  const { data: activityStats } = useActivityStats();
   const { user } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task>();
@@ -858,14 +840,18 @@ export function TasksPage() {
       };
       if (editingTask) {
         await workspaceApi.updateTask(editingTask.id, payload);
+        toast.success("Task updated");
       } else {
         await workspaceApi.createTask(payload);
+        toast.success("Task created");
       }
       setIsTaskModalOpen(false);
       setEditingTask(undefined);
       refetch();
     } catch (unknownError) {
-      setCreateError(unknownError instanceof Error ? unknownError.message : "Could not save task");
+      const msg = unknownError instanceof Error ? unknownError.message : "Could not save task";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsCreating(false);
     }
@@ -878,10 +864,11 @@ export function TasksPage() {
       await workspaceApi.deleteTask(deleteTarget.id);
       setDeleteTarget(undefined);
       refetch();
+      toast.success("Task deleted");
     } catch (unknownError) {
-      setCreateError(
-        unknownError instanceof Error ? unknownError.message : "Could not delete task",
-      );
+      const msg = unknownError instanceof Error ? unknownError.message : "Could not delete task";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -941,6 +928,33 @@ export function TasksPage() {
         onStatusFilterChange={setStatusFilter}
         onAddTask={openCreateModal}
       />
+
+      {/* Completion Trend */}
+      {activityStats?.taskCompletionTrend && activityStats.taskCompletionTrend.length > 0 ? (
+        <Tile style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <SimpleBarChart
+            data={activityStats.taskCompletionTrend.map((d) => {
+              const date = new Date(d.date);
+              const label = date.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              });
+              return { group: "Completed", key: label, value: d.count };
+            })}
+            options={{
+              title: "Completion Trend (7 days)",
+              axes: {
+                bottom: { mapsTo: "key", visible: false },
+                left: { mapsTo: "value", visible: false },
+              },
+              toolbar: { enabled: false },
+              height: "80px",
+              legend: { enabled: false },
+            }}
+          />
+        </Tile>
+      ) : null}
 
       {/* Board view */}
       {viewMode === "board" ? (

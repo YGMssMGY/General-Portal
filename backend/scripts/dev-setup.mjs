@@ -28,8 +28,17 @@ if (existsSync(dbPath)) {
 console.log(
   `[dev-setup] Creating fresh database (${dbName}) with seed data...`,
 );
-execSync("npx prisma migrate dev --name init", {
-  cwd: root,
-  stdio: "inherit",
-  env: process.env,
-});
+try {
+  execSync("npx prisma migrate dev --name init", {
+    cwd: root,
+    stdio: "inherit",
+    env: process.env,
+  });
+} catch (err) {
+  console.error(`[dev-setup] Migration failed, removing ${dbName}...`);
+  if (existsSync(dbPath)) unlinkSync(dbPath);
+  const journal = resolve(root, "prisma", `${dbName}-journal`);
+  if (existsSync(journal)) unlinkSync(journal);
+  console.error("[dev-setup] Migration error:", err.message);
+  process.exit(1);
+}

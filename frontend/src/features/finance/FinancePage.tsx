@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { PageHeader } from "../../components/PageHeader";
@@ -37,29 +38,8 @@ import {
   Time,
   Close,
 } from "@carbon/icons-react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
+import { LineChart } from "@carbon/charts-react";
+import "@carbon/charts/styles.css";
 
 export function FinancePage() {
   const { user } = useAuth();
@@ -222,14 +202,18 @@ export function FinancePage() {
       };
       if (editingTx) {
         await workspaceApi.updateFinanceTransaction(editingTx.id, payload);
+        toast.success("Transaction updated");
       } else {
         await workspaceApi.createFinanceTransaction(payload);
+        toast.success("Transaction created");
       }
       setIsModalOpen(false);
       setEditingTx(undefined);
       refetchTx();
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not save transaction");
+      const msg = e instanceof Error ? e.message : "Could not save transaction";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsCreating(false);
     }
@@ -242,8 +226,11 @@ export function FinancePage() {
       await workspaceApi.deleteFinanceTransaction(deleteTarget.id);
       setDeleteTarget(undefined);
       refetchTx();
+      toast.success("Transaction deleted");
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not delete transaction");
+      const msg = e instanceof Error ? e.message : "Could not delete transaction";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -253,37 +240,19 @@ export function FinancePage() {
   if (txError || !txData)
     return <ErrorState message={txError ?? "Finance data is unavailable"} onRetry={refetchTx} />;
 
-  const chartData = {
-    labels: trends?.map((t) => t.date) ?? [],
-    datasets: [
-      {
-        label: "Revenue",
-        data: trends?.map((t) => t.revenue) ?? [],
-        borderColor: "#24a148",
-        backgroundColor: "rgba(36, 161, 72, 0.1)",
-        fill: true,
-        tension: 0.3,
-      },
-      {
-        label: "Expenses",
-        data: trends?.map((t) => t.expenses) ?? [],
-        borderColor: "#da1e28",
-        backgroundColor: "rgba(218, 30, 40, 0.1)",
-        fill: true,
-        tension: 0.3,
-      },
-    ],
-  };
+  const chartData = (trends ?? []).flatMap((t) => [
+    { group: "Revenue", key: t.date, value: t.revenue },
+    { group: "Expenses", key: t.date, value: t.expenses },
+  ]);
 
   const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: { position: "bottom" as const },
+    title: "Revenue vs Expenses (7 days)",
+    axes: {
+      bottom: { mapsTo: "key", title: "Date" },
+      left: { mapsTo: "value", title: "Amount" },
     },
-    scales: {
-      x: { grid: { display: false } },
-      y: { beginAtZero: true },
-    },
+    legend: { enabled: true },
+    height: "280px",
   };
 
   return (
@@ -519,21 +488,9 @@ export function FinancePage() {
       </Grid>
 
       {/* Trend Chart */}
-      {trends && trends.length > 0 ? (
+      {chartData.length > 0 ? (
         <Tile style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-          <h3
-            style={{
-              fontSize: "1rem",
-              fontWeight: 600,
-              color: "var(--cds-text-primary)",
-              marginBottom: "1rem",
-            }}
-          >
-            Revenue vs Expenses (7 days)
-          </h3>
-          <div style={{ maxHeight: "280px" }}>
-            <Line data={chartData} options={chartOptions} />
-          </div>
+          <LineChart data={chartData} options={chartOptions} />
         </Tile>
       ) : null}
 

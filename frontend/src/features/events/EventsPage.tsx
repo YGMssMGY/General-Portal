@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { PageHeader } from "../../components/PageHeader";
@@ -181,14 +182,18 @@ export function EventsPage() {
       };
       if (editingEvent) {
         await workspaceApi.updateEvent(editingEvent.id, updates);
+        toast.success("Event updated");
       } else {
         await workspaceApi.createEvent(base as Pick<EventItem, "title" | "startsAt" | "status">);
+        toast.success("Event created");
       }
       setIsModalOpen(false);
       setEditingEvent(undefined);
       refetch();
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not save event");
+      const msg = e instanceof Error ? e.message : "Could not save event";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsCreating(false);
     }
@@ -201,8 +206,11 @@ export function EventsPage() {
       await workspaceApi.deleteEvent(deleteTarget.id);
       setDeleteTarget(undefined);
       refetch();
+      toast.success("Event deleted");
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Could not delete event");
+      const msg = e instanceof Error ? e.message : "Could not delete event";
+      setCreateError(msg);
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }

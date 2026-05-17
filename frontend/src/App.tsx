@@ -1,3 +1,4 @@
+import { Toaster } from "react-hot-toast";
 import { BrowserRouter } from "react-router-dom";
 import { Theme } from "@carbon/react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -26,6 +27,7 @@ export function App() {
           <ThemedApp />
         </ThemeProvider>
       </ErrorBoundary>
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
     </BrowserRouter>
   );
 }
