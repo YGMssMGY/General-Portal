@@ -53,7 +53,7 @@ function getAuthConfig(): AuthConfig {
           async authorize(credentials) {
             const email = credentials?.username as string;
             const pw = credentials?.password as string;
-            if (!email?.includes("@")) return null;
+            if (!email) return null;
             try {
               const user = await db.userAccount.findUnique({
                 where: { email },
