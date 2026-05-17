@@ -30,6 +30,7 @@ import searchRoute from "./routes/search.js";
 import settingsRoute from "./routes/settings.js";
 import publicRoute from "./routes/public.js";
 import docsRoute from "./routes/docs.js";
+import adminRoute from "./routes/admin.js";
 
 app.route("/api", healthRoute);
 app.route("/api", authRoute);
@@ -64,8 +65,18 @@ app.route("/api", activityRoute);
 app.route("/api", searchRoute);
 app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
+app.route("/api", adminRoute);
 
-app.use("/*", serveStatic({ root: "../frontend/dist", index: "index.html" }));
+app.use("/*", serveStatic({ root: "../frontend/dist" }));
+
+app.get("*", async (c) => {
+  const { readFileSync } = await import("fs");
+  const { resolve, dirname } = await import("path");
+  const { fileURLToPath } = await import("url");
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const indexPath = resolve(__dirname, "../../frontend/dist/index.html");
+  return c.html(readFileSync(indexPath, "utf-8"));
+});
 
 app.onError(errorHandler);
 

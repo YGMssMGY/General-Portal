@@ -16,3 +16,12 @@ export const requireWorkspace = createMiddleware(async (c, next) => {
   c.set("workspaceId", workspaceId);
   await next();
 });
+
+export const requireAdmin = createMiddleware(async (c, next) => {
+  const auth = await getAuthUser(c);
+  const role = (auth?.token as any)?.role as string | undefined;
+  if (!role || role !== "admin") {
+    return c.json({ error: "Forbidden: admin role required" }, 403);
+  }
+  await next();
+});

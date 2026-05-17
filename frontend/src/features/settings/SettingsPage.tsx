@@ -20,6 +20,8 @@ import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useSettings, useModules, useApprovalRules } from "../../hooks/useWorkspaceResources";
+import { useAuth } from "../../hooks/useAuth";
+import { AdminUserManager } from "./AdminUserManager";
 import type { WorkspaceSettings, ModuleSettings, ApprovalRule } from "../../types";
 
 const moduleLabels: Record<keyof ModuleSettings, string> = {
@@ -154,6 +156,7 @@ function NewRuleModal({
 /* ---------- Main Settings Page ---------- */
 
 export function SettingsPage() {
+  const { user } = useAuth();
   const {
     data: settings,
     error: settingsError,
@@ -540,6 +543,9 @@ export function SettingsPage() {
                 ))}
               </Stack>
             </Card>
+
+            {/* Admin User Management */}
+            {user?.role === "admin" && <AdminUserManager />}
 
             {/* Approval Workflows */}
             <Card padding="lg">
