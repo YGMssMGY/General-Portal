@@ -9,9 +9,13 @@ import { errorHandler } from "./middleware/error.js";
 import { requireWorkspace } from "./middleware/auth.js";
 import { secureHeaders } from "hono/secure-headers";
 import { apiLimiter, authLimiter } from "./middleware/rate-limit.js";
-import { setupWebSocket } from "./lib/websocket.js";
+import { setupWebSocket, presenceRoute } from "./lib/websocket.js";
 import notificationRoute from "./routes/notifications.js";
 import auditRoute from "./routes/audit.js";
+import gamificationRoute from "./routes/gamification.js";
+import kudosRoute from "./routes/kudos.js";
+import cron from "node-cron";
+import { runNudges } from "./workers/nudges.js";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -67,7 +71,11 @@ app.use("/api/notifications", requireWorkspace);
 app.use("/api/audit", requireWorkspace);
 app.use("/api/modules/*", requireWorkspace);
 app.use("/api/workspace/*", requireWorkspace);
+app.use("/api/gamification", requireWorkspace);
+app.use("/api/kudos", requireWorkspace);
+app.use("/api/presence", requireWorkspace);
 
+app.route("/api", presenceRoute);
 app.route("/api", dashboardRoute);
 app.route("/api", tasksRoute);
 app.route("/api", proposalsRoute);
@@ -83,6 +91,8 @@ app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
 app.route("/api", notificationRoute);
 app.route("/api", auditRoute);
+app.route("/api", gamificationRoute);
+app.route("/api", kudosRoute);
 app.route("/api", adminRoute);
 
 app.use("/*", serveStatic({ root: frontendDist }));
@@ -92,6 +102,10 @@ app.get("*", (c) => {
 });
 
 app.onError(errorHandler);
+
+cron.schedule("0 * * * *", () => {
+  runNudges().catch((err) => console.error("[cron] nudge error:", err));
+});
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(

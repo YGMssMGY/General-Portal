@@ -1,9 +1,16 @@
+import { Hono } from "hono";
 import { WebSocketServer, WebSocket } from "ws";
 import type { ServerType } from "@hono/node-server";
 import { verify } from "hono/jwt";
 import { env } from "./env.js";
 
-const rooms = new Map<string, Set<WebSocket>>();
+type UserSession = {
+  userId: string;
+  displayName: string;
+  ws: WebSocket;
+};
+
+const rooms = new Map<string, Map<string, UserSession>>();
 
 export function setupWebSocket(server: ServerType) {
   const wss = new WebSocketServer({ noServer: true });
@@ -19,6 +26,7 @@ export function setupWebSocket(server: ServerType) {
       const payload: any = await verify(token, env.AUTH_SECRET, "HS256");
       const userId: string = payload.id || payload.sub || "";
       const workspaceId: string = payload.workspaceId || "ws-default";
+      const displayName: string = payload.name || userId;
 
       wss.handleUpgrade(request, socket, head, (ws) => {
         (ws as any).userId = userId;
@@ -29,12 +37,18 @@ export function setupWebSocket(server: ServerType) {
           (ws as any).alive = true;
         });
 
-        if (!rooms.has(workspaceId)) rooms.set(workspaceId, new Set());
-        rooms.get(workspaceId)!.add(ws);
+        if (!rooms.has(workspaceId)) rooms.set(workspaceId, new Map());
+        rooms.get(workspaceId)!.set(userId, { userId, displayName, ws });
+
+        broadcastPresence(workspaceId);
 
         ws.on("close", () => {
-          rooms.get(workspaceId)?.delete(ws);
-          if (rooms.get(workspaceId)?.size === 0) rooms.delete(workspaceId);
+          const room = rooms.get(workspaceId);
+          if (room) {
+            room.delete(userId);
+            if (room.size === 0) rooms.delete(workspaceId);
+            else broadcastPresence(workspaceId);
+          }
         });
 
         ws.send(JSON.stringify({ type: "connected", userId }));
@@ -46,13 +60,13 @@ export function setupWebSocket(server: ServerType) {
 
   const interval = setInterval(() => {
     for (const clients of rooms.values()) {
-      for (const ws of clients) {
-        if (!(ws as any).alive) {
-          ws.terminate();
+      for (const [, session] of clients) {
+        if (!(session.ws as any).alive) {
+          session.ws.terminate();
           continue;
         }
-        (ws as any).alive = false;
-        ws.ping();
+        (session.ws as any).alive = false;
+        session.ws.ping();
       }
     }
   }, 30_000);
@@ -67,7 +81,30 @@ export function broadcast(workspaceId: string, event: object) {
   const clients = rooms.get(workspaceId);
   if (!clients) return;
   const data = JSON.stringify(event);
-  for (const ws of clients) {
-    if (ws.readyState === WebSocket.OPEN) ws.send(data);
+  for (const [, session] of clients) {
+    if (session.ws.readyState === WebSocket.OPEN) session.ws.send(data);
   }
 }
+
+function broadcastPresence(workspaceId: string) {
+  const room = rooms.get(workspaceId);
+  if (!room) return;
+  const online = Array.from(room.keys());
+  const data = JSON.stringify({ type: "presence", online });
+  for (const [, session] of room) {
+    if (session.ws.readyState === WebSocket.OPEN) session.ws.send(data);
+  }
+}
+
+export function getOnlineUsers(workspaceId: string): string[] {
+  const room = rooms.get(workspaceId);
+  if (!room) return [];
+  return Array.from(room.keys());
+}
+
+export const presenceRoute = new Hono();
+
+presenceRoute.get("/presence", (c) => {
+  const workspaceId = c.get("workspaceId");
+  return c.json({ online: getOnlineUsers(workspaceId) });
+});

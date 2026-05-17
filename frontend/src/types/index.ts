@@ -23,6 +23,9 @@ export interface UserProfile {
   role: UserRole;
   workspaceName: string;
   permissions?: string[];
+  xp?: number;
+  level?: number;
+  streak?: number;
 }
 
 export interface Workspace {
@@ -59,6 +62,7 @@ export interface Proposal {
   submittedAt: string;
   budget: number;
   summary: string;
+  rejectionReason?: string;
 }
 
 export interface EventItem {
@@ -195,6 +199,7 @@ export interface DashboardData {
   myTasks: Task[];
   upcomingEvents: EventItem[];
   recentActivity: ActivityItem[];
+  stats?: ActivityStats;
 }
 
 export interface WorkspaceSettings {
@@ -235,4 +240,29 @@ export interface SearchResult {
   title: string;
   description: string;
   status: string;
+}
+
+export interface ApprovalHistoryEntry {
+  id: string;
+  step: string;
+  approver: string;
+  action: "approved" | "rejected";
+  comment?: string;
+  createdAt: string;
+}
+
+export interface LeaderboardEntry {
+  userId: string;
+  displayName: string;
+  xp: number;
+  level: number;
+  rank: number;
+}
+
+export interface KudosEntry {
+  id: string;
+  fromUser: string;
+  toUser: string;
+  message: string;
+  createdAt: string;
 }

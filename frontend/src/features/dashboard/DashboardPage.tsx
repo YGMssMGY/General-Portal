@@ -481,6 +481,83 @@ export function DashboardPage() {
               </div>
             </Stack>
           </Card>
+
+          {/* Top Contributors */}
+          {data.stats?.topContributors && data.stats.topContributors.length > 0 && (
+            <Card padding="lg">
+              <Stack gap={4}>
+                <h2 className="cds--type-heading-02" style={{ margin: 0 }}>
+                  Top Contributors
+                </h2>
+                <div>
+                  {data.stats.topContributors.slice(0, 5).map((c, i) => (
+                    <div
+                      key={c.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        padding: "0.5rem 0",
+                        borderBottom: i < 4 ? "1px solid var(--cds-border-subtle)" : undefined,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "1.25rem",
+                          fontWeight: 700,
+                          fontSize: "0.8125rem",
+                          color: "var(--cds-text-secondary)",
+                          textAlign: "center",
+                        }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span
+                        style={{
+                          width: "2rem",
+                          height: "2rem",
+                          borderRadius: "50%",
+                          background: "var(--cds-button-tertiary)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {c.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p className="cds--type-body-02" style={{ fontWeight: 500, margin: 0 }}>
+                          {c.name}
+                        </p>
+                        <p
+                          className="cds--type-body-01"
+                          style={{ margin: 0, color: "var(--cds-text-secondary)" }}
+                        >
+                          {c.role}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p className="cds--type-body-02" style={{ fontWeight: 600, margin: 0 }}>
+                          {c.completedTasks}
+                        </p>
+                        <p
+                          className="cds--type-body-01"
+                          style={{ margin: 0, color: "var(--cds-text-secondary)" }}
+                        >
+                          tasks
+                        </p>
+                      </div>
+                      <Tag type={c.status === "Active" ? "green" : "gray"}>{c.status}</Tag>
+                    </div>
+                  ))}
+                </div>
+              </Stack>
+            </Card>
+          )}
         </Stack>
       </Column>
     </Grid>

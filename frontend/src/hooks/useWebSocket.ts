@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useSession } from "@hono/auth-js/react";
 
 type MessageCallback = (payload: unknown) => void;
@@ -26,6 +26,7 @@ export function useWebSocket() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const mountedRef = useRef(true);
   const tokenRef = useRef<string>("");
+  const [isConnected, setIsConnected] = useState(false);
 
   const token = (session as any)?.token as string | undefined;
   if (token) tokenRef.current = token;
@@ -40,6 +41,7 @@ export function useWebSocket() {
 
     ws.onopen = () => {
       retriesRef.current = 0;
+      setIsConnected(true);
     };
 
     ws.onmessage = (event) => {
@@ -54,6 +56,7 @@ export function useWebSocket() {
     };
 
     ws.onclose = () => {
+      setIsConnected(false);
       if (!mountedRef.current) return;
       const delay = Math.min(1000 * 2 ** retriesRef.current, 30000);
       retriesRef.current++;
@@ -73,5 +76,5 @@ export function useWebSocket() {
     };
   }, [connect, session]);
 
-  return { isConnected: wsRef.current?.readyState === WebSocket.OPEN };
+  return { isConnected };
 }
