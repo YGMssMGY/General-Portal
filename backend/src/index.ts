@@ -57,6 +57,10 @@ const [
   { default: auditRoute },
   { default: gamificationRoute },
   { default: kudosRoute },
+  { default: budgetRoute },
+  { default: meetingsRoute },
+  { default: archiveRoute },
+  { default: publicApiRoute },
 ] = await Promise.all([
   import("./routes/health.js"),
   import("./routes/auth.js"),
@@ -79,6 +83,10 @@ const [
   import("./routes/audit.js"),
   import("./routes/gamification.js"),
   import("./routes/kudos.js"),
+  import("./routes/budget.js"),
+  import("./routes/meetings.js"),
+  import("./routes/archive.js"),
+  import("./routes/public-api.js"),
 ]);
 
 app.route("/api", healthRoute);
@@ -106,6 +114,9 @@ app.use("/api/workspace/*", requireWorkspace);
 app.use("/api/gamification", requireWorkspace);
 app.use("/api/kudos", requireWorkspace);
 app.use("/api/presence", requireWorkspace);
+app.use("/api/budget", requireWorkspace);
+app.use("/api/meetings", requireWorkspace);
+app.use("/api/archive", requireWorkspace);
 
 app.route("/api", presenceRoute);
 app.route("/api", dashboardRoute);
@@ -125,6 +136,10 @@ app.route("/api", notificationRoute);
 app.route("/api", auditRoute);
 app.route("/api", gamificationRoute);
 app.route("/api", kudosRoute);
+app.route("/api", budgetRoute);
+app.route("/api", meetingsRoute);
+app.route("/api", archiveRoute);
+app.route("/api", publicApiRoute);
 app.route("/api", adminRoute);
 
 app.onError(errorHandler);

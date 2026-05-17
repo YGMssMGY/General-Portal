@@ -266,3 +266,45 @@ export interface KudosEntry {
   message: string;
   createdAt: string;
 }
+
+export interface Meeting {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  description: string;
+  agendaItems: string[];
+  minutes: string;
+  actionItems: string[];
+  status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  organizerName: string;
+  attendeeCount: number;
+  rsvpStatus?: "yes" | "no" | "maybe";
+}
+
+export interface BudgetAllocation {
+  id: string;
+  title: string;
+  amount: number;
+  status: "requested" | "approved" | "spent" | "reconciled";
+  linkedProposal: string;
+  linkedProposalId?: string;
+}
+
+export interface TermArchive {
+  id: string;
+  termName: string;
+  startDate: string;
+  endDate: string;
+  daysRemaining?: number;
+  isActive?: boolean;
+  summary?: TermSummary;
+}
+
+export interface TermSummary {
+  totalTasksCompleted: number;
+  eventsHeld: number;
+  budgetSpent: number;
+  volunteerHours: number;
+}

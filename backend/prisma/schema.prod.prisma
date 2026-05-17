@@ -386,6 +386,8 @@ model WorkspaceSettings {
   fiscalYearStart         String          @default("January")
   organizationType        String?
   primaryContactEmail     String?
+  teamsWebhookUrl         String?
+  webhookUrl              String?
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 

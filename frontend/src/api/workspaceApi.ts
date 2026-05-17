@@ -3,11 +3,13 @@ import type {
   ActivityStats,
   ApprovalHistoryEntry,
   ApprovalRule,
+  BudgetAllocation,
   DashboardData,
   EventItem,
   FinanceTransaction,
   KudosEntry,
   LeaderboardEntry,
+  Meeting,
   Member,
   Message,
   MessageThread,
@@ -15,6 +17,7 @@ import type {
   Proposal,
   SearchResult,
   Task,
+  TermArchive,
   UserProfile,
   VolunteerSlot,
   WorkspaceFile,
@@ -164,4 +167,31 @@ export const workspaceApi = {
   getKudos: () => fetchJson<KudosEntry[]>("/kudos"),
   sendKudos: (toUserId: string, message: string) =>
     fetchJson<KudosEntry>("/kudos", { method: "POST", ...jsonBody({ toUserId, message }) }),
+
+  // Meetings
+  getMeetings: () => fetchPage<Meeting>("/meetings"),
+  createMeeting: (
+    data: Pick<Meeting, "title" | "date" | "time" | "location" | "description" | "agendaItems">,
+  ) => fetchJson<Meeting>("/meetings", { method: "POST", ...jsonBody(data) }),
+  updateMeeting: (id: string, data: Partial<Meeting>) =>
+    fetchJson<Meeting>(`/meetings/${id}`, { method: "PATCH", ...jsonBody(data) }),
+  deleteMeeting: (id: string) => fetchJson<void>(`/meetings/${id}`, { method: "DELETE" }),
+  rsvpMeeting: (id: string, response: string) =>
+    fetchJson<void>(`/meetings/${id}/rsvp`, { method: "POST", ...jsonBody({ response }) }),
+  getMeetingRsvps: (id: string) =>
+    fetchJson<Array<{ id: string; userId: string; userName: string; response: string }>>(
+      `/meetings/${id}/rsvps`,
+    ),
+
+  // Budget
+  getBudgetAllocations: () => fetchJson<BudgetAllocation[]>("/budget"),
+  createBudgetAllocation: (data: Pick<BudgetAllocation, "title" | "amount" | "linkedProposal">) =>
+    fetchJson<BudgetAllocation>("/budget", { method: "POST", ...jsonBody(data) }),
+  approveBudgetAllocation: (id: string) =>
+    fetchJson<BudgetAllocation>(`/budget/${id}/approve`, { method: "PATCH" }),
+
+  // Archive / Term
+  endTerm: () => fetchJson<TermArchive>("/archive/end-term", { method: "POST" }),
+  getArchives: () => fetchJson<TermArchive[]>("/archive"),
+  getArchive: (id: string) => fetchJson<TermArchive>(`/archive/${id}`),
 };

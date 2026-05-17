@@ -14,6 +14,7 @@ export interface ClientConfig {
     showActivity: boolean;
     showMembers: boolean;
     showSettings: boolean;
+    showMeetings: boolean;
   };
 }
 
@@ -34,6 +35,7 @@ const clients: Record<string, ClientConfig> = {
       showActivity: true,
       showMembers: false,
       showSettings: false,
+      showMeetings: true,
     },
   },
   stuco: {
@@ -52,6 +54,7 @@ const clients: Record<string, ClientConfig> = {
       showActivity: true,
       showMembers: true,
       showSettings: true,
+      showMeetings: true,
     },
   },
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   Grid,
   Column,
@@ -13,7 +14,7 @@ import {
   Tag,
   InlineNotification,
 } from "@carbon/react";
-import { Save, Checkmark, Add, TrashCan } from "@carbon/icons-react";
+import { Save, Checkmark, Add, TrashCan, View } from "@carbon/icons-react";
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
@@ -21,7 +22,14 @@ import { Modal } from "../../components/Modal";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useSettings, useModules, useApprovalRules } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../hooks/useAuth";
-import type { WorkspaceSettings, ModuleSettings, ApprovalRule } from "../../types";
+import type {
+  TermArchive,
+  TermSummary,
+  WorkspaceSettings,
+  ModuleSettings,
+  ApprovalRule,
+} from "../../types";
+import { formatCurrency } from "../../utils/format";
 
 const moduleLabels: Record<keyof ModuleSettings, string> = {
   tasks: "Tasks",
@@ -198,6 +206,17 @@ export function SettingsPage() {
   const [saveError, setSaveError] = useState<string>();
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
 
+  // Archive state
+  const [archives, setArchives] = useState<TermArchive[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [endTermModalOpen, setEndTermModalOpen] = useState(false);
+  const [endTermSaving, setEndTermSaving] = useState(false);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [selectedSummary, setSelectedSummary] = useState<TermSummary | null>(null);
+
+  // Teams webhook
+  const [teamsWebhookUrl, setTeamsWebhookUrl] = useState("");
+
   const isLoading = settingsLoading || modulesLoading || rulesLoading;
   const error = settingsError || modulesError || rulesError;
 
@@ -217,6 +236,24 @@ export function SettingsPage() {
       .then((res) => setLogoPreview(res.url))
       .catch(() => {});
   }, []);
+
+  // Fetch archives
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    setArchiveLoading(true);
+    workspaceApi
+      .getArchives()
+      .then(setArchives)
+      .catch(() => {})
+      .finally(() => setArchiveLoading(false));
+  }, [user?.role]);
+
+  // Hydrate teams webhook from settings
+  useEffect(() => {
+    if (settings && "teamsWebhookUrl" in settings) {
+      setTeamsWebhookUrl((settings as any).teamsWebhookUrl || "");
+    }
+  }, [settings]);
 
   const handleLogoToggle = (_: any, data?: any) => {
     if (data?.addedFiles && data.addedFiles.length > 0) {
@@ -246,7 +283,7 @@ export function SettingsPage() {
     setSaveError(undefined);
     setSaved(false);
     try {
-      await workspaceApi.updateSettings(form);
+      await workspaceApi.updateSettings({ ...form, teamsWebhookUrl } as any);
       if (logoFile) await uploadLogo();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -279,6 +316,38 @@ export function SettingsPage() {
   async function handleDeleteRule(id: string) {
     await workspaceApi.deleteApprovalRule(id);
     refetchRules();
+  }
+
+  async function handleEndTerm() {
+    setEndTermSaving(true);
+    try {
+      await workspaceApi.endTerm();
+      toast.success("Term ended successfully");
+      setEndTermModalOpen(false);
+      const updated = await workspaceApi.getArchives();
+      setArchives(updated);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to end term");
+    } finally {
+      setEndTermSaving(false);
+    }
+  }
+
+  async function handleViewSummary(archive: TermArchive) {
+    try {
+      const detail = await workspaceApi.getArchive(archive.id);
+      setSelectedSummary(
+        detail.summary ?? {
+          totalTasksCompleted: 0,
+          eventsHeld: 0,
+          budgetSpent: 0,
+          volunteerHours: 0,
+        },
+      );
+      setSummaryModalOpen(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load summary");
+    }
   }
 
   if (isLoading) return <LoadingState />;
@@ -356,6 +425,14 @@ export function SettingsPage() {
                     <SelectItem key={opt.value} value={opt.value} text={opt.text} />
                   ))}
                 </Select>
+                <TextInput
+                  id="ws-teams-webhook"
+                  labelText="Teams Webhook URL"
+                  placeholder="https://your-org.webhook.office.com/..."
+                  value={teamsWebhookUrl}
+                  onChange={(e: any) => setTeamsWebhookUrl(e.target.value)}
+                  helperText="Used for notifications in Microsoft Teams."
+                />
               </Stack>
             </Card>
 
@@ -550,6 +627,87 @@ export function SettingsPage() {
               </p>
             )}
 
+            {/* Archive / Term Management (admin only) */}
+            {user?.role === "admin" && (
+              <Card padding="lg">
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <h2
+                    style={{
+                      fontSize: "1.125rem",
+                      fontWeight: 600,
+                      color: "var(--cds-text-primary)",
+                    }}
+                  >
+                    Term Management
+                  </h2>
+                  <Button kind="danger" size="sm" onClick={() => setEndTermModalOpen(true)}>
+                    End Term
+                  </Button>
+                </div>
+                {archiveLoading ? (
+                  <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                    Loading...
+                  </p>
+                ) : archives.length === 0 ? (
+                  <p
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--cds-text-secondary)",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    No past terms.
+                  </p>
+                ) : (
+                  <Stack gap={3}>
+                    {archives.map((a) => (
+                      <Tile
+                        key={a.id}
+                        style={{
+                          padding: "0.75rem 1rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <p
+                            style={{
+                              fontSize: "0.875rem",
+                              fontWeight: 500,
+                              color: "var(--cds-text-primary)",
+                            }}
+                          >
+                            {a.termName}
+                          </p>
+                          <p style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>
+                            {a.isActive
+                              ? `${a.daysRemaining ?? 0} days remaining`
+                              : `Ended ${new Date(a.endDate).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                        <Button
+                          kind="ghost"
+                          size="sm"
+                          renderIcon={View}
+                          hasIconOnly
+                          iconDescription="View Summary"
+                          onClick={() => handleViewSummary(a)}
+                        />
+                      </Tile>
+                    ))}
+                  </Stack>
+                )}
+              </Card>
+            )}
+
             {/* Approval Workflows */}
             <Card padding="lg">
               <div
@@ -654,6 +812,144 @@ export function SettingsPage() {
           </Stack>
         </Column>
       </Grid>
+
+      {/* End Term Modal */}
+      <Modal
+        title="End Current Term"
+        description="This action will archive all data for the current term."
+        isOpen={endTermModalOpen}
+        onClose={() => setEndTermModalOpen(false)}
+      >
+        <Stack gap={5}>
+          <p style={{ color: "var(--cds-text-secondary)" }}>
+            Are you sure you want to end the current term? Active tasks, events, and budgets will be
+            archived for historical reference. This action cannot be undone.
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+            <Button kind="secondary" type="button" onClick={() => setEndTermModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button kind="danger" onClick={handleEndTerm} disabled={endTermSaving}>
+              {endTermSaving ? "Ending..." : "End Term"}
+            </Button>
+          </div>
+        </Stack>
+      </Modal>
+
+      {/* Summary Modal */}
+      <Modal
+        title="Term Summary"
+        isOpen={summaryModalOpen}
+        onClose={() => {
+          setSummaryModalOpen(false);
+          setSelectedSummary(null);
+        }}
+      >
+        {selectedSummary && (
+          <Grid>
+            <Column lg={8} md={8} sm={4}>
+              <Tile
+                style={{
+                  padding: "1rem",
+                  marginBottom: "0.75rem",
+                  borderLeft: "4px solid var(--cds-support-info)",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    color: "var(--cds-text-secondary)",
+                  }}
+                >
+                  Tasks Completed
+                </p>
+                <p
+                  style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--cds-text-primary)" }}
+                >
+                  {selectedSummary.totalTasksCompleted}
+                </p>
+              </Tile>
+            </Column>
+            <Column lg={8} md={8} sm={4}>
+              <Tile
+                style={{
+                  padding: "1rem",
+                  marginBottom: "0.75rem",
+                  borderLeft: "4px solid var(--cds-support-success)",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    color: "var(--cds-text-secondary)",
+                  }}
+                >
+                  Events Held
+                </p>
+                <p
+                  style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--cds-text-primary)" }}
+                >
+                  {selectedSummary.eventsHeld}
+                </p>
+              </Tile>
+            </Column>
+            <Column lg={8} md={8} sm={4}>
+              <Tile
+                style={{
+                  padding: "1rem",
+                  marginBottom: "0.75rem",
+                  borderLeft: "4px solid var(--cds-support-warning)",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    color: "var(--cds-text-secondary)",
+                  }}
+                >
+                  Budget Spent
+                </p>
+                <p
+                  style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--cds-text-primary)" }}
+                >
+                  {formatCurrency(selectedSummary.budgetSpent)}
+                </p>
+              </Tile>
+            </Column>
+            <Column lg={8} md={8} sm={4}>
+              <Tile
+                style={{
+                  padding: "1rem",
+                  marginBottom: "0.75rem",
+                  borderLeft: "4px solid var(--cds-support-warning)",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    color: "var(--cds-text-secondary)",
+                  }}
+                >
+                  Volunteer Hours
+                </p>
+                <p
+                  style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--cds-text-primary)" }}
+                >
+                  {selectedSummary.volunteerHours}
+                </p>
+              </Tile>
+            </Column>
+          </Grid>
+        )}
+      </Modal>
 
       {/* New Rule Modal */}
       <NewRuleModal
