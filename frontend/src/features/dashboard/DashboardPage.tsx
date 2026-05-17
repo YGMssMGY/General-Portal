@@ -20,6 +20,7 @@ import type { DashboardMetric } from "../../types";
 import type { ComponentType } from "react";
 import { SimpleBarChart } from "@carbon/charts-react";
 import "@carbon/charts/styles.css";
+import { isToday, parseISO } from "date-fns";
 
 const metricIcons: Record<string, ComponentType<any>> = {
   Task,
@@ -113,6 +114,35 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
   return <Tile>{inner}</Tile>;
 }
 
+const quotes = [
+  "The secret of getting ahead is getting started. \u2014 Mark Twain",
+  "It does not matter how slowly you go as long as you do not stop. \u2014 Confucius",
+  "Quality is not an act, it is a habit. \u2014 Aristotle",
+  "The only way to do great work is to love what you do. \u2014 Steve Jobs",
+  "What you do today can improve all your tomorrows. \u2014 Ralph Marston",
+  "Success is the sum of small efforts repeated day in and day out. \u2014 Robert Collier",
+  "Believe you can and you are halfway there. \u2014 Theodore Roosevelt",
+  "The best time to plant a tree was 20 years ago. The second best time is now.",
+  "Everything you\u2019ve ever wanted is on the other side of fear. \u2014 George Addair",
+  "Your limitation\u2014it\u2019s only your imagination.",
+];
+
+function dailyQuote(): string {
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const diff = (+new Date() - +start + 864e5) / 864e5;
+  return quotes[Math.floor(diff) % quotes.length];
+}
+
+function countToday(
+  items: { dueDate?: string; startsAt?: string }[],
+  field: "dueDate" | "startsAt",
+): number {
+  return items.filter((item) => {
+    const val = item[field];
+    return val ? isToday(parseISO(val)) : false;
+  }).length;
+}
+
 const quickActions = [
   { label: "New Task", icon: Task, to: "/admin/tasks" },
   { label: "New Proposal", icon: Document, to: "/admin/proposals" },
@@ -131,12 +161,46 @@ export function DashboardPage() {
   if (error || !data)
     return <ErrorState message={error ?? "Dashboard data is unavailable"} onRetry={refetch} />;
 
+  const tasksDueToday = countToday(data.myTasks, "dueDate");
+  const eventsToday = countToday(data.upcomingEvents, "startsAt");
+  const pendingProposals = data.metrics.find((m) => m.label === "Pending Proposals");
+  const pendingCount = pendingProposals ? Number.parseInt(pendingProposals.value, 10) || 0 : 0;
+
+  const contextItems: string[] = [];
+  if (tasksDueToday > 0)
+    contextItems.push(`${tasksDueToday} ${tasksDueToday === 1 ? "task" : "tasks"} due today`);
+  if (eventsToday > 0)
+    contextItems.push(`${eventsToday} ${eventsToday === 1 ? "event" : "events"} today`);
+  if (pendingCount > 0)
+    contextItems.push(
+      `${pendingCount} ${pendingCount === 1 ? "proposal" : "proposals"} pending your review`,
+    );
+
+  const greetingDescription =
+    contextItems.length > 0
+      ? `Here\u2019s your day: ${contextItems.join("\u00B7 ")}`
+      : "Everything looks quiet today.";
+
   return (
     <Grid style={{ padding: 0 }}>
       <Column lg={16} md={8} sm={4}>
         <PageHeader
           title={`${greeting}, ${(user?.displayName ?? "").split(" ")[0]}`}
-          description="Here is what is happening in your workspace today."
+          description={
+            <div>
+              <p>{greetingDescription}</p>
+              <p
+                style={{
+                  margin: "0.25rem 0 0",
+                  fontSize: "0.8125rem",
+                  color: "var(--cds-text-helper, #6f6f6f)",
+                  fontStyle: "italic",
+                }}
+              >
+                {dailyQuote()}
+              </p>
+            </div>
+          }
           actions={
             <Stack gap={3} orientation="horizontal">
               {quickActions.map((action) => (

@@ -7,6 +7,11 @@ import { env } from "./lib/env.js";
 import { authConfig } from "./lib/auth-config.js";
 import { errorHandler } from "./middleware/error.js";
 import { requireWorkspace } from "./middleware/auth.js";
+import { secureHeaders } from "hono/secure-headers";
+import { apiLimiter, authLimiter } from "./middleware/rate-limit.js";
+import { setupWebSocket } from "./lib/websocket.js";
+import notificationRoute from "./routes/notifications.js";
+import auditRoute from "./routes/audit.js";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -17,6 +22,9 @@ const frontendDist = resolve(__dirname, "../../frontend/dist");
 const app = new Hono();
 
 app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
+app.use("*", secureHeaders());
+app.use("/api/*", apiLimiter);
+app.use("/api/auth/*", authLimiter);
 app.use(authConfig);
 app.use("/api/auth/*", authHandler());
 
@@ -55,6 +63,8 @@ app.use("/api/activity", requireWorkspace);
 app.use("/api/search", requireWorkspace);
 app.use("/api/settings", requireWorkspace);
 app.use("/api/roles/*", requireWorkspace);
+app.use("/api/notifications", requireWorkspace);
+app.use("/api/audit", requireWorkspace);
 app.use("/api/modules/*", requireWorkspace);
 app.use("/api/workspace/*", requireWorkspace);
 
@@ -71,6 +81,8 @@ app.route("/api", activityRoute);
 app.route("/api", searchRoute);
 app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
+app.route("/api", notificationRoute);
+app.route("/api", auditRoute);
 app.route("/api", adminRoute);
 
 app.use("/*", serveStatic({ root: frontendDist }));
@@ -81,8 +93,9 @@ app.get("*", (c) => {
 
 app.onError(errorHandler);
 
-serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(
     `[general-portal] Production server on http://localhost:${info.port}`,
   );
 });
+setupWebSocket(server);

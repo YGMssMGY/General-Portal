@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { PageTransition } from "../PageTransition/PageTransition";
 import {
@@ -34,9 +34,13 @@ import {
   Asleep,
   Light,
   Logout,
+  Notification,
 } from "@carbon/icons-react";
 import { useSession, signOut } from "@hono/auth-js/react";
 import { useTheme } from "../../context/ThemeContext";
+import { useNotifications } from "../../hooks/useNotifications";
+import { useWebSocket } from "../../hooks/useWebSocket";
+import { formatDate } from "../../utils/format";
 import type { ComponentType, ElementType } from "react";
 
 interface NavItem {
@@ -125,8 +129,29 @@ export function UIShell() {
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const notifBtnRef = useRef<HTMLButtonElement>(null);
+  const { unreadCount, notifications, markRead, markAllRead } = useNotifications();
+  useWebSocket();
   const config = useMemo(() => getClientConfig(), []);
   const features = config.features;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        notifOpen &&
+        notifRef.current &&
+        !notifRef.current.contains(e.target as Node) &&
+        notifBtnRef.current &&
+        !notifBtnRef.current.contains(e.target as Node)
+      ) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notifOpen]);
 
   const userRoleLevel = useMemo(() => {
     const role = sessionUser?.role;
@@ -216,6 +241,153 @@ export function UIShell() {
               >
                 <Launch size={20} />
               </HeaderGlobalAction>
+              <div style={{ position: "relative" }}>
+                <HeaderGlobalAction
+                  ref={notifBtnRef}
+                  aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ""}`}
+                  onClick={() => setNotifOpen((prev) => !prev)}
+                >
+                  <Notification size={20} />
+                  {unreadCount > 0 && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "4px",
+                        right: "4px",
+                        minWidth: "16px",
+                        height: "16px",
+                        borderRadius: "8px",
+                        background: "var(--cds-support-error, #da1e28)",
+                        color: "#fff",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        lineHeight: "16px",
+                        textAlign: "center",
+                        padding: "0 4px",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </HeaderGlobalAction>
+                {notifOpen && (
+                  <div
+                    ref={notifRef}
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      width: "320px",
+                      maxHeight: "400px",
+                      overflowY: "auto",
+                      background: "var(--cds-layer-01, #fff)",
+                      border: "1px solid var(--cds-border-subtle-01, #e0e0e0)",
+                      borderRadius: "4px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      zIndex: 9000,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "0.75rem 1rem",
+                        borderBottom: "1px solid var(--cds-border-subtle-01, #e0e0e0)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "0.875rem",
+                          color: "var(--cds-text-primary, #161616)",
+                        }}
+                      >
+                        Notifications
+                      </span>
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "1.5rem 1rem",
+                          textAlign: "center",
+                          fontSize: "0.875rem",
+                          color: "var(--cds-text-secondary, #6f6f6f)",
+                        }}
+                      >
+                        No notifications
+                      </div>
+                    ) : (
+                      <>
+                        {notifications.slice(0, 20).map((n) => (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => markRead(n.id)}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "0.625rem 1rem",
+                              border: "none",
+                              borderBottom: "1px solid var(--cds-border-subtle-01, #e0e0e0)",
+                              cursor: "pointer",
+                              background: n.isRead ? "transparent" : "var(--cds-layer-02, #f4f4f4)",
+                              color: "var(--cds-text-primary, #161616)",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            <div style={{ fontWeight: n.isRead ? 400 : 600 }}>{n.title}</div>
+                            {n.body && (
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--cds-text-secondary, #6f6f6f)",
+                                  marginTop: "2px",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {n.body}
+                              </div>
+                            )}
+                            <div
+                              style={{
+                                fontSize: "0.6875rem",
+                                color: "var(--cds-text-helper, #c6c6c6)",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {formatDate(n.createdAt)}
+                            </div>
+                          </button>
+                        ))}
+                        {unreadCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              markAllRead();
+                              setNotifOpen(false);
+                            }}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              padding: "0.625rem 1rem",
+                              border: "none",
+                              background: "transparent",
+                              cursor: "pointer",
+                              color: "var(--cds-link-primary, #0f62fe)",
+                              fontSize: "0.875rem",
+                              fontWeight: 500,
+                            }}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               <HeaderGlobalAction
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                 onClick={toggleTheme}

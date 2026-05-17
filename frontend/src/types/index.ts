@@ -218,6 +218,17 @@ export interface TrendDataPoint {
   expenses: number;
 }
 
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  type: string;
+  resourceType?: string;
+  resourceId?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface SearchResult {
   id: string;
   type: "Task" | "Proposal" | "Event" | "File" | "Finance";

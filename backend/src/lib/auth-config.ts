@@ -5,6 +5,7 @@ import Google from "@auth/core/providers/google";
 import Microsoft from "@auth/core/providers/microsoft-entra-id";
 import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { sign } from "hono/jwt";
 import { env, IS_PRODUCTION } from "./env.js";
 import { db } from "./db.js";
 
@@ -116,6 +117,8 @@ function getAuthConfig(): AuthConfig {
           (session.user as any).role = (token as any).role;
           (session.user as any).permissions = (token as any).permissions || [];
         }
+        const rawToken = await sign(token as any, env.AUTH_SECRET, "HS256");
+        (session as any).token = rawToken;
         return session;
       },
     },

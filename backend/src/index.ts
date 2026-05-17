@@ -22,9 +22,15 @@ const { env } = await import("./lib/env.js");
 const { authConfig } = await import("./lib/auth-config.js");
 const { errorHandler } = await import("./middleware/error.js");
 const { requireWorkspace } = await import("./middleware/auth.js");
+const { secureHeaders } = await import("hono/secure-headers");
+const { apiLimiter, authLimiter } = await import("./middleware/rate-limit.js");
+const { setupWebSocket } = await import("./lib/websocket.js");
 
 const app = new Hono();
 app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
+app.use("*", secureHeaders());
+app.use("/api/*", apiLimiter);
+app.use("/api/auth/*", authLimiter);
 app.use(authConfig);
 app.use("/api/auth/*", authHandler());
 
@@ -46,6 +52,8 @@ const [
   { default: publicRoute },
   { default: docsRoute },
   { default: adminRoute },
+  { default: notificationRoute },
+  { default: auditRoute },
 ] = await Promise.all([
   import("./routes/health.js"),
   import("./routes/auth.js"),
@@ -64,6 +72,8 @@ const [
   import("./routes/public.js"),
   import("./routes/docs.js"),
   import("./routes/admin.js"),
+  import("./routes/notifications.js"),
+  import("./routes/audit.js"),
 ]);
 
 app.route("/api", healthRoute);
@@ -83,6 +93,8 @@ app.use("/api/activity", requireWorkspace);
 app.use("/api/search", requireWorkspace);
 app.use("/api/settings", requireWorkspace);
 app.use("/api/roles/*", requireWorkspace);
+app.use("/api/notifications", requireWorkspace);
+app.use("/api/audit", requireWorkspace);
 
 app.use("/api/modules/*", requireWorkspace);
 
@@ -101,12 +113,15 @@ app.route("/api", activityRoute);
 app.route("/api", searchRoute);
 app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
+app.route("/api", notificationRoute);
+app.route("/api", auditRoute);
 app.route("/api", adminRoute);
 
 app.onError(errorHandler);
 
-serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`[backend] Hono server running on http://localhost:${info.port}`);
 });
+setupWebSocket(server);
 
 export default app;
