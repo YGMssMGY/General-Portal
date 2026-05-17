@@ -58,17 +58,16 @@ function getAuthConfig(): AuthConfig {
               const user = await db.userAccount.findUnique({
                 where: { email },
               });
-              if (user?.password) {
+              if (!user) return null;
+              if (user.password) {
                 if (pw !== user.password) return null;
-              } else if (pw !== env.DEV_AUTH_PASSWORD) return null;
-              if (user)
-                return {
-                  id: user.id,
-                  email: user.email,
-                  name: user.displayName,
-                };
-            } catch {
-              /* DB not available */
+              } else if (pw !== env.DEV_AUTH_PASSWORD) {
+                return null;
+              }
+              return { id: user.id, email: user.email, name: user.displayName };
+            } catch (e) {
+              console.error("[auth] authorize error:", e);
+              return null;
             }
             return { id: email, email, name: email.split("@")[0] };
           },
