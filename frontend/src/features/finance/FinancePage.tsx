@@ -18,6 +18,11 @@ import {
   Column,
   InlineNotification,
   NumberInput,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
 } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
@@ -25,6 +30,7 @@ import {
   useFinanceTransactions,
   useFinanceSummary,
   useFinanceTrends,
+  useBudgetAllocations,
 } from "../../hooks/useWorkspaceResources";
 import type { FinanceTransaction, ResourceStatus } from "../../types";
 import { formatCurrency, formatDateTime } from "../../utils/format";
@@ -37,6 +43,7 @@ import {
   CheckmarkOutline,
   Time,
   Close,
+  Money,
 } from "@carbon/icons-react";
 import { LineChart } from "@carbon/charts-react";
 import "@carbon/charts/styles.css";
@@ -59,6 +66,10 @@ export function FinancePage() {
   const [deleteTarget, setDeleteTarget] = useState<FinanceTransaction>();
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedTxId, setSelectedTxId] = useState<string>();
+  const { data: budgetData, refetch: refetchBudget } = useBudgetAllocations();
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({ title: "", amount: 0, linkedProposal: "" });
+  const [budgetSaving, setBudgetSaving] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -219,6 +230,36 @@ export function FinancePage() {
     }
   }
 
+  async function handleCreateBudget() {
+    if (!budgetForm.title.trim()) return;
+    setBudgetSaving(true);
+    try {
+      await workspaceApi.createBudgetAllocation({
+        title: budgetForm.title,
+        amount: budgetForm.amount,
+        linkedProposal: budgetForm.linkedProposal,
+      });
+      toast.success("Budget allocation created");
+      setBudgetModalOpen(false);
+      setBudgetForm({ title: "", amount: 0, linkedProposal: "" });
+      refetchBudget();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create allocation");
+    } finally {
+      setBudgetSaving(false);
+    }
+  }
+
+  async function handleApproveBudget(id: string) {
+    try {
+      await workspaceApi.approveBudgetAllocation(id);
+      toast.success("Allocation approved");
+      refetchBudget();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Approval failed");
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -267,420 +308,569 @@ export function FinancePage() {
         }
       />
 
-      {/* Summary Cards */}
-      <Grid style={{ marginBottom: "1.5rem" }}>
-        <Column lg={4} md={4} sm={4}>
-          <Tile
-            style={{
-              padding: "1.25rem",
-              borderLeft: "4px solid var(--cds-support-success)",
-            }}
-          >
-            <Stack gap={4}>
-              <Stack
-                orientation="horizontal"
-                gap={5}
-                style={{
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span
+      <Tabs>
+        <TabList aria-label="Finance tabs">
+          <Tab>Transactions</Tab>
+          <Tab>Budget</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            {/* Summary Cards */}
+            <Grid style={{ marginBottom: "1.5rem" }}>
+              <Column lg={4} md={4} sm={4}>
+                <Tile
                   style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.025em",
-                    color: "var(--cds-text-secondary)",
+                    padding: "1.25rem",
+                    borderLeft: "4px solid var(--cds-support-success)",
                   }}
                 >
-                  Total Revenue
-                </span>
-                <ArrowUp
-                  size={20}
-                  style={{ color: "var(--cds-support-success)" }}
-                  aria-hidden="true"
-                />
-              </Stack>
-              <span
-                style={{
-                  fontSize: "1.75rem",
-                  fontWeight: 600,
-                  color: "var(--cds-text-primary)",
-                }}
-              >
-                {formatCurrency(summary?.totalRevenue ?? 0)}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--cds-support-success)",
-                  fontWeight: 500,
-                }}
-              >
-                +12% vs last month
-              </span>
-            </Stack>
-          </Tile>
-        </Column>
-        <Column lg={4} md={4} sm={4}>
-          <Tile
-            style={{
-              padding: "1.25rem",
-              borderLeft: "4px solid var(--cds-support-error)",
-            }}
-          >
-            <Stack gap={4}>
-              <Stack
-                orientation="horizontal"
-                gap={5}
-                style={{
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span
+                  <Stack gap={4}>
+                    <Stack
+                      orientation="horizontal"
+                      gap={5}
+                      style={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.025em",
+                          color: "var(--cds-text-secondary)",
+                        }}
+                      >
+                        Total Revenue
+                      </span>
+                      <ArrowUp
+                        size={20}
+                        style={{ color: "var(--cds-support-success)" }}
+                        aria-hidden="true"
+                      />
+                    </Stack>
+                    <span
+                      style={{
+                        fontSize: "1.75rem",
+                        fontWeight: 600,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {formatCurrency(summary?.totalRevenue ?? 0)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--cds-support-success)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      +12% vs last month
+                    </span>
+                  </Stack>
+                </Tile>
+              </Column>
+              <Column lg={4} md={4} sm={4}>
+                <Tile
                   style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.025em",
-                    color: "var(--cds-text-secondary)",
+                    padding: "1.25rem",
+                    borderLeft: "4px solid var(--cds-support-error)",
                   }}
                 >
-                  Total Expenses
-                </span>
-                <ArrowDown
-                  size={20}
-                  style={{ color: "var(--cds-support-error)" }}
-                  aria-hidden="true"
-                />
-              </Stack>
-              <span
-                style={{
-                  fontSize: "1.75rem",
-                  fontWeight: 600,
-                  color: "var(--cds-text-primary)",
-                }}
-              >
-                {formatCurrency(summary?.totalExpenses ?? 0)}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--cds-support-error)",
-                  fontWeight: 500,
-                }}
-              >
-                +8% vs last month
-              </span>
-            </Stack>
-          </Tile>
-        </Column>
-        <Column lg={4} md={4} sm={4}>
-          <Tile
-            style={{
-              padding: "1.25rem",
-              borderLeft: "4px solid var(--cds-support-info)",
-            }}
-          >
-            <Stack gap={4}>
-              <Stack
-                orientation="horizontal"
-                gap={5}
-                style={{
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span
+                  <Stack gap={4}>
+                    <Stack
+                      orientation="horizontal"
+                      gap={5}
+                      style={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.025em",
+                          color: "var(--cds-text-secondary)",
+                        }}
+                      >
+                        Total Expenses
+                      </span>
+                      <ArrowDown
+                        size={20}
+                        style={{ color: "var(--cds-support-error)" }}
+                        aria-hidden="true"
+                      />
+                    </Stack>
+                    <span
+                      style={{
+                        fontSize: "1.75rem",
+                        fontWeight: 600,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {formatCurrency(summary?.totalExpenses ?? 0)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--cds-support-error)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      +8% vs last month
+                    </span>
+                  </Stack>
+                </Tile>
+              </Column>
+              <Column lg={4} md={4} sm={4}>
+                <Tile
                   style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.025em",
-                    color: "var(--cds-text-secondary)",
+                    padding: "1.25rem",
+                    borderLeft: "4px solid var(--cds-support-info)",
                   }}
                 >
-                  Net Balance
-                </span>
-                <CheckmarkOutline
-                  size={20}
-                  style={{ color: "var(--cds-support-info)" }}
-                  aria-hidden="true"
-                />
-              </Stack>
-              <span
-                style={{
-                  fontSize: "1.75rem",
-                  fontWeight: 600,
-                  color: "var(--cds-text-primary)",
-                }}
-              >
-                {formatCurrency(summary?.netBalance ?? 0)}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--cds-support-info)",
-                  fontWeight: 500,
-                }}
-              >
-                Healthy
-              </span>
-            </Stack>
-          </Tile>
-        </Column>
-        <Column lg={4} md={4} sm={4}>
-          <Tile
-            style={{
-              padding: "1.25rem",
-              borderLeft: "4px solid var(--cds-support-warning)",
-            }}
-          >
-            <Stack gap={4}>
-              <Stack
-                orientation="horizontal"
-                gap={5}
-                style={{
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span
+                  <Stack gap={4}>
+                    <Stack
+                      orientation="horizontal"
+                      gap={5}
+                      style={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.025em",
+                          color: "var(--cds-text-secondary)",
+                        }}
+                      >
+                        Net Balance
+                      </span>
+                      <CheckmarkOutline
+                        size={20}
+                        style={{ color: "var(--cds-support-info)" }}
+                        aria-hidden="true"
+                      />
+                    </Stack>
+                    <span
+                      style={{
+                        fontSize: "1.75rem",
+                        fontWeight: 600,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {formatCurrency(summary?.netBalance ?? 0)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--cds-support-info)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Healthy
+                    </span>
+                  </Stack>
+                </Tile>
+              </Column>
+              <Column lg={4} md={4} sm={4}>
+                <Tile
                   style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.025em",
-                    color: "var(--cds-text-secondary)",
+                    padding: "1.25rem",
+                    borderLeft: "4px solid var(--cds-support-warning)",
                   }}
                 >
-                  Pending Approval
-                </span>
-                <Time
-                  size={20}
-                  style={{ color: "var(--cds-support-warning)" }}
-                  aria-hidden="true"
-                />
-              </Stack>
-              <span
-                style={{
-                  fontSize: "1.75rem",
-                  fontWeight: 600,
-                  color: "var(--cds-text-primary)",
-                }}
-              >
-                {summary?.pendingCount ?? 0}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "var(--cds-support-warning)",
-                  fontWeight: 500,
-                }}
-              >
-                Needs attention
-              </span>
-            </Stack>
-          </Tile>
-        </Column>
-      </Grid>
+                  <Stack gap={4}>
+                    <Stack
+                      orientation="horizontal"
+                      gap={5}
+                      style={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.025em",
+                          color: "var(--cds-text-secondary)",
+                        }}
+                      >
+                        Pending Approval
+                      </span>
+                      <Time
+                        size={20}
+                        style={{ color: "var(--cds-support-warning)" }}
+                        aria-hidden="true"
+                      />
+                    </Stack>
+                    <span
+                      style={{
+                        fontSize: "1.75rem",
+                        fontWeight: 600,
+                        color: "var(--cds-text-primary)",
+                      }}
+                    >
+                      {summary?.pendingCount ?? 0}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--cds-support-warning)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Needs attention
+                    </span>
+                  </Stack>
+                </Tile>
+              </Column>
+            </Grid>
 
-      {/* Trend Chart */}
-      {chartData.length > 0 ? (
-        <Tile style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-          <LineChart data={chartData} options={chartOptions} />
-        </Tile>
-      ) : null}
+            {/* Trend Chart */}
+            {chartData.length > 0 ? (
+              <Tile style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+                <LineChart data={chartData} options={chartOptions} />
+              </Tile>
+            ) : null}
 
-      <DataTable
-        columns={columns}
-        data={txData as unknown as Record<string, unknown>[]}
-        defaultSort={{ key: "occurredAt", direction: "desc" }}
-        pageSize={10}
-        onRowClick={(item) => {
-          setSelectedTxId((prev) => (prev === item.id ? undefined : item.id));
-        }}
-      />
+            <DataTable
+              columns={columns}
+              data={txData as unknown as Record<string, unknown>[]}
+              defaultSort={{ key: "occurredAt", direction: "desc" }}
+              pageSize={10}
+              onRowClick={(item) => {
+                setSelectedTxId((prev) => (prev === item.id ? undefined : item.id));
+              }}
+            />
 
-      {/* Detail Drawer */}
-      {selectedTx ? (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9000,
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }}
-            onClick={() => setSelectedTxId(undefined)}
-          />
-          <Tile
-            style={{
-              position: "relative",
-              width: "480px",
-              maxWidth: "100vw",
-              height: "100vh",
-              overflowY: "auto",
-              padding: "1.5rem",
-              borderRadius: 0,
-              boxShadow: "-4px 0 12px rgba(0,0,0,0.1)",
-            }}
-          >
-            <Stack gap={6}>
-              <Stack
-                orientation="horizontal"
-                gap={5}
-                style={{
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
-              >
-                <div>
-                  <Tag type="outline">{selectedTx.status.replace(/_/g, " ")}</Tag>
-                  <h2
-                    style={{
-                      marginTop: "0.5rem",
-                      fontSize: "1.25rem",
-                      fontWeight: 600,
-                      color: "var(--cds-text-primary)",
-                    }}
-                  >
-                    {selectedTx.title}
-                  </h2>
-                </div>
-                <Button
-                  kind="ghost"
-                  size="sm"
-                  renderIcon={Close}
-                  iconDescription="Close"
-                  hasIconOnly
-                  onClick={() => setSelectedTxId(undefined)}
-                />
-              </Stack>
-
+            {/* Detail Drawer */}
+            {selectedTx ? (
               <div
                 style={{
-                  fontSize: "2rem",
-                  fontWeight: 700,
-                  color:
-                    selectedTx.amount >= 0
-                      ? "var(--cds-support-success)"
-                      : "var(--cds-support-error)",
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 9000,
+                  display: "flex",
+                  justifyContent: "flex-end",
                 }}
               >
-                {selectedTx.amount >= 0 ? "+" : "-"}
-                {formatCurrency(Math.abs(selectedTx.amount))}
+                <div
+                  style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }}
+                  onClick={() => setSelectedTxId(undefined)}
+                />
+                <Tile
+                  style={{
+                    position: "relative",
+                    width: "480px",
+                    maxWidth: "100vw",
+                    height: "100vh",
+                    overflowY: "auto",
+                    padding: "1.5rem",
+                    borderRadius: 0,
+                    boxShadow: "-4px 0 12px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <Stack gap={6}>
+                    <Stack
+                      orientation="horizontal"
+                      gap={5}
+                      style={{
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div>
+                        <Tag type="outline">{selectedTx.status.replace(/_/g, " ")}</Tag>
+                        <h2
+                          style={{
+                            marginTop: "0.5rem",
+                            fontSize: "1.25rem",
+                            fontWeight: 600,
+                            color: "var(--cds-text-primary)",
+                          }}
+                        >
+                          {selectedTx.title}
+                        </h2>
+                      </div>
+                      <Button
+                        kind="ghost"
+                        size="sm"
+                        renderIcon={Close}
+                        iconDescription="Close"
+                        hasIconOnly
+                        onClick={() => setSelectedTxId(undefined)}
+                      />
+                    </Stack>
+
+                    <div
+                      style={{
+                        fontSize: "2rem",
+                        fontWeight: 700,
+                        color:
+                          selectedTx.amount >= 0
+                            ? "var(--cds-support-success)"
+                            : "var(--cds-support-error)",
+                      }}
+                    >
+                      {selectedTx.amount >= 0 ? "+" : "-"}
+                      {formatCurrency(Math.abs(selectedTx.amount))}
+                    </div>
+
+                    <Stack gap={4}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <span style={{ color: "var(--cds-text-secondary)" }}>Category</span>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            color: "var(--cds-text-primary)",
+                          }}
+                        >
+                          {selectedTx.category}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <span style={{ color: "var(--cds-text-secondary)" }}>Submitted By</span>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            color: "var(--cds-text-primary)",
+                          }}
+                        >
+                          {selectedTx.submittedBy}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <span style={{ color: "var(--cds-text-secondary)" }}>Date</span>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            color: "var(--cds-text-primary)",
+                          }}
+                        >
+                          {formatDateTime(selectedTx.occurredAt)}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <span style={{ color: "var(--cds-text-secondary)" }}>Type</span>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            color:
+                              selectedTx.amount >= 0
+                                ? "var(--cds-support-success)"
+                                : "var(--cds-support-error)",
+                          }}
+                        >
+                          {selectedTx.amount >= 0 ? "Revenue" : "Expense"}
+                        </span>
+                      </div>
+                    </Stack>
+
+                    <Stack orientation="horizontal" gap={5}>
+                      <Button
+                        kind="primary"
+                        onClick={async () => {
+                          await workspaceApi.updateFinanceTransaction(selectedTx.id, {
+                            status: "approved",
+                          });
+                          refetchTx();
+                        }}
+                        disabled={selectedTx.status === "approved"}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        kind="danger"
+                        onClick={async () => {
+                          await workspaceApi.updateFinanceTransaction(selectedTx.id, {
+                            status: "rejected",
+                          });
+                          refetchTx();
+                        }}
+                        disabled={selectedTx.status === "rejected"}
+                      >
+                        Reject
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Tile>
               </div>
+            ) : null}
+          </TabPanel>
+          <TabPanel>
+            <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "flex-end" }}>
+              <Button renderIcon={Money} onClick={() => setBudgetModalOpen(true)}>
+                New Allocation
+              </Button>
+            </div>
+            {!budgetData || budgetData.length === 0 ? (
+              <Tile style={{ textAlign: "center", padding: "2rem" }}>
+                <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                  No budget allocations yet.
+                </p>
+              </Tile>
+            ) : (
+              <Grid>
+                {budgetData.map((ba) => {
+                  const statusColors: Record<string, string> = {
+                    requested: "var(--cds-support-warning)",
+                    approved: "var(--cds-support-success)",
+                    spent: "var(--cds-support-info)",
+                    reconciled: "var(--cds-text-secondary)",
+                  };
+                  return (
+                    <Column key={ba.id} lg={8} md={8} sm={4}>
+                      <Tile
+                        style={{
+                          padding: "1.25rem",
+                          borderLeft: `4px solid ${statusColors[ba.status] || "var(--cds-border-subtle)"}`,
+                          marginBottom: "1rem",
+                        }}
+                      >
+                        <Stack gap={4}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            <div>
+                              <p style={{ fontWeight: 600, color: "var(--cds-text-primary)" }}>
+                                {ba.title}
+                              </p>
+                              <p
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--cds-text-secondary)",
+                                  marginTop: "0.125rem",
+                                }}
+                              >
+                                {ba.linkedProposal || "No linked proposal"}
+                              </p>
+                            </div>
+                            <Tag
+                              type={
+                                ba.status === "reconciled"
+                                  ? "gray"
+                                  : ba.status === "spent"
+                                    ? "blue"
+                                    : ba.status === "approved"
+                                      ? "green"
+                                      : "teal"
+                              }
+                              size="sm"
+                            >
+                              {ba.status}
+                            </Tag>
+                          </div>
+                          <p
+                            style={{
+                              fontSize: "1.5rem",
+                              fontWeight: 700,
+                              color: "var(--cds-text-primary)",
+                            }}
+                          >
+                            {formatCurrency(ba.amount)}
+                          </p>
+                          {ba.status === "requested" &&
+                            user &&
+                            (user.role === "admin" ||
+                              user.role === "president" ||
+                              user.role === "officer") && (
+                              <Button
+                                kind="primary"
+                                size="sm"
+                                onClick={() => handleApproveBudget(ba.id)}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                        </Stack>
+                      </Tile>
+                    </Column>
+                  );
+                })}
+              </Grid>
+            )}
 
-              <Stack gap={4}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <span style={{ color: "var(--cds-text-secondary)" }}>Category</span>
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      color: "var(--cds-text-primary)",
-                    }}
+            <Modal
+              title="New Budget Allocation"
+              isOpen={budgetModalOpen}
+              onClose={() => setBudgetModalOpen(false)}
+            >
+              <Stack gap={5}>
+                <TextInput
+                  id="budget-title"
+                  labelText="Title"
+                  required
+                  value={budgetForm.title}
+                  onChange={(e) => setBudgetForm((f) => ({ ...f, title: e.target.value }))}
+                />
+                <NumberInput
+                  id="budget-amount"
+                  label="Amount"
+                  value={budgetForm.amount}
+                  min={0}
+                  onChange={(_e, { value }) =>
+                    setBudgetForm((f) => ({ ...f, amount: Number(value) }))
+                  }
+                />
+                <TextInput
+                  id="budget-proposal"
+                  labelText="Linked Proposal (optional)"
+                  value={budgetForm.linkedProposal}
+                  onChange={(e) => setBudgetForm((f) => ({ ...f, linkedProposal: e.target.value }))}
+                />
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+                  <Button kind="secondary" type="button" onClick={() => setBudgetModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateBudget}
+                    disabled={budgetSaving || !budgetForm.title.trim()}
                   >
-                    {selectedTx.category}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <span style={{ color: "var(--cds-text-secondary)" }}>Submitted By</span>
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      color: "var(--cds-text-primary)",
-                    }}
-                  >
-                    {selectedTx.submittedBy}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <span style={{ color: "var(--cds-text-secondary)" }}>Date</span>
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      color: "var(--cds-text-primary)",
-                    }}
-                  >
-                    {formatDateTime(selectedTx.occurredAt)}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  <span style={{ color: "var(--cds-text-secondary)" }}>Type</span>
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      color:
-                        selectedTx.amount >= 0
-                          ? "var(--cds-support-success)"
-                          : "var(--cds-support-error)",
-                    }}
-                  >
-                    {selectedTx.amount >= 0 ? "Revenue" : "Expense"}
-                  </span>
+                    {budgetSaving ? "Creating..." : "Create Allocation"}
+                  </Button>
                 </div>
               </Stack>
-
-              <Stack orientation="horizontal" gap={5}>
-                <Button
-                  kind="primary"
-                  onClick={async () => {
-                    await workspaceApi.updateFinanceTransaction(selectedTx.id, {
-                      status: "approved",
-                    });
-                    refetchTx();
-                  }}
-                  disabled={selectedTx.status === "approved"}
-                >
-                  Approve
-                </Button>
-                <Button
-                  kind="danger"
-                  onClick={async () => {
-                    await workspaceApi.updateFinanceTransaction(selectedTx.id, {
-                      status: "rejected",
-                    });
-                    refetchTx();
-                  }}
-                  disabled={selectedTx.status === "rejected"}
-                >
-                  Reject
-                </Button>
-              </Stack>
-            </Stack>
-          </Tile>
-        </div>
-      ) : null}
+            </Modal>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
       <Modal
         title={editingTx ? "Edit Transaction" : "Add Transaction"}

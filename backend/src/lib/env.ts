@@ -15,6 +15,7 @@ export const env = {
   MICROSOFT_CLIENT_ID: process.env["MICROSOFT_CLIENT_ID"] || "",
   MICROSOFT_CLIENT_SECRET: process.env["MICROSOFT_CLIENT_SECRET"] || "",
   NODE_ENV: process.env["NODE_ENV"] || "development",
+  API_KEY: process.env["API_KEY"] || "dev-api-key-change-in-production",
 };
 
 export const IS_PRODUCTION =

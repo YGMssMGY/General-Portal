@@ -1,5 +1,6 @@
 import { db } from "./db.js";
 import { broadcast } from "./websocket.js";
+import { sendTeamsMessage } from "./teams.js";
 
 export async function createNotification(
   workspaceId: string,
@@ -26,6 +27,13 @@ export async function createNotification(
     type: "notification",
     notification,
   });
+
+  const settings = await db.workspaceSettings.findUnique({
+    where: { workspaceId },
+  });
+  if (settings?.teamsWebhookUrl) {
+    sendTeamsMessage(settings.teamsWebhookUrl, title, body).catch(() => {});
+  }
 
   return notification;
 }

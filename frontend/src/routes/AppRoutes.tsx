@@ -17,6 +17,7 @@ import { ProposalsPage } from "../features/proposals/ProposalsPage";
 import { SearchPage } from "../features/search/SearchPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { TasksPage } from "../features/tasks/TasksPage";
+import { MeetingsPage } from "../features/meetings/MeetingsPage";
 import { VolunteersPage } from "../features/volunteers/VolunteersPage";
 import { AccountsPage } from "../features/accounts/AccountsPage";
 import { LoginPage } from "./LoginPage";
@@ -46,6 +47,7 @@ export function AppRoutes() {
         <Route path="admin/tasks" element={<TasksPage />} />
         <Route path="admin/events" element={<EventsPage />} />
         <Route path="admin/volunteers" element={<VolunteersPage />} />
+        <Route path="admin/meetings" element={<MeetingsPage />} />
         <Route path="admin/finance" element={<FinancePage />} />
         <Route path="admin/messages" element={<MessagesPage />} />
         <Route path="admin/files" element={<FilesPage />} />

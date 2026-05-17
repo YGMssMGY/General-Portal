@@ -41,6 +41,9 @@ route.patch("/settings", async (c) => {
     data.organizationType = body.organizationType;
   if (body.primaryContactEmail !== undefined)
     data.primaryContactEmail = body.primaryContactEmail;
+  if (body.teamsWebhookUrl !== undefined)
+    data.teamsWebhookUrl = body.teamsWebhookUrl;
+  if (body.webhookUrl !== undefined) data.webhookUrl = body.webhookUrl;
 
   const settings = await db.workspaceSettings.upsert({
     where: { workspaceId: wid },

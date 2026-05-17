@@ -65,6 +65,18 @@ export function useApprovalRules() {
   return useAsyncData(() => workspaceApi.getApprovalRules(), []);
 }
 
+export function useMeetings() {
+  return useAsyncData(() => workspaceApi.getMeetings(), []);
+}
+
+export function useBudgetAllocations() {
+  return useAsyncData(() => workspaceApi.getBudgetAllocations(), []);
+}
+
+export function useArchives() {
+  return useAsyncData(() => workspaceApi.getArchives(), []);
+}
+
 export function useSearch(query: string, type?: string, limit?: number, offset?: number) {
   return useAsyncData(
     () => workspaceApi.search(query, type, limit, offset),

@@ -80,6 +80,7 @@ const navConfig: NavGroup[] = [
         featureFlag: "showFinance",
       },
       { label: "Files", to: "/admin/files", icon: Folder, featureFlag: "showFiles" },
+      { label: "Meetings", to: "/admin/meetings", icon: Calendar, featureFlag: "showMeetings" },
     ],
   },
   {
