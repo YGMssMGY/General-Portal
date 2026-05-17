@@ -1,6 +1,7 @@
 import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { ZodError } from "zod";
 
 export const errorHandler: ErrorHandler = (err, c) => {
   if (err instanceof HTTPException) {
@@ -24,6 +25,20 @@ export const errorHandler: ErrorHandler = (err, c) => {
         code: "PARSE_ERROR",
         message: "Invalid request body",
         path: c.req.path,
+      },
+      400 as ContentfulStatusCode,
+    );
+  }
+
+  if (err instanceof ZodError) {
+    return c.json(
+      {
+        timestamp: new Date().toISOString(),
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "Invalid request body",
+        path: c.req.path,
+        details: err.errors,
       },
       400 as ContentfulStatusCode,
     );
