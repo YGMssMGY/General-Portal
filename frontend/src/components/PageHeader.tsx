@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 interface PageHeaderProps {
   title: string;
-  description?: string;
+  description?: string | ReactNode;
   actions?: ReactNode;
 }
 
@@ -31,15 +31,27 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
         <div>
           <h1 className="cds--productive-heading-03">{title}</h1>
           {description ? (
-            <p
-              className="cds--type-body-01"
-              style={{
-                marginTop: "0.25rem",
-                color: "var(--cds-text-secondary)",
-              }}
-            >
-              {description}
-            </p>
+            typeof description === "string" ? (
+              <p
+                className="cds--type-body-01"
+                style={{
+                  marginTop: "0.25rem",
+                  color: "var(--cds-text-secondary)",
+                }}
+              >
+                {description}
+              </p>
+            ) : (
+              <div
+                className="cds--type-body-01"
+                style={{
+                  marginTop: "0.25rem",
+                  color: "var(--cds-text-secondary)",
+                }}
+              >
+                {description}
+              </div>
+            )
           ) : null}
         </div>
         {actions ? (

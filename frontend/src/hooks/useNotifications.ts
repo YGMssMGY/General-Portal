@@ -1,0 +1,47 @@
+import { useEffect, useState, useCallback } from "react";
+import { fetchJson } from "../api/httpClient";
+import { subscribe } from "./useWebSocket";
+import type { NotificationItem } from "../types";
+
+export function useNotifications() {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const data = await fetchJson<NotificationItem[]>("/notifications");
+      setNotifications(data);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const poll = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(poll);
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    const unsub = subscribe("notification", (payload: unknown) => {
+      const notif = payload as NotificationItem;
+      if (notif?.id) {
+        setNotifications((prev) => [notif, ...prev]);
+      }
+    });
+    return unsub;
+  }, []);
+
+  const markRead = useCallback(async (id: string) => {
+    await fetchJson(`/notifications/${id}/read`, { method: "PATCH" });
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+  }, []);
+
+  const markAllRead = useCallback(async () => {
+    await fetchJson("/notifications/read-all", { method: "PATCH" });
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  return { unreadCount, notifications, markRead, markAllRead, refresh: fetchNotifications };
+}
