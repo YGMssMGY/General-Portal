@@ -21,7 +21,6 @@ import { Modal } from "../../components/Modal";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useSettings, useModules, useApprovalRules } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../hooks/useAuth";
-import { AdminUserManager } from "./AdminUserManager";
 import type { WorkspaceSettings, ModuleSettings, ApprovalRule } from "../../types";
 
 const moduleLabels: Record<keyof ModuleSettings, string> = {
@@ -545,7 +544,11 @@ export function SettingsPage() {
             </Card>
 
             {/* Admin User Management */}
-            {user?.role === "admin" && <AdminUserManager />}
+            {user?.role === "admin" && (
+              <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                Go to Accounts page to manage users.
+              </p>
+            )}
 
             {/* Approval Workflows */}
             <Card padding="lg">
