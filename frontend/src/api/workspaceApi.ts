@@ -147,4 +147,6 @@ export const workspaceApi = {
   getFinanceTrends: (days: number) => fetchJson<any[]>(`/finance/trends?days=${days}`),
   updateSettings: (settings: Partial<WorkspaceSettings>) =>
     fetchJson<WorkspaceSettings>("/settings", { method: "PATCH", ...jsonBody(settings) }),
+  createAdminUser: (data: { email: string; displayName: string; role: string }) =>
+    fetchJson<void>("/admin/users", { method: "POST", ...jsonBody(data) }),
 };

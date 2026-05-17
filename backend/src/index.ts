@@ -45,6 +45,7 @@ const [
   { default: settingsRoute },
   { default: publicRoute },
   { default: docsRoute },
+  { default: adminRoute },
 ] = await Promise.all([
   import("./routes/health.js"),
   import("./routes/auth.js"),
@@ -62,6 +63,7 @@ const [
   import("./routes/settings.js"),
   import("./routes/public.js"),
   import("./routes/docs.js"),
+  import("./routes/admin.js"),
 ]);
 
 app.route("/api", healthRoute);
@@ -99,6 +101,7 @@ app.route("/api", activityRoute);
 app.route("/api", searchRoute);
 app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
+app.route("/api", adminRoute);
 
 app.onError(errorHandler);
 
