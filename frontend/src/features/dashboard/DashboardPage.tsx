@@ -6,7 +6,16 @@ import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useAuth } from "../../context/AuthContext";
 import { useDashboard } from "../../hooks/useWorkspaceResources";
 import { formatDate } from "../../utils/format";
-import { ArrowRight, Task, Document, Calendar, Warning, Chat, Event } from "@carbon/icons-react";
+import {
+  ArrowRight,
+  Task,
+  Document,
+  Calendar,
+  Warning,
+  Chat,
+  Event,
+  User,
+} from "@carbon/icons-react";
 import type { DashboardMetric } from "../../types";
 import type { ComponentType } from "react";
 import { SimpleBarChart } from "@carbon/charts-react";
@@ -109,6 +118,7 @@ const quickActions = [
   { label: "New Proposal", icon: Document, to: "/admin/proposals" },
   { label: "New Event", icon: Event, to: "/admin/events" },
   { label: "Send Message", icon: Chat, to: "/admin/messages" },
+  { label: "My Account", icon: User, to: "/admin/accounts" },
 ];
 
 export function DashboardPage() {

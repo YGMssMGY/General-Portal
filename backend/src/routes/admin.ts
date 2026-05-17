@@ -78,7 +78,7 @@ const rolePerms: Record<string, string[]> = {
 };
 
 const createUserSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   displayName: z.string().min(1),
   role: z.enum(["admin", "president", "officer", "member"]),
 });
