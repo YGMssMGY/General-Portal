@@ -1,10 +1,13 @@
 import type {
   ActivityItem,
   ActivityStats,
+  ApprovalHistoryEntry,
   ApprovalRule,
   DashboardData,
   EventItem,
   FinanceTransaction,
+  KudosEntry,
+  LeaderboardEntry,
   Member,
   Message,
   MessageThread,
@@ -150,4 +153,15 @@ export const workspaceApi = {
   createAdminUser: (data: { email: string; displayName: string; password: string; role: string }) =>
     fetchJson<void>("/admin/users", { method: "POST", ...jsonBody(data) }),
   getAdminUsers: () => fetchJson<any[]>("/admin/users"),
+  approveProposal: (id: string) =>
+    fetchJson<Proposal>(`/proposals/${id}/approve`, { method: "POST" }),
+  rejectProposal: (id: string, reason: string) =>
+    fetchJson<Proposal>(`/proposals/${id}/reject`, { method: "POST", ...jsonBody({ reason }) }),
+  getApprovalHistory: (id: string) =>
+    fetchJson<ApprovalHistoryEntry[]>(`/proposals/${id}/approval-history`),
+  getLeaderboard: (period = "all") =>
+    fetchJson<LeaderboardEntry[]>(`/gamification/leaderboard?period=${period}`),
+  getKudos: () => fetchJson<KudosEntry[]>("/kudos"),
+  sendKudos: (toUserId: string, message: string) =>
+    fetchJson<KudosEntry>("/kudos", { method: "POST", ...jsonBody({ toUserId, message }) }),
 };

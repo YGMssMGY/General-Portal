@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
@@ -20,11 +20,13 @@ import {
   InlineNotification,
   Grid,
   Column,
+  ProgressIndicator,
+  ProgressStep,
 } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
 import { useProposals } from "../../hooks/useWorkspaceResources";
-import type { Proposal } from "../../types";
+import type { ApprovalHistoryEntry, Proposal } from "../../types";
 import { formatCurrency, formatDateTime } from "../../utils/format";
 import { Add, Edit, TrashCan, Document, Checkmark, Close } from "@carbon/icons-react";
 
@@ -45,6 +47,10 @@ export function ProposalsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Proposal>();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -164,6 +170,17 @@ export function ProposalsPage() {
     return data.find((p) => p.id === selectedId);
   }, [data, selectedId]);
 
+  useEffect(() => {
+    if (selected && selected.status !== "draft") {
+      workspaceApi
+        .getApprovalHistory(selected.id)
+        .then(setApprovalHistory)
+        .catch(() => setApprovalHistory([]));
+    } else {
+      setApprovalHistory([]);
+    }
+  }, [selected?.id]);
+
   function openCreateModal() {
     setEditingProposal(undefined);
     setForm({
@@ -225,18 +242,75 @@ export function ProposalsPage() {
     }
   }
 
-  async function handleApproveReject(id: string, status: "approved" | "rejected") {
+  async function handleApprove(id: string) {
     setIsApproving(true);
     try {
-      await workspaceApi.updateProposal(id, { status });
+      await workspaceApi.approveProposal(id);
       refetch();
-      toast.success(`Proposal ${status}`);
+      toast.success("Proposal approved");
     } catch {
-      toast.error(`Could not ${status} proposal`);
+      toast.error("Could not approve proposal");
     } finally {
       setIsApproving(false);
     }
   }
+
+  async function handleReject() {
+    if (!selected || !rejectReason.trim()) return;
+    setIsRejecting(true);
+    try {
+      await workspaceApi.rejectProposal(selected.id, rejectReason.trim());
+      setRejectModalOpen(false);
+      setRejectReason("");
+      refetch();
+      toast.success("Proposal rejected");
+    } catch {
+      toast.error("Could not reject proposal");
+    } finally {
+      setIsRejecting(false);
+    }
+  }
+
+  function getStepStates(status: string) {
+    const states = [
+      { complete: false, current: false, invalid: false },
+      { complete: false, current: false, invalid: false },
+      { complete: false, current: false, invalid: false },
+      { complete: false, current: false, invalid: false },
+    ];
+    switch (status) {
+      case "submitted":
+        states[0].complete = true;
+        states[1].current = true;
+        break;
+      case "under_review":
+        states[0].complete = true;
+        states[1].complete = true;
+        states[2].current = true;
+        break;
+      case "approved":
+        states[0].complete = true;
+        states[1].complete = true;
+        states[2].complete = true;
+        states[3].complete = true;
+        break;
+      case "rejected":
+        states[0].complete = true;
+        states[1].complete = true;
+        states[2].invalid = true;
+        break;
+    }
+    return states;
+  }
+
+  const stepLabels = ["Submitted", "Officer Review", "President Review", "Approved"];
+
+  const canAct =
+    selected &&
+    (user?.role === "admin" ||
+      (selected.status === "submitted" && user?.role === "officer") ||
+      (selected.status === "submitted" && user?.role === "president") ||
+      (selected.status === "under_review" && user?.role === "president"));
 
   if (isLoading) return <LoadingState />;
   if (error || !data)
@@ -401,26 +475,166 @@ export function ProposalsPage() {
                   </Stack>
                 </Stack>
 
-                <Stack orientation="horizontal" gap={5}>
+                {/* Progress Indicator */}
+                {selected.status !== "draft" && (
+                  <ProgressIndicator>
+                    {stepLabels.map((label, i) => {
+                      const state = getStepStates(selected.status)[i];
+                      return (
+                        <ProgressStep
+                          key={label}
+                          label={label}
+                          complete={state.complete}
+                          current={state.current}
+                          invalid={state.invalid}
+                          disabled={false}
+                        />
+                      );
+                    })}
+                  </ProgressIndicator>
+                )}
+
+                {/* Rejection reason */}
+                {selected.status === "rejected" && selected.rejectionReason && (
+                  <InlineNotification
+                    kind="error"
+                    title="Rejected"
+                    subtitle={selected.rejectionReason}
+                    hideCloseButton
+                    lowContrast
+                  />
+                )}
+
+                {/* Approve / Reject buttons */}
+                {canAct && (
+                  <Stack orientation="horizontal" gap={5}>
+                    <Button
+                      kind="primary"
+                      renderIcon={Checkmark}
+                      onClick={() => handleApprove(selected.id)}
+                      disabled={isApproving}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      kind="danger"
+                      renderIcon={Close}
+                      onClick={() => {
+                        setRejectReason("");
+                        setRejectModalOpen(true);
+                      }}
+                      disabled={isApproving}
+                    >
+                      Reject
+                    </Button>
+                  </Stack>
+                )}
+
+                {/* Approval history timeline */}
+                {approvalHistory.length > 0 && (
+                  <div>
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        color: "var(--cds-text-secondary)",
+                        marginBottom: "0.5rem",
+                        letterSpacing: "0.025em",
+                      }}
+                    >
+                      Approval History
+                    </p>
+                    <Stack gap={3}>
+                      {approvalHistory.map((entry) => (
+                        <div
+                          key={entry.id}
+                          style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            padding: "0.25rem 0",
+                            borderLeft: "2px solid var(--cds-border-subtle)",
+                            paddingLeft: "0.75rem",
+                          }}
+                        >
+                          <div>
+                            <p
+                              style={{
+                                fontSize: "0.8125rem",
+                                fontWeight: 500,
+                                color: "var(--cds-text-primary)",
+                              }}
+                            >
+                              {entry.step}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "var(--cds-text-secondary)",
+                              }}
+                            >
+                              {entry.approver} — {formatDateTime(entry.createdAt)}
+                            </p>
+                            {entry.comment && (
+                              <p
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color:
+                                    entry.action === "rejected"
+                                      ? "var(--cds-support-error)"
+                                      : "var(--cds-text-secondary)",
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                {entry.comment}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </Stack>
+                  </div>
+                )}
+              </Stack>
+            </Tile>
+
+            {/* Reject modal */}
+            <Modal
+              title="Reject Proposal"
+              description="Provide a reason for rejection."
+              isOpen={rejectModalOpen}
+              onClose={() => setRejectModalOpen(false)}
+            >
+              <Stack gap={5}>
+                <TextArea
+                  id="reject-reason"
+                  labelText="Reason (required)"
+                  placeholder="Explain why this proposal is being rejected..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  invalid={isRejecting && !rejectReason.trim()}
+                  invalidText="Reason is required"
+                />
+                <Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
                   <Button
-                    kind="primary"
-                    renderIcon={Checkmark}
-                    onClick={() => handleApproveReject(selected.id, "approved")}
-                    disabled={isApproving || selected.status === "approved"}
+                    kind="secondary"
+                    onClick={() => {
+                      setRejectModalOpen(false);
+                      setRejectReason("");
+                    }}
                   >
-                    Approve
+                    Cancel
                   </Button>
                   <Button
                     kind="danger"
-                    renderIcon={Close}
-                    onClick={() => handleApproveReject(selected.id, "rejected")}
-                    disabled={isApproving || selected.status === "rejected"}
+                    onClick={handleReject}
+                    disabled={!rejectReason.trim() || isRejecting}
                   >
-                    Reject
+                    {isRejecting ? "Rejecting..." : "Reject"}
                   </Button>
                 </Stack>
               </Stack>
-            </Tile>
+            </Modal>
           </Column>
         ) : null}
       </Grid>

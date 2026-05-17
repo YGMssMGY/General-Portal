@@ -133,7 +133,7 @@ export function UIShell() {
   const notifRef = useRef<HTMLDivElement>(null);
   const notifBtnRef = useRef<HTMLButtonElement>(null);
   const { unreadCount, notifications, markRead, markAllRead } = useNotifications();
-  useWebSocket();
+  const { isConnected } = useWebSocket();
   const config = useMemo(() => getClientConfig(), []);
   const features = config.features;
 
@@ -387,6 +387,42 @@ export function UIShell() {
                     )}
                   </div>
                 )}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  padding: "0 0.5rem",
+                  height: "3rem",
+                }}
+              >
+                <span
+                  style={{
+                    width: "0.5rem",
+                    height: "0.5rem",
+                    borderRadius: "50%",
+                    background: isConnected ? "#24a148" : "#6f6f6f",
+                    display: "inline-block",
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    width: "1.5rem",
+                    height: "1.5rem",
+                    borderRadius: "50%",
+                    background: "var(--cds-button-tertiary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: "0.6875rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {(sessionUser?.name ?? "?").charAt(0).toUpperCase()}
+                </span>
               </div>
               <HeaderGlobalAction
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}

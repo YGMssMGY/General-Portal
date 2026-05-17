@@ -24,7 +24,8 @@ const { errorHandler } = await import("./middleware/error.js");
 const { requireWorkspace } = await import("./middleware/auth.js");
 const { secureHeaders } = await import("hono/secure-headers");
 const { apiLimiter, authLimiter } = await import("./middleware/rate-limit.js");
-const { setupWebSocket } = await import("./lib/websocket.js");
+const { setupWebSocket, presenceRoute } = await import("./lib/websocket.js");
+const { default: cron } = await import("node-cron");
 
 const app = new Hono();
 app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
@@ -54,6 +55,8 @@ const [
   { default: adminRoute },
   { default: notificationRoute },
   { default: auditRoute },
+  { default: gamificationRoute },
+  { default: kudosRoute },
 ] = await Promise.all([
   import("./routes/health.js"),
   import("./routes/auth.js"),
@@ -74,6 +77,8 @@ const [
   import("./routes/admin.js"),
   import("./routes/notifications.js"),
   import("./routes/audit.js"),
+  import("./routes/gamification.js"),
+  import("./routes/kudos.js"),
 ]);
 
 app.route("/api", healthRoute);
@@ -97,9 +102,12 @@ app.use("/api/notifications", requireWorkspace);
 app.use("/api/audit", requireWorkspace);
 
 app.use("/api/modules/*", requireWorkspace);
-
 app.use("/api/workspace/*", requireWorkspace);
+app.use("/api/gamification", requireWorkspace);
+app.use("/api/kudos", requireWorkspace);
+app.use("/api/presence", requireWorkspace);
 
+app.route("/api", presenceRoute);
 app.route("/api", dashboardRoute);
 app.route("/api", tasksRoute);
 app.route("/api", proposalsRoute);
@@ -115,9 +123,18 @@ app.route("/api", settingsRoute);
 app.route("/api", publicRoute);
 app.route("/api", notificationRoute);
 app.route("/api", auditRoute);
+app.route("/api", gamificationRoute);
+app.route("/api", kudosRoute);
 app.route("/api", adminRoute);
 
 app.onError(errorHandler);
+
+const { runNudges } = await import("./workers/nudges.js");
+
+cron.schedule("0 * * * *", () => {
+  runNudges().catch((err) => console.error("[cron] nudge error:", err));
+});
+console.log("[cron] Registered hourly nudge schedule");
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`[backend] Hono server running on http://localhost:${info.port}`);
