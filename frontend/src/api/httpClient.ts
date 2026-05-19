@@ -1,6 +1,12 @@
 const rawBaseUrl = import.meta.env.VITE_API_URL || "/api";
 export const API_BASE_URL = rawBaseUrl.replace(/\/$/, "");
 
+function getPortalFromCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)portal=([^;]*)/);
+  return match ? match[1] : null;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -32,6 +38,10 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
   const headers = new Headers(init?.headers);
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  const portal = getPortalFromCookie();
+  if (portal) {
+    headers.set("X-Portal", portal);
   }
 
   const maxRetries = 2;
