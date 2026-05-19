@@ -10,6 +10,7 @@ import {
   TableRow as CarbonTableRow,
   TableBody,
   TableSelectAll,
+  Search,
 } from "@carbon/react";
 
 export interface ColumnDef<T> {
@@ -29,6 +30,11 @@ interface DataTableProps<T> {
   toolbar?: ReactNode;
   pageSize?: number;
   onRowClick?: (item: T) => void;
+  virtualize?: boolean;
+  filterable?: boolean;
+  batchActions?: ReactNode;
+  onSearch?: (query: string) => void;
+  searchPlaceholder?: string;
 }
 
 export function DataTable({
@@ -40,16 +46,34 @@ export function DataTable({
   toolbar,
   pageSize: defaultPageSize = 10,
   onRowClick,
+  virtualize = false,
+  filterable = false,
+  batchActions,
+  onSearch,
+  searchPlaceholder = "Search...",
 }: DataTableProps<any>) {
   const [sortKey, setSortKey] = useState<string | null>(defaultSort?.key ?? null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(defaultSort?.direction ?? "asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!searchQuery || !onSearch) return data;
+    const q = searchQuery.toLowerCase();
+    return data.filter((item: any) =>
+      Object.values(item).some((v: any) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  }, [data, searchQuery, onSearch]);
 
   const sorted = useMemo(() => {
-    if (!sortKey) return data;
-    return [...data].sort((a, b) => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       if (aVal == null && bVal == null) return 0;
@@ -61,10 +85,13 @@ export function DataTable({
       });
       return sortDir === "asc" ? comparison : -comparison;
     });
-  }, [data, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const maxRender = virtualize ? 100 : paged.length;
+  const rendered = paged.slice(0, maxRender);
 
   function handleSort(key: string) {
     if (sortKey === key) {
@@ -106,12 +133,31 @@ export function DataTable({
   const start = (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, sorted.length);
 
+  const displayData = rendered;
+
   return (
     <div style={{ border: "1px solid var(--cds-border-subtle)", background: "var(--cds-layer)" }}>
+      {filterable ? (
+        <div style={{ padding: "0.5rem", borderBottom: "1px solid var(--cds-border-subtle)" }}>
+          <Search
+            id="data-table-search"
+            labelText="Search"
+            placeholder={searchPlaceholder}
+            size="sm"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              onSearch?.(e.target.value);
+            }}
+            closeButtonLabelText="Clear search"
+          />
+        </div>
+      ) : null}
       {toolbar ? (
         <DataTableToolbar
           selectedCount={selected.size}
           onClearSelection={() => setSelected(new Set())}
+          batchActions={batchActions}
         >
           {toolbar}
         </DataTableToolbar>
@@ -140,7 +186,6 @@ export function DataTable({
                   onClick={() => {
                     if (col.sortable) handleSort(col.key);
                   }}
-                  style={col.sortable ? { cursor: "pointer" } : undefined}
                 >
                   {col.header}
                 </TableHeader>
@@ -148,7 +193,7 @@ export function DataTable({
             </CarbonTableRow>
           </TableHead>
           <TableBody>
-            {paged.map((item) => (
+            {displayData.map((item) => (
               <DataTableRow
                 key={String(item[keyField])}
                 item={item}

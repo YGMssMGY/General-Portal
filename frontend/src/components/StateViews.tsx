@@ -27,10 +27,11 @@ interface ErrorStateProps {
 export function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
     <Tile style={{ borderLeft: "4px solid var(--cds-support-error)" }}>
-      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
-        Could not load data
-      </p>
-      <p style={{ marginTop: "0.25rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+      <p className="cds--type-productive-heading-01">Could not load data</p>
+      <p
+        className="cds--type-body-01"
+        style={{ marginTop: "0.25rem", color: "var(--cds-text-secondary)" }}
+      >
         {message}
       </p>
       {onRetry ? (
@@ -50,10 +51,11 @@ interface EmptyStateProps {
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
     <Tile style={{ textAlign: "center", padding: "2rem" }}>
-      <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
-        {title}
-      </h2>
-      <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+      <h2 className="cds--type-heading-02">{title}</h2>
+      <p
+        className="cds--type-body-01"
+        style={{ marginTop: "0.5rem", color: "var(--cds-text-secondary)" }}
+      >
         {description}
       </p>
     </Tile>
