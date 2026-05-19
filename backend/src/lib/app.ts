@@ -141,7 +141,7 @@ export function startApp(opts: StartOptions = {}) {
   });
 
   const server = serve({ fetch: app.fetch, port }, (info) => {
-    console.log(`[server] Running on http://localhost:${info.port}`);
+    process.stdout.write(`[server] Running on http://localhost:${info.port}\n`);
   });
   setupWebSocket(server);
 
