@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid, Row, Column, ClickableTile, Layer } from "@carbon/react";
+import { ClickableTile, Layer } from "@carbon/react";
 import { useUIStore } from "../stores/useUIStore";
 
 const portals = [
@@ -34,84 +34,81 @@ export function PortalLanding() {
 
 	return (
 		<Layer>
-			<Grid
+			<div
 				style={{
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					justifyContent: "center",
 					minHeight: "100vh",
-					alignContent: "center",
-					padding: "2rem 0",
+					padding: "2rem",
 				}}
 			>
-				<Row>
-					<Column sm={4} md={8} lg={16}>
-						<h1
-							style={{
-								textAlign: "center",
-								marginBottom: "0.5rem",
-								fontSize: "2rem",
-								fontWeight: 600,
-							}}
-						>
-							General Portal
-						</h1>
-						<p
-							style={{
-								textAlign: "center",
-								marginBottom: "2rem",
-								color: "var(--cds-text-secondary, #525252)",
-							}}
-						>
-							Choose your organization to get started
-						</p>
-					</Column>
-				</Row>
-				<Row style={{ justifyContent: "center" }}>
+				<h1
+					style={{
+						fontSize: "2rem",
+						fontWeight: 600,
+						marginBottom: "0.5rem",
+					}}
+				>
+					General Portal
+				</h1>
+				<p
+					style={{
+						marginBottom: "2rem",
+						color: "var(--cds-text-secondary, #525252)",
+					}}
+				>
+					Choose your organization to get started
+				</p>
+
+				<div
+					style={{
+						display: "flex",
+						gap: "1rem",
+						flexWrap: "wrap",
+						justifyContent: "center",
+					}}
+				>
 					{portals.map((p) => (
-						<Column key={p.id} sm={4} md={4} lg={6} style={{ marginBottom: "1rem" }}>
-							<ClickableTile
-								id={`portal-${p.id}`}
-								onClick={() => handleSelect(p.id)}
-								aria-label={`Select ${p.label} portal`}
+						<ClickableTile
+							key={p.id}
+							id={`portal-${p.id}`}
+							onClick={() => handleSelect(p.id)}
+							aria-label={`Select ${p.label} portal`}
+							style={{
+								padding: "2rem",
+								textAlign: "center",
+								width: "20rem",
+								maxWidth: "100%",
+							}}
+						>
+							<h2 style={{ marginBottom: "0.75rem", fontSize: "1.25rem" }}>
+								{p.label}
+							</h2>
+							<p
 								style={{
-									padding: "2rem",
-									textAlign: "center",
-									height: "100%",
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									justifyContent: "center",
+									color: "var(--cds-text-secondary, #525252)",
+									fontSize: "0.875rem",
+									lineHeight: 1.5,
 								}}
 							>
-								<h2 style={{ marginBottom: "0.75rem", fontSize: "1.25rem" }}>
-									{p.label}
-								</h2>
-								<p
-									style={{
-										color: "var(--cds-text-secondary, #525252)",
-										fontSize: "0.875rem",
-										lineHeight: 1.5,
-									}}
-								>
-									{p.description}
-								</p>
-							</ClickableTile>
-						</Column>
+								{p.description}
+							</p>
+						</ClickableTile>
 					))}
-				</Row>
-				<Row>
-					<Column sm={4} md={8} lg={16}>
-						<p
-							style={{
-								textAlign: "center",
-								marginTop: "2rem",
-								fontSize: "0.75rem",
-								color: "var(--cds-text-helper, #6f6f6f)",
-							}}
-						>
-							Select a portal to continue. You can switch portals later from settings.
-						</p>
-					</Column>
-				</Row>
-			</Grid>
+				</div>
+
+				<p
+					style={{
+						marginTop: "2rem",
+						fontSize: "0.75rem",
+						color: "var(--cds-text-helper, #6f6f6f)",
+					}}
+				>
+					Select a portal to continue. You can switch portals later from settings.
+				</p>
+			</div>
 		</Layer>
 	);
 }

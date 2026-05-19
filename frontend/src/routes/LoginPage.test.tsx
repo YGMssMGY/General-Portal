@@ -25,7 +25,7 @@ describe("LoginPage", () => {
 				<LoginPage />
 			</MemoryRouter>,
 		);
-		expect(screen.getByRole("heading", { name: /student portal/i })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: /general portal/i })).toBeInTheDocument();
 	});
 
 	it("has username and password inputs", () => {

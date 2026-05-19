@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Tile } from "@carbon/react";
 import { useSession } from "@hono/auth-js/react";
 import { LoadingState } from "../components/StateViews";
@@ -18,6 +18,7 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 
 export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) {
 	const { data: session, status } = useSession();
+	const location = useLocation();
 
 	if (status === "loading") {
 		return (
@@ -36,7 +37,8 @@ export function ProtectedRoute({ requiredRole, children }: ProtectedRouteProps) 
 	}
 
 	if (status !== "authenticated" || !session?.user) {
-		return <Navigate to="/login" replace />;
+		const callbackUrl = encodeURIComponent(location.pathname);
+		return <Navigate to={`/login?callbackUrl=${callbackUrl}`} replace />;
 	}
 
 	const userRole = (session.user as any).role as UserRole | undefined;
