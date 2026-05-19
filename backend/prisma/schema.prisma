@@ -345,7 +345,6 @@ model FinanceTransaction {
 
   @@index([workspaceId])
   @@index([workspaceId, status])
-  @@index([workspaceId, dueDate])
 }
 
 model MessageThread {
@@ -407,7 +406,6 @@ model WorkspaceFile {
   workspaceId String
 
   @@index([workspaceId])
-  @@index([workspaceId, occurredAt])
 }
 
 model ActivityLog {
@@ -635,7 +633,7 @@ model AuditLog {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId, userId])
+  @@index([workspaceId, actorId])
 }
 
 model Meeting {
