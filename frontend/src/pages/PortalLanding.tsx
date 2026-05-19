@@ -1,149 +1,20 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Grid, Row, Column, ClickableTile, Heading, Section } from "@carbon/react";
 import { useUIStore } from "../stores/useUIStore";
 
 const portals = [
   {
     id: "stuco",
     label: "Student Council",
-    description: "Manage student government \u2014 events, budgets, proposals, and elections.",
-    accent: "#8b3b8b",
-    icon: "SC",
+    description: "Manage student government — events, budgets, proposals, and elections.",
   },
   {
     id: "developers",
     label: "Developers Club",
-    description: "Code, collaborate, and ship \u2014 project tracking, tasks, and team tools.",
-    accent: "#0f62fe",
-    icon: "DC",
+    description: "Code, collaborate, and ship — project tracking, tasks, and team tools.",
   },
 ] as const;
-
-function PortalCard({
-  portal,
-  index,
-  onSelect,
-}: {
-  portal: (typeof portals)[number];
-  index: number;
-  onSelect: (id: "developers" | "stuco") => void;
-}) {
-  return (
-    <motion.button
-      type="button"
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 + index * 0.15, duration: 0.5, ease: "easeOut" }}
-      whileHover={{ scale: 1.03, y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onSelect(portal.id)}
-      style={{
-        position: "relative",
-        display: "flex",
-        width: "100%",
-        maxWidth: "26rem",
-        flexDirection: "column",
-        alignItems: "center",
-        overflow: "hidden",
-        borderRadius: "1rem",
-        border: `1px solid ${portal.accent}44`,
-        padding: "2rem",
-        textAlign: "left",
-        cursor: "pointer",
-        background: `linear-gradient(135deg, ${portal.accent}22, ${portal.accent}44)`,
-        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
-        backdropFilter: "blur(8px)",
-        color: "#fff",
-        outline: "none",
-        transition: "box-shadow 0.2s",
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.boxShadow = `0 0 0 2px ${portal.accent}88`;
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.boxShadow = "0 25px 50px -12px rgba(0,0,0,0.5)";
-      }}
-      aria-label={`Select ${portal.label} portal`}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          opacity: 0.1,
-          transition: "opacity 0.2s",
-          pointerEvents: "none",
-          background: `radial-gradient(circle at 50% 0%, ${portal.accent}88, transparent 70%)`,
-        }}
-        className="portal-glow"
-      />
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "1rem",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            height: "5rem",
-            width: "5rem",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "50%",
-            background: portal.accent,
-            color: "#fff",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            boxShadow: `0 4px 14px ${portal.accent}66`,
-          }}
-        >
-          {portal.icon}
-        </div>
-        <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, color: "#fff" }}>
-          {portal.label}
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            fontSize: "0.875rem",
-            lineHeight: 1.6,
-            color: "rgba(255,255,255,0.7)",
-          }}
-        >
-          {portal.description}
-        </p>
-        <div
-          style={{
-            marginTop: "0.5rem",
-            borderRadius: "999px",
-            padding: "0.375rem 1rem",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color: "#fff",
-            background: portal.accent,
-            opacity: 0,
-            transition: "opacity 0.2s",
-          }}
-          className="portal-cta"
-        >
-          Enter Portal
-        </div>
-      </div>
-      <style>{`
-        button:hover .portal-glow { opacity: 0.2; }
-        button:hover .portal-cta { opacity: 1; }
-      `}</style>
-    </motion.button>
-  );
-}
 
 export function PortalLanding() {
   const navigate = useNavigate();
@@ -162,126 +33,48 @@ export function PortalLanding() {
   }
 
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        minHeight: "100vh",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-        background: "#000",
-      }}
-    >
-      {/* Animated background shapes */}
-      <div
-        style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}
-        aria-hidden="true"
-      >
-        <motion.div
-          style={{
-            position: "absolute",
-            left: "-8rem",
-            top: "-8rem",
-            width: "24rem",
-            height: "24rem",
-            borderRadius: "50%",
-            opacity: 0.2,
-            background: "#8b3b8b",
-            filter: "blur(80px)",
-          }}
-          animate={{ x: [0, 50, 0], y: [0, -30, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          style={{
-            position: "absolute",
-            bottom: "-8rem",
-            right: "-8rem",
-            width: "24rem",
-            height: "24rem",
-            borderRadius: "50%",
-            opacity: 0.2,
-            background: "#0f62fe",
-            filter: "blur(80px)",
-          }}
-          animate={{ x: [0, -40, 0], y: [0, 40, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: "16rem",
-            height: "16rem",
-            transform: "translate(-50%, -50%)",
-            borderRadius: "50%",
-            opacity: 0.1,
-            background: "#fff",
-            filter: "blur(80px)",
-          }}
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </div>
-
-      {/* Content */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "3rem",
-          padding: "0 1rem",
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{ textAlign: "center" }}
-        >
-          <h1
+    <Grid style={{ minHeight: "100vh", alignItems: "center" }}>
+      <Row>
+        <Column sm={4} md={8} lg={16}>
+          <Section style={{ textAlign: "center", marginBottom: "3rem" }}>
+            <Heading>General Portal</Heading>
+            <p style={{ marginTop: "0.5rem", color: "var(--cds-text-secondary, #525252)" }}>
+              Choose your organization to get started
+            </p>
+          </Section>
+        </Column>
+      </Row>
+      <Row style={{ justifyContent: "center", gap: "1rem" }}>
+        {portals.map((p) => (
+          <Column key={p.id} sm={4} md={4} lg={6}>
+            <ClickableTile
+              id={`portal-${p.id}`}
+              onClick={() => handleSelect(p.id)}
+              aria-label={`Select ${p.label} portal`}
+              style={{ padding: "2rem", textAlign: "center" }}
+            >
+              <Heading style={{ marginBottom: "0.75rem" }}>{p.label}</Heading>
+              <p style={{ color: "var(--cds-text-secondary, #525252)", fontSize: "0.875rem" }}>
+                {p.description}
+              </p>
+            </ClickableTile>
+          </Column>
+        ))}
+      </Row>
+      <Row>
+        <Column sm={4} md={8} lg={16}>
+          <p
             style={{
-              margin: 0,
-              fontSize: "3rem",
-              fontWeight: 700,
-              letterSpacing: "-0.025em",
-              color: "#fff",
+              textAlign: "center",
+              marginTop: "3rem",
+              fontSize: "0.75rem",
+              color: "var(--cds-text-helper, #6f6f6f)",
             }}
           >
-            General Portal
-          </h1>
-          <p style={{ marginTop: "0.75rem", fontSize: "1.125rem", color: "rgba(255,255,255,0.5)" }}>
-            Choose your organization to get started
+            Select a portal to continue. You can switch portals later from settings.
           </p>
-        </motion.div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {portals.map((p, i) => (
-            <PortalCard key={p.id} portal={p} index={i} onSelect={handleSelect} />
-          ))}
-        </div>
-      </div>
-
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 0.5 }}
-        style={{
-          position: "relative",
-          zIndex: 10,
-          marginTop: "4rem",
-          fontSize: "0.75rem",
-          color: "rgba(255,255,255,0.3)",
-        }}
-      >
-        Select a portal to continue. You can switch portals later from settings.
-      </motion.p>
-    </div>
+        </Column>
+      </Row>
+    </Grid>
   );
 }
