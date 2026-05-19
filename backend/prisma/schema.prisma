@@ -137,10 +137,10 @@ model Workspace {
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
-  displayName   String
+  name   String
   password      String?
   emailVerified DateTime?
-  avatarUrl     String?
+  image     String?
   xp            Int       @default(0)
   level         Int       @default(1)
   streak        Int       @default(0)

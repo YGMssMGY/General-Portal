@@ -38,18 +38,18 @@ async function main() {
 
 	/* ── Users (by email) ── */
 	const userDefs = [
-		{ email: "chris@example.edu", displayName: "Chris Rivera" },
-		{ email: "sarah.j@example.edu", displayName: "Sarah Jenkins" },
-		{ email: "maya.c@example.edu", displayName: "Maya Chen" },
-		{ email: "jordan.d@example.edu", displayName: "Jordan Diaz" },
-		{ email: "dev@generalportal.local", displayName: "Dev Admin" },
-		{ email: "dev.admin@generalportal.local", displayName: "Dev Admin" },
+		{ email: "chris@example.edu", name: "Chris Rivera" },
+		{ email: "sarah.j@example.edu", name: "Sarah Jenkins" },
+		{ email: "maya.c@example.edu", name: "Maya Chen" },
+		{ email: "jordan.d@example.edu", name: "Jordan Diaz" },
+		{ email: "dev@generalportal.local", name: "Dev Admin" },
+		{ email: "dev.admin@generalportal.local", name: "Dev Admin" },
 		{
 			email: "dev.president@generalportal.local",
-			displayName: "Dev President",
+			name: "Dev President",
 		},
-		{ email: "dev.officer@generalportal.local", displayName: "Dev Officer" },
-		{ email: "dev.member@generalportal.local", displayName: "Dev Member" },
+		{ email: "dev.officer@generalportal.local", name: "Dev Officer" },
+		{ email: "dev.member@generalportal.local", name: "Dev Member" },
 	];
 
 	const users = await Promise.all(

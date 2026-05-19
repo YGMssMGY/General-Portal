@@ -39,7 +39,7 @@ async function nudgeTasksDueSoon(db: PrismaClient, workspaceId: string) {
 		if (!task.assigneeName) continue;
 
 		const assignee = await db.user.findFirst({
-			where: { displayName: task.assigneeName },
+			where: { name: task.assigneeName },
 			select: { id: true },
 		});
 		if (!assignee) continue;
@@ -179,7 +179,7 @@ async function nudgeEventsStartingSoon(db: PrismaClient, workspaceId: string) {
 		if (event.owners.length > 0 && checkinCount < 2) {
 			for (const owner of event.owners) {
 				const ownerUser = await db.user.findFirst({
-					where: { displayName: { contains: owner.ownerLabel } },
+					where: { name: { contains: owner.ownerLabel } },
 					select: { id: true },
 				});
 				if (!ownerUser) continue;
