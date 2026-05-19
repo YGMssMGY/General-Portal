@@ -54,7 +54,7 @@ export function EventsPage() {
     endsAt: new Date().toISOString().slice(0, 10),
     progress: 0,
     budgetTotal: 0,
-    ownerNames: "",
+    owners: "",
   });
 
   const upcoming = useMemo(() => {
@@ -85,10 +85,10 @@ export function EventsPage() {
         ),
       },
       {
-        key: "ownerNames",
+        key: "owners",
         header: "Coordinator",
         sortable: true,
-        render: (event) => event.ownerNames?.[0] || "-",
+        render: (event) => event.owners?.[0]?.ownerLabel || "-",
       },
       {
         key: "budgetTotal",
@@ -124,7 +124,7 @@ export function EventsPage() {
                   endsAt: event.endsAt?.slice(0, 10) ?? "",
                   progress: event.progress,
                   budgetTotal: event.budgetTotal,
-                  ownerNames: event.ownerNames?.join(", ") ?? "",
+                  owners: event.owners?.map((o) => o.ownerLabel).join(", ") ?? "",
                 });
                 setIsModalOpen(true);
               }}
@@ -158,7 +158,7 @@ export function EventsPage() {
       endsAt: new Date().toISOString().slice(0, 10),
       progress: 0,
       budgetTotal: 0,
-      ownerNames: "",
+      owners: "",
     });
     setIsModalOpen(true);
   }
@@ -178,7 +178,7 @@ export function EventsPage() {
         endsAt: form.endsAt || undefined,
         progress: form.progress,
         budgetTotal: form.budgetTotal,
-        ownerNames: form.ownerNames ? form.ownerNames.split(",").map((s) => s.trim()) : [],
+        owners: form.owners ? form.owners.split(",").map((s) => s.trim()) : [],
       };
       if (editingEvent) {
         await workspaceApi.updateEvent(editingEvent.id, updates);
@@ -337,7 +337,7 @@ export function EventsPage() {
                         {formatCurrency(event.budgetTotal ?? 0)}
                       </p>
                     </div>
-                    {event.ownerNames?.length > 0 ? (
+                    {event.owners?.length > 0 ? (
                       <Stack orientation="horizontal" gap={3} style={{ alignItems: "center" }}>
                         <User
                           size={16}
@@ -350,7 +350,7 @@ export function EventsPage() {
                             color: "var(--cds-text-secondary)",
                           }}
                         >
-                          {event.ownerNames[0]}
+                          {event.owners[0].ownerLabel}
                         </span>
                       </Stack>
                     ) : null}
@@ -565,8 +565,8 @@ export function EventsPage() {
                       >
                         Coordinators
                       </p>
-                      {selectedEvent.ownerNames?.length > 0 ? (
-                        selectedEvent.ownerNames.map((name, i) => (
+                      {selectedEvent.owners?.length > 0 ? (
+                        selectedEvent.owners.map((owner, i) => (
                           <Stack
                             key={i}
                             orientation="horizontal"
@@ -584,7 +584,7 @@ export function EventsPage() {
                                 color: "var(--cds-text-primary)",
                               }}
                             >
-                              {name}
+                              {owner.ownerLabel}
                             </span>
                           </Stack>
                         ))
@@ -743,8 +743,8 @@ export function EventsPage() {
                 <TextInput
                   id="evt-owners"
                   labelText="Coordinators (comma-separated)"
-                  value={form.ownerNames}
-                  onChange={(e) => setForm((c) => ({ ...c, ownerNames: e.target.value }))}
+                  value={form.owners}
+                  onChange={(e) => setForm((c) => ({ ...c, owners: e.target.value }))}
                 />
               </Column>
             </Grid>
