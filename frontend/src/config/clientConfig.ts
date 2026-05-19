@@ -59,9 +59,27 @@ const clients: Record<string, ClientConfig> = {
 	},
 };
 
-const defaultClient: ClientConfig = clients.developers;
+const defaultClient: ClientConfig = {
+	displayName: "General Portal",
+	shortName: "GP",
+	tagline: "Manage your organizations",
+	description: "Choose a portal to get started.",
+	favicon: "",
+	primaryColor: "#0f62fe",
+	secondaryColor: "#0043ce",
+	features: {
+		showFinance: false,
+		showVolunteers: false,
+		showProposals: false,
+		showFiles: false,
+		showActivity: false,
+		showMembers: false,
+		showSettings: false,
+		showMeetings: false,
+	},
+};
 
 export function getClientConfig(portal?: string): ClientConfig {
-	const portalName = portal || import.meta.env.VITE_CLIENT_NAME || "developers";
-	return clients[portalName] || defaultClient;
+	if (!portal) return defaultClient;
+	return clients[portal] || defaultClient;
 }

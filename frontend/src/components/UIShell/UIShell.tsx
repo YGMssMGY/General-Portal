@@ -41,6 +41,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
+import { useUIStore } from "../../stores/useUIStore";
 import { formatDate } from "../../utils/format";
 import type { ComponentType, ElementType } from "react";
 
@@ -151,7 +152,9 @@ export function UIShell() {
 	const notifBtnRef = useRef<HTMLButtonElement>(null);
 	const { unreadCount, notifications, markRead, markAllRead } = useNotifications();
 	const { isConnected } = useWebSocket();
-	const config = useMemo(() => getClientConfig(), []);
+	const portal = useUIStore((s) => s.portal);
+	const setPortal = useUIStore((s) => s.setPortal);
+	const config = useMemo(() => getClientConfig(portal ?? undefined), [portal]);
 	const features = config.features;
 
 	useKeyboardShortcuts({
@@ -472,6 +475,15 @@ export function UIShell() {
 								onClick={toggleTheme}
 							>
 								{theme === "dark" ? <Light size={20} /> : <Asleep size={20} />}
+							</HeaderGlobalAction>
+							<HeaderGlobalAction
+								aria-label="Switch portal"
+								onClick={() => {
+									setPortal(null);
+									window.location.href = "/";
+								}}
+							>
+								<span style={{ fontSize: "1rem", fontWeight: 700 }}>&#x21C4;</span>
 							</HeaderGlobalAction>
 							<HeaderGlobalAction
 								aria-label="Sign out"
