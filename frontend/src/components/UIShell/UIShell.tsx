@@ -40,6 +40,7 @@ import { useSession, signOut } from "@hono/auth-js/react";
 import { useTheme } from "../../context/ThemeContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { formatDate } from "../../utils/format";
 import type { ComponentType, ElementType } from "react";
 
@@ -138,6 +139,12 @@ export function UIShell() {
   const config = useMemo(() => getClientConfig(), []);
   const features = config.features;
 
+  useKeyboardShortcuts({
+    "ctrl+k": () => {
+      setSearchOpen((prev) => !prev);
+    },
+  });
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -194,6 +201,9 @@ export function UIShell() {
         onClickSideNavExpand: () => void;
       }) => (
         <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+          <a href="#main-content" className="skip-to-content">
+            Skip to main content
+          </a>
           <Header aria-label={config.displayName}>
             <SkipToContent />
             <HeaderMenuButton
