@@ -7,29 +7,39 @@ export function useClientTheme() {
 	const config = getClientConfig(portal ?? undefined);
 
 	useEffect(() => {
-		const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-		if (link) {
-			link.href = config.favicon;
-		} else {
-			const newLink = document.createElement("link");
-			newLink.rel = "icon";
-			newLink.href = config.favicon;
-			document.head.appendChild(newLink);
+		if (!portal || !config.favicon) {
+			const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+			if (link) link.remove();
+			return;
 		}
-	}, [config.favicon]);
+		const existing = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+		if (existing) {
+			existing.href = config.favicon;
+		} else {
+			const link = document.createElement("link");
+			link.rel = "icon";
+			link.href = config.favicon;
+			document.head.appendChild(link);
+		}
+	}, [config.favicon, portal]);
 
 	useEffect(() => {
 		document.title = config.displayName;
 	}, [config.displayName]);
 
 	useEffect(() => {
+		if (!portal) {
+			document.documentElement.style.removeProperty("--client-primary");
+			document.documentElement.style.removeProperty("--client-secondary");
+			return;
+		}
 		document.documentElement.style.setProperty("--client-primary", config.primaryColor);
 		document.documentElement.style.setProperty("--client-secondary", config.secondaryColor);
 		return () => {
 			document.documentElement.style.removeProperty("--client-primary");
 			document.documentElement.style.removeProperty("--client-secondary");
 		};
-	}, [config.primaryColor, config.secondaryColor]);
+	}, [config.primaryColor, config.secondaryColor, portal]);
 
 	return config;
 }
