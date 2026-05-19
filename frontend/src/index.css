@@ -26,3 +26,70 @@
 .scrollbar-soft::-webkit-scrollbar-thumb:hover {
   background: var(--cds-text-placeholder);
 }
+
+/* Skip to content link (visually hidden until focused) */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--cds-layer);
+  color: var(--cds-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: top 0.1s;
+}
+
+.skip-to-content:focus {
+  top: 0;
+  outline: 2px solid var(--cds-focus);
+}
+
+/* Responsive: card views at <480px */
+@media (max-width: 479px) {
+  .responsive-card-stack {
+    flex-direction: column !important;
+  }
+
+  .responsive-hide-small {
+    display: none !important;
+  }
+
+  .responsive-full-width {
+    width: 100% !important;
+  }
+
+  .responsive-stack-vertical {
+    flex-direction: column !important;
+  }
+}
+
+/* Responsive: tablet adjustments <768px */
+@media (max-width: 767px) {
+  .responsive-hide-mobile {
+    display: none !important;
+  }
+
+  .responsive-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Accessibility: focus visible */
+:focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
