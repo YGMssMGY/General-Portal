@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { ROLE_PERMISSIONS } from "../src/lib/permissions.js";
 
 process.env["DATABASE_URL"] = process.env["DATABASE_URL_DEVELOPERS"];
 
@@ -47,17 +48,7 @@ async function main() {
     ),
   );
 
-  const [
-    chris,
-    sarah,
-    maya,
-    jordan,
-    dev,
-    devAdmin,
-    devPresident,
-    devOfficer,
-    devMember,
-  ] = users;
+  // users[0..8] used below in membershipDefs
 
   /* ── Memberships (by workspaceId + userId) ── */
   const membershipDefs = [
@@ -102,17 +93,22 @@ async function main() {
     { user: users[8], position: "Member", accessLabel: "Member", tc: 0, vh: 0 },
   ];
 
-  const permSets = [
-    adminPerms(),
-    adminPerms(),
-    presidentPerms(),
-    officerPerms(),
-    memberPerms(),
-    adminPerms(),
-    presidentPerms(),
-    officerPerms(),
-    memberPerms(),
+  const allRoles = [
+    "admin",
+    "admin",
+    "president",
+    "officer",
+    "member",
+    "admin",
+    "president",
+    "officer",
+    "member",
   ];
+  const permSets = allRoles.map(
+    (r) =>
+      ROLE_PERMISSIONS[r as keyof typeof ROLE_PERMISSIONS] ||
+      ROLE_PERMISSIONS.member,
+  );
 
   for (let i = 0; i < membershipDefs.length; i++) {
     const def = membershipDefs[i];
@@ -594,86 +590,6 @@ async function main() {
   await seedPhotos();
 
   console.log("[seed] Database seeded successfully");
-}
-
-function adminPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "task:delete",
-    "proposal:read",
-    "proposal:write",
-    "proposal:delete",
-    "event:read",
-    "event:write",
-    "event:delete",
-    "volunteer:read",
-    "volunteer:write",
-    "volunteer:delete",
-    "finance:read",
-    "finance:write",
-    "finance:delete",
-    "message:read",
-    "message:write",
-    "message:delete",
-    "file:read",
-    "file:write",
-    "file:delete",
-    "member:read",
-    "member:write",
-    "member:delete",
-    "activity:read",
-    "settings:read",
-    "settings:write",
-  ];
-}
-
-function presidentPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "volunteer:write",
-    "finance:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-    "settings:read",
-  ];
-}
-
-function officerPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-  ];
-}
-
-function memberPerms() {
-  return [
-    "task:read",
-    "event:read",
-    "volunteer:read",
-    "message:read",
-    "file:read",
-    "activity:read",
-  ];
 }
 
 main()

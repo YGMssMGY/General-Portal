@@ -2,80 +2,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../lib/db.js";
 import { requireAdmin } from "../middleware/auth.js";
+import { getPermissionsForRole } from "../lib/permissions.js";
 
 const route = new Hono();
 route.use("/*", requireAdmin);
-
-const rolePerms: Record<string, string[]> = {
-  admin: [
-    "task:read",
-    "task:write",
-    "task:delete",
-    "proposal:read",
-    "proposal:write",
-    "proposal:delete",
-    "event:read",
-    "event:write",
-    "event:delete",
-    "volunteer:read",
-    "volunteer:write",
-    "volunteer:delete",
-    "finance:read",
-    "finance:write",
-    "finance:delete",
-    "message:read",
-    "message:write",
-    "message:delete",
-    "file:read",
-    "file:write",
-    "file:delete",
-    "member:read",
-    "member:write",
-    "member:delete",
-    "activity:read",
-    "settings:read",
-    "settings:write",
-  ],
-  president: [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "volunteer:write",
-    "finance:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-    "settings:read",
-  ],
-  officer: [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-  ],
-  member: [
-    "task:read",
-    "event:read",
-    "volunteer:read",
-    "message:read",
-    "file:read",
-    "activity:read",
-  ],
-};
 
 const createUserSchema = z.object({
   email: z.string().min(1),
@@ -119,7 +49,7 @@ route.post("/admin/users", async (c) => {
       },
     });
 
-    const perms = rolePerms[parsed.role] || [];
+    const perms = getPermissionsForRole(parsed.role);
     await Promise.all(
       perms.map((perm) =>
         db.permissionGrant.create({

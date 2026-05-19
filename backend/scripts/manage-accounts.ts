@@ -1,126 +1,24 @@
 import { PrismaClient } from "@prisma/client";
-import { existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { getPermissionsForRole } from "../src/lib/permissions.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const projectRoot = resolve(root, "..");
 
-// Load .env.production first (PostgreSQL), fallback to .env.local (SQLite)
-const prodEnv = resolve(projectRoot, ".env.production");
-const localEnv = resolve(projectRoot, ".env.local");
+dotenv.config({ path: resolve(projectRoot, ".env.local") });
+dotenv.config({ path: resolve(projectRoot, ".env") });
 
-if (existsSync(prodEnv)) {
-  dotenv.config({ path: prodEnv });
-} else if (existsSync(localEnv)) {
-  dotenv.config({ path: localEnv });
-}
+const dbUrl =
+  process.env["DATABASE_URL_DEVELOPERS"] ||
+  "postgresql://localhost:5432/general_portal_dev";
+process.env["DATABASE_URL"] = dbUrl;
 
-// Set DATABASE_URL if not already set
-if (!process.env["DATABASE_URL"]) {
-  const dbFile = "dev.db";
-  process.env["DATABASE_URL"] = `file:./${dbFile}`;
-}
-
-const prisma = new PrismaClient();
-
-// Permission sets matching seed.ts
-function adminPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "task:delete",
-    "proposal:read",
-    "proposal:write",
-    "proposal:delete",
-    "event:read",
-    "event:write",
-    "event:delete",
-    "volunteer:read",
-    "volunteer:write",
-    "volunteer:delete",
-    "finance:read",
-    "finance:write",
-    "finance:delete",
-    "message:read",
-    "message:write",
-    "message:delete",
-    "file:read",
-    "file:write",
-    "file:delete",
-    "member:read",
-    "member:write",
-    "member:delete",
-    "activity:read",
-    "settings:read",
-    "settings:write",
-  ];
-}
-
-function presidentPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "volunteer:write",
-    "finance:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-    "settings:read",
-  ];
-}
-
-function officerPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-  ];
-}
-
-function memberPerms() {
-  return [
-    "task:read",
-    "event:read",
-    "volunteer:read",
-    "message:read",
-    "file:read",
-    "activity:read",
-  ];
-}
-
-function getPermsForRole(role) {
-  switch (role?.toLowerCase()) {
-    case "admin":
-      return adminPerms();
-    case "president":
-      return presidentPerms();
-    case "officer":
-      return officerPerms();
-    case "member":
-      return memberPerms();
-    default:
-      return memberPerms();
-  }
-}
+const prisma = new PrismaClient({
+  datasources: { db: { url: dbUrl } },
+});
 
 async function findOrCreateWorkspace() {
   let workspace = await prisma.workspace.findFirst();
@@ -136,7 +34,7 @@ async function findOrCreateWorkspace() {
   return workspace;
 }
 
-async function createUser(email, displayName, role) {
+async function createUser(email: string, displayName: string, role: string) {
   const workspace = await findOrCreateWorkspace();
 
   let user = await prisma.userAccount.findUnique({ where: { email } });
@@ -149,7 +47,6 @@ async function createUser(email, displayName, role) {
     console.log(`[manage-accounts] User already exists: ${email}`);
   }
 
-  // Check for existing membership
   const existing = await prisma.membership.findUnique({
     where: {
       workspaceId_userId: { workspaceId: workspace.id, userId: user.id },
@@ -174,7 +71,7 @@ async function createUser(email, displayName, role) {
     },
   });
 
-  const perms = getPermsForRole(role);
+  const perms = getPermissionsForRole(role);
   await Promise.all(
     perms.map((perm) =>
       prisma.permissionGrant.create({
@@ -215,7 +112,7 @@ async function listUsers() {
   }
 }
 
-async function deleteUser(email) {
+async function deleteUser(email: string) {
   const user = await prisma.userAccount.findUnique({ where: { email } });
   if (!user) {
     console.log(`[manage-accounts] User not found: ${email}`);
@@ -229,10 +126,10 @@ async function deleteUser(email) {
 function printUsage() {
   console.log(`
 Usage:
-  node scripts/manage-accounts.mjs create-admin <email> <name>
-  node scripts/manage-accounts.mjs create-user <email> <name> <role>
-  node scripts/manage-accounts.mjs list
-  node scripts/manage-accounts.mjs delete <email>
+  npx tsx scripts/manage-accounts.ts create-admin <email> <name>
+  npx tsx scripts/manage-accounts.ts create-user <email> <name> <role>
+  npx tsx scripts/manage-accounts.ts list
+  npx tsx scripts/manage-accounts.ts delete <email>
 
 Roles: admin, president, officer, member
 `);
