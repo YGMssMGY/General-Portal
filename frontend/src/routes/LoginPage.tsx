@@ -4,20 +4,19 @@ import { Tile, Button, TextInput, InlineNotification, Stack } from "@carbon/reac
 import { useSession, signIn } from "@hono/auth-js/react";
 import { LoadingState } from "../components/StateViews";
 import { getClientConfig } from "../config/clientConfig";
-
-const allProviders = [{ id: "microsoft", label: "Microsoft" }];
-const visibleProviders = import.meta.env.PROD
-	? allProviders.filter((p) => p.id === "microsoft")
-	: allProviders;
+import { useUIStore } from "../stores/useUIStore";
 
 export function LoginPage() {
 	const { status } = useSession();
 	const navigate = useNavigate();
-	const config = getClientConfig();
+	const portal = useUIStore((s) => s.portal);
+	const config = getClientConfig(portal ?? undefined);
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+
+	const dashboardPath = portal ? `/${portal}/dashboard` : "/";
 
 	useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
@@ -37,9 +36,9 @@ export function LoginPage() {
 
 	useEffect(() => {
 		if (status === "authenticated") {
-			navigate("/admin", { replace: true });
+			navigate(dashboardPath, { replace: true });
 		}
-	}, [status, navigate]);
+	}, [status, navigate, dashboardPath]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -54,7 +53,7 @@ export function LoginPage() {
 						: result.error,
 				);
 			} else {
-				window.location.href = "/admin";
+				window.location.href = dashboardPath;
 			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Login failed");
@@ -111,7 +110,7 @@ export function LoginPage() {
 						color: "var(--cds-text-primary)",
 					}}
 				>
-					{config.displayName}
+					{portal ? config.displayName : "General Portal"}
 				</h1>
 				<p
 					style={{
@@ -121,7 +120,7 @@ export function LoginPage() {
 						color: "var(--cds-text-secondary)",
 					}}
 				>
-					{config.description}
+					{portal ? config.description : "Select a portal on the landing page"}
 				</p>
 
 				{error && (
@@ -137,31 +136,22 @@ export function LoginPage() {
 				)}
 
 				<Stack gap={5} style={{ marginTop: "1.5rem" }}>
-					{visibleProviders.map((p) => (
-						<Button
-							key={p.id}
-							kind="tertiary"
-							style={{ width: "100%" }}
-							onClick={() => signIn(p.id, { redirect: true })}
-							disabled={loading}
-						>
-							{p.id === "microsoft" ? (
-								<span
-									style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-								>
-									<svg viewBox="0 0 21 21" width="20" height="20">
-										<rect x="1" y="1" width="9" height="9" fill="#f25022" />
-										<rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-										<rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-										<rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-									</svg>
-									Sign in with Microsoft
-								</span>
-							) : (
-								`Sign in with ${p.label}`
-							)}
-						</Button>
-					))}
+					<Button
+						kind="tertiary"
+						style={{ width: "100%" }}
+						onClick={() => signIn("microsoft-entra-id", { redirect: true })}
+						disabled={loading}
+					>
+						<span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+							<svg viewBox="0 0 21 21" width="20" height="20">
+								<rect x="1" y="1" width="9" height="9" fill="#f25022" />
+								<rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+								<rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+								<rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+							</svg>
+							Sign in with Microsoft
+						</span>
+					</Button>
 
 					{!import.meta.env.PROD && (
 						<>
