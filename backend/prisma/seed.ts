@@ -13,10 +13,13 @@ import {
 } from "@prisma/client";
 import { ROLE_PERMISSIONS } from "../src/lib/permissions.js";
 
-process.env["DATABASE_URL"] = process.env["DATABASE_URL_DEVELOPERS"];
+const dbUrl =
+  process.env["DATABASE_URL_DEVELOPERS"] ||
+  "postgresql://localhost:5432/general_portal_dev";
+process.env["DATABASE_URL"] = dbUrl;
 
 const prisma = new PrismaClient({
-  datasources: { db: { url: process.env["DATABASE_URL_DEVELOPERS"] } },
+  datasources: { db: { url: dbUrl } },
 });
 
 async function main() {
