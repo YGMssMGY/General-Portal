@@ -1,5 +1,6 @@
 import { initAuthConfig } from "@hono/auth-js";
 import type { AuthConfig } from "@auth/core";
+import type { Context } from "hono";
 import Microsoft from "@auth/core/providers/microsoft-entra-id";
 import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -9,32 +10,24 @@ import { getDb } from "./db.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
 
-function getAuthConfig(): AuthConfig {
-	const db = getDb("developers");
+function getAuthConfig(c: Context): AuthConfig {
+	const portal = (c.get("portal") as string) || "developers";
+	const db = getDb(portal);
+
 	const providers: AuthConfig["providers"] = [];
 
-	if (IS_PRODUCTION) {
-		if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET && env.MICROSOFT_TENANT_ID) {
-			providers.push(
-				Microsoft({
-					clientId: env.MICROSOFT_CLIENT_ID,
-					clientSecret: env.MICROSOFT_CLIENT_SECRET,
-					issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
-					name: "Microsoft",
-				}),
-			);
-		}
-	} else {
-		if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET && env.MICROSOFT_TENANT_ID) {
-			providers.push(
-				Microsoft({
-					clientId: env.MICROSOFT_CLIENT_ID,
-					clientSecret: env.MICROSOFT_CLIENT_SECRET,
-					issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
-					name: "Microsoft",
-				}),
-			);
-		}
+	if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET && env.MICROSOFT_TENANT_ID) {
+		providers.push(
+			Microsoft({
+				clientId: env.MICROSOFT_CLIENT_ID,
+				clientSecret: env.MICROSOFT_CLIENT_SECRET,
+				issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
+				name: "Microsoft",
+			}),
+		);
+	}
+
+	if (!IS_PRODUCTION) {
 		providers.push(
 			Credentials({
 				id: "credentials",
@@ -52,9 +45,7 @@ function getAuthConfig(): AuthConfig {
 							where: { email },
 						});
 						if (!user) return null;
-						if (user.password) {
-							if (pw !== user.password) return null;
-						}
+						if (user.password && pw !== user.password) return null;
 						return {
 							id: user.id,
 							email: user.email,
