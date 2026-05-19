@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/prod.js",
     "predev": "node scripts/dev-setup.mjs",
+    "accounts": "npx tsx scripts/manage-accounts.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
