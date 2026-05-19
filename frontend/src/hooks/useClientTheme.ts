@@ -1,8 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { getClientConfig } from "../config/clientConfig";
+import { useUIStore } from "../stores/useUIStore";
 
 export function useClientTheme() {
-	const config = useMemo(() => getClientConfig(), []);
+	const portal = useUIStore((s) => s.portal);
+	const config = getClientConfig(portal ?? undefined);
 
 	useEffect(() => {
 		const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
