@@ -6,6 +6,25 @@ import { writeFile, readFile } from "fs/promises";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = resolve(__dirname, "..", "..", "uploads");
 
+const ALLOWED_MIME_PREFIXES = [
+  "image/",
+  "application/pdf",
+  "text/",
+  "application/vnd",
+];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const FORBIDDEN_EXT = [
+  ".exe",
+  ".bat",
+  ".cmd",
+  ".com",
+  ".msi",
+  ".scr",
+  ".ps1",
+  ".sh",
+  ".dll",
+];
+
 const MIME_MAP: Record<string, string> = {
   pdf: "application/pdf",
   png: "image/png",
@@ -51,7 +70,24 @@ route.post("/files", async (c) => {
   if (!file) return c.json({ error: "No file provided" }, 400);
 
   const originalName = file.name;
-  const ext = originalName.split(".").pop() || "";
+  const ext = (originalName.split(".").pop() || "").toLowerCase();
+
+  // Validate file extension
+  if (FORBIDDEN_EXT.includes(`.${ext}`)) {
+    return c.json({ error: "File type not allowed" }, 400);
+  }
+
+  // Validate file size
+  if (file.size > MAX_FILE_SIZE) {
+    return c.json({ error: "File exceeds 50 MB limit" }, 400);
+  }
+
+  // Validate MIME type
+  const allowed = ALLOWED_MIME_PREFIXES.some((p) => file.type.startsWith(p));
+  if (!allowed) {
+    return c.json({ error: "File type not allowed" }, 400);
+  }
+
   const storageKey = `${crypto.randomUUID()}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 

@@ -8,6 +8,22 @@ import {
   parsePagination,
 } from "./api-response.js";
 
+function sanitize(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (typeof val === "string") {
+      result[key] = val
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        .replace(/on\w+="[^"]*"/gi, "");
+    } else if (val !== null && typeof val === "object" && !Array.isArray(val)) {
+      result[key] = sanitize(val as Record<string, unknown>);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 interface ResourceConfig {
   delegate: ((c: Context) => any) | any;
   createSchema: z.ZodTypeAny;
@@ -116,7 +132,8 @@ export function resourceRoute(config: ResourceConfig) {
     try {
       const user = getUser(c);
       const body = await c.req.json();
-      const parsed = createSchema.parse(body);
+      const sanitized = sanitize(body);
+      const parsed = createSchema.parse(sanitized);
 
       const data = { ...parsed, workspaceId: user.workspaceId };
       const d = resolveDelegate(c);
@@ -139,7 +156,8 @@ export function resourceRoute(config: ResourceConfig) {
       const user = getUser(c);
       const id = c.req.param("id");
       const body = await c.req.json();
-      const parsed = updateSchema.parse(body);
+      const sanitized = sanitize(body);
+      const parsed = updateSchema.parse(sanitized);
       const d = resolveDelegate(c);
 
       const existing = await d.findFirst({
