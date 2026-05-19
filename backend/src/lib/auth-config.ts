@@ -6,13 +6,11 @@ import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { sign } from "hono/jwt";
 import { env, IS_PRODUCTION } from "./env.js";
-import { getDb } from "./db.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
 
 function getAuthConfig(c: Context): AuthConfig {
-	const portal = (c.get("portal") as string) || "developers";
-	const db = getDb(portal);
+	const db = c.get("db") as any;
 
 	const providers: AuthConfig["providers"] = [];
 

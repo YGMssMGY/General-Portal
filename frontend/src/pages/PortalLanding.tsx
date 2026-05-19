@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClickableTile, Layer } from "@carbon/react";
+import { ClickableTile, Layer, InlineLoading } from "@carbon/react";
 import { useUIStore } from "../stores/useUIStore";
 
 const portals = [
@@ -20,6 +20,7 @@ export function PortalLanding() {
 	const navigate = useNavigate();
 	const portal = useUIStore((s) => s.portal);
 	const setPortal = useUIStore((s) => s.setPortal);
+	const [navigating, setNavigating] = useState(false);
 
 	useEffect(() => {
 		if (portal) {
@@ -28,8 +29,8 @@ export function PortalLanding() {
 	}, [portal, navigate]);
 
 	function handleSelect(id: "developers" | "stuco") {
+		setNavigating(true);
 		setPortal(id);
-		navigate(`/${id}/dashboard`);
 	}
 
 	return (
@@ -76,6 +77,7 @@ export function PortalLanding() {
 							id={`portal-${p.id}`}
 							onClick={() => handleSelect(p.id)}
 							aria-label={`Select ${p.label} portal`}
+							disabled={navigating}
 							style={{
 								padding: "2rem",
 								textAlign: "center",
@@ -99,15 +101,23 @@ export function PortalLanding() {
 					))}
 				</div>
 
-				<p
-					style={{
-						marginTop: "2rem",
-						fontSize: "0.75rem",
-						color: "var(--cds-text-helper, #6f6f6f)",
-					}}
-				>
-					Select a portal to continue. You can switch portals later from settings.
-				</p>
+				{navigating && (
+					<div style={{ marginTop: "2rem" }}>
+						<InlineLoading description="Redirecting..." />
+					</div>
+				)}
+
+				{!navigating && (
+					<p
+						style={{
+							marginTop: "2rem",
+							fontSize: "0.75rem",
+							color: "var(--cds-text-helper, #6f6f6f)",
+						}}
+					>
+						Select a portal to continue. You can switch portals later from settings.
+					</p>
+				)}
 			</div>
 		</Layer>
 	);
