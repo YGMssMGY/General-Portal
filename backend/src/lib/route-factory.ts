@@ -55,9 +55,13 @@ export function resourceRoute(config: ResourceConfig) {
     return getAuthUser(c);
   }
 
+  function includeDeleted(c: Context): boolean {
+    return c.req.query("includeDeleted") === "true";
+  }
+
   function buildWhere(c: Context, workspaceId: string) {
     const where: Record<string, unknown> = { workspaceId };
-    if (softDelete) where["deletedAt"] = null;
+    if (softDelete && !includeDeleted(c)) where["deletedAt"] = null;
 
     const search = c.req.query("search");
     if (search && searchFields && searchFields.length > 0) {
@@ -115,7 +119,7 @@ export function resourceRoute(config: ResourceConfig) {
         id: c.req.param("id"),
         workspaceId: user.workspaceId,
       };
-      if (softDelete) where["deletedAt"] = null;
+      if (softDelete && !includeDeleted(c)) where["deletedAt"] = null;
 
       const include = buildInclude(c);
       const d = resolveDelegate(c);
@@ -209,6 +213,34 @@ export function resourceRoute(config: ResourceConfig) {
       return c.json(errorResponse("Failed to delete " + resourceName), 500);
     }
   });
+
+  if (softDelete) {
+    route.post("/:id/restore", async (c) => {
+      try {
+        const user = getUser(c);
+        const id = c.req.param("id");
+        const d = resolveDelegate(c);
+
+        const existing = await d.findFirst({
+          where: { id, workspaceId: user.workspaceId },
+        });
+        if (!existing)
+          return c.json(errorResponse(`${resourceName} not found`), 404);
+
+        await d.update({
+          where: { id },
+          data: { deletedAt: null },
+        });
+
+        const restored = await d.findUnique({
+          where: { id },
+        });
+        return c.json(successResponse(restored));
+      } catch {
+        return c.json(errorResponse("Failed to restore " + resourceName), 500);
+      }
+    });
+  }
 
   return route;
 }
