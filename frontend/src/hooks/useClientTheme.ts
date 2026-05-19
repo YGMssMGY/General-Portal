@@ -8,19 +8,14 @@ export function useClientTheme() {
 
 	useEffect(() => {
 		if (!portal || !config.favicon) {
-			const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-			if (link) link.remove();
+			document.querySelectorAll('link[rel*="icon"]').forEach((el) => el.remove());
 			return;
 		}
-		const existing = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-		if (existing) {
-			existing.href = config.favicon;
-		} else {
-			const link = document.createElement("link");
-			link.rel = "icon";
-			link.href = config.favicon;
-			document.head.appendChild(link);
-		}
+		document.querySelectorAll('link[rel*="icon"]').forEach((el) => el.remove());
+		const link = document.createElement("link");
+		link.rel = "icon";
+		link.href = config.favicon;
+		document.head.appendChild(link);
 	}, [config.favicon, portal]);
 
 	useEffect(() => {

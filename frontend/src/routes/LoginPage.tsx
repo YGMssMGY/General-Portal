@@ -68,8 +68,7 @@ export function LoginPage() {
 	function goBack() {
 		setPortal(null);
 		document.title = "General Portal";
-		const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-		if (link) link.remove();
+		document.querySelectorAll('link[rel*="icon"]').forEach((el) => el.remove());
 		document.documentElement.style.removeProperty("--client-primary");
 		document.documentElement.style.removeProperty("--client-secondary");
 		navigate("/", { replace: true });
@@ -117,7 +116,7 @@ export function LoginPage() {
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
-						background: "var(--cds-button-primary)",
+						background: "#ffffff",
 						fontSize: "1.125rem",
 						fontWeight: 600,
 						color: "#ffffff",
