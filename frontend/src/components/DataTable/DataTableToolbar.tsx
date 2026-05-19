@@ -6,12 +6,14 @@ interface DataTableToolbarProps {
   selectedCount: number;
   onClearSelection: () => void;
   children: ReactNode;
+  batchActions?: ReactNode;
 }
 
 export function DataTableToolbar({
   selectedCount,
   onClearSelection,
   children,
+  batchActions,
 }: DataTableToolbarProps) {
   return (
     <TableToolbar>
@@ -24,6 +26,7 @@ export function DataTableToolbar({
             <Button kind="ghost" size="sm" onClick={onClearSelection} renderIcon={Close}>
               Clear
             </Button>
+            {batchActions}
             {children}
           </div>
         ) : (
