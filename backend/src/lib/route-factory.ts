@@ -109,6 +109,7 @@ export function resourceRoute(config: ResourceConfig) {
         d.count({ where }),
       ]);
 
+      c.header("Cache-Control", "private, max-age=30, must-revalidate");
       return c.json(paginatedResponse(data, total, page, limit));
     } catch {
       return c.json(errorResponse("Failed to fetch " + resourceName), 500);
@@ -129,6 +130,7 @@ export function resourceRoute(config: ResourceConfig) {
       const item = await d.findFirst({ where, include });
       if (!item) return c.json(errorResponse(`${resourceName} not found`), 404);
 
+      c.header("Cache-Control", "private, max-age=60, must-revalidate");
       return c.json(successResponse(item));
     } catch {
       return c.json(errorResponse("Failed to fetch " + resourceName), 500);

@@ -18,7 +18,7 @@ route.get("/dashboard", async (c) => {
     unreadThreadCount,
     pendingProposalsCount,
     topMembers,
-  ] = await Promise.all([
+  ] = await db.$transaction([
     db.taskItem.groupBy({
       by: ["status"],
       where: { workspaceId },
@@ -35,7 +35,7 @@ route.get("/dashboard", async (c) => {
         startsAt: { gte: now },
       },
       orderBy: { startsAt: "asc" },
-      take: 3,
+      take: 5,
     }),
     db.activityLog.findMany({
       where: { workspaceId },

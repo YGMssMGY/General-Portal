@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
+import { compress } from "hono/compress";
 import { authHandler } from "@hono/auth-js";
 import { serveStatic } from "@hono/node-server/serve-static";
 import cron from "node-cron";
@@ -55,6 +56,7 @@ export function createApp(opts: CreateAppOptions = {}) {
 
   app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
   app.use("*", secureHeaders());
+  app.use("*", compress());
   app.use("*", portalMiddleware);
   app.use("/api/*", apiLimiter);
   app.use("/api/auth/*", authLimiter);
