@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -159,12 +159,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? 
-  access_token      String? 
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? 
+  id_token          String?
   session_state     String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -202,13 +202,14 @@ model Membership {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
   user        UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
   permissions PermissionGrant[]
 
   @@unique([workspaceId, userId])
+  @@index([workspaceId])
 }
 
 model PermissionGrant {
@@ -224,62 +225,74 @@ model PermissionGrant {
 }
 
 model TaskItem {
-  id            String     @id @default(uuid())
+  id            String       @id @default(uuid())
   title         String
-  status        String     @default("todo")
-  priority      String     @default("medium")
+  status        TaskStatus   @default(todo)
+  priority      TaskPriority @default(medium)
   project       String?
   dueDate       DateTime?
   assigneeName  String?
-  progress      Int        @default(0)
+  progress      Int          @default(0)
   blockedReason String?
-  position      Int        @default(0)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  position      Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
   subtasks    TaskSubtask[]
   comments    TaskComment[]
   attachments TaskAttachment[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
 }
 
 model Proposal {
-  id              String   @id @default(uuid())
+  id              String         @id @default(uuid())
   title           String
-  type            String
-  status          String   @default("submitted")
-  approvalStep    String   @default("submitted")
+  type            ProposalType
+  status          ProposalStatus @default(submitted)
+  approvalStep    String         @default("submitted")
   approvalHistory String?
   submittedBy     String
   submittedAt     DateTime
   dateNeeded      DateTime?
-  budget          Decimal  @default(0)
+  budget          Decimal        @default(0)
   summary         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
   attachments ProposalAttachment[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
 }
 
 model EventItem {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   title       String
-  status      String   @default("pending")
+  status      EventStatus @default(pending)
   startsAt    DateTime?
   endsAt      DateTime?
-  progress    Int      @default(0)
-  budgetUsed  Decimal  @default(0)
-  budgetTotal Decimal  @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  progress    Int         @default(0)
+  budgetUsed  Decimal     @default(0)
+  budgetTotal Decimal     @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
   owners      EventOwner[]
   checkIns    CheckIn[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
 }
 
 model EventOwner {
@@ -303,46 +316,54 @@ model VolunteerSlot {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
   signups     VolunteerSignup[]
+
+  @@index([workspaceId])
 }
 
 model FinanceTransaction {
-  id          String   @id @default(uuid())
+  id          String              @id @default(uuid())
   title       String
-  category    String
-  status      String   @default("pending")
+  category    TransactionCategory
+  status      TransactionStatus   @default(pending)
   submittedBy String
-  amount      Decimal  @default(0)
-  type        String   @default("expense")
+  amount      Decimal             @default(0)
+  type        String              @default("expense")
   notes       String?
   occurredAt  DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
   attachments FinanceAttachment[]
   budgetAllocation BudgetAllocation? @relation(fields: [budgetId], references: [id])
   budgetId    String?
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
 }
 
 model MessageThread {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   title         String
-  context       String   @default("general")
-  status        String   @default("active")
+  context       ThreadContext @default(general)
+  status        ThreadStatus @default(active)
   preview       String?
-  unreadCount   Int      @default(0)
+  unreadCount   Int          @default(0)
   lastMessageAt DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
 
   workspace    Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId  String
   participants MessageParticipant[]
   messages     Message[]
+
+  @@index([workspaceId])
 }
 
 model MessageParticipant {
@@ -363,8 +384,8 @@ model Message {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  thread   MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  threadId String
+  thread      MessageThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  threadId    String
   attachments MessageAttachment[]
 }
 
@@ -382,6 +403,8 @@ model WorkspaceFile {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+
+  @@index([workspaceId])
 }
 
 model ActivityLog {
@@ -396,6 +419,8 @@ model ActivityLog {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+
+  @@index([workspaceId])
 }
 
 model WorkspaceSettings {
@@ -426,6 +451,8 @@ model PublicEvent {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+
+  @@index([workspaceId])
 }
 
 model Photo {
@@ -439,6 +466,8 @@ model Photo {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+
+  @@index([workspaceId])
 }
 
 model TaskSubtask {
@@ -537,6 +566,8 @@ model TrendSnapshot {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+
+  @@index([workspaceId])
 }
 
 model WorkspaceModule {
@@ -562,6 +593,8 @@ model ApprovalRule {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
+
+  @@index([workspaceId])
 }
 
 model Notification {
@@ -578,6 +611,8 @@ model Notification {
   createdAt    DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model AuditLog {
@@ -595,6 +630,8 @@ model AuditLog {
   createdAt    DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model Meeting {
@@ -614,6 +651,8 @@ model Meeting {
 
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   rsvps     MeetingRsvp[]
+
+  @@index([workspaceId])
 }
 
 model MeetingRsvp {
@@ -647,6 +686,8 @@ model RecurringTask {
   updatedAt     DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model WebhookSubscription {
@@ -661,6 +702,8 @@ model WebhookSubscription {
   updatedAt     DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model BudgetAllocation {
@@ -677,8 +720,10 @@ model BudgetAllocation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   financeTransactions FinanceTransaction[]
+
+  @@index([workspaceId])
 }
 
 model CheckIn {
@@ -693,6 +738,9 @@ model CheckIn {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   event     EventItem @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([eventId])
 }
 
 model TermArchive {
@@ -707,6 +755,8 @@ model TermArchive {
   updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model ClubTemplate {
@@ -720,6 +770,8 @@ model ClubTemplate {
   updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model Kudos {
@@ -731,4 +783,6 @@ model Kudos {
   createdAt   DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }

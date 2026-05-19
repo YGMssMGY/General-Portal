@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { WebSocketServer, WebSocket } from "ws";
 import type { ServerType } from "@hono/node-server";
-import { verify } from "hono/jwt";
+import { decode } from "@auth/core/jwt";
 import { env } from "./env.js";
 
 type UserSession = {
@@ -23,7 +23,8 @@ export function setupWebSocket(server: ServerType) {
     if (!token) return void socket.destroy();
 
     try {
-      const payload: any = await verify(token, env.AUTH_SECRET, "HS256");
+      const decoded: any = await decode({ token, secret: env.AUTH_SECRET });
+      const payload = decoded as any;
       const userId: string = payload.id || payload.sub || "";
       const workspaceId: string = payload.workspaceId || "ws-default";
       const displayName: string = payload.name || userId;
