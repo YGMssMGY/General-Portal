@@ -28,8 +28,8 @@ createdb general_portal_stuco
 npm install
 
 # 2. Configure environment
-cp .env.example .env.local
-# Edit .env.local to match your local PostgreSQL credentials
+cp .env.example .env
+# Edit .env to match your local PostgreSQL credentials
 
 # 3. Start dev servers (runs migrations + seed automatically)
 npm run dev

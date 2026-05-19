@@ -8,7 +8,7 @@
 #   createdb general_portal_stuco
 
 # Everything from root (npm workspaces)
-cp .env.example .env.local    # then edit credentials
+cp .env.example .env    # then edit credentials
 npm install                   # hoists deps for frontend/ + backend/
 npm run dev                   # kills ports 3000,30001 → migrations + seed → Hono (:30001) + Vite (:3000)
 npm run stop                  # kills ports 3000,30001
@@ -62,7 +62,7 @@ Vite proxy: /api/* → localhost:30001
 
 ## Critical gotchas
 
-1. **`DATABASE_URL_DEVELOPERS` / `DATABASE_URL_STUCO` must be set before PrismaClient is created.** `.env.local` is loaded in `app.ts` before any route imports. `env.ts` must NOT call `dotenv.config()` — it would overwrite the URL.
+1. **`DATABASE_URL_DEVELOPERS` / `DATABASE_URL_STUCO` must be set before PrismaClient is created.** `.env` is loaded in `env.ts` before any route imports.
 2. **`env-url-basepath-redundant` warning** — safe to ignore. Caused by explicit `basePath: "/api/auth"` plus `AUTH_URL` env var.
 3. **Module execution order matters.** The `DATABASE_URL_*` env vars must be set before any PrismaClient is instantiated.
 4. **Dual PrismaClient instances.** `getDb(portal)` returns a cached client keyed by portal name. Never create `new PrismaClient()` directly — always use `getDb()` or `getDbFromContext(c)`.

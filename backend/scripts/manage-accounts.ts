@@ -8,7 +8,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const projectRoot = resolve(root, "..");
 
-dotenv.config({ path: resolve(projectRoot, ".env.local") });
 dotenv.config({ path: resolve(projectRoot, ".env") });
 
 const dbUrl =
