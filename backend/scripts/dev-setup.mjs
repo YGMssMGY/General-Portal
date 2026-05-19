@@ -22,23 +22,21 @@ const DATABASES = [
   { name: "stuco", url: DB_URL_STUCO },
 ];
 
-function run(cmd, cwd) {
-  execSync(cmd, { cwd, stdio: "inherit", env: process.env });
-}
-
 for (const db of DATABASES) {
-  process.env["DATABASE_URL"] = db.url;
+  const env = { ...process.env, DATABASE_URL: db.url };
   console.log(`\n[dev-setup] Setting up ${db.name} database...`);
 
   try {
-    run("npx prisma migrate deploy", root);
+    execSync("npx prisma migrate deploy", { cwd: root, stdio: "inherit", env });
     console.log(`[dev-setup] Migrations applied for ${db.name}`);
   } catch {
-    console.log(
-      `[dev-setup] No existing migrations — creating initial migration for ${db.name}...`,
-    );
+    console.log(`[dev-setup] Creating initial migration for ${db.name}...`);
     try {
-      run("npx prisma migrate dev --name init", root);
+      execSync("npx prisma migrate dev --name init", {
+        cwd: root,
+        stdio: "inherit",
+        env,
+      });
     } catch (err) {
       console.error(
         `[dev-setup] Migration failed for ${db.name}:`,
@@ -49,5 +47,10 @@ for (const db of DATABASES) {
   }
 }
 
-run("npx prisma generate", root);
+execSync("npx prisma generate", {
+  cwd: root,
+  stdio: "inherit",
+  env: process.env,
+});
+
 console.log("\n[dev-setup] Done — both databases ready");
