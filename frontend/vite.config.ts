@@ -11,6 +11,15 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:30001",
         changeOrigin: true,
+        timeout: 30000,
+        proxyTimeout: 30000,
+        configure: (proxy) => {
+          proxy.on("error", (err: Error & { code?: string }) => {
+            if (err.code !== "ECONNREFUSED") {
+              console.error("[vite proxy]", err);
+            }
+          });
+        },
       },
     },
   },
