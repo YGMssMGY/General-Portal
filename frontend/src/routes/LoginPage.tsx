@@ -67,6 +67,11 @@ export function LoginPage() {
 
 	function goBack() {
 		setPortal(null);
+		document.title = "General Portal";
+		const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+		if (link) link.remove();
+		document.documentElement.style.removeProperty("--client-primary");
+		document.documentElement.style.removeProperty("--client-secondary");
 		navigate("/", { replace: true });
 	}
 
@@ -182,7 +187,7 @@ export function LoginPage() {
 						</span>
 					</Button>
 
-					{!import.meta.env.PROD && (
+					{!import.meta.env.VITE_DISABLE_DEV_AUTH && (
 						<>
 							<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
 								<div
