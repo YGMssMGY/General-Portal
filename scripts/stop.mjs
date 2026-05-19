@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { networkInterfaces } from "node:os";
 
-const ports = [3001, 5173];
+const ports = [30001, 3000];
 const isWin = process.platform === "win32";
 
 for (const port of ports) {
