@@ -32,13 +32,13 @@ async function findOrCreateWorkspace() {
 	return workspace;
 }
 
-async function createUser(email: string, displayName: string, role: string) {
+async function createUser(email: string, name: string, role: string) {
 	const workspace = await findOrCreateWorkspace();
 
 	let user = await prisma.user.findUnique({ where: { email } });
 	if (!user) {
 		user = await prisma.user.create({
-			data: { email, displayName },
+			data: { email, name },
 		});
 		console.log(`[manage-accounts] Created user: ${email}`);
 	} else {
@@ -103,9 +103,7 @@ async function listUsers() {
 		const roles = user.memberships.map(
 			(m) => `${m.accessLabel} (ws: ${m.workspace.name}, ${m.permissions.length} perms)`,
 		);
-		console.log(
-			`  ${user.email} — ${user.displayName} [${roles.join(", ") || "no membership"}]`,
-		);
+		console.log(`  ${user.email} — ${user.name} [${roles.join(", ") || "no membership"}]`);
 	}
 }
 
@@ -117,7 +115,7 @@ async function deleteUser(email: string) {
 	}
 
 	await prisma.user.delete({ where: { email } });
-	console.log(`[manage-accounts] Deleted user: ${email} (${user.displayName})`);
+	console.log(`[manage-accounts] Deleted user: ${email} (${user.name})`);
 }
 
 function printUsage() {

@@ -36,10 +36,10 @@ export function buildUser(overrides?: Partial<User>): Partial<User> {
 	return {
 		id: id(),
 		email: "test@example.edu",
-		displayName: "Test User",
+		name: "Test User",
 		password: null,
 		emailVerified: null,
-		avatarUrl: null,
+		image: null,
 		xp: 0,
 		level: 1,
 		streak: 0,

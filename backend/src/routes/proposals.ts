@@ -237,7 +237,7 @@ route.post("/proposals/:id/approve", async (c) => {
 		}
 	} else {
 		const submitter = await db.user.findFirst({
-			where: { displayName: proposal.submittedBy },
+			where: { name: proposal.submittedBy },
 			select: { id: true },
 		});
 		if (submitter) {
@@ -306,7 +306,7 @@ route.post("/proposals/:id/reject", async (c) => {
 	});
 
 	const submitter = await db.user.findFirst({
-		where: { displayName: proposal.submittedBy },
+		where: { name: proposal.submittedBy },
 		select: { id: true },
 	});
 	if (submitter) {

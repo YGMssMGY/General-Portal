@@ -74,7 +74,7 @@ route.get("/kudos/leaderboard", async (c) => {
 
 	const users = await db.user.findMany({
 		where: { id: { in: sorted.map(([id]) => id) } },
-		select: { id: true, displayName: true, email: true, avatarUrl: true },
+		select: { id: true, name: true, email: true, image: true },
 	});
 
 	const userMap = new Map(users.map((u) => [u.id, u]));

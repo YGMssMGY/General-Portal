@@ -8,7 +8,7 @@ route.use("/*", requireAdmin);
 
 const createUserSchema = z.object({
 	email: z.string().min(1),
-	displayName: z.string().min(1),
+	name: z.string().min(1),
 	password: z.string().min(1),
 	role: z.enum(["admin", "president", "officer", "member"]),
 });
@@ -34,7 +34,7 @@ route.post("/admin/users", async (c) => {
 		const user = await db.user.create({
 			data: {
 				email: parsed.email,
-				displayName: parsed.displayName,
+				name: parsed.name,
 				password: parsed.password,
 			},
 		});
@@ -62,7 +62,7 @@ route.post("/admin/users", async (c) => {
 			{
 				id: user.id,
 				email: user.email,
-				displayName: user.displayName,
+				name: user.name,
 				role: parsed.role,
 			},
 			201,
@@ -91,7 +91,7 @@ route.get("/admin/users", async (c) => {
 		users.map((u) => ({
 			id: u.id,
 			email: u.email,
-			displayName: u.displayName,
+			name: u.name,
 			role: u.memberships[0]?.accessLabel?.toLowerCase() || "none",
 			permissionCount: u.memberships[0]?.permissions?.length || 0,
 		})),

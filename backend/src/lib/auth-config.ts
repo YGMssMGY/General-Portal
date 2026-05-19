@@ -45,7 +45,7 @@ function getAuthConfig(c: Context): AuthConfig {
 						const user = await db.user.findUnique({ where: { email } });
 						if (!user) return null;
 						if (user.password && pw !== user.password) return null;
-						return { id: user.id, email: user.email, name: user.displayName };
+						return { id: user.id, email: user.email, name: user.name };
 					} catch {
 						return null;
 					}

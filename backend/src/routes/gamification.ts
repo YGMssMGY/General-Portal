@@ -79,9 +79,9 @@ route.get("/gamification/leaderboard", async (c) => {
 			user: {
 				select: {
 					id: true,
-					displayName: true,
+					name: true,
 					email: true,
-					avatarUrl: true,
+					image: true,
 					xp: true,
 					level: true,
 					streak: true,
