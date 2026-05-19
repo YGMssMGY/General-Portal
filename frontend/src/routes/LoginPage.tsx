@@ -10,6 +10,7 @@ export function LoginPage() {
 	const { status } = useSession();
 	const navigate = useNavigate();
 	const portal = useUIStore((s) => s.portal);
+	const setPortal = useUIStore((s) => s.setPortal);
 	const config = getClientConfig(portal ?? undefined);
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -64,6 +65,11 @@ export function LoginPage() {
 
 	if (status === "loading") return <LoadingState label="Checking session..." />;
 
+	function goBack() {
+		setPortal(null);
+		navigate("/", { replace: true });
+	}
+
 	return (
 		<div
 			style={{
@@ -74,7 +80,30 @@ export function LoginPage() {
 				background: "var(--cds-background)",
 			}}
 		>
-			<Tile style={{ maxWidth: "24rem", width: "100%", padding: "2rem" }}>
+			<Tile
+				style={{ maxWidth: "24rem", width: "100%", padding: "2rem", position: "relative" }}
+			>
+				<button
+					type="button"
+					onClick={goBack}
+					aria-label="Back to portal selection"
+					style={{
+						position: "absolute",
+						top: "0.75rem",
+						left: "0.75rem",
+						background: "none",
+						border: "none",
+						cursor: "pointer",
+						fontSize: "1.25rem",
+						color: "var(--cds-text-secondary, #525252)",
+						padding: "0.25rem",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					&#x2190;
+				</button>
 				<div
 					style={{
 						margin: "0 auto",
