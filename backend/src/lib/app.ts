@@ -52,6 +52,8 @@ export interface CreateAppOptions {
 }
 
 export function createApp(opts: CreateAppOptions = {}) {
+  const t0 = Date.now();
+  process.stdout.write(`[${Date.now() - t0}ms] [app] Creating Hono app...\n`);
   const app = new Hono();
 
   app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));

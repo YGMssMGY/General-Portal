@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsc --pretty && concurrently -k -n tsc,node \"tsc --watch\" \"node --watch dist/index.js\"",
     "build": "tsc",
     "start": "node dist/prod.js",
     "predev": "node scripts/dev-setup.mjs",
