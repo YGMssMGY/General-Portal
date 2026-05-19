@@ -10,7 +10,6 @@ export interface AuditLogData {
 }
 
 export async function writeAuditLog(
-   
   db: any,
   workspaceId: string,
   data: AuditLogData,

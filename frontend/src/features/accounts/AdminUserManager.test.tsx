@@ -2,83 +2,83 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockUseAuth } = vi.hoisted(() => ({
-  mockUseAuth: vi.fn(),
+	mockUseAuth: vi.fn(),
 }));
 
 vi.mock("../../hooks/useAuth", () => ({
-  useAuth: mockUseAuth,
+	useAuth: mockUseAuth,
 }));
 
 vi.mock("../../api/workspaceApi", () => ({
-  workspaceApi: {
-    createAdminUser: vi.fn(),
-  },
+	workspaceApi: {
+		createAdminUser: vi.fn(),
+	},
 }));
 
 import { AdminUserManager } from "./AdminUserManager";
 
 describe("AdminUserManager", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
 
-  it("renders nothing when role is not admin", () => {
-    mockUseAuth.mockReturnValue({
-      user: {
-        id: "1",
-        displayName: "Test",
-        email: "test@test.com",
-        role: "member",
-        permissions: [],
-      },
-    });
+	it("renders nothing when role is not admin", () => {
+		mockUseAuth.mockReturnValue({
+			user: {
+				id: "1",
+				displayName: "Test",
+				email: "test@test.com",
+				role: "member",
+				permissions: [],
+			},
+		});
 
-    const { container } = render(<AdminUserManager />);
-    expect(container.innerHTML).toBe("");
-  });
+		const { container } = render(<AdminUserManager />);
+		expect(container.innerHTML).toBe("");
+	});
 
-  it("renders nothing when user is null", () => {
-    mockUseAuth.mockReturnValue({
-      user: null,
-    });
+	it("renders nothing when user is null", () => {
+		mockUseAuth.mockReturnValue({
+			user: null,
+		});
 
-    const { container } = render(<AdminUserManager />);
-    expect(container.innerHTML).toBe("");
-  });
+		const { container } = render(<AdminUserManager />);
+		expect(container.innerHTML).toBe("");
+	});
 
-  it("renders the form when role is admin", () => {
-    mockUseAuth.mockReturnValue({
-      user: {
-        id: "1",
-        displayName: "Admin",
-        email: "admin@test.com",
-        role: "admin",
-        permissions: [],
-      },
-    });
+	it("renders the form when role is admin", () => {
+		mockUseAuth.mockReturnValue({
+			user: {
+				id: "1",
+				displayName: "Admin",
+				email: "admin@test.com",
+				role: "admin",
+				permissions: [],
+			},
+		});
 
-    render(<AdminUserManager />);
+		render(<AdminUserManager />);
 
-    expect(screen.getByText("Create User Account")).toBeInTheDocument();
-    expect(screen.getByLabelText(/username \/ email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /create user/i })).toBeInTheDocument();
-  });
+		expect(screen.getByText("Create User Account")).toBeInTheDocument();
+		expect(screen.getByLabelText(/username \/ email/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /create user/i })).toBeInTheDocument();
+	});
 
-  it("disables submit button when form fields are empty", () => {
-    mockUseAuth.mockReturnValue({
-      user: {
-        id: "1",
-        displayName: "Admin",
-        email: "admin@test.com",
-        role: "admin",
-        permissions: [],
-      },
-    });
+	it("disables submit button when form fields are empty", () => {
+		mockUseAuth.mockReturnValue({
+			user: {
+				id: "1",
+				displayName: "Admin",
+				email: "admin@test.com",
+				role: "admin",
+				permissions: [],
+			},
+		});
 
-    render(<AdminUserManager />);
-    const button = screen.getByRole("button", { name: /create user/i });
-    expect(button).toBeDisabled();
-  });
+		render(<AdminUserManager />);
+		const button = screen.getByRole("button", { name: /create user/i });
+		expect(button).toBeDisabled();
+	});
 });
