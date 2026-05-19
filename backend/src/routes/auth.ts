@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { getAuthUser } from "@hono/auth-js";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -11,6 +10,7 @@ route.get("/me", async (c) => {
     return c.json({ error: "Not authenticated" }, 401);
   }
 
+  const db = c.get("db");
   const membership = await db.membership.findFirst({
     where: { userId: token.id },
     include: {

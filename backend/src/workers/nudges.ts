@@ -1,21 +1,29 @@
-import { db } from "../lib/db.js";
+import { getDb } from "../lib/db.js";
+import { PrismaClient } from "@prisma/client";
 import { createNotification } from "../lib/notifications.js";
 import { writeAuditLog } from "../lib/audit.js";
 
+const PORTALS = ["developers", "stuco"];
+
 export async function runNudges() {
+  await Promise.all(PORTALS.map((portal) => runNudgesForPortal(portal)));
+}
+
+async function runNudgesForPortal(portal: string) {
+  const db = getDb(portal);
   const workspaces = await db.workspace.findMany({ select: { id: true } });
 
   for (const ws of workspaces) {
     await Promise.all([
-      nudgeTasksDueSoon(ws.id),
-      nudgeTasksOverdue(ws.id),
-      nudgeProposalsPending(ws.id),
-      nudgeEventsStartingSoon(ws.id),
+      nudgeTasksDueSoon(db, ws.id),
+      nudgeTasksOverdue(db, ws.id),
+      nudgeProposalsPending(db, ws.id),
+      nudgeEventsStartingSoon(db, ws.id),
     ]);
   }
 }
 
-async function nudgeTasksDueSoon(workspaceId: string) {
+async function nudgeTasksDueSoon(db: PrismaClient, workspaceId: string) {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -37,6 +45,7 @@ async function nudgeTasksDueSoon(workspaceId: string) {
     if (!assignee) continue;
 
     await createNotification(
+      db,
       workspaceId,
       assignee.id,
       "Task Due Soon",
@@ -46,7 +55,7 @@ async function nudgeTasksDueSoon(workspaceId: string) {
       task.id,
     );
 
-    await writeAuditLog(workspaceId, {
+    await writeAuditLog(db, workspaceId, {
       action: "nudge.task_due_soon",
       actorName: "auto-pilot",
       resourceType: "Task",
@@ -57,7 +66,7 @@ async function nudgeTasksDueSoon(workspaceId: string) {
   }
 }
 
-async function nudgeTasksOverdue(workspaceId: string) {
+async function nudgeTasksOverdue(db: PrismaClient, workspaceId: string) {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
   const tasks = await db.taskItem.findMany({
@@ -78,6 +87,7 @@ async function nudgeTasksOverdue(workspaceId: string) {
 
     for (const sup of supervisors) {
       await createNotification(
+        db,
         workspaceId,
         sup.userId,
         "Task Overdue - Escalated",
@@ -88,7 +98,7 @@ async function nudgeTasksOverdue(workspaceId: string) {
       );
     }
 
-    await writeAuditLog(workspaceId, {
+    await writeAuditLog(db, workspaceId, {
       action: "nudge.task_escalated",
       actorName: "auto-pilot",
       resourceType: "Task",
@@ -99,7 +109,7 @@ async function nudgeTasksOverdue(workspaceId: string) {
   }
 }
 
-async function nudgeProposalsPending(workspaceId: string) {
+async function nudgeProposalsPending(db: PrismaClient, workspaceId: string) {
   const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   const proposals = await db.proposal.findMany({
@@ -126,6 +136,7 @@ async function nudgeProposalsPending(workspaceId: string) {
 
     for (const r of reviewers) {
       await createNotification(
+        db,
         workspaceId,
         r.userId,
         "Proposal Pending Review",
@@ -136,7 +147,7 @@ async function nudgeProposalsPending(workspaceId: string) {
       );
     }
 
-    await writeAuditLog(workspaceId, {
+    await writeAuditLog(db, workspaceId, {
       action: "nudge.proposal_pending",
       actorName: "auto-pilot",
       resourceType: "Proposal",
@@ -147,7 +158,7 @@ async function nudgeProposalsPending(workspaceId: string) {
   }
 }
 
-async function nudgeEventsStartingSoon(workspaceId: string) {
+async function nudgeEventsStartingSoon(db: PrismaClient, workspaceId: string) {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -174,6 +185,7 @@ async function nudgeEventsStartingSoon(workspaceId: string) {
         if (!ownerUser) continue;
 
         await createNotification(
+          db,
           workspaceId,
           ownerUser.id,
           "Event Starting Soon - Low Attendance",
@@ -185,7 +197,7 @@ async function nudgeEventsStartingSoon(workspaceId: string) {
       }
     }
 
-    await writeAuditLog(workspaceId, {
+    await writeAuditLog(db, workspaceId, {
       action: "nudge.event_starting_soon",
       actorName: "auto-pilot",
       resourceType: "Event",

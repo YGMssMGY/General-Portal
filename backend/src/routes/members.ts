@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -7,6 +6,7 @@ const route = new Hono();
 // ── Members ──
 
 route.get("/members", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const q = c.req.query("q");
   const limit = Math.min(parseInt(c.req.query("limit") || "100", 10), 200);
@@ -54,6 +54,7 @@ route.get("/members", async (c) => {
 });
 
 route.patch("/members/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -72,6 +73,7 @@ route.patch("/members/:id", async (c) => {
 });
 
 route.delete("/members/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   await db.membership.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -91,6 +93,7 @@ const roleUpdateSchema = z.object({
 });
 
 route.get("/roles", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const grants = await db.permissionGrant.findMany({
     where: { membership: { workspaceId: wid } },
@@ -109,6 +112,7 @@ route.get("/roles", async (c) => {
 });
 
 route.post("/roles", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = roleSchema.parse(body);
@@ -127,6 +131,7 @@ route.post("/roles", async (c) => {
 });
 
 route.patch("/roles/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -143,6 +148,7 @@ route.patch("/roles/:id", async (c) => {
 });
 
 route.delete("/roles/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const existing = await db.permissionGrant.findFirst({
     where: { id: c.req.param("id"), membership: { workspaceId: wid } },

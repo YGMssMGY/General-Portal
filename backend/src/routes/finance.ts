@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -36,6 +35,7 @@ const attachmentSchema = z.object({
 // ── Transaction CRUD ──
 
 route.get("/finance/transactions", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const items = await db.financeTransaction.findMany({
     where: { workspaceId: wid },
@@ -45,6 +45,7 @@ route.get("/finance/transactions", async (c) => {
 });
 
 route.post("/finance/transactions", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
@@ -52,8 +53,8 @@ route.post("/finance/transactions", async (c) => {
     data: {
       workspaceId: wid,
       title: parsed.title,
-      category: parsed.category,
-      status: parsed.status || "pending",
+      category: parsed.category as any,
+      status: (parsed.status || "pending") as any,
       submittedBy: parsed.submittedBy,
       amount: parsed.amount || 0,
       type: parsed.type || "expense",
@@ -65,6 +66,7 @@ route.post("/finance/transactions", async (c) => {
 });
 
 route.patch("/finance/transactions/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -79,6 +81,7 @@ route.patch("/finance/transactions/:id", async (c) => {
 });
 
 route.delete("/finance/transactions/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   await db.financeTransaction.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -89,6 +92,7 @@ route.delete("/finance/transactions/:id", async (c) => {
 // ── Attachments ──
 
 route.post("/finance/transactions/:id/attachments", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -111,6 +115,7 @@ route.post("/finance/transactions/:id/attachments", async (c) => {
 route.delete(
   "/finance/transactions/:id/attachments/:attachmentId",
   async (c) => {
+    const db = c.get("db");
     const wid = c.get("workspaceId");
     const { id, attachmentId } = c.req.param();
     const existing = await db.financeAttachment.findFirst({
@@ -125,6 +130,7 @@ route.delete(
 // ── Summary ──
 
 route.get("/finance/summary", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const [byType, pendingCount] = await Promise.all([
     db.financeTransaction.groupBy({
@@ -153,6 +159,7 @@ route.get("/finance/summary", async (c) => {
 // ── Trends ──
 
 route.get("/finance/trends", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const days = parseInt(c.req.query("days") || "7", 10);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);

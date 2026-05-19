@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/search", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const q = c.req.query("q") || "";
   const type = c.req.query("type") || "";

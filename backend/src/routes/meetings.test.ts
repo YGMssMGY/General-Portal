@@ -38,8 +38,33 @@ const rejectAll = createMiddleware(async (c) => {
   return c.json({ error: "Unauthorized" }, 401);
 });
 
+const mockDb = {
+  meeting: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findFirst: mockFindFirst,
+    create: vi
+      .fn()
+      .mockImplementation((_a: any) =>
+        Promise.resolve({ id: "mock-meeting-id", ..._a?.data }),
+      ),
+    update: vi.fn().mockResolvedValue({ id: "mock-meeting-id" }),
+    delete: vi.fn().mockResolvedValue({ id: "mock-meeting-id" }),
+    upsert: vi
+      .fn()
+      .mockImplementation((_a: any) =>
+        Promise.resolve({ id: "mock-rsvp-id", ..._a?.create }),
+      ),
+  },
+  meetingRsvp: {
+    findMany: vi.fn().mockResolvedValue([]),
+    upsert: vi
+      .fn()
+      .mockImplementation((_a: any) => Promise.resolve({ id: "mock-rsvp-id" })),
+  },
+};
 const mockWorkspace = createMiddleware(async (c, next) => {
   c.set("workspaceId", "test-ws-id");
+  c.set("db", mockDb as any);
   await next();
 });
 

@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { createNotification } from "../lib/notifications.js";
 import { requireAdmin } from "../middleware/auth.js";
 
@@ -7,6 +6,7 @@ const route = new Hono();
 route.use("/*", requireAdmin);
 
 route.post("/archive/end-term", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const auth = await import("@hono/auth-js").then((m) => m.getAuthUser(c));
   const actorName = ((auth?.token as any)?.name as string) || "System";
@@ -61,16 +61,24 @@ route.post("/archive/end-term", async (c) => {
 
   await Promise.all([
     db.taskItem.updateMany({
-      where: { id: { in: tasks.map((t) => t.id) } },
-      data: { status: "archived" },
+      where: { id: { in: tasks.map((t: any) => t.id) } },
+      data: { status: "archived" as any },
+    }),
+    db.proposal.updateMany({
+      where: { id: { in: proposals.map((p: any) => p.id) } },
+      data: { status: "archived" as any },
+    }),
+    db.eventItem.updateMany({
+      where: { id: { in: events.map((e: any) => e.id) } },
+      data: { status: "archived" as any },
     }),
     db.proposal.updateMany({
       where: { id: { in: proposals.map((p) => p.id) } },
-      data: { status: "archived" },
+      data: { status: "archived" as any },
     }),
     db.eventItem.updateMany({
       where: { id: { in: events.map((e) => e.id) } },
-      data: { status: "archived" },
+      data: { status: "archived" as any },
     }),
   ]);
 
@@ -91,6 +99,7 @@ route.post("/archive/end-term", async (c) => {
   await Promise.all(
     members.map((m) =>
       createNotification(
+        db,
         wid,
         m.user.id,
         "New Term Started",
@@ -111,6 +120,7 @@ route.post("/archive/end-term", async (c) => {
 });
 
 route.get("/archive", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const terms = await db.termArchive.findMany({
     where: { workspaceId: wid },
@@ -120,6 +130,7 @@ route.get("/archive", async (c) => {
 });
 
 route.get("/archive/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const term = await db.termArchive.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },

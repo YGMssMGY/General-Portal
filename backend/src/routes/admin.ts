@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { db } from "../lib/db.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { getPermissionsForRole } from "../lib/permissions.js";
 
@@ -16,6 +15,7 @@ const createUserSchema = z.object({
 
 route.post("/admin/users", async (c) => {
   try {
+    const db = c.get("db");
     const body = await c.req.json();
     const parsed = createUserSchema.parse(body);
 
@@ -76,6 +76,7 @@ route.post("/admin/users", async (c) => {
 });
 
 route.get("/admin/users", async (c) => {
+  const db = c.get("db");
   const users = await db.userAccount.findMany({
     include: {
       memberships: {

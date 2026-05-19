@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { requireApiKey } from "../middleware/api-auth.js";
 import { rateLimiter } from "hono-rate-limiter";
 
@@ -26,6 +25,7 @@ function pagination(c: any) {
 }
 
 route.get("/v1/tasks", async (c) => {
+  const db = c.get("db");
   const p = pagination(c);
   const status = c.req.query("status");
   const where: any = {};
@@ -43,6 +43,7 @@ route.get("/v1/tasks", async (c) => {
 });
 
 route.get("/v1/events", async (c) => {
+  const db = c.get("db");
   const p = pagination(c);
   const status = c.req.query("status");
   const where: any = {};
@@ -60,6 +61,7 @@ route.get("/v1/events", async (c) => {
 });
 
 route.get("/v1/proposals", async (c) => {
+  const db = c.get("db");
   const p = pagination(c);
   const where: any = {};
   const [data, total] = await Promise.all([

@@ -1,5 +1,5 @@
 import { createHmac } from "crypto";
-import { db } from "./db.js";
+import { PrismaClient } from "@prisma/client";
 
 type WebhookEvent =
   | "task.created"
@@ -8,6 +8,7 @@ type WebhookEvent =
   | "proposal.updated";
 
 export async function triggerWebhooks(
+  db: PrismaClient,
   workspaceId: string,
   event: WebhookEvent,
   data: Record<string, unknown>,

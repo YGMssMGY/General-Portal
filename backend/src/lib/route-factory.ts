@@ -9,7 +9,7 @@ import {
 } from "./api-response.js";
 
 interface ResourceConfig {
-  delegate: any;
+  delegate: ((c: Context) => any) | any;
   createSchema: z.ZodTypeAny;
   updateSchema: z.ZodTypeAny;
   resourceName: string;
@@ -28,6 +28,10 @@ export function resourceRoute(config: ResourceConfig) {
     softDelete = false,
     allowedIncludes,
   } = config;
+
+  function resolveDelegate(c: Context) {
+    return typeof delegate === "function" ? delegate(c) : delegate;
+  }
 
   const route = new Hono();
 
@@ -76,9 +80,10 @@ export function resourceRoute(config: ResourceConfig) {
         ? { [c.req.query("sort")!]: c.req.query("order") || "asc" }
         : { createdAt: "desc" as const };
 
+      const d = resolveDelegate(c);
       const [data, total] = await Promise.all([
-        delegate.findMany({ where, include, skip, take: limit, orderBy }),
-        delegate.count({ where }),
+        d.findMany({ where, include, skip, take: limit, orderBy }),
+        d.count({ where }),
       ]);
 
       return c.json(paginatedResponse(data, total, page, limit));
@@ -97,7 +102,8 @@ export function resourceRoute(config: ResourceConfig) {
       if (softDelete) where["deletedAt"] = null;
 
       const include = buildInclude(c);
-      const item = await delegate.findFirst({ where, include });
+      const d = resolveDelegate(c);
+      const item = await d.findFirst({ where, include });
       if (!item) return c.json(errorResponse(`${resourceName} not found`), 404);
 
       return c.json(successResponse(item));
@@ -113,7 +119,8 @@ export function resourceRoute(config: ResourceConfig) {
       const parsed = createSchema.parse(body);
 
       const data = { ...parsed, workspaceId: user.workspaceId };
-      const item = await delegate.create({ data });
+      const d = resolveDelegate(c);
+      const item = await d.create({ data });
 
       return c.json(successResponse(item), 201);
     } catch (err) {
@@ -133,14 +140,15 @@ export function resourceRoute(config: ResourceConfig) {
       const id = c.req.param("id");
       const body = await c.req.json();
       const parsed = updateSchema.parse(body);
+      const d = resolveDelegate(c);
 
-      const existing = await delegate.findFirst({
+      const existing = await d.findFirst({
         where: { id, workspaceId: user.workspaceId },
       });
       if (!existing)
         return c.json(errorResponse(`${resourceName} not found`), 404);
 
-      const item = await delegate.update({
+      const item = await d.update({
         where: { id },
         data: parsed,
       });
@@ -161,20 +169,21 @@ export function resourceRoute(config: ResourceConfig) {
     try {
       const user = getUser(c);
       const id = c.req.param("id");
+      const d = resolveDelegate(c);
 
-      const existing = await delegate.findFirst({
+      const existing = await d.findFirst({
         where: { id, workspaceId: user.workspaceId },
       });
       if (!existing)
         return c.json(errorResponse(`${resourceName} not found`), 404);
 
       if (softDelete) {
-        await delegate.update({
+        await d.update({
           where: { id },
           data: { deletedAt: new Date() },
         });
       } else {
-        await delegate.delete({ where: { id } });
+        await d.delete({ where: { id } });
       }
 
       return c.body(null, 204);

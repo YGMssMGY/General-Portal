@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { getAuthUser } from "@hono/auth-js";
-import { db } from "../lib/db.js";
 
 const OFFICER_ROLES = ["admin", "president", "officer"];
 const route = new Hono();
@@ -30,6 +29,7 @@ route.get("/audit", async (c) => {
     if (endDate) where.occurredAt.lte = new Date(endDate);
   }
 
+  const db = c.get("db");
   const [logs, total] = await Promise.all([
     db.auditLog.findMany({
       where,
@@ -69,6 +69,7 @@ route.get("/audit/export", async (c) => {
     if (endDate) where.occurredAt.lte = new Date(endDate);
   }
 
+  const db = c.get("db");
   const logs = await db.auditLog.findMany({
     where,
     orderBy: { occurredAt: "desc" },

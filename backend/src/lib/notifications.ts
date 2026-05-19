@@ -1,8 +1,9 @@
-import { db } from "./db.js";
+import { PrismaClient } from "@prisma/client";
 import { broadcast } from "./websocket.js";
 import { sendTeamsMessage } from "./teams.js";
 
 export async function createNotification(
+  db: PrismaClient,
   workspaceId: string,
   userId: string,
   title: string,

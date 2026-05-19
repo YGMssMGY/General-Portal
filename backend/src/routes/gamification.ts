@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { getAuthUser } from "@hono/auth-js";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notifications.js";
 
@@ -30,6 +29,7 @@ const awardXpSchema = z.object({
 });
 
 route.post("/gamification/award-xp", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
 
   const body = await c.req.json();
@@ -51,6 +51,7 @@ route.post("/gamification/award-xp", async (c) => {
 
   if (newLevel > oldLevel) {
     await createNotification(
+      db,
       wid,
       parsed.userId,
       "Level Up!",
@@ -68,6 +69,7 @@ route.post("/gamification/award-xp", async (c) => {
 });
 
 route.get("/gamification/leaderboard", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const period = c.req.query("period") || "all";
 
@@ -104,6 +106,7 @@ route.post("/gamification/check-streak", async (c) => {
   const userId = (auth?.token as any)?.id as string;
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
+  const db = c.get("db");
   const user = await db.userAccount.findUnique({ where: { id: userId } });
   if (!user) return c.json({ error: "User not found" }, 404);
 

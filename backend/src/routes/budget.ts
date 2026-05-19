@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -12,6 +11,7 @@ const createSchema = z.object({
 });
 
 route.get("/budget", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const items = await db.budgetAllocation.findMany({
     where: { workspaceId: wid },
@@ -21,6 +21,7 @@ route.get("/budget", async (c) => {
 });
 
 route.get("/budget/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const item = await db.budgetAllocation.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -31,6 +32,7 @@ route.get("/budget/:id", async (c) => {
 });
 
 route.post("/budget", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
@@ -47,6 +49,7 @@ route.post("/budget", async (c) => {
 });
 
 route.patch("/budget/:id/approve", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const item = await db.budgetAllocation.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -62,6 +65,7 @@ route.patch("/budget/:id/approve", async (c) => {
 });
 
 route.patch("/budget/:id/spend", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const item = await db.budgetAllocation.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -86,6 +90,7 @@ route.patch("/budget/:id/spend", async (c) => {
 });
 
 route.patch("/budget/:id/reconcile", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const item = await db.budgetAllocation.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },

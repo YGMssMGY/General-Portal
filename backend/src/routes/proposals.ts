@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { getAuthUser } from "@hono/auth-js";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 import { writeAuditLog } from "../lib/audit.js";
 import { createNotification } from "../lib/notifications.js";
@@ -50,6 +49,7 @@ const attachmentSchema = z.object({
 // ── CRUD ──
 
 route.get("/proposals", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const status = c.req.query("status");
   const type = c.req.query("type");
@@ -64,6 +64,7 @@ route.get("/proposals", async (c) => {
 });
 
 route.post("/proposals", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
@@ -71,7 +72,7 @@ route.post("/proposals", async (c) => {
     data: {
       workspaceId: wid,
       title: parsed.title,
-      type: parsed.type,
+      type: parsed.type as any,
       summary: parsed.summary,
       budget: parsed.budget || 0,
       submittedBy: parsed.submittedBy,
@@ -83,6 +84,7 @@ route.post("/proposals", async (c) => {
 });
 
 route.patch("/proposals/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -97,6 +99,7 @@ route.patch("/proposals/:id", async (c) => {
 });
 
 route.delete("/proposals/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   await db.proposal.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -107,6 +110,7 @@ route.delete("/proposals/:id", async (c) => {
 // ── Attachments ──
 
 route.post("/proposals/:id/attachments", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -127,6 +131,7 @@ route.post("/proposals/:id/attachments", async (c) => {
 });
 
 route.delete("/proposals/:id/attachments/:attachmentId", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { id, attachmentId } = c.req.param();
   const existing = await db.proposalAttachment.findFirst({
@@ -154,6 +159,7 @@ function getNextStep(current: string): string | null {
 }
 
 route.post("/proposals/:id/approve", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const auth = await getAuthUser(c);
@@ -199,7 +205,7 @@ route.post("/proposals/:id/approve", async (c) => {
 
   await db.proposal.update({ where: { id }, data: updateData });
 
-  await writeAuditLog(wid, {
+  await writeAuditLog(db, wid, {
     actorId: userId,
     actorName: userName,
     action: `proposal.approved.${nextStep}`,
@@ -227,6 +233,7 @@ route.post("/proposals/:id/approve", async (c) => {
       });
       for (const m of nextApprovers) {
         await createNotification(
+          db,
           wid,
           m.userId,
           "Proposal Needs Review",
@@ -244,6 +251,7 @@ route.post("/proposals/:id/approve", async (c) => {
     });
     if (submitter) {
       await createNotification(
+        db,
         wid,
         submitter.id,
         "Proposal Approved",
@@ -259,6 +267,7 @@ route.post("/proposals/:id/approve", async (c) => {
 });
 
 route.post("/proposals/:id/reject", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const auth = await getAuthUser(c);
@@ -294,7 +303,7 @@ route.post("/proposals/:id/reject", async (c) => {
     data: { status: "rejected", approvalHistory: JSON.stringify(history) },
   });
 
-  await writeAuditLog(wid, {
+  await writeAuditLog(db, wid, {
     actorId: userId,
     actorName: userName,
     action: "proposal.rejected",
@@ -313,6 +322,7 @@ route.post("/proposals/:id/reject", async (c) => {
   });
   if (submitter) {
     await createNotification(
+      db,
       wid,
       submitter.id,
       "Proposal Rejected",
@@ -331,6 +341,7 @@ route.post("/proposals/:id/reject", async (c) => {
 });
 
 route.get("/proposals/:id/approval-history", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const proposal = await db.proposal.findFirst({

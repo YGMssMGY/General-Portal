@@ -4,13 +4,29 @@ vi.hoisted(() => {
   process.env["API_KEY"] = "test-api-key-123";
 });
 
-vi.mock("../lib/db.js", () => {
-  const m = () => ({
+import { createMiddleware } from "hono/factory";
+
+const mockDb = {
+  taskItem: {
     findMany: vi.fn().mockResolvedValue([]),
     count: vi.fn().mockResolvedValue(0),
-  });
-  return { db: { taskItem: m(), eventItem: m(), proposal: m() } };
+  },
+  eventItem: {
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+  },
+  proposal: {
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+  },
+};
+
+const mockDbMiddleware = createMiddleware(async (c, next) => {
+  c.set("db", mockDb as any);
+  await next();
 });
+
+vi.mock("../lib/db.js", () => ({ db: mockDb }));
 
 import { Hono } from "hono";
 import publicApiRoute from "./public-api.js";
@@ -22,6 +38,7 @@ describe("Public API", () => {
 
   it("GET /api/v1/tasks with no API key returns 401", async () => {
     const app = new Hono();
+    app.use("/api/*", mockDbMiddleware);
     app.route("/api", publicApiRoute);
     const res = await app.request("/api/v1/tasks");
     expect(res.status).toBe(401);
@@ -29,6 +46,7 @@ describe("Public API", () => {
 
   it("GET /api/v1/tasks with wrong API key returns 401", async () => {
     const app = new Hono();
+    app.use("/api/*", mockDbMiddleware);
     app.route("/api", publicApiRoute);
     const res = await app.request("/api/v1/tasks", {
       headers: { Authorization: "Bearer wrong-key" },
@@ -38,6 +56,7 @@ describe("Public API", () => {
 
   it("GET /api/v1/tasks with correct API key returns 200", async () => {
     const app = new Hono();
+    app.use("/api/*", mockDbMiddleware);
     app.route("/api", publicApiRoute);
     const res = await app.request("/api/v1/tasks", {
       headers: { Authorization: "Bearer test-api-key-123" },

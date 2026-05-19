@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { getAuthUser } from "@hono/auth-js";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -9,6 +8,7 @@ route.get("/notifications", async (c) => {
   const userId = (auth?.token as any)?.id as string;
   const workspaceId = c.get("workspaceId");
 
+  const db = c.get("db");
   const notifications = await db.notification.findMany({
     where: { userId, workspaceId, isRead: false },
     orderBy: { createdAt: "desc" },
@@ -19,6 +19,7 @@ route.get("/notifications", async (c) => {
 });
 
 route.patch("/notifications/read-all", async (c) => {
+  const db = c.get("db");
   const auth = await getAuthUser(c);
   const userId = (auth?.token as any)?.id as string;
   const workspaceId = c.get("workspaceId");
@@ -32,6 +33,7 @@ route.patch("/notifications/read-all", async (c) => {
 });
 
 route.patch("/notifications/:id/read", async (c) => {
+  const db = c.get("db");
   const auth = await getAuthUser(c);
   const userId = (auth?.token as any)?.id as string;
   const workspaceId = c.get("workspaceId");

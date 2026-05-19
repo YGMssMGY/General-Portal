@@ -1,7 +1,8 @@
+import { PrismaClient } from "@prisma/client";
 import { broadcast } from "./websocket.js";
-import { db } from "./db.js";
 
 export async function emitEvent(
+  db: PrismaClient,
   workspaceId: string,
   type: string,
   data: {

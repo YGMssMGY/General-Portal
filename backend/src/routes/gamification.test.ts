@@ -33,8 +33,23 @@ const rejectAll = createMiddleware(async (c) => {
   return c.json({ error: "Unauthorized" }, 401);
 });
 
+const mockDb = {
+  taskItem: { groupBy: vi.fn().mockResolvedValue([]) },
+  membership: { findMany: vi.fn().mockResolvedValue([]) },
+  userAccount: {
+    findUnique: vi.fn().mockResolvedValue({
+      id: "test-user-id",
+      xp: 50,
+      level: 1,
+      streak: 3,
+      lastLoginAt: new Date(Date.now() - 86400000),
+    }),
+    update: vi.fn().mockResolvedValue({}),
+  },
+};
 const mockWorkspace = createMiddleware(async (c, next) => {
   c.set("workspaceId", "test-ws-id");
+  c.set("db", mockDb as any);
   await next();
 });
 

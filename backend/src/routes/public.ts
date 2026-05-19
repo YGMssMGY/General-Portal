@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/events/public", async (c) => {
+  const db = c.get("db");
   const items = await db.publicEvent.findMany({
     orderBy: { eventDate: "desc" },
   });
@@ -11,6 +11,7 @@ route.get("/events/public", async (c) => {
 });
 
 route.get("/photos", async (c) => {
+  const db = c.get("db");
   const items = await db.photo.findMany({
     orderBy: { photoDate: "desc" },
   });
@@ -18,6 +19,7 @@ route.get("/photos", async (c) => {
 });
 
 route.get("/workspace", async (c) => {
+  const db = c.get("db");
   const workspace = await db.workspace.findFirst();
   if (!workspace) return c.json({ error: "No workspace found" }, 404);
   return c.json({
