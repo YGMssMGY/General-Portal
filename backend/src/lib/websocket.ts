@@ -19,7 +19,9 @@ export function setupWebSocket(server: ServerType) {
     const url = new URL(request.url || "/", "http://localhost");
     if (url.pathname !== "/ws") return void socket.destroy();
 
-    const token = url.searchParams.get("token");
+    const protocol =
+      (request.headers["sec-websocket-protocol"] as string) || "";
+    const token = protocol || url.searchParams.get("token");
     if (!token) return void socket.destroy();
 
     try {

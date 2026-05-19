@@ -19,6 +19,11 @@ function dispatch(eventType: string, payload: unknown) {
   listeners.get(eventType)?.forEach((cb) => cb(payload));
 }
 
+function getWsUrl(): string {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws`;
+}
+
 export function useWebSocket() {
   const { data: session } = useSession();
   const wsRef = useRef<WebSocket | null>(null);
@@ -36,7 +41,7 @@ export function useWebSocket() {
     if (!t) return;
 
     wsRef.current?.close();
-    const ws = new WebSocket(`ws://localhost:3001/ws?token=${t}`);
+    const ws = new WebSocket(getWsUrl(), [t]);
     wsRef.current = ws;
 
     ws.onopen = () => {
