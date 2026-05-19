@@ -111,7 +111,7 @@ export function MessagesPage() {
         (t) =>
           t.title.toLowerCase().includes(q) ||
           t.preview.toLowerCase().includes(q) ||
-          t.participants.some((p) => p.toLowerCase().includes(q)),
+          t.participants.some((p) => p.name.toLowerCase().includes(q)),
       );
     }
     return result;
@@ -454,7 +454,7 @@ export function MessagesPage() {
                         marginTop: "0.125rem",
                       }}
                     >
-                      {selected.participants.join(", ")}
+                      {selected.participants.map((p) => p.name).join(", ")}
                     </p>
                   </div>
                   <div
@@ -726,7 +726,7 @@ export function MessagesPage() {
                           lineHeight: 1.5,
                         }}
                       >
-                        {selected.participants.join(", ")}
+                        {selected.participants.map((p) => p.name).join(", ")}
                       </dd>
                     </div>
                     <div>

@@ -65,6 +65,11 @@ export interface Proposal {
   rejectionReason?: string;
 }
 
+export interface EventOwner {
+  id: string;
+  ownerLabel: string;
+}
+
 export interface EventItem {
   id: string;
   title: string;
@@ -74,7 +79,7 @@ export interface EventItem {
   progress: number;
   budgetUsed: number;
   budgetTotal: number;
-  ownerNames: string[];
+  owners: EventOwner[];
 }
 
 export interface VolunteerSlot {
@@ -104,6 +109,11 @@ export interface Message {
   sentAt: string;
 }
 
+export interface MessageParticipant {
+  id: string;
+  name: string;
+}
+
 export interface MessageThread {
   id: string;
   title: string;
@@ -112,7 +122,7 @@ export interface MessageThread {
   preview: string;
   unreadCount: number;
   updatedAt: string;
-  participants: string[];
+  participants: MessageParticipant[];
   messages: Message[];
 }
 

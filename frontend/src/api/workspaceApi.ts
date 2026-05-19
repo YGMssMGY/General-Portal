@@ -97,9 +97,12 @@ export const workspaceApi = {
     }),
   deleteFinanceTransaction: (id: string) =>
     fetchJson<void>(`/finance/transactions/${id}`, { method: "DELETE" }),
-  sendMessage: (
-    thread: Pick<MessageThread, "title" | "context" | "participants"> & { body: string },
-  ) => fetchJson<MessageThread>("/messages/threads", { method: "POST", ...jsonBody(thread) }),
+  sendMessage: (thread: {
+    title: string;
+    context: MessageThread["context"];
+    participants: string[];
+    body: string;
+  }) => fetchJson<MessageThread>("/messages/threads", { method: "POST", ...jsonBody(thread) }),
   replyToThread: (threadId: string, body: string) =>
     fetchJson<Message>(`/messages/threads/${threadId}/reply`, {
       method: "POST",
