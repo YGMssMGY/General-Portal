@@ -15,7 +15,11 @@ route.get("/events", async (c) => {
     include: { owners: true },
     orderBy: { createdAt: "desc" },
   });
-  return c.json(items);
+  const mapped = items.map((item: any) => ({
+    ...item,
+    ownerNames: item.owners.map((o: any) => o.ownerLabel),
+  }));
+  return c.json(mapped);
 });
 
 route.post("/events", async (c) => {
@@ -32,9 +36,14 @@ route.post("/events", async (c) => {
       progress: body.progress || 0,
       budgetUsed: body.budgetUsed || 0,
       budgetTotal: body.budgetTotal || 0,
-      owners: body.owners
-        ? { create: body.owners.map((o: string) => ({ ownerLabel: o })) }
-        : undefined,
+      owners:
+        body.owners || body.ownerNames
+          ? {
+              create: (body.owners || body.ownerNames).map((o: string) => ({
+                ownerLabel: o,
+              })),
+            }
+          : undefined,
     },
     include: { owners: true },
   });
@@ -52,10 +61,11 @@ route.patch("/events/:id", async (c) => {
   if (fields.endsAt) data.endsAt = new Date(fields.endsAt);
 
   // Handle owner updates: delete existing and recreate
-  if (body.owners) {
+  const ownerLabels = body.owners || body.ownerNames;
+  if (ownerLabels) {
     await db.eventOwner.deleteMany({ where: { eventId: id } });
     await db.eventOwner.createMany({
-      data: body.owners.map((o: string) => ({ eventId: id, ownerLabel: o })),
+      data: ownerLabels.map((o: string) => ({ eventId: id, ownerLabel: o })),
     });
   }
 
@@ -64,7 +74,10 @@ route.patch("/events/:id", async (c) => {
     data,
     include: { owners: true },
   });
-  return c.json(item);
+  return c.json({
+    ...item,
+    ownerNames: (item as any).owners.map((o: any) => o.ownerLabel),
+  });
 });
 
 route.delete("/events/:id", async (c) => {

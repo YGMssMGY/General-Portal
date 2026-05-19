@@ -76,21 +76,31 @@ route.get("/dashboard", async (c) => {
   const metrics = [
     {
       label: "Total Tasks",
-      value: taskCounts.reduce((sum, g) => sum + g._count, 0),
+      value: String(taskCounts.reduce((sum, g) => sum + g._count, 0)),
+      tone: "primary" as const,
+      icon: "task",
     },
     {
       label: "Upcoming Events",
-      value: upcomingEvents.length,
+      value: String(upcomingEvents.length),
+      tone: "secondary" as const,
+      icon: "event",
     },
     {
       label: "Pending Proposals",
-      value: pendingProposalsCount,
+      value: String(pendingProposalsCount),
+      tone: "tertiary" as const,
+      icon: "proposal",
     },
     {
       label: "Pending Expenses",
-      value: financeSummary
-        .filter((f) => f.status === "pending")
-        .reduce((sum, f) => sum + (f._sum.amount?.toNumber() || 0), 0),
+      value: String(
+        financeSummary
+          .filter((f) => f.status === "pending")
+          .reduce((sum, f) => sum + (f._sum.amount?.toNumber() || 0), 0),
+      ),
+      tone: "danger" as const,
+      icon: "finance",
     },
   ];
 

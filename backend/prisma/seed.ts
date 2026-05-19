@@ -1,4 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  PrismaClient,
+  TaskStatus,
+  TaskPriority,
+  ProposalType,
+  ProposalStatus,
+  EventStatus,
+  TransactionCategory,
+  TransactionStatus,
+  ThreadContext,
+  ThreadStatus,
+  MemberVisibility,
+} from "@prisma/client";
 import { ROLE_PERMISSIONS } from "../src/lib/permissions.js";
 
 process.env["DATABASE_URL"] = process.env["DATABASE_URL_DEVELOPERS"];
@@ -157,8 +169,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Confirm gym reservation",
-          status: "todo",
-          priority: "high",
+          status: TaskStatus.todo,
+          priority: TaskPriority.high,
           project: "Winter Formal",
           dueDate: new Date(Date.now() + 8 * 86400000),
           assigneeName: "Maya Chen",
@@ -166,8 +178,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Update volunteer contact list",
-          status: "todo",
-          priority: "low",
+          status: TaskStatus.todo,
+          priority: TaskPriority.low,
           project: "General Admin",
           dueDate: new Date(Date.now() + 12 * 86400000),
           assigneeName: "Jordan Diaz",
@@ -175,8 +187,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Design fundraiser poster",
-          status: "in_progress",
-          priority: "medium",
+          status: TaskStatus.in_progress,
+          priority: TaskPriority.medium,
           project: "Fall Drive",
           dueDate: new Date(Date.now() + 86400000),
           assigneeName: "Chris Rivera",
@@ -185,8 +197,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Approve catering budget",
-          status: "blocked",
-          priority: "high",
+          status: TaskStatus.blocked,
+          priority: TaskPriority.high,
           project: "Winter Formal",
           dueDate: new Date(Date.now() - 86400000),
           assigneeName: "Sarah Jenkins",
@@ -211,8 +223,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Winter Formal Decoration Plan",
-          type: "Event",
-          status: "under_review",
+          type: ProposalType.Event,
+          status: ProposalStatus.under_review,
           submittedBy: "Sarah Jenkins",
           submittedAt: new Date(Date.now() - 86400000),
           budget: 1850,
@@ -222,8 +234,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Fall Merchandise Design",
-          type: "Purchase",
-          status: "submitted",
+          type: ProposalType.Purchase,
+          status: ProposalStatus.submitted,
           submittedBy: "Maya Chen",
           submittedAt: new Date(Date.now() - 7200000),
           budget: 940,
@@ -232,8 +244,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Community Garden Workday",
-          type: "Project",
-          status: "approved",
+          type: ProposalType.Project,
+          status: ProposalStatus.approved,
           submittedBy: "Jordan Diaz",
           submittedAt: new Date(Date.now() - 420000000),
           budget: 420,
@@ -257,7 +269,7 @@ async function main() {
       data: {
         workspaceId: workspace.id,
         title: "Spirit Week 2026",
-        status: "active",
+        status: EventStatus.active,
         startsAt: new Date(Date.now() + 1296000000),
         endsAt: new Date(Date.now() + 1641600000),
         progress: 75,
@@ -277,7 +289,7 @@ async function main() {
       data: {
         workspaceId: workspace.id,
         title: "Winter Formal",
-        status: "pending",
+        status: EventStatus.pending,
         startsAt: new Date("2026-12-10T19:00:00Z"),
         progress: 30,
         budgetUsed: 1200,
@@ -334,8 +346,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Receipt for event posters",
-          category: "Printing",
-          status: "pending",
+          category: TransactionCategory.Printing,
+          status: TransactionStatus.pending,
           submittedBy: "Maya Chen",
           amount: 86.25,
           occurredAt: new Date(Date.now() - 7200000),
@@ -343,8 +355,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Venue deposit",
-          category: "Event",
-          status: "approved",
+          category: TransactionCategory.Event,
+          status: TransactionStatus.approved,
           submittedBy: "Sarah Jenkins",
           amount: 500,
           occurredAt: new Date(Date.now() - 260000000),
@@ -352,8 +364,8 @@ async function main() {
         {
           workspaceId: workspace.id,
           title: "Catering quote",
-          category: "Food",
-          status: "under_review",
+          category: TransactionCategory.Food,
+          status: TransactionStatus.under_review,
           submittedBy: "Chris Rivera",
           amount: 1280,
           occurredAt: new Date(Date.now() - 160000000),
@@ -375,8 +387,8 @@ async function main() {
       data: {
         workspaceId: workspace.id,
         title: "Winter Formal Planning",
-        context: "event",
-        status: "active",
+        context: ThreadContext.event,
+        status: ThreadStatus.active,
         preview: "Sarah: I updated the seating chart for the VIP section.",
         unreadCount: 2,
         lastMessageAt: new Date(Date.now() - 3600000),
@@ -404,8 +416,8 @@ async function main() {
       data: {
         workspaceId: workspace.id,
         title: "Confirm Decorations Task",
-        context: "task",
-        status: "completed",
+        context: ThreadContext.task,
+        status: ThreadStatus.completed,
         preview: "Mark: All balloons and banners ordered.",
         lastMessageAt: new Date(Date.now() - 90000000),
         participants: { create: [{ name: "Mark" }, { name: "Chris" }] },
@@ -508,7 +520,7 @@ async function main() {
     await prisma.workspaceSettings.create({
       data: {
         workspaceId: workspace.id,
-        defaultVisibility: "members",
+        defaultVisibility: MemberVisibility.members,
         requireProposalApproval: false,
         allowMemberInvites: true,
         fiscalYearStart: "August",
