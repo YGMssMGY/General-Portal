@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Tag, Button, ClickableTile, Tile, Grid, Column, Row, Stack } from "@carbon/react";
 import { Card } from "../../components/Card";
@@ -52,7 +53,7 @@ function makeSparklineData(value: string, label: string) {
   return points.map((v, i) => ({ group: label, key: String(i), value: Math.round(v) }));
 }
 
-function MetricSparkline({ metric }: { metric: DashboardMetric }) {
+const MetricSparkline = memo(function MetricSparkline({ metric }: { metric: DashboardMetric }) {
   const data = makeSparklineData(metric.value, metric.label);
   const colorMap: Record<string, string> = {
     primary: "#0f62fe",
@@ -72,9 +73,9 @@ function MetricSparkline({ metric }: { metric: DashboardMetric }) {
       }}
     />
   );
-}
+});
 
-function MetricCard({ metric }: { metric: DashboardMetric }) {
+const MetricCard = memo(function MetricCard({ metric }: { metric: DashboardMetric }) {
   const Icon = metricIcons[metric.icon] ?? Task;
   const link = metricLinks[metric.label];
   const iconColor = toneIconColors[metric.tone];
@@ -112,7 +113,7 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
   }
 
   return <Tile>{inner}</Tile>;
-}
+});
 
 const quotes = [
   "The secret of getting ahead is getting started. \u2014 Mark Twain",

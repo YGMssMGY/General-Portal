@@ -4,6 +4,8 @@ import { Warning } from "@carbon/icons-react";
 
 interface Props {
   children: ReactNode;
+  onRetry?: () => void;
+  label?: string;
 }
 
 interface State {
@@ -24,6 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Uncaught error:", error, info.componentStack);
   }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+    this.props.onRetry?.();
+  };
 
   render() {
     if (this.state.hasError) {
@@ -48,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
               color: "var(--cds-text-primary)",
             }}
           >
-            Something went wrong
+            {this.props.label || "Something went wrong"}
           </h1>
           <p
             style={{
@@ -59,17 +66,14 @@ export class ErrorBoundary extends Component<Props, State> {
               color: "var(--cds-text-secondary)",
             }}
           >
-            An unexpected error occurred. Please refresh the page to try again.
+            {this.state.error?.message || "An unexpected error occurred. Please try again."}
           </p>
-          <Button
-            style={{ marginTop: "1.5rem" }}
-            onClick={() => {
-              this.setState({ hasError: false, error: null });
-              window.location.reload();
-            }}
-          >
-            Reload Page
-          </Button>
+          <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem" }}>
+            <Button onClick={this.handleRetry}>Try Again</Button>
+            <Button kind="secondary" onClick={() => window.location.reload()}>
+              Reload Page
+            </Button>
+          </div>
         </div>
       );
     }
