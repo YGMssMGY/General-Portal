@@ -7,6 +7,7 @@ import {
   errorResponse,
   parsePagination,
 } from "./api-response.js";
+import { writeAuditLog } from "./audit.js";
 
 function sanitize(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -31,6 +32,7 @@ interface ResourceConfig {
   resourceName: string;
   searchFields?: string[];
   softDelete?: boolean;
+  auditLog?: boolean;
   allowedIncludes?: string[];
 }
 
@@ -42,6 +44,7 @@ export function resourceRoute(config: ResourceConfig) {
     resourceName,
     searchFields,
     softDelete = false,
+    auditLog: enableAuditLog = false,
     allowedIncludes,
   } = config;
 
@@ -143,6 +146,21 @@ export function resourceRoute(config: ResourceConfig) {
       const d = resolveDelegate(c);
       const item = await d.create({ data });
 
+      if (enableAuditLog) {
+        await writeAuditLog(d, user.workspaceId, {
+          actorId: user.id,
+          actorName: user.displayName,
+          action: `create.${resourceName.toLowerCase()}`,
+          resourceType: resourceName,
+          resourceId: item.id,
+          resourceTitle: item.title || undefined,
+          ipAddress:
+            c.req.header("x-forwarded-for") ||
+            c.req.header("x-real-ip") ||
+            undefined,
+        }).catch(() => {});
+      }
+
       return c.json(successResponse(item), 201);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -174,6 +192,21 @@ export function resourceRoute(config: ResourceConfig) {
         where: { id },
         data: parsed,
       });
+
+      if (enableAuditLog) {
+        await writeAuditLog(d, user.workspaceId, {
+          actorId: user.id,
+          actorName: user.displayName,
+          action: `update.${resourceName.toLowerCase()}`,
+          resourceType: resourceName,
+          resourceId: id,
+          resourceTitle: item.title || existing.title || undefined,
+          ipAddress:
+            c.req.header("x-forwarded-for") ||
+            c.req.header("x-real-ip") ||
+            undefined,
+        }).catch(() => {});
+      }
 
       return c.json(successResponse(item));
     } catch (err) {
@@ -208,6 +241,23 @@ export function resourceRoute(config: ResourceConfig) {
         await d.delete({ where: { id } });
       }
 
+      if (enableAuditLog) {
+        await writeAuditLog(d, user.workspaceId, {
+          actorId: user.id,
+          actorName: user.displayName,
+          action: softDelete
+            ? `soft-delete.${resourceName.toLowerCase()}`
+            : `delete.${resourceName.toLowerCase()}`,
+          resourceType: resourceName,
+          resourceId: id,
+          resourceTitle: existing.title || undefined,
+          ipAddress:
+            c.req.header("x-forwarded-for") ||
+            c.req.header("x-real-ip") ||
+            undefined,
+        }).catch(() => {});
+      }
+
       return c.body(null, 204);
     } catch {
       return c.json(errorResponse("Failed to delete " + resourceName), 500);
@@ -235,6 +285,22 @@ export function resourceRoute(config: ResourceConfig) {
         const restored = await d.findUnique({
           where: { id },
         });
+
+        if (enableAuditLog) {
+          await writeAuditLog(d, user.workspaceId, {
+            actorId: user.id,
+            actorName: user.displayName,
+            action: `restore.${resourceName.toLowerCase()}`,
+            resourceType: resourceName,
+            resourceId: id,
+            resourceTitle: existing.title || undefined,
+            ipAddress:
+              c.req.header("x-forwarded-for") ||
+              c.req.header("x-real-ip") ||
+              undefined,
+          }).catch(() => {});
+        }
+
         return c.json(successResponse(restored));
       } catch {
         return c.json(errorResponse("Failed to restore " + resourceName), 500);
