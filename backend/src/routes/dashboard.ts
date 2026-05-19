@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/dashboard", async (c) => {
+  const db = c.get("db");
   const workspaceId = c.get("workspaceId");
 
   const now = new Date();

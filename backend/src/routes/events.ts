@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/events", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const status = c.req.query("status");
   const dateFrom = c.req.query("dateFrom");
@@ -19,6 +19,7 @@ route.get("/events", async (c) => {
 });
 
 route.post("/events", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const item = await db.eventItem.create({
@@ -41,6 +42,7 @@ route.post("/events", async (c) => {
 });
 
 route.patch("/events/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -66,6 +68,7 @@ route.patch("/events/:id", async (c) => {
 });
 
 route.delete("/events/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   await db.eventItem.delete({
     where: { id: c.req.param("id"), workspaceId: wid },

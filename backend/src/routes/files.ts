@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { writeFile, readFile } from "fs/promises";
@@ -32,6 +31,7 @@ function mimeType(filename: string): string {
 const route = new Hono();
 
 route.get("/files", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const type = c.req.query("type");
   const where: any = { workspaceId: wid };
@@ -44,6 +44,7 @@ route.get("/files", async (c) => {
 });
 
 route.post("/files", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.parseBody();
   const file = body["file"] as File | undefined;
@@ -81,6 +82,7 @@ route.post("/files", async (c) => {
 route.get("/files/:id/download", async (c) => {
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
+  const db = c.get("db");
   const record = await db.workspaceFile.findFirst({
     where: { id, workspaceId: wid },
   });
@@ -101,6 +103,7 @@ route.get("/files/:id/download", async (c) => {
 
 route.delete("/files/:id", async (c) => {
   const wid = c.get("workspaceId");
+  const db = c.get("db");
   const record = await db.workspaceFile.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },
   });

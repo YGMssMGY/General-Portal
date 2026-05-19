@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -45,6 +44,7 @@ const attachmentSchema = z.object({
 // ── Task CRUD ──
 
 route.get("/tasks", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const status = c.req.query("status");
   const where: any = { workspaceId: wid };
@@ -57,6 +57,7 @@ route.get("/tasks", async (c) => {
 });
 
 route.post("/tasks", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
@@ -64,8 +65,8 @@ route.post("/tasks", async (c) => {
     data: {
       workspaceId: wid,
       title: parsed.title,
-      status: parsed.status || "todo",
-      priority: parsed.priority || "medium",
+      status: (parsed.status || "todo") as any,
+      priority: (parsed.priority || "medium") as any,
       project: parsed.project,
       dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
       assigneeName: parsed.assigneeName,
@@ -78,6 +79,7 @@ route.post("/tasks", async (c) => {
 });
 
 route.patch("/tasks/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -92,6 +94,7 @@ route.patch("/tasks/:id", async (c) => {
 });
 
 route.delete("/tasks/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   await db.taskItem.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -102,6 +105,7 @@ route.delete("/tasks/:id", async (c) => {
 // ── Subtasks ──
 
 route.get("/tasks/:taskId/subtasks", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { taskId } = c.req.param();
   const items = await db.taskSubtask.findMany({
@@ -112,6 +116,7 @@ route.get("/tasks/:taskId/subtasks", async (c) => {
 });
 
 route.post("/tasks/:taskId/subtasks", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { taskId } = c.req.param();
   const body = await c.req.json();
@@ -132,6 +137,7 @@ route.post("/tasks/:taskId/subtasks", async (c) => {
 });
 
 route.patch("/tasks/subtasks/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -149,6 +155,7 @@ route.patch("/tasks/subtasks/:id", async (c) => {
 });
 
 route.delete("/tasks/subtasks/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const existing = await db.taskSubtask.findFirst({
@@ -162,6 +169,7 @@ route.delete("/tasks/subtasks/:id", async (c) => {
 // ── Comments ──
 
 route.get("/tasks/:taskId/comments", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { taskId } = c.req.param();
   const items = await db.taskComment.findMany({
@@ -172,6 +180,7 @@ route.get("/tasks/:taskId/comments", async (c) => {
 });
 
 route.post("/tasks/:taskId/comments", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { taskId } = c.req.param();
   const body = await c.req.json();
@@ -192,6 +201,7 @@ route.post("/tasks/:taskId/comments", async (c) => {
 // ── Attachments ──
 
 route.post("/tasks/:id/attachments", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -212,6 +222,7 @@ route.post("/tasks/:id/attachments", async (c) => {
 });
 
 route.delete("/tasks/:id/attachments/:attachmentId", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { id, attachmentId } = c.req.param();
   const existing = await db.taskAttachment.findFirst({

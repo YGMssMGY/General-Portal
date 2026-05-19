@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
 route.get("/activity", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const limit = parseInt(c.req.query("limit") || "50", 10);
   const before = c.req.query("before");
@@ -18,6 +18,7 @@ route.get("/activity", async (c) => {
 });
 
 route.get("/activity/stats", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

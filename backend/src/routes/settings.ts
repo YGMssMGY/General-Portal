@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -14,6 +13,7 @@ const route = new Hono();
 
 route.get("/settings", async (c) => {
   const wid = c.get("workspaceId");
+  const db = c.get("db");
   let settings = await db.workspaceSettings.findUnique({
     where: { workspaceId: wid },
   });
@@ -45,6 +45,7 @@ route.patch("/settings", async (c) => {
     data.teamsWebhookUrl = body.teamsWebhookUrl;
   if (body.webhookUrl !== undefined) data.webhookUrl = body.webhookUrl;
 
+  const db = c.get("db");
   const settings = await db.workspaceSettings.upsert({
     where: { workspaceId: wid },
     update: data,
@@ -57,6 +58,7 @@ route.patch("/settings", async (c) => {
 
 route.get("/modules", async (c) => {
   const wid = c.get("workspaceId");
+  const db = c.get("db");
   const modules = await db.workspaceModule.findMany({
     where: { workspaceId: wid },
     orderBy: { moduleKey: "asc" },
@@ -74,6 +76,7 @@ route.patch("/modules", async (c) => {
   const body = await c.req.json();
   const parsed = moduleSchema.parse(body);
 
+  const db = c.get("db");
   const item = await db.workspaceModule.upsert({
     where: {
       workspaceId_moduleKey: { workspaceId: wid, moduleKey: parsed.moduleKey },
@@ -98,6 +101,7 @@ const ruleSchema = z.object({
 
 route.get("/modules/rules", async (c) => {
   const wid = c.get("workspaceId");
+  const db = c.get("db");
   const rules = await db.approvalRule.findMany({
     where: { workspaceId: wid },
     orderBy: { createdAt: "desc" },
@@ -109,6 +113,7 @@ route.post("/modules/rules", async (c) => {
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = ruleSchema.parse(body);
+  const db = c.get("db");
   const rule = await db.approvalRule.create({
     data: {
       workspaceId: wid,
@@ -122,6 +127,7 @@ route.post("/modules/rules", async (c) => {
 
 route.delete("/modules/rules/:id", async (c) => {
   const wid = c.get("workspaceId");
+  const db = c.get("db");
   const existing = await db.approvalRule.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },
   });
@@ -133,6 +139,7 @@ route.delete("/modules/rules/:id", async (c) => {
 // ── Logo Upload ──
 
 route.post("/workspace/logo", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.parseBody();
   const file = body["logo"] as File | undefined;
@@ -176,6 +183,7 @@ route.post("/workspace/logo", async (c) => {
 
 route.get("/workspace/logo", async (c) => {
   const wid = c.get("workspaceId");
+  const db = c.get("db");
   const record = await db.workspaceFile.findFirst({
     where: { workspaceId: wid, name: "_workspace_logo" },
   });

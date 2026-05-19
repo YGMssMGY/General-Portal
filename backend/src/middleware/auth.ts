@@ -1,9 +1,12 @@
 import { createMiddleware } from "hono/factory";
 import { getAuthUser } from "@hono/auth-js";
+import { PrismaClient } from "@prisma/client";
 
 declare module "hono" {
   interface ContextVariableMap {
     workspaceId: string;
+    db: PrismaClient;
+    portal: string;
   }
 }
 

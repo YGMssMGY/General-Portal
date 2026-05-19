@@ -28,8 +28,18 @@ const rejectAll = createMiddleware(async (c) => {
   return c.json({ error: "Unauthorized" }, 401);
 });
 
+const mockDb = {
+  notification: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findFirst: mockFindFirst,
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    update: vi.fn().mockResolvedValue({ id: "mock-notif-id" }),
+  },
+};
 const mockWorkspace = createMiddleware(async (c, next) => {
   c.set("workspaceId", "test-ws-id");
+  c.set("db", mockDb as any);
+  c.set("userId", "test-user-id");
   await next();
 });
 

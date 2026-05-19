@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { db } from "../lib/db.js";
 
 const route = new Hono();
 
@@ -26,6 +25,7 @@ const updateSchema = z.object({
 });
 
 route.get("/meetings", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const status = c.req.query("status");
   const from = c.req.query("from");
@@ -45,6 +45,7 @@ route.get("/meetings", async (c) => {
 });
 
 route.post("/meetings", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const parsed = createSchema.parse(body);
@@ -63,6 +64,7 @@ route.post("/meetings", async (c) => {
 });
 
 route.patch("/meetings/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const existing = await db.meeting.findFirst({
@@ -79,6 +81,7 @@ route.patch("/meetings/:id", async (c) => {
 });
 
 route.delete("/meetings/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const existing = await db.meeting.findFirst({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -89,6 +92,7 @@ route.delete("/meetings/:id", async (c) => {
 });
 
 route.post("/meetings/:id/rsvp", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const existing = await db.meeting.findFirst({
@@ -109,6 +113,7 @@ route.post("/meetings/:id/rsvp", async (c) => {
 });
 
 route.get("/meetings/:id/rsvps", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const existing = await db.meeting.findFirst({

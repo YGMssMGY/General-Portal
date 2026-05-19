@@ -1,6 +1,7 @@
-import { db } from "./db.js";
+import { PrismaClient } from "@prisma/client";
 
 export async function writeAuditLog(
+  db: PrismaClient,
   workspaceId: string,
   data: {
     actorId?: string;

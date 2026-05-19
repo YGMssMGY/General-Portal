@@ -32,8 +32,52 @@ const rejectAll = createMiddleware(async (c) => {
   return c.json({ error: "Unauthorized" }, 401);
 });
 
+const mockDb = {
+  taskItem: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findFirst: vi.fn().mockResolvedValue(null),
+    create: vi
+      .fn()
+      .mockImplementation((_a: any) =>
+        Promise.resolve({ id: "mock-task-id", ..._a?.data }),
+      ),
+    update: vi.fn().mockResolvedValue({ id: "mock-task-id" }),
+    delete: vi.fn().mockResolvedValue({ id: "mock-task-id" }),
+    findFirstOrThrow: vi.fn().mockRejectedValue(new Error("Not found")),
+  },
+  taskSubtask: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findFirst: vi.fn().mockResolvedValue(null),
+    create: vi
+      .fn()
+      .mockImplementation((_a: any) =>
+        Promise.resolve({ id: "mock-subtask-id" }),
+      ),
+    update: vi.fn().mockResolvedValue({ id: "mock-subtask-id" }),
+    delete: vi.fn().mockResolvedValue({ id: "mock-subtask-id" }),
+  },
+  taskComment: {
+    findMany: vi.fn().mockResolvedValue([]),
+    create: vi
+      .fn()
+      .mockImplementation((_a: any) =>
+        Promise.resolve({ id: "mock-comment-id" }),
+      ),
+  },
+  taskAttachment: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findFirst: vi.fn().mockResolvedValue(null),
+    create: vi
+      .fn()
+      .mockImplementation((_a: any) =>
+        Promise.resolve({ id: "mock-attachment-id" }),
+      ),
+    delete: vi.fn().mockResolvedValue({ id: "mock-attachment-id" }),
+  },
+};
 const mockWorkspace = createMiddleware(async (c, next) => {
   c.set("workspaceId", "test-ws-id");
+  c.set("db", mockDb as any);
   await next();
 });
 

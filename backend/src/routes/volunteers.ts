@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { db } from "../lib/db.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -18,6 +17,7 @@ const signupUpdateSchema = z.object({
 // ── Slot CRUD ──
 
 route.get("/volunteers/slots", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const items = await db.volunteerSlot.findMany({
     where: { workspaceId: wid },
@@ -27,6 +27,7 @@ route.get("/volunteers/slots", async (c) => {
 });
 
 route.post("/volunteers/slots", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const body = await c.req.json();
   const item = await db.volunteerSlot.create({
@@ -44,6 +45,7 @@ route.post("/volunteers/slots", async (c) => {
 });
 
 route.patch("/volunteers/slots/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -62,6 +64,7 @@ route.patch("/volunteers/slots/:id", async (c) => {
 });
 
 route.delete("/volunteers/slots/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   await db.volunteerSlot.delete({
     where: { id: c.req.param("id"), workspaceId: wid },
@@ -72,6 +75,7 @@ route.delete("/volunteers/slots/:id", async (c) => {
 // ── Signups ──
 
 route.get("/volunteers/slots/:slotId/signups", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { slotId } = c.req.param();
   const items = await db.volunteerSignup.findMany({
@@ -82,6 +86,7 @@ route.get("/volunteers/slots/:slotId/signups", async (c) => {
 });
 
 route.post("/volunteers/slots/:slotId/signups", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const { slotId } = c.req.param();
   const body = await c.req.json();
@@ -106,6 +111,7 @@ route.post("/volunteers/slots/:slotId/signups", async (c) => {
 });
 
 route.patch("/volunteers/signups/:id", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const id = c.req.param("id");
   const body = await c.req.json();
@@ -124,6 +130,7 @@ route.patch("/volunteers/signups/:id", async (c) => {
 // ── Stats ──
 
 route.get("/volunteers/stats", async (c) => {
+  const db = c.get("db");
   const wid = c.get("workspaceId");
   const [hoursAgg, activeCount, topSignups] = await Promise.all([
     db.volunteerSignup.aggregate({
