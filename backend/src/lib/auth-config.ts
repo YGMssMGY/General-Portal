@@ -14,20 +14,30 @@ function getAuthConfig(): AuthConfig {
   const providers: AuthConfig["providers"] = [];
 
   if (IS_PRODUCTION) {
-    if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
+    if (
+      env.MICROSOFT_CLIENT_ID &&
+      env.MICROSOFT_CLIENT_SECRET &&
+      env.MICROSOFT_TENANT_ID
+    ) {
       providers.push(
         Microsoft({
           clientId: env.MICROSOFT_CLIENT_ID,
           clientSecret: env.MICROSOFT_CLIENT_SECRET,
+          issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
         }),
       );
     }
   } else {
-    if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
+    if (
+      env.MICROSOFT_CLIENT_ID &&
+      env.MICROSOFT_CLIENT_SECRET &&
+      env.MICROSOFT_TENANT_ID
+    ) {
       providers.push(
         Microsoft({
           clientId: env.MICROSOFT_CLIENT_ID,
           clientSecret: env.MICROSOFT_CLIENT_SECRET,
+          issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
         }),
       );
     }
