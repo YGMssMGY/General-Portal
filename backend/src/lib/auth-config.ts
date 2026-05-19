@@ -1,17 +1,16 @@
 import { initAuthConfig } from "@hono/auth-js";
 import type { AuthConfig } from "@auth/core";
-import GitHub from "@auth/core/providers/github";
-import Google from "@auth/core/providers/google";
 import Microsoft from "@auth/core/providers/microsoft-entra-id";
 import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { sign } from "hono/jwt";
 import { env, IS_PRODUCTION } from "./env.js";
-import { db } from "./db.js";
+import { getDb } from "./db.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
 
 function getAuthConfig(): AuthConfig {
+  const db = getDb("developers");
   const providers: AuthConfig["providers"] = [];
 
   if (IS_PRODUCTION) {
@@ -24,16 +23,6 @@ function getAuthConfig(): AuthConfig {
       );
     }
   } else {
-    if (env.GITHUB_ID && env.GITHUB_SECRET) {
-      providers.push(
-        GitHub({ clientId: env.GITHUB_ID, clientSecret: env.GITHUB_SECRET }),
-      );
-    }
-    if (env.GOOGLE_ID && env.GOOGLE_SECRET) {
-      providers.push(
-        Google({ clientId: env.GOOGLE_ID, clientSecret: env.GOOGLE_SECRET }),
-      );
-    }
     if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
       providers.push(
         Microsoft({
@@ -42,39 +31,38 @@ function getAuthConfig(): AuthConfig {
         }),
       );
     }
-    if (env.DEV_AUTH_PASSWORD) {
-      providers.push(
-        Credentials({
-          id: "credentials",
-          name: "Dev Login",
-          credentials: {
-            username: { label: "Username" },
-            password: { label: "Password", type: "password" },
-          },
-          async authorize(credentials) {
-            const email = credentials?.username as string;
-            const pw = credentials?.password as string;
-            if (!email) return null;
-            try {
-              const user = await db.userAccount.findUnique({
-                where: { email },
-              });
-              if (!user) return null;
-              if (user.password) {
-                if (pw !== user.password) return null;
-              } else if (pw !== env.DEV_AUTH_PASSWORD) {
-                return null;
-              }
-              return { id: user.id, email: user.email, name: user.displayName };
-            } catch (e) {
-              console.error("[auth] authorize error:", e);
-              return null;
+    providers.push(
+      Credentials({
+        id: "credentials",
+        name: "Dev Login",
+        credentials: {
+          username: { label: "Email" },
+          password: { label: "Password", type: "password" },
+        },
+        async authorize(credentials) {
+          const email = credentials?.username as string;
+          const pw = credentials?.password as string;
+          if (!email) return null;
+          try {
+            const user = await db.userAccount.findUnique({
+              where: { email },
+            });
+            if (!user) return null;
+            if (user.password) {
+              if (pw !== user.password) return null;
             }
-            return { id: email, email, name: email.split("@")[0] };
-          },
-        }),
-      );
-    }
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.displayName,
+            };
+          } catch (e) {
+            console.error("[auth] authorize error:", e);
+            return null;
+          }
+        },
+      }),
+    );
   }
 
   return {
