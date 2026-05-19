@@ -20,6 +20,9 @@ vi.mock("../lib/db.js", () => {
       messageThread: m(),
       proposal: m(),
       membership: m(),
+      $transaction: vi
+        .fn()
+        .mockImplementation(async (queries: any[]) => Promise.all(queries)),
     },
   };
 });
@@ -46,6 +49,9 @@ const mockDb = {
   messageThread: m(),
   proposal: m(),
   membership: m(),
+  $transaction: vi
+    .fn()
+    .mockImplementation(async (queries: any[]) => Promise.all(queries)),
 };
 const mockWorkspace = createMiddleware(async (c, next) => {
   c.set("workspaceId", "test-ws-id");

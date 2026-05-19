@@ -2,12 +2,44 @@ import { Hono } from "hono";
 
 const route = new Hono();
 
+function tsvectorFields(fields: string[]): string {
+  return fields.map((f) => `coalesce("${f}", '')`).join(" || ' ' || ");
+}
+
+async function fullTextSearch(
+  db: any,
+  table: string,
+  wid: string,
+  query: string,
+  searchFields: string[],
+  limit: number,
+  offset: number,
+): Promise<any[] | null> {
+  try {
+    const searchable = tsvectorFields(searchFields);
+    return await db.$queryRawUnsafe(
+      `SELECT * FROM "${table}"
+       WHERE "workspaceId" = $1
+         AND to_tsvector('english', ${searchable}) @@ plainto_tsquery('english', $2)
+       ORDER BY ts_rank(to_tsvector('english', ${searchable}), plainto_tsquery('english', $2)) DESC
+       LIMIT $3 OFFSET $4`,
+      wid,
+      query,
+      limit,
+      offset,
+    );
+  } catch {
+    return null; // signal fallback
+  }
+}
+
 route.get("/search", async (c) => {
   const db = c.get("db");
   const wid = c.get("workspaceId");
   const q = c.req.query("q") || "";
   const type = c.req.query("type") || "";
   const limit = Math.min(parseInt(c.req.query("limit") || "5", 10), 20);
+  const noTypeLimit = Math.min(parseInt(c.req.query("limit") || "3", 10), 20);
   const offset = parseInt(c.req.query("offset") || "0", 10);
 
   if (!q.trim()) return c.json([]);
@@ -15,136 +47,114 @@ route.get("/search", async (c) => {
   const query = q.trim();
   const validTypes = ["task", "proposal", "event", "file", "finance"];
   const filterType = type && validTypes.includes(type) ? type : "";
+  const effectiveLimit = filterType ? limit : noTypeLimit;
 
-  const queries: Promise<any>[] = [];
+  const queries: Promise<any[]>[] = [];
+
+  async function searchType(
+    typeName: string,
+    table: string,
+    fields: string[],
+    mapFn: (row: any) => any,
+  ) {
+    const rows = await fullTextSearch(
+      db,
+      table,
+      wid,
+      query,
+      fields,
+      effectiveLimit,
+      offset,
+    );
+    if (rows !== null) return rows.map(mapFn);
+
+    const ors = fields.map((f) => ({
+      [f]: { contains: query, mode: "insensitive" as const },
+    }));
+    const results = await (db as any)[table].findMany({
+      where: { workspaceId: wid, OR: ors },
+      skip: offset,
+      take: effectiveLimit,
+    });
+    return results.map(mapFn);
+  }
 
   if (!filterType || filterType === "task") {
     queries.push(
-      db.taskItem
-        .findMany({
-          where: {
-            workspaceId: wid,
-            OR: [
-              { title: { contains: query, mode: "insensitive" } },
-              { project: { contains: query, mode: "insensitive" } },
-              { assigneeName: { contains: query, mode: "insensitive" } },
-            ],
-          },
-          skip: offset,
-          take: limit,
-        })
-        .then((tasks) =>
-          tasks.map((t) => ({
-            type: "task" as const,
-            id: t.id,
-            title: t.title,
-            description: t.project || "",
-            status: t.status,
-          })),
-        ),
+      searchType(
+        "task",
+        "taskItem",
+        ["title", "project", "assigneeName"],
+        (t: any) => ({
+          type: "task" as const,
+          id: t.id,
+          title: t.title,
+          description: t.project || "",
+          status: t.status,
+        }),
+      ),
     );
   }
 
   if (!filterType || filterType === "proposal") {
     queries.push(
-      db.proposal
-        .findMany({
-          where: {
-            workspaceId: wid,
-            OR: [
-              { title: { contains: query, mode: "insensitive" } },
-              { submittedBy: { contains: query, mode: "insensitive" } },
-            ],
-          },
-          skip: offset,
-          take: limit,
-        })
-        .then((proposals) =>
-          proposals.map((p) => ({
-            type: "proposal" as const,
-            id: p.id,
-            title: p.title,
-            description: p.summary || "",
-            status: p.status,
-          })),
-        ),
+      searchType(
+        "proposal",
+        "proposal",
+        ["title", "submittedBy", "summary"],
+        (p: any) => ({
+          type: "proposal" as const,
+          id: p.id,
+          title: p.title,
+          description: p.summary || "",
+          status: p.status,
+        }),
+      ),
     );
   }
 
   if (!filterType || filterType === "event") {
     queries.push(
-      db.eventItem
-        .findMany({
-          where: {
-            workspaceId: wid,
-            title: { contains: query, mode: "insensitive" },
-          },
-          skip: offset,
-          take: limit,
-        })
-        .then((events) =>
-          events.map((e) => ({
-            type: "event" as const,
-            id: e.id,
-            title: e.title,
-            description: "",
-            status: e.status,
-          })),
-        ),
+      searchType("event", "eventItem", ["title"], (e: any) => ({
+        type: "event" as const,
+        id: e.id,
+        title: e.title,
+        description: "",
+        status: e.status,
+      })),
     );
   }
 
   if (!filterType || filterType === "file") {
     queries.push(
-      db.workspaceFile
-        .findMany({
-          where: {
-            workspaceId: wid,
-            name: { contains: query, mode: "insensitive" },
-          },
-          skip: offset,
-          take: limit,
-        })
-        .then((files) =>
-          files.map((f) => ({
-            type: "file" as const,
-            id: f.id,
-            title: f.name,
-            description: f.fileType,
-            status: "",
-          })),
-        ),
+      searchType("file", "workspaceFile", ["name"], (f: any) => ({
+        type: "file" as const,
+        id: f.id,
+        title: f.name,
+        description: f.fileType,
+        status: "",
+      })),
     );
   }
 
   if (!filterType || filterType === "finance") {
     queries.push(
-      db.financeTransaction
-        .findMany({
-          where: {
-            workspaceId: wid,
-            OR: [
-              { title: { contains: query, mode: "insensitive" } },
-              { submittedBy: { contains: query, mode: "insensitive" } },
-            ],
-          },
-          skip: offset,
-          take: limit,
-        })
-        .then((finance) =>
-          finance.map((f) => ({
-            type: "finance" as const,
-            id: f.id,
-            title: f.title,
-            description: `$${f.amount}`,
-            status: f.status,
-          })),
-        ),
+      searchType(
+        "finance",
+        "financeTransaction",
+        ["title", "submittedBy", "notes"],
+        (f: any) => ({
+          type: "finance" as const,
+          id: f.id,
+          title: f.title,
+          description: `$${f.amount}`,
+          status: f.status,
+        }),
+      ),
     );
   }
 
   const results = (await Promise.all(queries)).flat();
-
   return c.json(results);
 });
 

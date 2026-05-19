@@ -293,6 +293,7 @@ model EventItem {
 
   @@index([workspaceId])
   @@index([workspaceId, status])
+  @@index([workspaceId, startsAt])
 }
 
 model EventOwner {
@@ -344,6 +345,7 @@ model FinanceTransaction {
 
   @@index([workspaceId])
   @@index([workspaceId, status])
+  @@index([workspaceId, dueDate])
 }
 
 model MessageThread {
@@ -405,6 +407,7 @@ model WorkspaceFile {
   workspaceId String
 
   @@index([workspaceId])
+  @@index([workspaceId, occurredAt])
 }
 
 model ActivityLog {
@@ -421,6 +424,7 @@ model ActivityLog {
   workspaceId String
 
   @@index([workspaceId])
+  @@index([workspaceId, occurredAt])
 }
 
 model WorkspaceSettings {
@@ -631,7 +635,7 @@ model AuditLog {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
+  @@index([workspaceId, userId])
 }
 
 model Meeting {
