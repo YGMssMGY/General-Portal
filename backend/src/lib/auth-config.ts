@@ -6,11 +6,15 @@ import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { sign } from "hono/jwt";
 import { env, IS_PRODUCTION } from "./env.js";
+import { getDb } from "./db.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
 
 function getAuthConfig(c: Context): AuthConfig {
-	const db = c.get("db") as any;
+	const db: any = c.get("db") || getDb("developers");
+	if (!db || !db.user) {
+		console.error("[auth] PrismaClient not available — auth requests will fail");
+	}
 
 	const providers: AuthConfig["providers"] = [];
 
@@ -20,7 +24,6 @@ function getAuthConfig(c: Context): AuthConfig {
 				clientId: env.MICROSOFT_CLIENT_ID,
 				clientSecret: env.MICROSOFT_CLIENT_SECRET,
 				issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
-				name: "Microsoft",
 			}),
 		);
 	}
@@ -39,18 +42,11 @@ function getAuthConfig(c: Context): AuthConfig {
 					const pw = credentials?.password as string;
 					if (!email) return null;
 					try {
-						const user = await db.userAccount.findUnique({
-							where: { email },
-						});
+						const user = await db.user.findUnique({ where: { email } });
 						if (!user) return null;
 						if (user.password && pw !== user.password) return null;
-						return {
-							id: user.id,
-							email: user.email,
-							name: user.displayName,
-						};
-					} catch (e) {
-						console.error("[auth] authorize error:", e);
+						return { id: user.id, email: user.email, name: user.displayName };
+					} catch {
 						return null;
 					}
 				},
