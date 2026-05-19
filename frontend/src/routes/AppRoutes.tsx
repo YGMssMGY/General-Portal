@@ -8,6 +8,7 @@ import { AboutPage } from "../features/public/AboutPage";
 import { PhotoGallery } from "../features/public/PhotoGallery";
 import { PortalLanding } from "../pages/PortalLanding";
 import { ProtectedRoute } from "./ProtectedRoute";
+import { PageErrorBoundary } from "../components/PageErrorBoundary";
 import { LoadingState } from "../components/StateViews";
 
 const ActivityPage = lazy(() =>
@@ -54,8 +55,12 @@ const AccountsPage = lazy(() =>
 );
 const LoginPage = lazy(() => import("./LoginPage").then((m) => ({ default: m.LoginPage })));
 
-function Lazy({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<LoadingState />}>{children}</Suspense>;
+function Lazy({ children, name }: { children: React.ReactNode; name?: string }) {
+  return (
+    <PageErrorBoundary pageName={name}>
+      <Suspense fallback={<LoadingState />}>{children}</Suspense>
+    </PageErrorBoundary>
+  );
 }
 
 export function AppRoutes() {
@@ -89,7 +94,7 @@ export function AppRoutes() {
           <Route
             path="dashboard"
             element={
-              <Lazy>
+              <Lazy name="Dashboard">
                 <DashboardPage />
               </Lazy>
             }
@@ -97,7 +102,7 @@ export function AppRoutes() {
           <Route
             path="proposals"
             element={
-              <Lazy>
+              <Lazy name="Proposals">
                 <ProposalsPage />
               </Lazy>
             }
@@ -105,7 +110,7 @@ export function AppRoutes() {
           <Route
             path="tasks"
             element={
-              <Lazy>
+              <Lazy name="Tasks">
                 <TasksPage />
               </Lazy>
             }
@@ -113,7 +118,7 @@ export function AppRoutes() {
           <Route
             path="events"
             element={
-              <Lazy>
+              <Lazy name="Events">
                 <EventsPage />
               </Lazy>
             }
@@ -121,7 +126,7 @@ export function AppRoutes() {
           <Route
             path="volunteers"
             element={
-              <Lazy>
+              <Lazy name="Volunteers">
                 <VolunteersPage />
               </Lazy>
             }
@@ -129,7 +134,7 @@ export function AppRoutes() {
           <Route
             path="meetings"
             element={
-              <Lazy>
+              <Lazy name="Meetings">
                 <MeetingsPage />
               </Lazy>
             }
@@ -137,7 +142,7 @@ export function AppRoutes() {
           <Route
             path="finance"
             element={
-              <Lazy>
+              <Lazy name="Finance">
                 <FinancePage />
               </Lazy>
             }
@@ -145,7 +150,7 @@ export function AppRoutes() {
           <Route
             path="messages"
             element={
-              <Lazy>
+              <Lazy name="Messages">
                 <MessagesPage />
               </Lazy>
             }
@@ -153,7 +158,7 @@ export function AppRoutes() {
           <Route
             path="files"
             element={
-              <Lazy>
+              <Lazy name="Files">
                 <FilesPage />
               </Lazy>
             }
@@ -161,7 +166,7 @@ export function AppRoutes() {
           <Route
             path="members"
             element={
-              <Lazy>
+              <Lazy name="Members">
                 <MembersPage />
               </Lazy>
             }
@@ -169,7 +174,7 @@ export function AppRoutes() {
           <Route
             path="accounts"
             element={
-              <Lazy>
+              <Lazy name="Accounts">
                 <AccountsPage />
               </Lazy>
             }
@@ -177,7 +182,7 @@ export function AppRoutes() {
           <Route
             path="search"
             element={
-              <Lazy>
+              <Lazy name="Search">
                 <SearchPage />
               </Lazy>
             }
@@ -185,7 +190,7 @@ export function AppRoutes() {
           <Route
             path="activity"
             element={
-              <Lazy>
+              <Lazy name="Activity">
                 <ActivityPage />
               </Lazy>
             }
@@ -194,7 +199,7 @@ export function AppRoutes() {
             path="settings"
             element={
               <ProtectedRoute requiredRole="officer">
-                <Lazy>
+                <Lazy name="Settings">
                   <SettingsPage />
                 </Lazy>
               </ProtectedRoute>

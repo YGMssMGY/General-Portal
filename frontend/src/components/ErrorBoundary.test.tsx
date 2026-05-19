@@ -39,9 +39,8 @@ describe("ErrorBoundary", () => {
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    expect(
-      screen.getByText("An unexpected error occurred. Please refresh the page to try again."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Test render error")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /reload page/i })).toBeInTheDocument();
 
     consoleSpy.mockRestore();
