@@ -61,7 +61,7 @@ const clients: Record<string, ClientConfig> = {
 
 const defaultClient: ClientConfig = clients.developers;
 
-export function getClientConfig(): ClientConfig {
-	const name = import.meta.env.VITE_CLIENT_NAME || "developers";
-	return clients[name] || defaultClient;
+export function getClientConfig(portal?: string): ClientConfig {
+	const portalName = portal || import.meta.env.VITE_CLIENT_NAME || "developers";
+	return clients[portalName] || defaultClient;
 }
