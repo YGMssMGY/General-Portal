@@ -386,7 +386,7 @@ export function FinancePage() {
 												fontWeight: 500,
 											}}
 										>
-											+12% vs last month
+											Trend data available soon
 										</span>
 									</Stack>
 								</Tile>
@@ -440,7 +440,7 @@ export function FinancePage() {
 												fontWeight: 500,
 											}}
 										>
-											+8% vs last month
+											Trend data available soon
 										</span>
 									</Stack>
 								</Tile>
