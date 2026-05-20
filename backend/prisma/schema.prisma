@@ -336,7 +336,10 @@ model FinanceTransaction {
   submittedBy     String
   submittedById   String?
   submittedByUser User?            @relation("TransactionSubmitter", fields: [submittedById], references: [id])
+  type            String             @default("expense")
   amount          Decimal             @default(0)
+  occurredAt      DateTime
+  notes           String?
 
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
