@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
+
+export type ShowPortal = "developers" | "stuco";
 
 const navLinkStyle: React.CSSProperties = {
 	padding: "0.5rem 0.75rem",
@@ -13,9 +16,28 @@ const activeNavStyle: React.CSSProperties = {
 	fontWeight: 600,
 };
 
+const portalButtonStyle: React.CSSProperties = {
+	padding: "0.25rem 0.625rem",
+	fontSize: "0.8125rem",
+	fontFamily: "inherit",
+	border: "1px solid var(--cds-border-strong)",
+	background: "var(--cds-layer)",
+	color: "var(--cds-text-secondary)",
+	cursor: "pointer",
+};
+
+const activePortalButtonStyle: React.CSSProperties = {
+	...portalButtonStyle,
+	background: "var(--cds-layer-selected)",
+	color: "var(--cds-text-primary)",
+	fontWeight: 600,
+	borderColor: "var(--cds-border-interactive)",
+};
+
 export function PublicLayout() {
 	const location = useLocation();
 	const isActive = (path: string) => location.pathname === path;
+	const [showPortal, setShowPortal] = useState<ShowPortal>("developers");
 
 	return (
 		<div
@@ -45,6 +67,7 @@ export function PublicLayout() {
 						alignItems: "center",
 						justifyContent: "space-between",
 						padding: "0 1rem",
+						gap: "1rem",
 					}}
 				>
 					<Link
@@ -55,12 +78,46 @@ export function PublicLayout() {
 							gap: "0.75rem",
 							color: "var(--cds-text-primary)",
 							textDecoration: "none",
+							whiteSpace: "nowrap",
 						}}
 					>
 						<span style={{ fontSize: "1.125rem", fontWeight: 600 }}>
 							General Portal
 						</span>
 					</Link>
+
+					<div
+						style={{
+							display: "flex",
+							borderRadius: "4px",
+							overflow: "hidden",
+							flexShrink: 0,
+						}}
+					>
+						<button
+							type="button"
+							onClick={() => setShowPortal("developers")}
+							style={
+								showPortal === "developers"
+									? activePortalButtonStyle
+									: portalButtonStyle
+							}
+						>
+							Developers
+						</button>
+						<button
+							type="button"
+							onClick={() => setShowPortal("stuco")}
+							style={
+								showPortal === "stuco"
+									? activePortalButtonStyle
+									: { ...portalButtonStyle, borderLeft: "none" }
+							}
+						>
+							Student Council
+						</button>
+					</div>
+
 					<nav
 						style={{
 							display: "flex",
@@ -91,7 +148,7 @@ export function PublicLayout() {
 				</div>
 			</header>
 			<main style={{ flex: 1 }}>
-				<Outlet />
+				<Outlet context={showPortal} />
 			</main>
 			<footer
 				style={{
