@@ -114,7 +114,7 @@ function NewRuleModal({
 
 	return (
 		<Modal title="Add Approval Rule" isOpen={isOpen} onClose={onClose}>
-			<Stack gap={5}>
+			<Stack gap={4}>
 				<Select
 					id="rule-trigger-type"
 					labelText="Trigger type"
@@ -372,7 +372,7 @@ export function SettingsPage() {
 					color: "var(--cds-link-primary)",
 					textDecoration: "none",
 					display: "inline-block",
-					marginBottom: "0.75rem",
+					marginBottom: "0.5rem",
 				}}
 			>
 				&larr; Back to Dashboard
@@ -406,9 +406,9 @@ export function SettingsPage() {
 			<Grid style={{ padding: 0 }}>
 				{/* Left column: General + Organization */}
 				<Column lg={8} md={8} sm={4}>
-					<Stack gap={6}>
+					<Stack gap={4}>
 						{/* General Section */}
-						<Card padding="lg">
+						<Card padding="md">
 							<h2
 								style={{
 									fontSize: "1.125rem",
@@ -419,7 +419,7 @@ export function SettingsPage() {
 							>
 								General
 							</h2>
-							<Stack gap={5}>
+							<Stack gap={4}>
 								<TextInput
 									id="ws-name"
 									labelText="Workspace name"
@@ -476,18 +476,18 @@ export function SettingsPage() {
 						</Card>
 
 						{/* Organization Section */}
-						<Card padding="lg">
+						<Card padding="md">
 							<h2
 								style={{
 									fontSize: "1.125rem",
 									fontWeight: 600,
-									marginBottom: "1rem",
+									marginBottom: "0.75rem",
 									color: "var(--cds-text-primary)",
 								}}
 							>
 								Organization
 							</h2>
-							<Stack gap={5}>
+							<Stack gap={4}>
 								<Select
 									id="org-type"
 									labelText="Organization type"
@@ -513,12 +513,12 @@ export function SettingsPage() {
 						</Card>
 
 						{/* Terminology Labels Section */}
-						<Card padding="lg">
+						<Card padding="md">
 							<h2
 								style={{
 									fontSize: "1.125rem",
 									fontWeight: 600,
-									marginBottom: "1rem",
+									marginBottom: "0.75rem",
 									color: "var(--cds-text-primary)",
 								}}
 							>
@@ -528,12 +528,12 @@ export function SettingsPage() {
 								style={{
 									fontSize: "0.875rem",
 									color: "var(--cds-text-secondary)",
-									marginBottom: "1rem",
+									marginBottom: "0.75rem",
 								}}
 							>
 								Customize how certain terms are displayed in the workspace.
 							</p>
-							<Stack gap={5}>
+							<Stack gap={4}>
 								<TextInput
 									id="term-member"
 									labelText="Member / Partner"
@@ -560,9 +560,9 @@ export function SettingsPage() {
 
 				{/* Right column: Logo + Modules + Approval */}
 				<Column lg={8} md={8} sm={4}>
-					<Stack gap={6}>
+					<Stack gap={4}>
 						{/* Logo Upload */}
-						<Card padding="lg">
+						<Card padding="md">
 							<h2
 								style={{
 									fontSize: "1.125rem",
@@ -610,12 +610,12 @@ export function SettingsPage() {
 						</Card>
 
 						{/* Module Toggles */}
-						<Card padding="lg">
+						<Card padding="md">
 							<h2
 								style={{
 									fontSize: "1.125rem",
 									fontWeight: 600,
-									marginBottom: "1rem",
+									marginBottom: "0.75rem",
 									color: "var(--cds-text-primary)",
 								}}
 							>
@@ -625,13 +625,13 @@ export function SettingsPage() {
 								style={{
 									fontSize: "0.875rem",
 									color: "var(--cds-text-secondary)",
-									marginBottom: "1rem",
+									marginBottom: "0.75rem",
 								}}
 							>
 								Enable or disable workspace modules. Disabled modules are hidden
 								from navigation.
 							</p>
-							<Stack gap={5}>
+							<Stack gap={4}>
 								{(Object.keys(moduleLabels) as (keyof ModuleSettings)[]).map(
 									(key) => (
 										<div
@@ -690,13 +690,13 @@ export function SettingsPage() {
 
 						{/* Archive / Term Management (admin only) */}
 						{user?.role === "admin" && (
-							<Card padding="lg">
+							<Card padding="md">
 								<div
 									style={{
 										display: "flex",
 										justifyContent: "space-between",
 										alignItems: "center",
-										marginBottom: "1rem",
+										marginBottom: "0.75rem",
 									}}
 								>
 									<h2
@@ -786,13 +786,13 @@ export function SettingsPage() {
 						)}
 
 						{/* Approval Workflows */}
-						<Card padding="lg">
+						<Card padding="md">
 							<div
 								style={{
 									display: "flex",
 									justifyContent: "space-between",
 									alignItems: "center",
-									marginBottom: "1rem",
+									marginBottom: "0.75rem",
 								}}
 							>
 								<h2
@@ -900,7 +900,7 @@ export function SettingsPage() {
 				isOpen={endTermModalOpen}
 				onClose={() => setEndTermModalOpen(false)}
 			>
-				<Stack gap={5}>
+				<Stack gap={4}>
 					<p style={{ color: "var(--cds-text-secondary)" }}>
 						Are you sure you want to end the current term? Active tasks, events, and
 						budgets will be archived for historical reference. This action cannot be

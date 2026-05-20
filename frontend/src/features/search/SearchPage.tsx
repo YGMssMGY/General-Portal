@@ -79,7 +79,7 @@ export function SearchPage() {
 					color: "var(--cds-link-primary)",
 					textDecoration: "none",
 					display: "inline-block",
-					marginBottom: "0.75rem",
+					marginBottom: "0.5rem",
 				}}
 			>
 				&larr; Back to Dashboard

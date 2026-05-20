@@ -15,10 +15,6 @@ vi.mock("../../hooks/useWorkspaceResources", () => ({
 	useDashboard: mockUseDashboard,
 }));
 
-vi.mock("@carbon/charts-react", () => ({
-	SimpleBarChart: () => <div data-testid="mock-chart" />,
-}));
-
 import { DashboardPage } from "./DashboardPage";
 
 function renderPage() {
