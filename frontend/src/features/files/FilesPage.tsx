@@ -25,7 +25,7 @@ import {
 	Close,
 } from "@carbon/icons-react";
 import { Modal } from "../../components/Modal";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useFiles } from "../../hooks/useWorkspaceResources";
@@ -191,319 +191,332 @@ export function FilesPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader title="Files" description="Store, preview, and manage workspace files." />
-
-			{/* Toolbar */}
-			<div
-				style={{
-					display: "flex",
-					gap: "0.75rem",
-					marginBottom: "1.5rem",
-					flexWrap: "wrap",
-					alignItems: "center",
-				}}
+			<PageLayout
+				title="Files"
+				description="Store, preview, and manage workspace files."
+				actions={
+					<Button renderIcon={Upload} onClick={() => setIsUploadOpen(true)}>
+						Upload
+					</Button>
+				}
 			>
-				<Search
-					id="file-search"
-					labelText="Search files"
-					placeholder="Search files by name or type..."
-					size="lg"
-					value={searchQuery}
-					onChange={(e: any) => setSearchQuery(e.target.value)}
-					style={{ flex: 1, minWidth: "200px" }}
-				/>
-				<Select
-					id="file-type-filter"
-					labelText=""
-					hideLabel
-					size="lg"
-					value={typeFilter}
-					onChange={(e: any) => setTypeFilter(e.target.value)}
-					style={{ minWidth: "140px" }}
+				{/* Toolbar */}
+				<div
+					style={{
+						display: "flex",
+						gap: "0.75rem",
+						marginBottom: "1rem",
+						flexWrap: "wrap",
+						alignItems: "center",
+					}}
 				>
-					{typeFilterOptions.map((opt) => (
-						<SelectItem key={opt.value} value={opt.value} text={opt.text} />
-					))}
-				</Select>
-				<Button renderIcon={Upload} size="lg" onClick={() => setIsUploadOpen(true)}>
-					Upload
-				</Button>
-			</div>
-
-			{/* Main content area */}
-			<div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
-				{/* File grid */}
-				<div style={{ flex: 1 }}>
-					{filteredFiles.length === 0 ? (
-						<EmptyState
-							title="No files found"
-							description={
-								searchQuery || typeFilter !== "all"
-									? "Try adjusting your search or filter."
-									: "Upload a file to get started."
-							}
-						/>
-					) : (
-						<div
-							style={{
-								display: "grid",
-								gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-								gap: "1rem",
-							}}
-						>
-							{filteredFiles.map((file) => {
-								const ext = file.fileType.toLowerCase();
-								const meta = getFileMeta(ext);
-								const isImg = isImage(ext);
-								return (
-									<Tile
-										key={file.id}
-										onClick={() => handleCardClick(file)}
-										style={{
-											cursor: "pointer",
-											padding: "1.25rem",
-											textAlign: "center",
-											border:
-												selectedFile?.id === file.id
-													? "2px solid var(--cds-focus)"
-													: undefined,
-										}}
-									>
-										{isImg ? (
-											<div
-												style={{
-													width: "64px",
-													height: "64px",
-													margin: "0 auto",
-													background: "var(--cds-layer-02)",
-													borderRadius: "8px",
-													overflow: "hidden",
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-												}}
-											>
-												{file.url ? (
-													<img
-														src={file.url}
-														alt={file.name}
-														style={{
-															width: "100%",
-															height: "100%",
-															objectFit: "cover",
-														}}
-													/>
-												) : (
-													<Image
-														size={28}
-														style={{
-															color: "var(--cds-text-secondary)",
-														}}
-													/>
-												)}
-											</div>
-										) : (
-											<div
-												style={{
-													width: "48px",
-													height: "48px",
-													margin: "0 auto",
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-													background: `${meta.color}18`,
-													borderRadius: "8px",
-												}}
-											>
-												<meta.icon
-													size={28}
-													style={{ color: meta.color }}
-												/>
-											</div>
-										)}
-										<p
-											style={{
-												marginTop: "0.75rem",
-												fontWeight: 500,
-												fontSize: "0.875rem",
-												color: "var(--cds-text-primary)",
-												overflow: "hidden",
-												textOverflow: "ellipsis",
-												whiteSpace: "nowrap",
-											}}
-										>
-											{file.name}
-										</p>
-										<p
-											style={{
-												marginTop: "0.25rem",
-												fontSize: "0.75rem",
-												color: "var(--cds-text-secondary)",
-											}}
-										>
-											{file.sizeLabel}
-										</p>
-									</Tile>
-								);
-							})}
-						</div>
-					)}
+					<Search
+						id="file-search"
+						labelText="Search files"
+						placeholder="Search files by name or type..."
+						size="lg"
+						value={searchQuery}
+						onChange={(e: any) => setSearchQuery(e.target.value)}
+						style={{ flex: 1, minWidth: "200px" }}
+					/>
+					<Select
+						id="file-type-filter"
+						labelText=""
+						hideLabel
+						size="lg"
+						value={typeFilter}
+						onChange={(e: any) => setTypeFilter(e.target.value)}
+						style={{ minWidth: "140px" }}
+					>
+						{typeFilterOptions.map((opt) => (
+							<SelectItem key={opt.value} value={opt.value} text={opt.text} />
+						))}
+					</Select>
 				</div>
 
-				{/* Detail sidebar */}
-				{detailFile ? (
-					<div
-						style={{
-							width: "320px",
-							flexShrink: 0,
-							border: "1px solid var(--cds-border-subtle)",
-							background: "var(--cds-layer)",
-							borderRadius: "4px",
-							position: "sticky",
-							top: "1rem",
-						}}
-					>
+				{/* Main content area */}
+				<div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
+					{/* File grid */}
+					<div style={{ flex: 1 }}>
+						{filteredFiles.length === 0 ? (
+							<EmptyState
+								title="No files found"
+								description={
+									searchQuery || typeFilter !== "all"
+										? "Try adjusting your search or filter."
+										: "Upload a file to get started."
+								}
+							/>
+						) : (
+							<div
+								style={{
+									display: "grid",
+									gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+									gap: "1rem",
+								}}
+							>
+								{filteredFiles.map((file) => {
+									const ext = file.fileType.toLowerCase();
+									const meta = getFileMeta(ext);
+									const isImg = isImage(ext);
+									return (
+										<Tile
+											key={file.id}
+											onClick={() => handleCardClick(file)}
+											style={{
+												cursor: "pointer",
+												padding: "1.25rem",
+												textAlign: "center",
+												border:
+													selectedFile?.id === file.id
+														? "2px solid var(--cds-focus)"
+														: undefined,
+											}}
+										>
+											{isImg ? (
+												<div
+													style={{
+														width: "64px",
+														height: "64px",
+														margin: "0 auto",
+														background: "var(--cds-layer-02)",
+														borderRadius: "8px",
+														overflow: "hidden",
+														display: "flex",
+														alignItems: "center",
+														justifyContent: "center",
+													}}
+												>
+													{file.url ? (
+														<img
+															src={file.url}
+															alt={file.name}
+															style={{
+																width: "100%",
+																height: "100%",
+																objectFit: "cover",
+															}}
+														/>
+													) : (
+														<Image
+															size={28}
+															style={{
+																color: "var(--cds-text-secondary)",
+															}}
+														/>
+													)}
+												</div>
+											) : (
+												<div
+													style={{
+														width: "48px",
+														height: "48px",
+														margin: "0 auto",
+														display: "flex",
+														alignItems: "center",
+														justifyContent: "center",
+														background: `${meta.color}18`,
+														borderRadius: "8px",
+													}}
+												>
+													<meta.icon
+														size={28}
+														style={{ color: meta.color }}
+													/>
+												</div>
+											)}
+											<p
+												style={{
+													marginTop: "0.75rem",
+													fontWeight: 500,
+													fontSize: "0.875rem",
+													color: "var(--cds-text-primary)",
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+													whiteSpace: "nowrap",
+												}}
+											>
+												{file.name}
+											</p>
+											<p
+												style={{
+													marginTop: "0.25rem",
+													fontSize: "0.75rem",
+													color: "var(--cds-text-secondary)",
+												}}
+											>
+												{file.sizeLabel}
+											</p>
+										</Tile>
+									);
+								})}
+							</div>
+						)}
+					</div>
+
+					{/* Detail sidebar */}
+					{detailFile ? (
 						<div
 							style={{
-								padding: "1rem 1.25rem",
-								borderBottom: "1px solid var(--cds-border-subtle)",
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center",
+								width: "320px",
+								flexShrink: 0,
+								border: "1px solid var(--cds-border-subtle)",
+								background: "var(--cds-layer)",
+								borderRadius: "4px",
+								position: "sticky",
+								top: "1rem",
 							}}
 						>
-							<span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-								File Details
-							</span>
-							<Button
-								kind="ghost"
-								size="sm"
-								renderIcon={Close}
-								hasIconOnly
-								iconDescription="Close"
-								onClick={() => setSelectedFile(null)}
-							/>
-						</div>
-						<div style={{ padding: "1.25rem" }}>
-							<Stack gap={5}>
-								{/* Preview area */}
-								<div
-									style={{
-										width: "100%",
-										height: "140px",
-										background: "var(--cds-layer-02)",
-										borderRadius: "4px",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										overflow: "hidden",
-									}}
-								>
-									{isImage(detailFile.fileType) && detailFile.url ? (
-										<img
-											src={detailFile.url}
-											alt={detailFile.name}
-											style={{
-												maxWidth: "100%",
-												maxHeight: "100%",
-												objectFit: "contain",
-											}}
-										/>
-									) : (
-										(() => {
-											const m = getFileMeta(detailFile.fileType);
-											return <m.icon size={48} style={{ color: m.color }} />;
-										})()
-									)}
-								</div>
-
-								{/* File info */}
-								<div>
-									<p
+							<div
+								style={{
+									padding: "1rem 1.25rem",
+									borderBottom: "1px solid var(--cds-border-subtle)",
+									display: "flex",
+									justifyContent: "space-between",
+									alignItems: "center",
+								}}
+							>
+								<span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+									File Details
+								</span>
+								<Button
+									kind="ghost"
+									size="sm"
+									renderIcon={Close}
+									hasIconOnly
+									iconDescription="Close"
+									onClick={() => setSelectedFile(null)}
+								/>
+							</div>
+							<div style={{ padding: "1.25rem" }}>
+								<Stack gap={5}>
+									{/* Preview area */}
+									<div
 										style={{
-											fontWeight: 600,
-											fontSize: "1rem",
-											color: "var(--cds-text-primary)",
-											wordBreak: "break-word",
+											width: "100%",
+											height: "140px",
+											background: "var(--cds-layer-02)",
+											borderRadius: "4px",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											overflow: "hidden",
 										}}
 									>
-										{detailFile.name}
-									</p>
-								</div>
+										{isImage(detailFile.fileType) && detailFile.url ? (
+											<img
+												src={detailFile.url}
+												alt={detailFile.name}
+												style={{
+													maxWidth: "100%",
+													maxHeight: "100%",
+													objectFit: "contain",
+												}}
+											/>
+										) : (
+											(() => {
+												const m = getFileMeta(detailFile.fileType);
+												return (
+													<m.icon size={48} style={{ color: m.color }} />
+												);
+											})()
+										)}
+									</div>
 
-								<div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-									<Tag type="outline">{detailFile.fileType.toUpperCase()}</Tag>
-									<Tag type="cool-gray">{detailFile.sizeLabel}</Tag>
-								</div>
-
-								<div
-									style={{
-										display: "grid",
-										gridTemplateColumns: "1fr 1fr",
-										gap: "0.75rem",
-									}}
-								>
+									{/* File info */}
 									<div>
 										<p
 											style={{
-												fontSize: "0.75rem",
-												color: "var(--cds-text-secondary)",
-												marginBottom: "0.125rem",
+												fontWeight: 600,
+												fontSize: "1rem",
+												color: "var(--cds-text-primary)",
+												wordBreak: "break-word",
 											}}
 										>
-											Uploaded by
-										</p>
-										<p style={{ fontSize: "0.875rem", fontWeight: 500 }}>
-											{detailFile.uploadedBy || detailFile.ownerName || "—"}
+											{detailFile.name}
 										</p>
 									</div>
-									<div>
-										<p
-											style={{
-												fontSize: "0.75rem",
-												color: "var(--cds-text-secondary)",
-												marginBottom: "0.125rem",
-											}}
-										>
-											Date
-										</p>
-										<p style={{ fontSize: "0.875rem", fontWeight: 500 }}>
-											{formatDateTime(
-												detailFile.uploadedAt || detailFile.updatedAt,
-											)}
-										</p>
-									</div>
-								</div>
 
-								{/* Actions */}
-								<Stack gap={3}>
-									<Button
-										kind="primary"
-										renderIcon={Download}
-										onClick={() => {
-											window.open(
-												workspaceApi.getFileDownloadUrl(detailFile.id),
-												"_blank",
-											);
+									<div
+										style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
+									>
+										<Tag type="outline">
+											{detailFile.fileType.toUpperCase()}
+										</Tag>
+										<Tag type="cool-gray">{detailFile.sizeLabel}</Tag>
+									</div>
+
+									<div
+										style={{
+											display: "grid",
+											gridTemplateColumns: "1fr 1fr",
+											gap: "0.75rem",
 										}}
 									>
-										Download
-									</Button>
-									<Button
-										kind="danger--ghost"
-										renderIcon={TrashCan}
-										onClick={() => setDeleteTarget(detailFile)}
-									>
-										Delete
-									</Button>
+										<div>
+											<p
+												style={{
+													fontSize: "0.75rem",
+													color: "var(--cds-text-secondary)",
+													marginBottom: "0.125rem",
+												}}
+											>
+												Uploaded by
+											</p>
+											<p style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+												{detailFile.uploadedBy ||
+													detailFile.ownerName ||
+													"—"}
+											</p>
+										</div>
+										<div>
+											<p
+												style={{
+													fontSize: "0.75rem",
+													color: "var(--cds-text-secondary)",
+													marginBottom: "0.125rem",
+												}}
+											>
+												Date
+											</p>
+											<p style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+												{formatDateTime(
+													detailFile.uploadedAt || detailFile.updatedAt,
+												)}
+											</p>
+										</div>
+									</div>
+
+									{/* Actions */}
+									<Stack gap={3}>
+										<Button
+											kind="primary"
+											renderIcon={Download}
+											onClick={() => {
+												window.open(
+													workspaceApi.getFileDownloadUrl(detailFile.id),
+													"_blank",
+												);
+											}}
+										>
+											Download
+										</Button>
+										<Button
+											kind="danger--ghost"
+											renderIcon={TrashCan}
+											onClick={() => setDeleteTarget(detailFile)}
+										>
+											Delete
+										</Button>
+									</Stack>
 								</Stack>
-							</Stack>
+							</div>
 						</div>
-					</div>
-				) : null}
-			</div>
+					) : null}
+				</div>
 
-			{/* Upload Modal */}
+				{/* Upload Modal */}
+			</PageLayout>
 			{isUploadOpen && (
 				<Modal
 					title="Upload Files"

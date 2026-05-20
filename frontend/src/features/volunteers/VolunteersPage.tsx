@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { SimpleBarChart } from "@carbon/charts-react";
 import "@carbon/charts/styles.css";
@@ -286,7 +286,7 @@ export function VolunteersPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader
+			<PageLayout
 				title="Volunteers"
 				description="Manage volunteer slots, sign-ups, and hours."
 				actions={
@@ -294,280 +294,292 @@ export function VolunteersPage() {
 						Add Slot
 					</Button>
 				}
-			/>
-
-			<Grid style={{ marginBottom: "1.5rem" }}>
-				<Column lg={4} md={4} sm={4}>
-					<Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-						<div
-							style={{
-								position: "absolute",
-								top: "0.75rem",
-								right: "0.75rem",
-								opacity: 0.12,
-							}}
+			>
+				<Grid style={{ marginBottom: "1.5rem" }}>
+					<Column lg={4} md={4} sm={4}>
+						<Tile
+							style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}
 						>
-							<Time size={48} />
-						</div>
-						<p
-							style={{
-								fontSize: "0.75rem",
-								fontWeight: 600,
-								textTransform: "uppercase",
-								letterSpacing: "0.025em",
-								color: "var(--cds-text-secondary)",
-							}}
-						>
-							Total Hours This Month
-						</p>
-						<p
-							style={{
-								marginTop: "0.5rem",
-								fontSize: "1.875rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-							}}
-						>
-							{stats?.totalHoursThisMonth ?? totalHours}
-							<span
+							<div
 								style={{
-									fontSize: "0.875rem",
-									fontWeight: 400,
-									color: "var(--cds-text-secondary)",
-									marginLeft: "0.5rem",
+									position: "absolute",
+									top: "0.75rem",
+									right: "0.75rem",
+									opacity: 0.12,
 								}}
 							>
-								hrs
-							</span>
-						</p>
-					</Tile>
-				</Column>
-				<Column lg={4} md={4} sm={4}>
-					<Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-						<div
-							style={{
-								position: "absolute",
-								top: "0.75rem",
-								right: "0.75rem",
-								opacity: 0.12,
-							}}
-						>
-							<UserAvatar size={48} />
-						</div>
-						<p
-							style={{
-								fontSize: "0.75rem",
-								fontWeight: 600,
-								textTransform: "uppercase",
-								letterSpacing: "0.025em",
-								color: "var(--cds-text-secondary)",
-							}}
-						>
-							Active Volunteers
-						</p>
-						<p
-							style={{
-								marginTop: "0.5rem",
-								fontSize: "1.875rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-							}}
-						>
-							{stats?.activeVolunteers ?? totalFilled}
-						</p>
-					</Tile>
-				</Column>
-				<Column lg={4} md={4} sm={4}>
-					<Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-						<div
-							style={{
-								position: "absolute",
-								top: "0.75rem",
-								right: "0.75rem",
-								opacity: 0.12,
-							}}
-						>
-							<StarFilled size={48} />
-						</div>
-						<p
-							style={{
-								fontSize: "0.75rem",
-								fontWeight: 600,
-								textTransform: "uppercase",
-								letterSpacing: "0.025em",
-								color: "var(--cds-text-secondary)",
-							}}
-						>
-							Top Contributor
-						</p>
-						<p
-							style={{
-								marginTop: "0.5rem",
-								fontSize: "1.875rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-							}}
-						>
-							{stats?.topContributor?.name ?? "—"}
-						</p>
-						{stats?.topContributor ? (
+								<Time size={48} />
+							</div>
 							<p
 								style={{
 									fontSize: "0.75rem",
+									fontWeight: 600,
+									textTransform: "uppercase",
+									letterSpacing: "0.025em",
 									color: "var(--cds-text-secondary)",
-									marginTop: "0.25rem",
 								}}
 							>
-								{stats.topContributor.hours} hours contributed
+								Total Hours This Month
 							</p>
-						) : null}
-					</Tile>
-				</Column>
-			</Grid>
+							<p
+								style={{
+									marginTop: "0.5rem",
+									fontSize: "1.875rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								{stats?.totalHoursThisMonth ?? totalHours}
+								<span
+									style={{
+										fontSize: "0.875rem",
+										fontWeight: 400,
+										color: "var(--cds-text-secondary)",
+										marginLeft: "0.5rem",
+									}}
+								>
+									hrs
+								</span>
+							</p>
+						</Tile>
+					</Column>
+					<Column lg={4} md={4} sm={4}>
+						<Tile
+							style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}
+						>
+							<div
+								style={{
+									position: "absolute",
+									top: "0.75rem",
+									right: "0.75rem",
+									opacity: 0.12,
+								}}
+							>
+								<UserAvatar size={48} />
+							</div>
+							<p
+								style={{
+									fontSize: "0.75rem",
+									fontWeight: 600,
+									textTransform: "uppercase",
+									letterSpacing: "0.025em",
+									color: "var(--cds-text-secondary)",
+								}}
+							>
+								Active Volunteers
+							</p>
+							<p
+								style={{
+									marginTop: "0.5rem",
+									fontSize: "1.875rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								{stats?.activeVolunteers ?? totalFilled}
+							</p>
+						</Tile>
+					</Column>
+					<Column lg={4} md={4} sm={4}>
+						<Tile
+							style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}
+						>
+							<div
+								style={{
+									position: "absolute",
+									top: "0.75rem",
+									right: "0.75rem",
+									opacity: 0.12,
+								}}
+							>
+								<StarFilled size={48} />
+							</div>
+							<p
+								style={{
+									fontSize: "0.75rem",
+									fontWeight: 600,
+									textTransform: "uppercase",
+									letterSpacing: "0.025em",
+									color: "var(--cds-text-secondary)",
+								}}
+							>
+								Top Contributor
+							</p>
+							<p
+								style={{
+									marginTop: "0.5rem",
+									fontSize: "1.875rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								{stats?.topContributor?.name ?? "—"}
+							</p>
+							{stats?.topContributor ? (
+								<p
+									style={{
+										fontSize: "0.75rem",
+										color: "var(--cds-text-secondary)",
+										marginTop: "0.25rem",
+									}}
+								>
+									{stats.topContributor.hours} hours contributed
+								</p>
+							) : null}
+						</Tile>
+					</Column>
+				</Grid>
 
-			<Grid>
-				<Column lg={12} md={8} sm={4}>
-					{upcomingSlots.length > 0 ? (
-						<div style={{ marginBottom: "1.5rem" }}>
+				<Grid>
+					<Column lg={12} md={8} sm={4}>
+						{upcomingSlots.length > 0 ? (
+							<div style={{ marginBottom: "1.5rem" }}>
+								<h2
+									style={{
+										fontSize: "1rem",
+										fontWeight: 600,
+										color: "var(--cds-text-primary)",
+										marginBottom: "0.75rem",
+										display: "flex",
+										alignItems: "center",
+										gap: "0.5rem",
+									}}
+								>
+									<Calendar size={20} />
+									Upcoming Slots
+								</h2>
+								<div
+									style={{
+										display: "grid",
+										gridTemplateColumns:
+											"repeat(auto-fill, minmax(240px, 1fr))",
+										gap: "0.75rem",
+									}}
+								>
+									{upcomingSlots.map((slot) => {
+										const pct =
+											slot.capacity > 0
+												? Math.round((slot.filled / slot.capacity) * 100)
+												: 0;
+										return (
+											<Tile key={slot.id} style={{ padding: "1.25rem" }}>
+												<div
+													style={{
+														display: "flex",
+														justifyContent: "space-between",
+														alignItems: "flex-start",
+														marginBottom: "0.75rem",
+													}}
+												>
+													<div>
+														<p
+															style={{
+																fontWeight: 600,
+																color: "var(--cds-text-primary)",
+																fontSize: "0.875rem",
+															}}
+														>
+															{slot.title}
+														</p>
+														<p
+															style={{
+																fontSize: "0.75rem",
+																color: "var(--cds-text-secondary)",
+																marginTop: "0.125rem",
+															}}
+														>
+															{slot.eventName}
+														</p>
+													</div>
+													<Tag
+														type={
+															pct >= 100
+																? "red"
+																: pct >= 75
+																	? "warm-gray"
+																	: "green"
+														}
+													>
+														{slot.filled}/{slot.capacity}
+													</Tag>
+												</div>
+												<ProgressBar
+													value={slot.filled}
+													max={slot.capacity || 1}
+													label="Capacity"
+													hideLabel
+													size="small"
+												/>
+												<div
+													style={{
+														display: "flex",
+														justifyContent: "space-between",
+														marginTop: "0.5rem",
+														fontSize: "0.75rem",
+														color: "var(--cds-text-secondary)",
+													}}
+												>
+													<span>{formatDate(slot.startsAt)}</span>
+													<span>{slot.hours}h each</span>
+												</div>
+											</Tile>
+										);
+									})}
+								</div>
+							</div>
+						) : null}
+
+						<DataTable
+							columns={columns}
+							data={data as unknown as Record<string, unknown>[]}
+							defaultSort={{ key: "startsAt", direction: "asc" }}
+							pageSize={10}
+						/>
+					</Column>
+
+					<Column lg={4} md={8} sm={4}>
+						<Tile style={{ padding: "1.25rem" }}>
 							<h2
 								style={{
 									fontSize: "1rem",
 									fontWeight: 600,
 									color: "var(--cds-text-primary)",
-									marginBottom: "0.75rem",
-									display: "flex",
-									alignItems: "center",
-									gap: "0.5rem",
+									marginBottom: "1rem",
 								}}
 							>
-								<Calendar size={20} />
-								Upcoming Slots
+								Hours by Activity
 							</h2>
-							<div
-								style={{
-									display: "grid",
-									gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-									gap: "0.75rem",
-								}}
-							>
-								{upcomingSlots.map((slot) => {
-									const pct =
-										slot.capacity > 0
-											? Math.round((slot.filled / slot.capacity) * 100)
-											: 0;
-									return (
-										<Tile key={slot.id} style={{ padding: "1.25rem" }}>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													alignItems: "flex-start",
-													marginBottom: "0.75rem",
-												}}
-											>
-												<div>
-													<p
-														style={{
-															fontWeight: 600,
-															color: "var(--cds-text-primary)",
-															fontSize: "0.875rem",
-														}}
-													>
-														{slot.title}
-													</p>
-													<p
-														style={{
-															fontSize: "0.75rem",
-															color: "var(--cds-text-secondary)",
-															marginTop: "0.125rem",
-														}}
-													>
-														{slot.eventName}
-													</p>
-												</div>
-												<Tag
-													type={
-														pct >= 100
-															? "red"
-															: pct >= 75
-																? "warm-gray"
-																: "green"
-													}
-												>
-													{slot.filled}/{slot.capacity}
-												</Tag>
-											</div>
-											<ProgressBar
-												value={slot.filled}
-												max={slot.capacity || 1}
-												label="Capacity"
-												hideLabel
-												size="small"
-											/>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													marginTop: "0.5rem",
-													fontSize: "0.75rem",
-													color: "var(--cds-text-secondary)",
-												}}
-											>
-												<span>{formatDate(slot.startsAt)}</span>
-												<span>{slot.hours}h each</span>
-											</div>
-										</Tile>
-									);
-								})}
-							</div>
-						</div>
-					) : null}
-
-					<DataTable
-						columns={columns}
-						data={data as unknown as Record<string, unknown>[]}
-						defaultSort={{ key: "startsAt", direction: "asc" }}
-						pageSize={10}
-					/>
-				</Column>
-
-				<Column lg={4} md={8} sm={4}>
-					<Tile style={{ padding: "1.25rem" }}>
-						<h2
-							style={{
-								fontSize: "1rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-								marginBottom: "1rem",
-							}}
-						>
-							Hours by Activity
-						</h2>
-						{hoursByMember.length === 0 ? (
-							<p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-								No hours recorded yet.
-							</p>
-						) : (
-							<SimpleBarChart
-								data={hoursByMember.map((m) => ({
-									group: "Hours",
-									key: m.name,
-									value: m.hours,
-								}))}
-								options={{
-									axes: {
-										bottom: { mapsTo: "key", visible: false },
-										left: { mapsTo: "value", visible: false },
-									},
-									toolbar: { enabled: false },
-									height: "200px",
-									legend: { enabled: false },
-								}}
-							/>
-						)}
-					</Tile>
-				</Column>
-			</Grid>
+							{hoursByMember.length === 0 ? (
+								<p
+									style={{
+										fontSize: "0.875rem",
+										color: "var(--cds-text-secondary)",
+									}}
+								>
+									No hours recorded yet.
+								</p>
+							) : (
+								<SimpleBarChart
+									data={hoursByMember.map((m) => ({
+										group: "Hours",
+										key: m.name,
+										value: m.hours,
+									}))}
+									options={{
+										axes: {
+											bottom: { mapsTo: "key", visible: false },
+											left: { mapsTo: "value", visible: false },
+										},
+										toolbar: { enabled: false },
+										height: "200px",
+										legend: { enabled: false },
+									}}
+								/>
+							)}
+						</Tile>
+					</Column>
+				</Grid>
+			</PageLayout>
 
 			<Modal
 				title={editingSlot ? "Edit Slot" : "Add Volunteer Slot"}

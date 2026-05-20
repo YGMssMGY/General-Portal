@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
 import { useUIStore } from "../../stores/useUIStore";
@@ -1097,93 +1097,97 @@ export function TasksPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader
+			<PageLayout
 				title="Tasks"
 				description="Assign work, track progress, and keep every responsibility visible."
 				actions={
 					<Stack gap={3} orientation="horizontal">
 						<ViewToggle value={viewMode} onChange={setViewMode} />
+						<Button type="button" size="sm" renderIcon={Add} onClick={openCreateModal}>
+							Add Task
+						</Button>
 					</Stack>
 				}
-			/>
-
-			{/* DataToolbar */}
-			<DataToolbar
-				searchQuery={searchQuery}
-				onSearchChange={setSearchQuery}
-				statusFilter={statusFilter}
-				onStatusFilterChange={setStatusFilter}
-				onAddTask={openCreateModal}
-			/>
-
-			{/* Completion Trend */}
-			{activityStats?.taskCompletionTrend && activityStats.taskCompletionTrend.length > 0 ? (
-				<Tile style={{ padding: "1rem", marginBottom: "1rem" }}>
-					<SimpleBarChart
-						data={activityStats.taskCompletionTrend.map((d) => {
-							const date = new Date(d.date);
-							const label = date.toLocaleDateString("en-US", {
-								weekday: "short",
-								month: "short",
-								day: "numeric",
-							});
-							return { group: "Completed", key: label, value: d.count };
-						})}
-						options={{
-							title: "Completion Trend (7 days)",
-							axes: {
-								bottom: { mapsTo: "key", visible: false },
-								left: { mapsTo: "value", visible: false },
-							},
-							toolbar: { enabled: false },
-							height: "80px",
-							legend: { enabled: false },
-						}}
-					/>
-				</Tile>
-			) : null}
-
-			{/* Board view */}
-			{viewMode === "board" ? (
-				<DndContext
-					sensors={sensors}
-					onDragStart={handleDragStart}
-					onDragEnd={handleDragEnd}
-				>
-					<div
-						style={{
-							display: "flex",
-							gap: "1.5rem",
-							overflowX: "auto",
-							paddingBottom: "1rem",
-							flex: 1,
-							height: "calc(100vh - 18rem)",
-						}}
-					>
-						{statusOrder.map((status) => (
-							<KanbanColumn
-								key={status}
-								status={status}
-								tasks={groupedTasks[status]}
-								onCardClick={(task) => setDrawerTask(task)}
-								onAddTask={status === "todo" ? openCreateModal : undefined}
-							/>
-						))}
-					</div>
-					<DragOverlay>
-						<DraggedCardOverlay task={activeDragTask} />
-					</DragOverlay>
-				</DndContext>
-			) : (
-				/* List view */
-				<DataTable
-					columns={columns}
-					data={filteredTasks as unknown as Record<string, unknown>[]}
-					selectable
-					defaultSort={{ key: "dueDate", direction: "asc" }}
-					pageSize={10}
+			>
+				{/* DataToolbar */}
+				<DataToolbar
+					searchQuery={searchQuery}
+					onSearchChange={setSearchQuery}
+					statusFilter={statusFilter}
+					onStatusFilterChange={setStatusFilter}
+					onAddTask={openCreateModal}
 				/>
-			)}
+
+				{/* Completion Trend */}
+				{activityStats?.taskCompletionTrend &&
+				activityStats.taskCompletionTrend.length > 0 ? (
+					<Tile style={{ padding: "1rem", marginBottom: "1rem" }}>
+						<SimpleBarChart
+							data={activityStats.taskCompletionTrend.map((d) => {
+								const date = new Date(d.date);
+								const label = date.toLocaleDateString("en-US", {
+									weekday: "short",
+									month: "short",
+									day: "numeric",
+								});
+								return { group: "Completed", key: label, value: d.count };
+							})}
+							options={{
+								title: "Completion Trend (7 days)",
+								axes: {
+									bottom: { mapsTo: "key", visible: false },
+									left: { mapsTo: "value", visible: false },
+								},
+								toolbar: { enabled: false },
+								height: "80px",
+								legend: { enabled: false },
+							}}
+						/>
+					</Tile>
+				) : null}
+
+				{/* Board view */}
+				{viewMode === "board" ? (
+					<DndContext
+						sensors={sensors}
+						onDragStart={handleDragStart}
+						onDragEnd={handleDragEnd}
+					>
+						<div
+							style={{
+								display: "flex",
+								gap: "1.5rem",
+								overflowX: "auto",
+								paddingBottom: "1rem",
+								flex: 1,
+								height: "calc(100vh - 18rem)",
+							}}
+						>
+							{statusOrder.map((status) => (
+								<KanbanColumn
+									key={status}
+									status={status}
+									tasks={groupedTasks[status]}
+									onCardClick={(task) => setDrawerTask(task)}
+									onAddTask={status === "todo" ? openCreateModal : undefined}
+								/>
+							))}
+						</div>
+						<DragOverlay>
+							<DraggedCardOverlay task={activeDragTask} />
+						</DragOverlay>
+					</DndContext>
+				) : (
+					/* List view */
+					<DataTable
+						columns={columns}
+						data={filteredTasks as unknown as Record<string, unknown>[]}
+						selectable
+						defaultSort={{ key: "dueDate", direction: "asc" }}
+						pageSize={10}
+					/>
+				)}
+			</PageLayout>
 
 			{/* Detail slide-over drawer */}
 			{drawerTask ? (

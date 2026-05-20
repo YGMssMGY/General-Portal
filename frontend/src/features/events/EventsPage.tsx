@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
 import { useUIStore } from "../../stores/useUIStore";
@@ -254,7 +254,7 @@ export function EventsPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader
+			<PageLayout
 				title="Events"
 				description="Plan and track events, assign volunteers, and manage budgets."
 				actions={
@@ -262,331 +262,266 @@ export function EventsPage() {
 						Add Event
 					</Button>
 				}
-			/>
-
-			{upcoming.length > 0 ? (
-				<Grid style={{ marginBottom: "1.5rem" }}>
-					{upcoming.map((event) => (
-						<Column lg={8} md={8} sm={4} key={event.id}>
-							<Tile style={{ padding: "1.5rem" }}>
-								<Stack gap={5}>
-									<Stack
-										orientation="horizontal"
-										gap={5}
-										style={{
-											justifyContent: "space-between",
-											alignItems: "flex-start",
-										}}
-									>
-										<div>
-											<Tag
-												type={
-													(statusTagColors[event.status] || "gray") as
-														| "green"
-														| "blue"
-														| "gray"
-												}
-											>
-												{event.status.charAt(0).toUpperCase() +
-													event.status.slice(1)}
-											</Tag>
-											<h3
-												style={{
-													marginTop: "0.5rem",
-													fontSize: "1rem",
-													fontWeight: 600,
-													color: "var(--cds-text-primary)",
-												}}
-											>
-												{event.title}
-											</h3>
-											<p
-												style={{
-													fontSize: "0.875rem",
-													color: "var(--cds-text-secondary)",
-													marginTop: "0.25rem",
-												}}
-											>
-												{formatDate(event.startsAt)}
-											</p>
-										</div>
-										<Calendar
-											size={20}
+			>
+				{upcoming.length > 0 ? (
+					<Grid style={{ marginBottom: "1rem" }}>
+						{upcoming.map((event) => (
+							<Column lg={8} md={8} sm={4} key={event.id}>
+								<Tile style={{ padding: "1.5rem" }}>
+									<Stack gap={5}>
+										<Stack
+											orientation="horizontal"
+											gap={5}
 											style={{
-												color: "var(--cds-text-secondary)",
-												flexShrink: 0,
-											}}
-											aria-hidden="true"
-										/>
-									</Stack>
-
-									<div>
-										<div
-											style={{
-												display: "flex",
 												justifyContent: "space-between",
-												marginBottom: "0.25rem",
-												fontSize: "0.75rem",
+												alignItems: "flex-start",
 											}}
 										>
-											<span style={{ color: "var(--cds-text-secondary)" }}>
-												Progress
-											</span>
-											<span
-												style={{
-													fontWeight: 500,
-													color: "var(--cds-text-primary)",
-												}}
-											>
-												{event.progress}%
-											</span>
-										</div>
-										<div
-											style={{
-												height: "0.5rem",
-												borderRadius: "4px",
-												background: "var(--cds-layer-active)",
-												overflow: "hidden",
-											}}
-										>
-											<div
-												style={{
-													width: `${event.progress}%`,
-													height: "100%",
-													borderRadius: "4px",
-													background: "var(--cds-support-success)",
-													transition: "width 0.3s ease",
-												}}
-											/>
-										</div>
-									</div>
-
-									<Stack
-										orientation="horizontal"
-										gap={5}
-										style={{ justifyContent: "space-between" }}
-									>
-										<div style={{ fontSize: "0.875rem" }}>
-											<p style={{ color: "var(--cds-text-secondary)" }}>
-												Budget
-											</p>
-											<p
-												style={{
-													fontWeight: 500,
-													color: "var(--cds-text-primary)",
-												}}
-											>
-												{formatCurrency(event.budgetUsed ?? 0)} /{" "}
-												{formatCurrency(event.budgetTotal ?? 0)}
-											</p>
-										</div>
-										{event.owners?.length > 0 ? (
-											<Stack
-												orientation="horizontal"
-												gap={3}
-												style={{ alignItems: "center" }}
-											>
-												<User
-													size={16}
-													style={{ color: "var(--cds-text-secondary)" }}
-													aria-hidden="true"
-												/>
-												<span
+											<div>
+												<Tag
+													type={
+														(statusTagColors[event.status] ||
+															"gray") as "green" | "blue" | "gray"
+													}
+												>
+													{event.status.charAt(0).toUpperCase() +
+														event.status.slice(1)}
+												</Tag>
+												<h3
+													style={{
+														marginTop: "0.5rem",
+														fontSize: "1rem",
+														fontWeight: 600,
+														color: "var(--cds-text-primary)",
+													}}
+												>
+													{event.title}
+												</h3>
+												<p
 													style={{
 														fontSize: "0.875rem",
 														color: "var(--cds-text-secondary)",
+														marginTop: "0.25rem",
 													}}
 												>
-													{event.owners[0].ownerLabel}
+													{formatDate(event.startsAt)}
+												</p>
+											</div>
+											<Calendar
+												size={20}
+												style={{
+													color: "var(--cds-text-secondary)",
+													flexShrink: 0,
+												}}
+												aria-hidden="true"
+											/>
+										</Stack>
+
+										<div>
+											<div
+												style={{
+													display: "flex",
+													justifyContent: "space-between",
+													marginBottom: "0.25rem",
+													fontSize: "0.75rem",
+												}}
+											>
+												<span
+													style={{ color: "var(--cds-text-secondary)" }}
+												>
+													Progress
 												</span>
-											</Stack>
-										) : null}
+												<span
+													style={{
+														fontWeight: 500,
+														color: "var(--cds-text-primary)",
+													}}
+												>
+													{event.progress}%
+												</span>
+											</div>
+											<div
+												style={{
+													height: "0.5rem",
+													borderRadius: "4px",
+													background: "var(--cds-layer-active)",
+													overflow: "hidden",
+												}}
+											>
+												<div
+													style={{
+														width: `${event.progress}%`,
+														height: "100%",
+														borderRadius: "4px",
+														background: "var(--cds-support-success)",
+														transition: "width 0.3s ease",
+													}}
+												/>
+											</div>
+										</div>
+
+										<Stack
+											orientation="horizontal"
+											gap={5}
+											style={{ justifyContent: "space-between" }}
+										>
+											<div style={{ fontSize: "0.875rem" }}>
+												<p style={{ color: "var(--cds-text-secondary)" }}>
+													Budget
+												</p>
+												<p
+													style={{
+														fontWeight: 500,
+														color: "var(--cds-text-primary)",
+													}}
+												>
+													{formatCurrency(event.budgetUsed ?? 0)} /{" "}
+													{formatCurrency(event.budgetTotal ?? 0)}
+												</p>
+											</div>
+											{event.owners?.length > 0 ? (
+												<Stack
+													orientation="horizontal"
+													gap={3}
+													style={{ alignItems: "center" }}
+												>
+													<User
+														size={16}
+														style={{
+															color: "var(--cds-text-secondary)",
+														}}
+														aria-hidden="true"
+													/>
+													<span
+														style={{
+															fontSize: "0.875rem",
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														{event.owners[0].ownerLabel}
+													</span>
+												</Stack>
+											) : null}
+										</Stack>
 									</Stack>
-								</Stack>
-							</Tile>
-						</Column>
-					))}
-				</Grid>
-			) : null}
+								</Tile>
+							</Column>
+						))}
+					</Grid>
+				) : null}
 
-			<DataTable
-				columns={columns}
-				data={data as unknown as Record<string, unknown>[]}
-				defaultSort={{ key: "startsAt", direction: "asc" }}
-				pageSize={10}
-				onRowClick={(item) => {
-					setSelectedEventId((prev) => (prev === item.id ? undefined : item.id));
-				}}
-			/>
-
-			{/* Detail Drawer */}
-			{selectedEvent ? (
-				<div
-					style={{
-						position: "fixed",
-						inset: 0,
-						zIndex: 9000,
-						display: "flex",
-						justifyContent: "flex-end",
+				<DataTable
+					columns={columns}
+					data={data as unknown as Record<string, unknown>[]}
+					defaultSort={{ key: "startsAt", direction: "asc" }}
+					pageSize={10}
+					onRowClick={(item) => {
+						setSelectedEventId((prev) => (prev === item.id ? undefined : item.id));
 					}}
-				>
+				/>
+
+				{/* Detail Drawer */}
+				{selectedEvent ? (
 					<div
 						style={{
-							position: "absolute",
+							position: "fixed",
 							inset: 0,
-							background: "rgba(0,0,0,0.3)",
-						}}
-						onClick={() => setSelectedEventId(undefined)}
-					/>
-					<Tile
-						style={{
-							position: "relative",
-							width: "480px",
-							maxWidth: "100vw",
-							height: "100vh",
-							overflowY: "auto",
-							padding: "1.5rem",
-							borderRadius: 0,
-							boxShadow: "-4px 0 12px rgba(0,0,0,0.1)",
+							zIndex: 9000,
+							display: "flex",
+							justifyContent: "flex-end",
 						}}
 					>
-						<Stack gap={6}>
-							<Stack
-								orientation="horizontal"
-								gap={5}
-								style={{
-									justifyContent: "space-between",
-									alignItems: "flex-start",
-								}}
-							>
-								<Tag
-									type={
-										(statusTagColors[selectedEvent.status] || "gray") as
-											| "green"
-											| "blue"
-											| "gray"
+						<div
+							style={{
+								position: "absolute",
+								inset: 0,
+								background: "rgba(0,0,0,0.3)",
+							}}
+							onClick={() => setSelectedEventId(undefined)}
+						/>
+						<Tile
+							style={{
+								position: "relative",
+								width: "480px",
+								maxWidth: "100vw",
+								height: "100vh",
+								overflowY: "auto",
+								padding: "1.5rem",
+								borderRadius: 0,
+								boxShadow: "-4px 0 12px rgba(0,0,0,0.1)",
+							}}
+						>
+							<Stack gap={4}>
+								<Stack
+									orientation="horizontal"
+									gap={4}
+									style={{
+										justifyContent: "space-between",
+										alignItems: "flex-start",
+									}}
+								>
+									<Tag
+										type={
+											(statusTagColors[selectedEvent.status] || "gray") as
+												| "green"
+												| "blue"
+												| "gray"
+										}
+									>
+										{selectedEvent.status.charAt(0).toUpperCase() +
+											selectedEvent.status.slice(1)}
+									</Tag>
+									<Button
+										kind="ghost"
+										type="button"
+										size="sm"
+										renderIcon={Close}
+										iconDescription="Close"
+										hasIconOnly
+										onClick={() => setSelectedEventId(undefined)}
+									/>
+								</Stack>
+
+								<div>
+									<h2
+										style={{
+											fontSize: "1.25rem",
+											fontWeight: 600,
+											color: "var(--cds-text-primary)",
+										}}
+									>
+										{selectedEvent.title}
+									</h2>
+									<p
+										style={{
+											fontSize: "0.875rem",
+											color: "var(--cds-text-secondary)",
+											marginTop: "0.25rem",
+										}}
+									>
+										{formatDate(selectedEvent.startsAt)}
+									</p>
+								</div>
+
+								<Tabs
+									selectedIndex={selectedTab}
+									onChange={(state: { selectedIndex: number }) =>
+										setSelectedTab(state.selectedIndex)
 									}
 								>
-									{selectedEvent.status.charAt(0).toUpperCase() +
-										selectedEvent.status.slice(1)}
-								</Tag>
-								<Button
-									kind="ghost"
-									type="button"
-									size="sm"
-									renderIcon={Close}
-									iconDescription="Close"
-									hasIconOnly
-									onClick={() => setSelectedEventId(undefined)}
-								/>
-							</Stack>
-
-							<div>
-								<h2
-									style={{
-										fontSize: "1.25rem",
-										fontWeight: 600,
-										color: "var(--cds-text-primary)",
-									}}
-								>
-									{selectedEvent.title}
-								</h2>
-								<p
-									style={{
-										fontSize: "0.875rem",
-										color: "var(--cds-text-secondary)",
-										marginTop: "0.25rem",
-									}}
-								>
-									{formatDate(selectedEvent.startsAt)}
-								</p>
-							</div>
-
-							<Tabs
-								selectedIndex={selectedTab}
-								onChange={(state: { selectedIndex: number }) =>
-									setSelectedTab(state.selectedIndex)
-								}
-							>
-								<TabList aria-label="Event details">
-									<Tab>Overview</Tab>
-									<Tab>Volunteers</Tab>
-									<Tab>Budget</Tab>
-								</TabList>
-								<TabPanels>
-									<TabPanel>
-										<Stack gap={5} style={{ paddingTop: "1rem" }}>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													fontSize: "0.875rem",
-												}}
-											>
-												<span
-													style={{ color: "var(--cds-text-secondary)" }}
-												>
-													Status
-												</span>
-												<span
-													style={{
-														fontWeight: 500,
-														color: "var(--cds-text-primary)",
-													}}
-												>
-													{selectedEvent.status.charAt(0).toUpperCase() +
-														selectedEvent.status.slice(1)}
-												</span>
-											</div>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													fontSize: "0.875rem",
-												}}
-											>
-												<span
-													style={{ color: "var(--cds-text-secondary)" }}
-												>
-													Date
-												</span>
-												<span
-													style={{
-														fontWeight: 500,
-														color: "var(--cds-text-primary)",
-													}}
-												>
-													{formatDate(selectedEvent.startsAt)}
-												</span>
-											</div>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													fontSize: "0.875rem",
-												}}
-											>
-												<span
-													style={{ color: "var(--cds-text-secondary)" }}
-												>
-													Budget
-												</span>
-												<span
-													style={{
-														fontWeight: 500,
-														color: "var(--cds-text-primary)",
-													}}
-												>
-													{formatCurrency(selectedEvent.budgetTotal ?? 0)}
-												</span>
-											</div>
-											<div>
+									<TabList aria-label="Event details">
+										<Tab>Overview</Tab>
+										<Tab>Volunteers</Tab>
+										<Tab>Budget</Tab>
+									</TabList>
+									<TabPanels>
+										<TabPanel>
+											<Stack gap={5} style={{ paddingTop: "1rem" }}>
 												<div
 													style={{
 														display: "flex",
 														justifyContent: "space-between",
-														marginBottom: "0.25rem",
-														fontSize: "0.75rem",
+														fontSize: "0.875rem",
 													}}
 												>
 													<span
@@ -594,7 +529,7 @@ export function EventsPage() {
 															color: "var(--cds-text-secondary)",
 														}}
 													>
-														Progress
+														Status
 													</span>
 													<span
 														style={{
@@ -602,155 +537,242 @@ export function EventsPage() {
 															color: "var(--cds-text-primary)",
 														}}
 													>
-														{selectedEvent.progress}%
+														{selectedEvent.status
+															.charAt(0)
+															.toUpperCase() +
+															selectedEvent.status.slice(1)}
 													</span>
 												</div>
 												<div
 													style={{
-														height: "0.5rem",
-														borderRadius: "4px",
-														background: "var(--cds-layer-active)",
-														overflow: "hidden",
+														display: "flex",
+														justifyContent: "space-between",
+														fontSize: "0.875rem",
 													}}
 												>
+													<span
+														style={{
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														Date
+													</span>
+													<span
+														style={{
+															fontWeight: 500,
+															color: "var(--cds-text-primary)",
+														}}
+													>
+														{formatDate(selectedEvent.startsAt)}
+													</span>
+												</div>
+												<div
+													style={{
+														display: "flex",
+														justifyContent: "space-between",
+														fontSize: "0.875rem",
+													}}
+												>
+													<span
+														style={{
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														Budget
+													</span>
+													<span
+														style={{
+															fontWeight: 500,
+															color: "var(--cds-text-primary)",
+														}}
+													>
+														{formatCurrency(
+															selectedEvent.budgetTotal ?? 0,
+														)}
+													</span>
+												</div>
+												<div>
 													<div
 														style={{
-															width: `${selectedEvent.progress}%`,
-															height: "100%",
-															borderRadius: "4px",
-															background:
-																"var(--cds-support-success)",
-															transition: "width 0.3s ease",
+															display: "flex",
+															justifyContent: "space-between",
+															marginBottom: "0.25rem",
+															fontSize: "0.75rem",
 														}}
-													/>
-												</div>
-											</div>
-										</Stack>
-									</TabPanel>
-									<TabPanel>
-										<Stack gap={4} style={{ paddingTop: "1rem" }}>
-											<p
-												style={{
-													fontSize: "0.875rem",
-													fontWeight: 600,
-													color: "var(--cds-text-primary)",
-												}}
-											>
-												Coordinators
-											</p>
-											{selectedEvent.owners?.length > 0 ? (
-												selectedEvent.owners.map((owner, i) => (
-													<Stack
-														key={i}
-														orientation="horizontal"
-														gap={3}
-														style={{ alignItems: "center" }}
 													>
-														<User
-															size={16}
+														<span
 															style={{
 																color: "var(--cds-text-secondary)",
 															}}
-															aria-hidden="true"
-														/>
+														>
+															Progress
+														</span>
 														<span
 															style={{
-																fontSize: "0.875rem",
+																fontWeight: 500,
 																color: "var(--cds-text-primary)",
 															}}
 														>
-															{owner.ownerLabel}
+															{selectedEvent.progress}%
 														</span>
-													</Stack>
-												))
-											) : (
+													</div>
+													<div
+														style={{
+															height: "0.5rem",
+															borderRadius: "4px",
+															background: "var(--cds-layer-active)",
+															overflow: "hidden",
+														}}
+													>
+														<div
+															style={{
+																width: `${selectedEvent.progress}%`,
+																height: "100%",
+																borderRadius: "4px",
+																background:
+																	"var(--cds-support-success)",
+																transition: "width 0.3s ease",
+															}}
+														/>
+													</div>
+												</div>
+											</Stack>
+										</TabPanel>
+										<TabPanel>
+											<Stack gap={4} style={{ paddingTop: "1rem" }}>
 												<p
 													style={{
 														fontSize: "0.875rem",
-														color: "var(--cds-text-secondary)",
+														fontWeight: 600,
+														color: "var(--cds-text-primary)",
 													}}
 												>
-													No coordinators assigned
+													Coordinators
 												</p>
-											)}
-										</Stack>
-									</TabPanel>
-									<TabPanel>
-										<Stack gap={4} style={{ paddingTop: "1rem" }}>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													fontSize: "0.875rem",
-												}}
-											>
-												<span
-													style={{ color: "var(--cds-text-secondary)" }}
-												>
-													Total Budget
-												</span>
-												<span
+												{selectedEvent.owners?.length > 0 ? (
+													selectedEvent.owners.map((owner, i) => (
+														<Stack
+															key={i}
+															orientation="horizontal"
+															gap={3}
+															style={{ alignItems: "center" }}
+														>
+															<User
+																size={16}
+																style={{
+																	color: "var(--cds-text-secondary)",
+																}}
+																aria-hidden="true"
+															/>
+															<span
+																style={{
+																	fontSize: "0.875rem",
+																	color: "var(--cds-text-primary)",
+																}}
+															>
+																{owner.ownerLabel}
+															</span>
+														</Stack>
+													))
+												) : (
+													<p
+														style={{
+															fontSize: "0.875rem",
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														No coordinators assigned
+													</p>
+												)}
+											</Stack>
+										</TabPanel>
+										<TabPanel>
+											<Stack gap={4} style={{ paddingTop: "1rem" }}>
+												<div
 													style={{
-														fontWeight: 500,
-														color: "var(--cds-text-primary)",
+														display: "flex",
+														justifyContent: "space-between",
+														fontSize: "0.875rem",
 													}}
 												>
-													{formatCurrency(selectedEvent.budgetTotal ?? 0)}
-												</span>
-											</div>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													fontSize: "0.875rem",
-												}}
-											>
-												<span
-													style={{ color: "var(--cds-text-secondary)" }}
-												>
-													Used
-												</span>
-												<span
+													<span
+														style={{
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														Total Budget
+													</span>
+													<span
+														style={{
+															fontWeight: 500,
+															color: "var(--cds-text-primary)",
+														}}
+													>
+														{formatCurrency(
+															selectedEvent.budgetTotal ?? 0,
+														)}
+													</span>
+												</div>
+												<div
 													style={{
-														fontWeight: 500,
-														color: "var(--cds-text-primary)",
+														display: "flex",
+														justifyContent: "space-between",
+														fontSize: "0.875rem",
 													}}
 												>
-													{formatCurrency(selectedEvent.budgetUsed ?? 0)}
-												</span>
-											</div>
-											<div
-												style={{
-													display: "flex",
-													justifyContent: "space-between",
-													fontSize: "0.875rem",
-												}}
-											>
-												<span
-													style={{ color: "var(--cds-text-secondary)" }}
-												>
-													Remaining
-												</span>
-												<span
+													<span
+														style={{
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														Used
+													</span>
+													<span
+														style={{
+															fontWeight: 500,
+															color: "var(--cds-text-primary)",
+														}}
+													>
+														{formatCurrency(
+															selectedEvent.budgetUsed ?? 0,
+														)}
+													</span>
+												</div>
+												<div
 													style={{
-														fontWeight: 500,
-														color: "var(--cds-support-success)",
+														display: "flex",
+														justifyContent: "space-between",
+														fontSize: "0.875rem",
 													}}
 												>
-													{formatCurrency(
-														(selectedEvent.budgetTotal ?? 0) -
-															(selectedEvent.budgetUsed ?? 0),
-													)}
-												</span>
-											</div>
-										</Stack>
-									</TabPanel>
-								</TabPanels>
-							</Tabs>
-						</Stack>
-					</Tile>
-				</div>
-			) : null}
+													<span
+														style={{
+															color: "var(--cds-text-secondary)",
+														}}
+													>
+														Remaining
+													</span>
+													<span
+														style={{
+															fontWeight: 500,
+															color: "var(--cds-support-success)",
+														}}
+													>
+														{formatCurrency(
+															(selectedEvent.budgetTotal ?? 0) -
+																(selectedEvent.budgetUsed ?? 0),
+														)}
+													</span>
+												</div>
+											</Stack>
+										</TabPanel>
+									</TabPanels>
+								</Tabs>
+							</Stack>
+						</Tile>
+					</div>
+				) : null}
+			</PageLayout>
 
 			<Modal
 				title={editingEvent ? "Edit Event" : "Add Event"}

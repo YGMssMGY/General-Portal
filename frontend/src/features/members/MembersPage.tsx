@@ -5,7 +5,7 @@ import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Badge } from "../../components/Badge";
 import { Modal } from "../../components/Modal";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import {
 	Button,
@@ -218,7 +218,7 @@ export function MembersPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader
+			<PageLayout
 				title="Members"
 				description="Manage people, roles, positions, and access."
 				actions={
@@ -226,290 +226,305 @@ export function MembersPage() {
 						Add Member
 					</Button>
 				}
-			/>
-
-			<Grid style={{ marginBottom: "1.5rem" }}>
-				<Column lg={4} md={4} sm={4}>
-					<Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-						<div
-							style={{
-								position: "absolute",
-								top: "0.75rem",
-								right: "0.75rem",
-								opacity: 0.12,
-							}}
+			>
+				<Grid style={{ marginBottom: "1.5rem" }}>
+					<Column lg={4} md={4} sm={4}>
+						<Tile
+							style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}
 						>
-							<UserMultiple size={48} />
-						</div>
-						<p
-							style={{
-								fontSize: "0.75rem",
-								fontWeight: 600,
-								textTransform: "uppercase",
-								letterSpacing: "0.025em",
-								color: "var(--cds-text-secondary)",
-							}}
-						>
-							Total Members
-						</p>
-						<p
-							style={{
-								marginTop: "0.5rem",
-								fontSize: "1.875rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-							}}
-						>
-							{totalMembers}
-						</p>
-					</Tile>
-				</Column>
-				<Column lg={4} md={4} sm={4}>
-					<Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-						<div
-							style={{
-								position: "absolute",
-								top: "0.75rem",
-								right: "0.75rem",
-								opacity: 0.12,
-							}}
-						>
-							<UserRole size={48} />
-						</div>
-						<p
-							style={{
-								fontSize: "0.75rem",
-								fontWeight: 600,
-								textTransform: "uppercase",
-								letterSpacing: "0.025em",
-								color: "var(--cds-text-secondary)",
-							}}
-						>
-							Active Officers
-						</p>
-						<p
-							style={{
-								marginTop: "0.5rem",
-								fontSize: "1.875rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-							}}
-						>
-							{activeOfficers}
-						</p>
-					</Tile>
-				</Column>
-				<Column lg={4} md={4} sm={4}>
-					<Tile style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}>
-						<div
-							style={{
-								position: "absolute",
-								top: "0.75rem",
-								right: "0.75rem",
-								opacity: 0.12,
-							}}
-						>
-							<Incomplete size={48} />
-						</div>
-						<p
-							style={{
-								fontSize: "0.75rem",
-								fontWeight: 600,
-								textTransform: "uppercase",
-								letterSpacing: "0.025em",
-								color: "var(--cds-text-secondary)",
-							}}
-						>
-							Pending Invites
-						</p>
-						<p
-							style={{
-								marginTop: "0.5rem",
-								fontSize: "1.875rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-							}}
-						>
-							{pendingInvites}
-						</p>
-					</Tile>
-				</Column>
-			</Grid>
-
-			<Grid>
-				<Column lg={12} md={8} sm={4}>
-					<DataTable
-						columns={columns}
-						data={data as unknown as Record<string, unknown>[]}
-						defaultSort={{ key: "position", direction: "asc" }}
-						pageSize={10}
-					/>
-				</Column>
-
-				<Column lg={4} md={8} sm={4}>
-					<Tile style={{ padding: "1.25rem" }}>
-						<h2
-							style={{
-								fontSize: "1rem",
-								fontWeight: 600,
-								color: "var(--cds-text-primary)",
-								marginBottom: "1rem",
-							}}
-						>
-							Role Management
-						</h2>
-						{roles.length === 0 ? (
 							<div
-								style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+								style={{
+									position: "absolute",
+									top: "0.75rem",
+									right: "0.75rem",
+									opacity: 0.12,
+								}}
 							>
-								{(["Admin", "President", "Officer", "Member"] as const).map(
-									(role) => {
-										const count = data.filter(
-											(m) =>
-												m.accessLabel.toLowerCase() === role.toLowerCase(),
-										).length;
-										const perms =
-											role === "Admin"
-												? ["Full Access", "Settings", "Members"]
-												: role === "President"
-													? ["Manage Events", "Finance", "Members"]
-													: role === "Officer"
-														? [
-																"Create Events",
-																"Manage Tasks",
-																"View Finance",
-															]
-														: ["View Events", "Volunteer"];
-										return (
-											<div
-												key={role}
-												style={{
-													border: "1px solid var(--cds-border-subtle)",
-													borderRadius: "4px",
-													padding: "1rem",
-												}}
-											>
+								<UserMultiple size={48} />
+							</div>
+							<p
+								style={{
+									fontSize: "0.75rem",
+									fontWeight: 600,
+									textTransform: "uppercase",
+									letterSpacing: "0.025em",
+									color: "var(--cds-text-secondary)",
+								}}
+							>
+								Total Members
+							</p>
+							<p
+								style={{
+									marginTop: "0.5rem",
+									fontSize: "1.875rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								{totalMembers}
+							</p>
+						</Tile>
+					</Column>
+					<Column lg={4} md={4} sm={4}>
+						<Tile
+							style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}
+						>
+							<div
+								style={{
+									position: "absolute",
+									top: "0.75rem",
+									right: "0.75rem",
+									opacity: 0.12,
+								}}
+							>
+								<UserRole size={48} />
+							</div>
+							<p
+								style={{
+									fontSize: "0.75rem",
+									fontWeight: 600,
+									textTransform: "uppercase",
+									letterSpacing: "0.025em",
+									color: "var(--cds-text-secondary)",
+								}}
+							>
+								Active Officers
+							</p>
+							<p
+								style={{
+									marginTop: "0.5rem",
+									fontSize: "1.875rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								{activeOfficers}
+							</p>
+						</Tile>
+					</Column>
+					<Column lg={4} md={4} sm={4}>
+						<Tile
+							style={{ padding: "1.5rem", position: "relative", overflow: "hidden" }}
+						>
+							<div
+								style={{
+									position: "absolute",
+									top: "0.75rem",
+									right: "0.75rem",
+									opacity: 0.12,
+								}}
+							>
+								<Incomplete size={48} />
+							</div>
+							<p
+								style={{
+									fontSize: "0.75rem",
+									fontWeight: 600,
+									textTransform: "uppercase",
+									letterSpacing: "0.025em",
+									color: "var(--cds-text-secondary)",
+								}}
+							>
+								Pending Invites
+							</p>
+							<p
+								style={{
+									marginTop: "0.5rem",
+									fontSize: "1.875rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								{pendingInvites}
+							</p>
+						</Tile>
+					</Column>
+				</Grid>
+
+				<Grid>
+					<Column lg={12} md={8} sm={4}>
+						<DataTable
+							columns={columns}
+							data={data as unknown as Record<string, unknown>[]}
+							defaultSort={{ key: "position", direction: "asc" }}
+							pageSize={10}
+						/>
+					</Column>
+
+					<Column lg={4} md={8} sm={4}>
+						<Tile style={{ padding: "1.25rem" }}>
+							<h2
+								style={{
+									fontSize: "1rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+									marginBottom: "1rem",
+								}}
+							>
+								Role Management
+							</h2>
+							{roles.length === 0 ? (
+								<div
+									style={{
+										display: "flex",
+										flexDirection: "column",
+										gap: "0.75rem",
+									}}
+								>
+									{(["Admin", "President", "Officer", "Member"] as const).map(
+										(role) => {
+											const count = data.filter(
+												(m) =>
+													m.accessLabel.toLowerCase() ===
+													role.toLowerCase(),
+											).length;
+											const perms =
+												role === "Admin"
+													? ["Full Access", "Settings", "Members"]
+													: role === "President"
+														? ["Manage Events", "Finance", "Members"]
+														: role === "Officer"
+															? [
+																	"Create Events",
+																	"Manage Tasks",
+																	"View Finance",
+																]
+															: ["View Events", "Volunteer"];
+											return (
 												<div
+													key={role}
 													style={{
-														display: "flex",
-														justifyContent: "space-between",
-														alignItems: "center",
-														marginBottom: "0.5rem",
+														border: "1px solid var(--cds-border-subtle)",
+														borderRadius: "4px",
+														padding: "1rem",
 													}}
 												>
-													<span
+													<div
 														style={{
-															fontWeight: 600,
-															color: "var(--cds-text-primary)",
-															fontSize: "0.875rem",
+															display: "flex",
+															justifyContent: "space-between",
+															alignItems: "center",
+															marginBottom: "0.5rem",
 														}}
 													>
-														{role}
-													</span>
-													<Tag type="blue">{count}</Tag>
-												</div>
-												<p
-													style={{
-														fontSize: "0.75rem",
-														color: "var(--cds-text-secondary)",
-														marginBottom: "0.5rem",
-													}}
-												>
-													{role === "Admin"
-														? "Full system access"
-														: role === "President"
-															? "Executive leadership"
-															: role === "Officer"
-																? "Day-to-day operations"
-																: "General access"}
-												</p>
-												<div
-													style={{
-														display: "flex",
-														flexWrap: "wrap",
-														gap: "0.25rem",
-													}}
-												>
-													{perms.map((perm) => (
-														<Tag
-															key={perm}
-															type="outline"
-															style={{ fontSize: "0.6875rem" }}
+														<span
+															style={{
+																fontWeight: 600,
+																color: "var(--cds-text-primary)",
+																fontSize: "0.875rem",
+															}}
 														>
-															{perm}
-														</Tag>
-													))}
+															{role}
+														</span>
+														<Tag type="blue">{count}</Tag>
+													</div>
+													<p
+														style={{
+															fontSize: "0.75rem",
+															color: "var(--cds-text-secondary)",
+															marginBottom: "0.5rem",
+														}}
+													>
+														{role === "Admin"
+															? "Full system access"
+															: role === "President"
+																? "Executive leadership"
+																: role === "Officer"
+																	? "Day-to-day operations"
+																	: "General access"}
+													</p>
+													<div
+														style={{
+															display: "flex",
+															flexWrap: "wrap",
+															gap: "0.25rem",
+														}}
+													>
+														{perms.map((perm) => (
+															<Tag
+																key={perm}
+																type="outline"
+																style={{ fontSize: "0.6875rem" }}
+															>
+																{perm}
+															</Tag>
+														))}
+													</div>
 												</div>
-											</div>
-										);
-									},
-								)}
-							</div>
-						) : (
-							<div
-								style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-							>
-								{roles.map((role) => (
-									<div
-										key={role.id}
-										style={{
-											border: "1px solid var(--cds-border-subtle)",
-											borderRadius: "4px",
-											padding: "1rem",
-										}}
-									>
+											);
+										},
+									)}
+								</div>
+							) : (
+								<div
+									style={{
+										display: "flex",
+										flexDirection: "column",
+										gap: "0.75rem",
+									}}
+								>
+									{roles.map((role) => (
 										<div
+											key={role.id}
 											style={{
-												display: "flex",
-												justifyContent: "space-between",
-												alignItems: "center",
-												marginBottom: "0.5rem",
+												border: "1px solid var(--cds-border-subtle)",
+												borderRadius: "4px",
+												padding: "1rem",
 											}}
 										>
-											<span
+											<div
 												style={{
-													fontWeight: 600,
-													color: "var(--cds-text-primary)",
-													fontSize: "0.875rem",
+													display: "flex",
+													justifyContent: "space-between",
+													alignItems: "center",
+													marginBottom: "0.5rem",
 												}}
 											>
-												{role.name}
-											</span>
-											<Tag type="blue">{role.count}</Tag>
-										</div>
-										<p
-											style={{
-												fontSize: "0.75rem",
-												color: "var(--cds-text-secondary)",
-												marginBottom: "0.5rem",
-											}}
-										>
-											{role.description}
-										</p>
-										<div
-											style={{
-												display: "flex",
-												flexWrap: "wrap",
-												gap: "0.25rem",
-											}}
-										>
-											{role.permissions.map((perm) => (
-												<Tag
-													key={perm}
-													type="outline"
-													style={{ fontSize: "0.6875rem" }}
+												<span
+													style={{
+														fontWeight: 600,
+														color: "var(--cds-text-primary)",
+														fontSize: "0.875rem",
+													}}
 												>
-													{perm}
-												</Tag>
-											))}
+													{role.name}
+												</span>
+												<Tag type="blue">{role.count}</Tag>
+											</div>
+											<p
+												style={{
+													fontSize: "0.75rem",
+													color: "var(--cds-text-secondary)",
+													marginBottom: "0.5rem",
+												}}
+											>
+												{role.description}
+											</p>
+											<div
+												style={{
+													display: "flex",
+													flexWrap: "wrap",
+													gap: "0.25rem",
+												}}
+											>
+												{role.permissions.map((perm) => (
+													<Tag
+														key={perm}
+														type="outline"
+														style={{ fontSize: "0.6875rem" }}
+													>
+														{perm}
+													</Tag>
+												))}
+											</div>
 										</div>
-									</div>
-								))}
-							</div>
-						)}
-					</Tile>
-				</Column>
-			</Grid>
+									))}
+								</div>
+							)}
+						</Tile>
+					</Column>
+				</Grid>
+			</PageLayout>
 
 			<Modal title="Add Member" isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
 				<Form onSubmit={handleAdd}>

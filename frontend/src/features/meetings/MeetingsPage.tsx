@@ -19,7 +19,7 @@ import {
 	SelectItem,
 } from "@carbon/react";
 import { Add, ChevronDown, ChevronRight, Edit, TrashCan } from "@carbon/icons-react";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { Modal } from "../../components/Modal";
 import { LoadingState, ErrorState, EmptyState } from "../../components/StateViews";
 import { workspaceApi } from "../../api/workspaceApi";
@@ -186,7 +186,7 @@ export function MeetingsPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader
+			<PageLayout
 				title="Meetings"
 				description="Schedule, manage, and record meeting minutes."
 				actions={
@@ -194,256 +194,269 @@ export function MeetingsPage() {
 						New Meeting
 					</Button>
 				}
-			/>
+			>
+				{!meetings || meetings.length === 0 ? (
+					<EmptyState
+						title="No meetings"
+						description="Upcoming meetings will appear here."
+					/>
+				) : (
+					<Stack gap={4}>
+						{meetings.map((m) => {
+							const isExpanded = expandedId === m.id;
+							const rsvpStatus = m.rsvpStatus;
+							const userIsOrganizer =
+								user?.displayName === m.organizerName ||
+								canOrganize(user?.role ?? null);
 
-			{!meetings || meetings.length === 0 ? (
-				<EmptyState title="No meetings" description="Upcoming meetings will appear here." />
-			) : (
-				<Stack gap={4}>
-					{meetings.map((m) => {
-						const isExpanded = expandedId === m.id;
-						const rsvpStatus = m.rsvpStatus;
-						const userIsOrganizer =
-							user?.displayName === m.organizerName ||
-							canOrganize(user?.role ?? null);
-
-						return (
-							<Tile key={m.id} style={{ padding: "1rem" }}>
-								<div
-									role="button"
-									tabIndex={0}
-									onClick={() => setExpandedId(isExpanded ? null : m.id)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											setExpandedId(isExpanded ? null : m.id);
-										}
-									}}
-									style={{
-										cursor: "pointer",
-										display: "flex",
-										alignItems: "flex-start",
-										justifyContent: "space-between",
-										gap: "0.75rem",
-									}}
-								>
-									<div style={{ flex: 1 }}>
-										<div
-											style={{
-												display: "flex",
-												alignItems: "center",
-												gap: "0.5rem",
-												marginBottom: "0.25rem",
-											}}
-										>
-											{isExpanded ? (
-												<ChevronDown size={16} />
-											) : (
-												<ChevronRight size={16} />
-											)}
-											<span
-												style={{
-													fontWeight: 600,
-													fontSize: "1rem",
-													color: "var(--cds-text-primary)",
-												}}
-											>
-												{m.title}
-											</span>
-											<Tag
-												type={
-													m.status === "completed"
-														? "green"
-														: m.status === "in_progress"
-															? "blue"
-															: m.status === "cancelled"
-																? "red"
-																: "teal"
-												}
-												size="sm"
-											>
-												{m.status.replace(/_/g, " ")}
-											</Tag>
-										</div>
-										<div
-											style={{
-												display: "flex",
-												flexWrap: "wrap",
-												gap: "0.75rem",
-												fontSize: "0.8125rem",
-												color: "var(--cds-text-secondary)",
-												marginLeft: "1.25rem",
-											}}
-										>
-											<span>
-												{formatDate(m.date)} at {m.time}
-											</span>
-											<span>{m.location}</span>
-											<span>{m.attendeeCount} attendees</span>
-										</div>
-									</div>
-
+							return (
+								<Tile key={m.id} style={{ padding: "1rem" }}>
 									<div
-										style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}
-										onClick={(e) => e.stopPropagation()}
-									>
-										{["yes", "no", "maybe"].map((opt) => (
-											<Button
-												key={opt}
-												kind={rsvpStatus === opt ? "primary" : "ghost"}
-												type="button"
-												size="sm"
-												onClick={() => handleRsvp(m.id, opt)}
-											>
-												{opt.charAt(0).toUpperCase() + opt.slice(1)}
-											</Button>
-										))}
-										{m.status !== "completed" &&
-											m.status !== "cancelled" &&
-											userIsOrganizer && (
-												<>
-													<Button
-														kind="ghost"
-														type="button"
-														size="sm"
-														renderIcon={Edit}
-														hasIconOnly
-														iconDescription="Edit minutes"
-														onClick={() => openEditMinutes(m)}
-													/>
-													<Button
-														kind="ghost"
-														type="button"
-														size="sm"
-														renderIcon={TrashCan}
-														hasIconOnly
-														iconDescription="Delete"
-														onClick={() => setConfirmDelete(m)}
-													/>
-												</>
-											)}
-									</div>
-								</div>
-
-								{isExpanded && (
-									<div
+										role="button"
+										tabIndex={0}
+										onClick={() => setExpandedId(isExpanded ? null : m.id)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.preventDefault();
+												setExpandedId(isExpanded ? null : m.id);
+											}
+										}}
 										style={{
-											marginTop: "1rem",
-											paddingTop: "1rem",
-											borderTop: "1px solid var(--cds-border-subtle)",
-											marginLeft: "0",
+											cursor: "pointer",
+											display: "flex",
+											alignItems: "flex-start",
+											justifyContent: "space-between",
+											gap: "0.75rem",
 										}}
 									>
-										<Grid>
-											<Column lg={8} md={8} sm={4}>
-												<Stack gap={5}>
-													{m.description && (
-														<div>
-															<h4
-																style={{
-																	fontSize: "0.875rem",
-																	fontWeight: 600,
-																	marginBottom: "0.25rem",
-																	color: "var(--cds-text-primary)",
-																}}
-															>
-																Description
-															</h4>
-															<p
-																style={{
-																	fontSize: "0.875rem",
-																	color: "var(--cds-text-secondary)",
-																	whiteSpace: "pre-wrap",
-																}}
-															>
-																{m.description}
-															</p>
-														</div>
-													)}
-													{m.agendaItems?.length > 0 && (
-														<div>
-															<h4
-																style={{
-																	fontSize: "0.875rem",
-																	fontWeight: 600,
-																	marginBottom: "0.375rem",
-																	color: "var(--cds-text-primary)",
-																}}
-															>
-																Agenda
-															</h4>
-															<Stack gap={2}>
-																{m.agendaItems.map((item, i) => (
-																	<div
-																		key={i}
-																		style={{
-																			display: "flex",
-																			alignItems: "center",
-																			gap: "0.5rem",
-																			fontSize: "0.875rem",
-																			color: "var(--cds-text-secondary)",
-																		}}
-																	>
-																		<span
-																			style={{
-																				width: "1.25rem",
-																				height: "1.25rem",
-																				borderRadius: "50%",
-																				background:
-																					"var(--cds-layer-02)",
-																				display: "flex",
-																				alignItems:
-																					"center",
-																				justifyContent:
-																					"center",
-																				fontSize:
-																					"0.6875rem",
-																				fontWeight: 600,
-																				color: "var(--cds-text-primary)",
-																				flexShrink: 0,
-																			}}
-																		>
-																			{i + 1}
-																		</span>
-																		{item}
-																	</div>
-																))}
-															</Stack>
-														</div>
-													)}
-													{m.minutes && (
-														<div>
-															<h4
-																style={{
-																	fontSize: "0.875rem",
-																	fontWeight: 600,
-																	marginBottom: "0.25rem",
-																	color: "var(--cds-text-primary)",
-																}}
-															>
-																Minutes
-															</h4>
-															<p
-																style={{
-																	fontSize: "0.875rem",
-																	color: "var(--cds-text-secondary)",
-																	whiteSpace: "pre-wrap",
-																}}
-															>
-																{m.minutes}
-															</p>
-														</div>
-													)}
-												</Stack>
-											</Column>
-										</Grid>
+										<div style={{ flex: 1 }}>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: "0.5rem",
+													marginBottom: "0.25rem",
+												}}
+											>
+												{isExpanded ? (
+													<ChevronDown size={16} />
+												) : (
+													<ChevronRight size={16} />
+												)}
+												<span
+													style={{
+														fontWeight: 600,
+														fontSize: "1rem",
+														color: "var(--cds-text-primary)",
+													}}
+												>
+													{m.title}
+												</span>
+												<Tag
+													type={
+														m.status === "completed"
+															? "green"
+															: m.status === "in_progress"
+																? "blue"
+																: m.status === "cancelled"
+																	? "red"
+																	: "teal"
+													}
+													size="sm"
+												>
+													{m.status.replace(/_/g, " ")}
+												</Tag>
+											</div>
+											<div
+												style={{
+													display: "flex",
+													flexWrap: "wrap",
+													gap: "0.75rem",
+													fontSize: "0.8125rem",
+													color: "var(--cds-text-secondary)",
+													marginLeft: "1.25rem",
+												}}
+											>
+												<span>
+													{formatDate(m.date)} at {m.time}
+												</span>
+												<span>{m.location}</span>
+												<span>{m.attendeeCount} attendees</span>
+											</div>
+										</div>
+
+										<div
+											style={{
+												display: "flex",
+												gap: "0.25rem",
+												flexShrink: 0,
+											}}
+											onClick={(e) => e.stopPropagation()}
+										>
+											{["yes", "no", "maybe"].map((opt) => (
+												<Button
+													key={opt}
+													kind={rsvpStatus === opt ? "primary" : "ghost"}
+													type="button"
+													size="sm"
+													onClick={() => handleRsvp(m.id, opt)}
+												>
+													{opt.charAt(0).toUpperCase() + opt.slice(1)}
+												</Button>
+											))}
+											{m.status !== "completed" &&
+												m.status !== "cancelled" &&
+												userIsOrganizer && (
+													<>
+														<Button
+															kind="ghost"
+															type="button"
+															size="sm"
+															renderIcon={Edit}
+															hasIconOnly
+															iconDescription="Edit minutes"
+															onClick={() => openEditMinutes(m)}
+														/>
+														<Button
+															kind="ghost"
+															type="button"
+															size="sm"
+															renderIcon={TrashCan}
+															hasIconOnly
+															iconDescription="Delete"
+															onClick={() => setConfirmDelete(m)}
+														/>
+													</>
+												)}
+										</div>
 									</div>
-								)}
-							</Tile>
-						);
-					})}
-				</Stack>
-			)}
+
+									{isExpanded && (
+										<div
+											style={{
+												marginTop: "1rem",
+												paddingTop: "1rem",
+												borderTop: "1px solid var(--cds-border-subtle)",
+												marginLeft: "0",
+											}}
+										>
+											<Grid>
+												<Column lg={8} md={8} sm={4}>
+													<Stack gap={5}>
+														{m.description && (
+															<div>
+																<h4
+																	style={{
+																		fontSize: "0.875rem",
+																		fontWeight: 600,
+																		marginBottom: "0.25rem",
+																		color: "var(--cds-text-primary)",
+																	}}
+																>
+																	Description
+																</h4>
+																<p
+																	style={{
+																		fontSize: "0.875rem",
+																		color: "var(--cds-text-secondary)",
+																		whiteSpace: "pre-wrap",
+																	}}
+																>
+																	{m.description}
+																</p>
+															</div>
+														)}
+														{m.agendaItems?.length > 0 && (
+															<div>
+																<h4
+																	style={{
+																		fontSize: "0.875rem",
+																		fontWeight: 600,
+																		marginBottom: "0.375rem",
+																		color: "var(--cds-text-primary)",
+																	}}
+																>
+																	Agenda
+																</h4>
+																<Stack gap={2}>
+																	{m.agendaItems.map(
+																		(item, i) => (
+																			<div
+																				key={i}
+																				style={{
+																					display: "flex",
+																					alignItems:
+																						"center",
+																					gap: "0.5rem",
+																					fontSize:
+																						"0.875rem",
+																					color: "var(--cds-text-secondary)",
+																				}}
+																			>
+																				<span
+																					style={{
+																						width: "1.25rem",
+																						height: "1.25rem",
+																						borderRadius:
+																							"50%",
+																						background:
+																							"var(--cds-layer-02)",
+																						display:
+																							"flex",
+																						alignItems:
+																							"center",
+																						justifyContent:
+																							"center",
+																						fontSize:
+																							"0.6875rem",
+																						fontWeight: 600,
+																						color: "var(--cds-text-primary)",
+																						flexShrink: 0,
+																					}}
+																				>
+																					{i + 1}
+																				</span>
+																				{item}
+																			</div>
+																		),
+																	)}
+																</Stack>
+															</div>
+														)}
+														{m.minutes && (
+															<div>
+																<h4
+																	style={{
+																		fontSize: "0.875rem",
+																		fontWeight: 600,
+																		marginBottom: "0.25rem",
+																		color: "var(--cds-text-primary)",
+																	}}
+																>
+																	Minutes
+																</h4>
+																<p
+																	style={{
+																		fontSize: "0.875rem",
+																		color: "var(--cds-text-secondary)",
+																		whiteSpace: "pre-wrap",
+																	}}
+																>
+																	{m.minutes}
+																</p>
+															</div>
+														)}
+													</Stack>
+												</Column>
+											</Grid>
+										</div>
+									)}
+								</Tile>
+							);
+						})}
+					</Stack>
+				)}
+			</PageLayout>
 
 			{/* New Meeting Modal */}
 			<Modal title="New Meeting" isOpen={newModalOpen} onClose={() => setNewModalOpen(false)}>
