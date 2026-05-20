@@ -20,6 +20,7 @@ const createSchema = z.object({
 	summary: z.string().optional(),
 	budget: z.number().optional(),
 	submittedBy: z.string(),
+	submittedById: z.string().optional(),
 	dateNeeded: z.string().optional(),
 	approvalStep: z.string().optional(),
 });
@@ -63,6 +64,14 @@ route.post("/proposals", async (c) => {
 	const wid = c.get("workspaceId");
 	const body = await c.req.json();
 	const parsed = createSchema.parse(body);
+	let submittedBy = parsed.submittedBy;
+	if (parsed.submittedById && !submittedBy) {
+		const user = await db.user.findUnique({
+			where: { id: parsed.submittedById },
+			select: { name: true },
+		});
+		if (user) submittedBy = user.name;
+	}
 	const item = await db.proposal.create({
 		data: {
 			workspaceId: wid,
@@ -70,7 +79,8 @@ route.post("/proposals", async (c) => {
 			type: parsed.type as any,
 			summary: parsed.summary,
 			budget: parsed.budget || 0,
-			submittedBy: parsed.submittedBy,
+			submittedBy,
+			submittedById: parsed.submittedById || null,
 			submittedAt: new Date(),
 			dateNeeded: parsed.dateNeeded ? new Date(parsed.dateNeeded) : null,
 		},

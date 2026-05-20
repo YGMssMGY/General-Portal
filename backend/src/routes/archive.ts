@@ -73,14 +73,6 @@ route.post("/archive/end-term", async (c) => {
 			where: { id: { in: events.map((e: any) => e.id) } },
 			data: { status: "archived" as any },
 		}),
-		db.proposal.updateMany({
-			where: { id: { in: proposals.map((p) => p.id) } },
-			data: { status: "archived" as any },
-		}),
-		db.eventItem.updateMany({
-			where: { id: { in: events.map((e) => e.id) } },
-			data: { status: "archived" as any },
-		}),
 	]);
 
 	await db.termArchive.create({

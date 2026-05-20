@@ -24,6 +24,7 @@ import {
 	ProgressIndicator,
 	ProgressStep,
 } from "@carbon/react";
+import { MemberSelect } from "../../components/MemberSelect/MemberSelect";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
 import { useProposals } from "../../hooks/useWorkspaceResources";
@@ -65,6 +66,7 @@ export function ProposalsPage() {
 		budget: "0",
 		summary: "",
 		submittedBy: "",
+		submittedById: undefined as string | undefined,
 		dateNeeded: "",
 	});
 
@@ -151,6 +153,7 @@ export function ProposalsPage() {
 									budget: String(p.budget),
 									summary: p.summary,
 									submittedBy: p.submittedBy,
+									submittedById: p.submittedById,
 									dateNeeded: "",
 								});
 								setIsModalOpen(true);
@@ -196,6 +199,7 @@ export function ProposalsPage() {
 			budget: "0",
 			summary: "",
 			submittedBy: user?.displayName ?? "",
+			submittedById: undefined,
 			dateNeeded: "",
 		});
 		setIsModalOpen(true);
@@ -206,18 +210,21 @@ export function ProposalsPage() {
 		setCreateError(undefined);
 		setIsCreating(true);
 		try {
-			const payload = {
+			const payload: Record<string, unknown> = {
 				title: form.title,
 				type: form.type,
 				submittedBy: (form.submittedBy || user?.displayName) ?? "Demo User",
 				budget: Number(form.budget),
 				summary: form.summary,
 			};
+			if (form.submittedById) {
+				payload.submittedById = form.submittedById;
+			}
 			if (editingProposal) {
-				await workspaceApi.updateProposal(editingProposal.id, payload);
+				await workspaceApi.updateProposal(editingProposal.id, payload as any);
 				toast.success("Proposal updated");
 			} else {
-				await workspaceApi.createProposal(payload);
+				await workspaceApi.createProposal(payload as any);
 				toast.success("Proposal created");
 			}
 			setIsModalOpen(false);
@@ -758,14 +765,29 @@ export function ProposalsPage() {
 							<Column lg={8} md={8} sm={4}>
 								<TextInput
 									id="prop-submitted-by"
-									labelText="Submitted By"
-									required
+									labelText="Submitted By (name)"
 									value={form.submittedBy}
 									onChange={(e) =>
 										setForm((c) => ({ ...c, submittedBy: e.target.value }))
 									}
 								/>
 							</Column>
+							<Column lg={8} md={8} sm={4}>
+								<MemberSelect
+									value={form.submittedById}
+									onChange={({ id, label }) => {
+										setForm((c) => ({
+											...c,
+											submittedById: id,
+											submittedBy: label ?? c.submittedBy,
+										}));
+									}}
+									label="Or select a member"
+									placeholder="Search members..."
+								/>
+							</Column>
+						</Grid>
+						<Grid>
 							<Column lg={8} md={8} sm={4}>
 								<TextInput
 									id="prop-date-needed"
@@ -777,6 +799,7 @@ export function ProposalsPage() {
 									}
 								/>
 							</Column>
+							<Column lg={8} md={8} sm={4} />
 						</Grid>
 						<TextArea
 							id="prop-summary"

@@ -10,8 +10,6 @@ import { useUIStore } from "../../stores/useUIStore";
 import {
 	Button,
 	TextInput,
-	Select,
-	SelectItem,
 	Form,
 	Tag,
 	Tile,
@@ -25,6 +23,7 @@ import {
 	TabPanel,
 	InlineNotification,
 } from "@carbon/react";
+import { MultiMemberSelect } from "../../components/MemberSelect/MultiMemberSelect";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useEvents } from "../../hooks/useWorkspaceResources";
 import type { EventItem } from "../../types";
@@ -58,6 +57,7 @@ export function EventsPage() {
 		progress: 0,
 		budgetTotal: 0,
 		owners: "",
+		ownerIds: [] as string[],
 	});
 
 	const upcoming = useMemo(() => {
@@ -134,6 +134,10 @@ export function EventsPage() {
 									progress: event.progress,
 									budgetTotal: event.budgetTotal,
 									owners: event.owners?.map((o) => o.ownerLabel).join(", ") ?? "",
+									ownerIds:
+										event.owners
+											?.map((o) => o.userId ?? o.id)
+											.filter(Boolean) ?? [],
 								});
 								setIsModalOpen(true);
 							}}
@@ -169,6 +173,7 @@ export function EventsPage() {
 			progress: 0,
 			budgetTotal: 0,
 			owners: "",
+			ownerIds: [],
 		});
 		setIsModalOpen(true);
 	}
@@ -189,6 +194,7 @@ export function EventsPage() {
 				progress: form.progress,
 				budgetTotal: form.budgetTotal,
 				owners: form.owners ? form.owners.split(",").map((s) => s.trim()) : [],
+				ownerIds: form.ownerIds.length > 0 ? form.ownerIds : undefined,
 			};
 			if (editingEvent) {
 				await workspaceApi.updateEvent(editingEvent.id, updates);
@@ -766,30 +772,21 @@ export function EventsPage() {
 						/>
 						<Grid>
 							<Column lg={8} md={8} sm={4}>
-								<Select
-									id="evt-status"
-									labelText="Status"
-									value={form.status}
+								<TextInput
+									id="evt-owners"
+									labelText="Coordinators (comma-separated names)"
+									value={form.owners}
 									onChange={(e) =>
-										setForm((c) => ({ ...c, status: e.target.value }))
+										setForm((c) => ({ ...c, owners: e.target.value }))
 									}
-								>
-									<SelectItem value="pending" text="Pending" />
-									<SelectItem value="active" text="Active" />
-									<SelectItem value="completed" text="Completed" />
-								</Select>
+								/>
 							</Column>
 							<Column lg={8} md={8} sm={4}>
-								<TextInput
-									id="evt-progress"
-									labelText="Progress (%)"
-									type="number"
-									min={0}
-									max={100}
-									value={form.progress}
-									onChange={(e) =>
-										setForm((c) => ({ ...c, progress: Number(e.target.value) }))
-									}
+								<MultiMemberSelect
+									value={form.ownerIds}
+									onChange={(ids) => setForm((c) => ({ ...c, ownerIds: ids }))}
+									label="Or select coordinators"
+									placeholder="Search members..."
 								/>
 							</Column>
 						</Grid>

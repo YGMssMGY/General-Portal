@@ -841,7 +841,8 @@ export function TasksPage() {
 		() =>
 			(members || []).map((m) => ({
 				id: m.id,
-				label: (m as any).displayName || m.user?.displayName || "Unknown",
+				label: m.user?.displayName || "Unknown",
+				subtitle: m.user?.email || "",
 			})),
 		[members],
 	);

@@ -37,8 +37,29 @@ route.post("/events", async (c) => {
 		budgetTotal: body.budgetTotal || 0,
 	};
 	const ownerLabels = body.owners || body.ownerNames;
+	const ownerIds: string[] = body.ownerIds || [];
+	const allOwners: { ownerLabel: string; userId?: string }[] = [];
+
 	if (Array.isArray(ownerLabels) && ownerLabels.length > 0) {
-		data.owners = { create: ownerLabels.map((o: string) => ({ ownerLabel: o })) };
+		for (const label of ownerLabels) {
+			allOwners.push({ ownerLabel: label });
+		}
+	}
+
+	if (Array.isArray(ownerIds) && ownerIds.length > 0) {
+		const users = await db.user.findMany({
+			where: { id: { in: ownerIds } },
+			select: { id: true, name: true },
+		});
+		const userMap = new Map(users.map((u: any) => [u.id, u.name]));
+		for (const uid of ownerIds) {
+			const name = userMap.get(uid);
+			if (name) allOwners.push({ ownerLabel: name, userId: uid });
+		}
+	}
+
+	if (allOwners.length > 0) {
+		data.owners = { create: allOwners };
 	}
 	const item = await db.eventItem.create({ data, include: { owners: true } });
 	return c.json(item, 201);

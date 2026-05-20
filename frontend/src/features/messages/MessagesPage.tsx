@@ -25,6 +25,7 @@ import {
 	Tile,
 	Search,
 } from "@carbon/react";
+import { MultiMemberSelect } from "../../components/MemberSelect/MultiMemberSelect";
 import { Add, Send, TrashCan, Calendar, Task, Document, FaceActivated } from "@carbon/icons-react";
 
 function computeDateDivider(prevSentAt: string | null, currentSentAt: string): string | null {
@@ -91,6 +92,7 @@ export function MessagesPage() {
 		title: "",
 		context: "general" as MessageThread["context"],
 		participants: "",
+		participantIds: [] as string[],
 		body: "",
 	});
 	const [composeError, setComposeError] = useState<string>();
@@ -136,9 +138,16 @@ export function MessagesPage() {
 					.split(",")
 					.map((s) => s.trim())
 					.filter(Boolean),
+				participantIds: composeForm.participantIds,
 				body: composeForm.body,
 			});
-			setComposeForm({ title: "", context: "general", participants: "", body: "" });
+			setComposeForm({
+				title: "",
+				context: "general",
+				participants: "",
+				participantIds: [],
+				body: "",
+			});
 			setIsComposeOpen(false);
 			refetch();
 			toast.success("Message sent");
@@ -960,12 +969,19 @@ export function MessagesPage() {
 						</Select>
 						<TextInput
 							id="thread-recipients"
-							labelText="Participants (comma-separated)"
-							required
+							labelText="Participants (comma-separated names)"
 							value={composeForm.participants}
 							onChange={(e) =>
 								setComposeForm((c) => ({ ...c, participants: e.target.value }))
 							}
+						/>
+						<MultiMemberSelect
+							value={composeForm.participantIds}
+							onChange={(ids) =>
+								setComposeForm((c) => ({ ...c, participantIds: ids }))
+							}
+							label="Or select participants"
+							placeholder="Search members..."
 						/>
 						<TextArea
 							id="thread-body"
