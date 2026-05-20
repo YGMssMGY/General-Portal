@@ -18,6 +18,7 @@ route.get("/dashboard", async (c) => {
 		unreadThreadCount,
 		pendingProposalsCount,
 		topMembers,
+		memberCount,
 	] = await db.$transaction([
 		db.taskItem.groupBy({
 			by: ["status"],
@@ -27,7 +28,7 @@ route.get("/dashboard", async (c) => {
 		db.taskItem.findMany({
 			where: { workspaceId },
 			orderBy: { dueDate: "asc" },
-			take: 5,
+			take: 10,
 		}),
 		db.eventItem.findMany({
 			where: {
@@ -35,12 +36,12 @@ route.get("/dashboard", async (c) => {
 				startsAt: { gte: now },
 			},
 			orderBy: { startsAt: "asc" },
-			take: 5,
+			take: 8,
 		}),
 		db.activityLog.findMany({
 			where: { workspaceId },
 			orderBy: { occurredAt: "desc" },
-			take: 5,
+			take: 10,
 		}),
 		db.financeTransaction.groupBy({
 			by: ["status"],
@@ -71,12 +72,18 @@ route.get("/dashboard", async (c) => {
 				},
 			},
 		}),
+		db.membership.count({ where: { workspaceId } }),
 	]);
+
+	const totalTaskCount = taskCounts.reduce((sum, g) => sum + g._count, 0);
+	const doneCount = taskCounts.find((g) => g.status === "done")?._count ?? 0;
+	const taskCompletionRate =
+		totalTaskCount > 0 ? Math.round((doneCount / totalTaskCount) * 100) : 0;
 
 	const metrics = [
 		{
 			label: "Total Tasks",
-			value: String(taskCounts.reduce((sum, g) => sum + g._count, 0)),
+			value: String(totalTaskCount),
 			tone: "primary" as const,
 			icon: "task",
 		},
@@ -102,6 +109,24 @@ route.get("/dashboard", async (c) => {
 			tone: "danger" as const,
 			icon: "finance",
 		},
+		{
+			label: "Members",
+			value: String(memberCount),
+			tone: "primary" as const,
+			icon: "member",
+		},
+		{
+			label: "Overdue Tasks",
+			value: String(overdueTaskCount),
+			tone: "danger" as const,
+			icon: "task",
+		},
+		{
+			label: "Completion Rate",
+			value: `${taskCompletionRate}%`,
+			tone: "secondary" as const,
+			icon: "task",
+		},
 	];
 
 	return c.json({
@@ -113,6 +138,8 @@ route.get("/dashboard", async (c) => {
 		upcomingEvents,
 		recentActivity,
 		overdueTaskCount,
+		memberCount,
+		taskCompletionRate,
 		unreadThreadCount: unreadThreadCount._sum.unreadCount || 0,
 		pendingProposalsCount,
 		topContributor:
