@@ -2,6 +2,18 @@ import { describe, it, expect, vi } from "vitest";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 
+vi.mock("@hono/auth-js", () => ({
+	getAuthUser: vi.fn().mockResolvedValue({
+		token: {
+			id: "admin-id",
+			name: "Admin",
+			role: "admin",
+			workspaceId: "test-ws-id",
+			permissions: ["*"],
+		},
+	}),
+}));
+
 vi.mock("../lib/db.js", () => {
 	const m = () => ({
 		findMany: vi.fn().mockResolvedValue([]),
