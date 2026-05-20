@@ -1,18 +1,14 @@
 import { Hono } from "hono";
-import { getAuthUser } from "@hono/auth-js";
+import { getAuthUser } from "../lib/get-auth-user.js";
 
 const route = new Hono();
 
 route.get("/me", async (c) => {
-	const auth = await getAuthUser(c);
-	const token = auth?.token as any;
-	if (!token?.id) {
-		return c.json({ error: "Not authenticated" }, 401);
-	}
+	const user = getAuthUser(c);
 
 	const db = c.get("db");
 	const membership = await db.membership.findFirst({
-		where: { userId: token.id },
+		where: { userId: user.id },
 		include: {
 			workspace: { select: { id: true, name: true, description: true } },
 			permissions: { select: { permission: true } },

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getAuthUser } from "@hono/auth-js";
+import { getAuthUser } from "../lib/get-auth-user.js";
 import { z } from "zod";
 import { writeAuditLog } from "../lib/audit.js";
 import { createNotification } from "../lib/notifications.js";
@@ -157,10 +157,10 @@ route.post("/proposals/:id/approve", async (c) => {
 	const db = c.get("db");
 	const wid = c.get("workspaceId");
 	const id = c.req.param("id");
-	const auth = await getAuthUser(c);
-	const userId = (auth?.token as any)?.id as string;
-	const userName = (auth?.token as any)?.name as string;
-	const role = (((auth?.token as any)?.role as string) || "").toLowerCase();
+	const user = getAuthUser(c);
+	const userId = user.id;
+	const userName = user.name;
+	const role = user.role.toLowerCase();
 	const body = await c.req.json().catch(() => ({}));
 	const parsed = approveSchema.parse(body);
 
@@ -261,10 +261,10 @@ route.post("/proposals/:id/reject", async (c) => {
 	const db = c.get("db");
 	const wid = c.get("workspaceId");
 	const id = c.req.param("id");
-	const auth = await getAuthUser(c);
-	const userId = (auth?.token as any)?.id as string;
-	const userName = (auth?.token as any)?.name as string;
-	const role = (((auth?.token as any)?.role as string) || "").toLowerCase();
+	const user = getAuthUser(c);
+	const userId = user.id;
+	const userName = user.name;
+	const role = user.role.toLowerCase();
 	const body = await c.req.json();
 	const parsed = rejectSchema.parse(body);
 
