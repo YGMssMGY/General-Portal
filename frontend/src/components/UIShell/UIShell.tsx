@@ -59,79 +59,82 @@ interface NavGroup {
 	items: NavItem[];
 }
 
-const navConfig: NavGroup[] = [
-	{
-		title: "Main",
-		items: [
-			{ label: "Dashboard", to: "/admin", icon: Dashboard, end: true },
-			{ label: "Search", to: "/admin/search", icon: Search },
-		],
-	},
-	{
-		title: "Management",
-		items: [
-			{ label: "Tasks", to: "/admin/tasks", icon: Task },
-			{ label: "Events", to: "/admin/events", icon: Calendar },
-			{
-				label: "Proposals",
-				to: "/admin/proposals",
-				icon: Document,
-				featureFlag: "showProposals",
-			},
-			{
-				label: "Volunteers",
-				to: "/admin/volunteers",
-				icon: User,
-				featureFlag: "showVolunteers",
-			},
-			{
-				label: "Finance",
-				to: "/admin/finance",
-				icon: Money,
-				minRole: "officer",
-				featureFlag: "showFinance",
-			},
-			{ label: "Files", to: "/admin/files", icon: Folder, featureFlag: "showFiles" },
-			{
-				label: "Meetings",
-				to: "/admin/meetings",
-				icon: Calendar,
-				featureFlag: "showMeetings",
-			},
-		],
-	},
-	{
-		title: "Communication",
-		items: [{ label: "Messages", to: "/admin/messages", icon: Chat }],
-	},
-	{
-		title: "Administration",
-		items: [
-			{ label: "Accounts", to: "/admin/accounts", icon: User },
-			{
-				label: "Members",
-				to: "/admin/members",
-				icon: Group,
-				minRole: "officer",
-				featureFlag: "showMembers",
-			},
-			{
-				label: "Activity",
-				to: "/admin/activity",
-				icon: Activity,
-				minRole: "officer",
-				featureFlag: "showActivity",
-			},
-			{
-				label: "Settings",
-				to: "/admin/settings",
-				icon: Settings,
-				minRole: "president",
-				featureFlag: "showSettings",
-			},
-		],
-	},
-];
+function getNavConfig(portal: string): NavGroup[] {
+	const p = portal || "developers";
+	return [
+		{
+			title: "Main",
+			items: [
+				{ label: "Dashboard", to: `/${p}`, icon: Dashboard, end: true },
+				{ label: "Search", to: `/${p}/search`, icon: Search },
+			],
+		},
+		{
+			title: "Management",
+			items: [
+				{ label: "Tasks", to: `/${p}/tasks`, icon: Task },
+				{ label: "Events", to: `/${p}/events`, icon: Calendar },
+				{
+					label: "Proposals",
+					to: `/${p}/proposals`,
+					icon: Document,
+					featureFlag: "showProposals",
+				},
+				{
+					label: "Volunteers",
+					to: `/${p}/volunteers`,
+					icon: User,
+					featureFlag: "showVolunteers",
+				},
+				{
+					label: "Finance",
+					to: `/${p}/finance`,
+					icon: Money,
+					minRole: "officer",
+					featureFlag: "showFinance",
+				},
+				{ label: "Files", to: `/${p}/files`, icon: Folder, featureFlag: "showFiles" },
+				{
+					label: "Meetings",
+					to: `/${p}/meetings`,
+					icon: Calendar,
+					featureFlag: "showMeetings",
+				},
+			],
+		},
+		{
+			title: "Communication",
+			items: [{ label: "Messages", to: `/${p}/messages`, icon: Chat }],
+		},
+		{
+			title: "Administration",
+			items: [
+				{ label: "Accounts", to: `/${p}/accounts`, icon: User },
+				{
+					label: "Members",
+					to: `/${p}/members`,
+					icon: Group,
+					minRole: "officer",
+					featureFlag: "showMembers",
+				},
+				{
+					label: "Activity",
+					to: `/${p}/activity`,
+					icon: Activity,
+					minRole: "officer",
+					featureFlag: "showActivity",
+				},
+				{
+					label: "Settings",
+					to: `/${p}/settings`,
+					icon: Settings,
+					minRole: "president",
+					featureFlag: "showSettings",
+				},
+			],
+		},
+	];
+}
 
 const roleLevels: Record<string, number> = {
 	admin: 4,
@@ -152,7 +155,7 @@ export function UIShell() {
 	const notifBtnRef = useRef<HTMLButtonElement>(null);
 	const { unreadCount, notifications, markRead, markAllRead } = useNotifications();
 	const { isConnected } = useWebSocket();
-	const portal = useUIStore((s) => s.portal);
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const setPortal = useUIStore((s) => s.setPortal);
 	const config = useMemo(() => getClientConfig(portal ?? undefined), [portal]);
 	const features = config.features;
@@ -185,7 +188,7 @@ export function UIShell() {
 	}, [sessionUser?.role]);
 
 	const filteredConfig = useMemo(() => {
-		return navConfig
+		return getNavConfig(portal)
 			.map((group) => ({
 				...group,
 				items: group.items.filter((item) => {
@@ -195,11 +198,11 @@ export function UIShell() {
 				}),
 			}))
 			.filter((group) => group.items.length > 0);
-	}, [userRoleLevel, features]);
+	}, [userRoleLevel, features, portal]);
 
 	function handleSearchSubmit(e: React.KeyboardEvent<HTMLInputElement>) {
 		if (e.key === "Enter" && searchValue.trim()) {
-			window.location.href = `/admin/search?q=${encodeURIComponent(searchValue.trim())}`;
+			window.location.href = `/${portal}/search?q=${encodeURIComponent(searchValue.trim())}`;
 			setSearchOpen(false);
 			setSearchValue("");
 		}
@@ -229,7 +232,7 @@ export function UIShell() {
 							onClick={onClickSideNavExpand}
 							isActive={isSideNavExpanded}
 						/>
-						<HeaderName as={Link} to="/admin" prefix={config.shortName}>
+						<HeaderName as={Link} to={`/${portal}`} prefix={config.shortName}>
 							{config.displayName}
 						</HeaderName>
 						<HeaderGlobalBar>

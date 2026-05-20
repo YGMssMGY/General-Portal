@@ -10,7 +10,7 @@ export async function runNudges() {
 }
 
 async function runNudgesForPortal(portal: string) {
-	const db = getDb(portal);
+	const db = await getDb(portal);
 	const workspaces = await db.workspace.findMany({ select: { id: true } });
 
 	for (const ws of workspaces) {

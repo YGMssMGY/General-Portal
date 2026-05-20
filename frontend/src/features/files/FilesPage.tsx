@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
 	Search,
@@ -12,6 +13,7 @@ import {
 	Form,
 	InlineNotification,
 } from "@carbon/react";
+import { useUIStore } from "../../stores/useUIStore";
 import {
 	Document,
 	DocumentPdf,
@@ -69,6 +71,7 @@ function isImage(ext: string) {
 }
 
 export function FilesPage() {
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const { data, error, isLoading, refetch } = useFiles();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [typeFilter, setTypeFilter] = useState("all");
@@ -176,6 +179,18 @@ export function FilesPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader title="Files" description="Store, preview, and manage workspace files." />
 
 			{/* Toolbar */}

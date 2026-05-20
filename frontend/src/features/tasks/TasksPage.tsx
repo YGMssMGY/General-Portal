@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
@@ -6,6 +7,7 @@ import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
+import { useUIStore } from "../../stores/useUIStore";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
 import {
 	Button,
@@ -676,6 +678,7 @@ function DataToolbar({
 /* ---------- Main Page Component ---------- */
 
 export function TasksPage() {
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const { data, error, isLoading, refetch } = useTasks();
 	const { data: activityStats } = useActivityStats();
 	const { user } = useAuth();
@@ -947,6 +950,18 @@ export function TasksPage() {
 
 	return (
 		<div style={{ position: "relative", minHeight: "calc(100vh - 4rem)" }}>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader
 				title="Tasks"
 				description="Assign work, track progress, and keep every responsibility visible."

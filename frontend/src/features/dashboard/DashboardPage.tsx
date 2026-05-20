@@ -6,6 +6,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useAuth } from "../../context/AuthContext";
 import { useDashboard } from "../../hooks/useWorkspaceResources";
+import { useUIStore } from "../../stores/useUIStore";
 import { formatDate } from "../../utils/format";
 import {
 	ArrowRight,
@@ -32,12 +33,14 @@ const metricIcons: Record<string, ComponentType<any>> = {
 	Payment: Calendar,
 };
 
-const metricLinks: Record<string, string> = {
-	"Open Tasks": "/admin/tasks",
-	"Pending Proposals": "/admin/proposals",
-	"Upcoming Events": "/admin/events",
-	"Unread Messages": "/admin/messages",
-};
+function getMetricLinks(portal: string): Record<string, string> {
+	return {
+		"Open Tasks": `/${portal}/tasks`,
+		"Pending Proposals": `/${portal}/proposals`,
+		"Upcoming Events": `/${portal}/events`,
+		"Unread Messages": `/${portal}/messages`,
+	};
+}
 
 const toneIconColors: Record<string, string> = {
 	primary: "var(--cds-support-info)",
@@ -75,9 +78,15 @@ const MetricSparkline = memo(function MetricSparkline({ metric }: { metric: Dash
 	);
 });
 
-const MetricCard = memo(function MetricCard({ metric }: { metric: DashboardMetric }) {
+const MetricCard = memo(function MetricCard({
+	metric,
+	portal,
+}: {
+	metric: DashboardMetric;
+	portal: string;
+}) {
 	const Icon = metricIcons[metric.icon] ?? Task;
-	const link = metricLinks[metric.label];
+	const link = getMetricLinks(portal)[metric.label];
 	const iconColor = toneIconColors[metric.tone];
 
 	const inner = (
@@ -150,16 +159,19 @@ function countToday(
 	}).length;
 }
 
-const quickActions = [
-	{ label: "New Task", icon: Task, to: "/admin/tasks" },
-	{ label: "New Proposal", icon: Document, to: "/admin/proposals" },
-	{ label: "New Event", icon: Event, to: "/admin/events" },
-	{ label: "Send Message", icon: Chat, to: "/admin/messages" },
-	{ label: "My Account", icon: User, to: "/admin/accounts" },
-];
+function getQuickActions(portal: string) {
+	return [
+		{ label: "New Task", icon: Task, to: `/${portal}/tasks` },
+		{ label: "New Proposal", icon: Document, to: `/${portal}/proposals` },
+		{ label: "New Event", icon: Event, to: `/${portal}/events` },
+		{ label: "Send Message", icon: Chat, to: `/${portal}/messages` },
+		{ label: "My Account", icon: User, to: `/${portal}/accounts` },
+	];
+}
 
 export function DashboardPage() {
 	const { user } = useAuth();
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const { data, error, isLoading, refetch } = useDashboard();
 	const greeting = ((h: number) =>
 		h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening")(
@@ -212,7 +224,7 @@ export function DashboardPage() {
 					}
 					actions={
 						<Stack gap={3} orientation="horizontal">
-							{quickActions.map((action) => (
+							{getQuickActions(portal).map((action) => (
 								<Button
 									key={action.label}
 									as={Link}
@@ -239,7 +251,7 @@ export function DashboardPage() {
 							key={metric.label}
 							style={{ marginBottom: "1rem" }}
 						>
-							<MetricCard metric={metric} />
+							<MetricCard metric={metric} portal={portal} />
 						</Column>
 					))}
 				</Row>
@@ -261,7 +273,7 @@ export function DashboardPage() {
 									Needs Attention
 								</h2>
 								<Link
-									to="/admin/tasks"
+									to={`/${portal}/tasks`}
 									className="cds--type-body-01"
 									style={{ fontWeight: 500, color: "var(--cds-link-primary)" }}
 								>
@@ -360,7 +372,7 @@ export function DashboardPage() {
 									My Tasks
 								</h2>
 								<Link
-									to="/admin/tasks"
+									to={`/${portal}/tasks`}
 									className="cds--type-body-01"
 									style={{ fontWeight: 500, color: "var(--cds-link-primary)" }}
 								>

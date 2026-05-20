@@ -12,7 +12,7 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
 	let db: any = c.get("db");
 	if (!db) {
 		const { getDb } = await import("./db.js");
-		db = getDb("developers");
+		db = await getDb("developers");
 	}
 
 	return {

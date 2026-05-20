@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
@@ -21,6 +22,7 @@ import {
 import { Add, Edit, TrashCan, Time, UserAvatar, StarFilled, Calendar } from "@carbon/icons-react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useVolunteerSlots } from "../../hooks/useWorkspaceResources";
+import { useUIStore } from "../../stores/useUIStore";
 import type { VolunteerSlot } from "../../types";
 import { formatDate } from "../../utils/format";
 
@@ -37,6 +39,7 @@ const statusColorMap: Record<string, "blue" | "green" | "gray"> = {
 };
 
 export function VolunteersPage() {
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const { data, error, isLoading, refetch } = useVolunteerSlots();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingSlot, setEditingSlot] = useState<VolunteerSlot>();
@@ -262,6 +265,18 @@ export function VolunteersPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader
 				title="Volunteers"
 				description="Manage volunteer slots, sign-ups, and hours."

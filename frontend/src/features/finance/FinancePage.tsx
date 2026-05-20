@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
@@ -26,6 +27,7 @@ import {
 } from "@carbon/react";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useAuth } from "../../context/AuthContext";
+import { useUIStore } from "../../stores/useUIStore";
 import {
 	useFinanceTransactions,
 	useFinanceSummary,
@@ -50,6 +52,7 @@ import "@carbon/charts/styles.css";
 
 export function FinancePage() {
 	const { user } = useAuth();
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const {
 		data: txData,
 		error: txError,
@@ -303,6 +306,18 @@ export function FinancePage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader
 				title="Finance"
 				description="Track reimbursements, approvals, budgets, and spending."

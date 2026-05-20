@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
 	Grid,
@@ -22,6 +23,7 @@ import { Modal } from "../../components/Modal";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useSettings, useModules, useApprovalRules } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../hooks/useAuth";
+import { useUIStore } from "../../stores/useUIStore";
 import type {
 	TermArchive,
 	TermSummary,
@@ -170,6 +172,7 @@ function NewRuleModal({
 
 export function SettingsPage() {
 	const { user } = useAuth();
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const {
 		data: settings,
 		error: settingsError,
@@ -362,6 +365,18 @@ export function SettingsPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader
 				title="Workspace Settings"
 				description="Configure workspace defaults, modules, and policies."
