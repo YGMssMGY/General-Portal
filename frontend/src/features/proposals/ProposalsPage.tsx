@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
-import { PageHeader } from "../../components/PageHeader";
+import { PageLayout } from "../../components/PageLayout/PageLayout";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
@@ -351,7 +351,7 @@ export function ProposalsPage() {
 			>
 				&larr; Back to Dashboard
 			</Link>
-			<PageHeader
+			<PageLayout
 				title="Proposals"
 				description="Submit, review, and track proposals for events, purchases, and projects."
 				actions={
@@ -359,354 +359,359 @@ export function ProposalsPage() {
 						New Proposal
 					</Button>
 				}
-			/>
+			>
+				<Stack orientation="horizontal" gap={4} className="cds--data-table-toolbar">
+					<Search
+						id="search-proposals"
+						labelText="Search proposals"
+						placeholder="Search by title or submitter"
+						size="sm"
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+					/>
+					<Select
+						id="filter-status"
+						labelText=""
+						hideLabel
+						size="sm"
+						value={statusFilter}
+						onChange={(e) => setStatusFilter(e.target.value)}
+					>
+						<SelectItem value="all" text="All Statuses" />
+						<SelectItem value="draft" text="Draft" />
+						<SelectItem value="submitted" text="Submitted" />
+						<SelectItem value="under_review" text="Under Review" />
+						<SelectItem value="approved" text="Approved" />
+						<SelectItem value="rejected" text="Rejected" />
+					</Select>
+					<Select
+						id="filter-type"
+						labelText=""
+						hideLabel
+						size="sm"
+						value={typeFilter}
+						onChange={(e) => setTypeFilter(e.target.value)}
+					>
+						<SelectItem value="all" text="All Types" />
+						<SelectItem value="Event" text="Event" />
+						<SelectItem value="Purchase" text="Purchase" />
+						<SelectItem value="Project" text="Project" />
+					</Select>
+					<Button type="button" renderIcon={Add} size="sm" onClick={openCreateModal}>
+						Add Proposal
+					</Button>
+				</Stack>
 
-			<Stack orientation="horizontal" gap={5} className="cds--data-table-toolbar">
-				<Search
-					id="search-proposals"
-					labelText="Search proposals"
-					placeholder="Search by title or submitter"
-					size="sm"
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-				/>
-				<Select
-					id="filter-status"
-					labelText=""
-					hideLabel
-					size="sm"
-					value={statusFilter}
-					onChange={(e) => setStatusFilter(e.target.value)}
-				>
-					<SelectItem value="all" text="All Statuses" />
-					<SelectItem value="draft" text="Draft" />
-					<SelectItem value="submitted" text="Submitted" />
-					<SelectItem value="under_review" text="Under Review" />
-					<SelectItem value="approved" text="Approved" />
-					<SelectItem value="rejected" text="Rejected" />
-				</Select>
-				<Select
-					id="filter-type"
-					labelText=""
-					hideLabel
-					size="sm"
-					value={typeFilter}
-					onChange={(e) => setTypeFilter(e.target.value)}
-				>
-					<SelectItem value="all" text="All Types" />
-					<SelectItem value="Event" text="Event" />
-					<SelectItem value="Purchase" text="Purchase" />
-					<SelectItem value="Project" text="Project" />
-				</Select>
-				<Button type="button" renderIcon={Add} size="sm" onClick={openCreateModal}>
-					Add Proposal
-				</Button>
-			</Stack>
+				<Grid>
+					<Column lg={selected ? 12 : 16} md={16} sm={4}>
+						<Stack gap={4}>
+							<DataTable
+								columns={columns}
+								data={filtered as unknown as Record<string, unknown>[]}
+								defaultSort={{ key: "submittedAt", direction: "desc" }}
+								pageSize={10}
+								onRowClick={(item) => {
+									setSelectedId((prev) =>
+										prev === item.id ? undefined : item.id,
+									);
+								}}
+							/>
+						</Stack>
+					</Column>
 
-			<Grid>
-				<Column lg={selected ? 12 : 16} md={16} sm={4}>
-					<Stack gap={6}>
-						<DataTable
-							columns={columns}
-							data={filtered as unknown as Record<string, unknown>[]}
-							defaultSort={{ key: "submittedAt", direction: "desc" }}
-							pageSize={10}
-							onRowClick={(item) => {
-								setSelectedId((prev) => (prev === item.id ? undefined : item.id));
-							}}
-						/>
-					</Stack>
-				</Column>
-
-				{selected ? (
-					<Column lg={4} md={0} sm={0}>
-						<Tile style={{ padding: "1.5rem" }}>
-							<Stack gap={5}>
-								<Stack orientation="horizontal" gap={5}>
-									<Tag type="outline">{selected.status.replace(/_/g, " ")}</Tag>
-									<Tag
-										type={
-											typeTagColors[selected.type] as
-												| "teal"
-												| "purple"
-												| "cyan"
-										}
-									>
-										{selected.type}
-									</Tag>
-								</Stack>
-
-								<div>
-									<h2
-										style={{
-											fontSize: "1.125rem",
-											fontWeight: 600,
-											color: "var(--cds-text-primary)",
-											marginBottom: "0.25rem",
-										}}
-									>
-										{selected.title}
-									</h2>
-									<div
-										style={{
-											fontSize: "0.875rem",
-											color: "var(--cds-text-secondary)",
-										}}
-									>
-										<MarkdownRenderer>{selected.summary}</MarkdownRenderer>
-									</div>
-								</div>
-
-								<Document
-									size={20}
-									style={{ color: "var(--cds-text-secondary)" }}
-									aria-hidden="true"
-								/>
-
-								<Stack gap={4}>
-									<Stack
-										orientation="horizontal"
-										gap={5}
-										style={{ justifyContent: "space-between" }}
-									>
-										<span
-											style={{
-												fontSize: "0.875rem",
-												color: "var(--cds-text-secondary)",
-											}}
-										>
-											Submitter
-										</span>
-										<span
-											style={{
-												fontSize: "0.875rem",
-												fontWeight: 500,
-												color: "var(--cds-text-primary)",
-											}}
-										>
-											{selected.submittedBy}
-										</span>
-									</Stack>
-									<Stack
-										orientation="horizontal"
-										gap={5}
-										style={{ justifyContent: "space-between" }}
-									>
-										<span
-											style={{
-												fontSize: "0.875rem",
-												color: "var(--cds-text-secondary)",
-											}}
-										>
-											Date
-										</span>
-										<span
-											style={{
-												fontSize: "0.875rem",
-												fontWeight: 500,
-												color: "var(--cds-text-primary)",
-											}}
-										>
-											{formatDateTime(selected.submittedAt)}
-										</span>
-									</Stack>
-									<Stack
-										orientation="horizontal"
-										gap={5}
-										style={{ justifyContent: "space-between" }}
-									>
-										<span
-											style={{
-												fontSize: "0.875rem",
-												color: "var(--cds-text-secondary)",
-											}}
-										>
-											Budget
-										</span>
-										<span
-											style={{
-												fontSize: "0.875rem",
-												fontWeight: 500,
-												color: "var(--cds-text-primary)",
-											}}
-										>
-											{formatCurrency(selected.budget)}
-										</span>
-									</Stack>
-								</Stack>
-
-								{/* Progress Indicator */}
-								{selected.status !== "draft" && (
-									<ProgressIndicator>
-										{stepLabels.map((label, i) => {
-											const state = getStepStates(selected.status)[i];
-											return (
-												<ProgressStep
-													key={label}
-													label={label}
-													complete={state.complete}
-													current={state.current}
-													invalid={state.invalid}
-													disabled={false}
-												/>
-											);
-										})}
-									</ProgressIndicator>
-								)}
-
-								{/* Rejection reason */}
-								{selected.status === "rejected" && selected.rejectionReason && (
-									<InlineNotification
-										kind="error"
-										title="Rejected"
-										subtitle={selected.rejectionReason}
-										hideCloseButton
-										lowContrast
-									/>
-								)}
-
-								{/* Approve / Reject buttons */}
-								{canAct && (
+					{selected ? (
+						<Column lg={4} md={0} sm={0}>
+							<Tile style={{ padding: "1.5rem" }}>
+								<Stack gap={5}>
 									<Stack orientation="horizontal" gap={5}>
-										<Button
-											kind="primary"
-											type="button"
-											renderIcon={Checkmark}
-											onClick={() => handleApprove(selected.id)}
-											disabled={isApproving}
+										<Tag type="outline">
+											{selected.status.replace(/_/g, " ")}
+										</Tag>
+										<Tag
+											type={
+												typeTagColors[selected.type] as
+													| "teal"
+													| "purple"
+													| "cyan"
+											}
 										>
-											Approve
+											{selected.type}
+										</Tag>
+									</Stack>
+
+									<div>
+										<h2
+											style={{
+												fontSize: "1.125rem",
+												fontWeight: 600,
+												color: "var(--cds-text-primary)",
+												marginBottom: "0.25rem",
+											}}
+										>
+											{selected.title}
+										</h2>
+										<div
+											style={{
+												fontSize: "0.875rem",
+												color: "var(--cds-text-secondary)",
+											}}
+										>
+											<MarkdownRenderer>{selected.summary}</MarkdownRenderer>
+										</div>
+									</div>
+
+									<Document
+										size={20}
+										style={{ color: "var(--cds-text-secondary)" }}
+										aria-hidden="true"
+									/>
+
+									<Stack gap={4}>
+										<Stack
+											orientation="horizontal"
+											gap={5}
+											style={{ justifyContent: "space-between" }}
+										>
+											<span
+												style={{
+													fontSize: "0.875rem",
+													color: "var(--cds-text-secondary)",
+												}}
+											>
+												Submitter
+											</span>
+											<span
+												style={{
+													fontSize: "0.875rem",
+													fontWeight: 500,
+													color: "var(--cds-text-primary)",
+												}}
+											>
+												{selected.submittedBy}
+											</span>
+										</Stack>
+										<Stack
+											orientation="horizontal"
+											gap={5}
+											style={{ justifyContent: "space-between" }}
+										>
+											<span
+												style={{
+													fontSize: "0.875rem",
+													color: "var(--cds-text-secondary)",
+												}}
+											>
+												Date
+											</span>
+											<span
+												style={{
+													fontSize: "0.875rem",
+													fontWeight: 500,
+													color: "var(--cds-text-primary)",
+												}}
+											>
+												{formatDateTime(selected.submittedAt)}
+											</span>
+										</Stack>
+										<Stack
+											orientation="horizontal"
+											gap={5}
+											style={{ justifyContent: "space-between" }}
+										>
+											<span
+												style={{
+													fontSize: "0.875rem",
+													color: "var(--cds-text-secondary)",
+												}}
+											>
+												Budget
+											</span>
+											<span
+												style={{
+													fontSize: "0.875rem",
+													fontWeight: 500,
+													color: "var(--cds-text-primary)",
+												}}
+											>
+												{formatCurrency(selected.budget)}
+											</span>
+										</Stack>
+									</Stack>
+
+									{/* Progress Indicator */}
+									{selected.status !== "draft" && (
+										<ProgressIndicator>
+											{stepLabels.map((label, i) => {
+												const state = getStepStates(selected.status)[i];
+												return (
+													<ProgressStep
+														key={label}
+														label={label}
+														complete={state.complete}
+														current={state.current}
+														invalid={state.invalid}
+														disabled={false}
+													/>
+												);
+											})}
+										</ProgressIndicator>
+									)}
+
+									{/* Rejection reason */}
+									{selected.status === "rejected" && selected.rejectionReason && (
+										<InlineNotification
+											kind="error"
+											title="Rejected"
+											subtitle={selected.rejectionReason}
+											hideCloseButton
+											lowContrast
+										/>
+									)}
+
+									{/* Approve / Reject buttons */}
+									{canAct && (
+										<Stack orientation="horizontal" gap={5}>
+											<Button
+												kind="primary"
+												type="button"
+												renderIcon={Checkmark}
+												onClick={() => handleApprove(selected.id)}
+												disabled={isApproving}
+											>
+												Approve
+											</Button>
+											<Button
+												kind="danger"
+												type="button"
+												renderIcon={Close}
+												onClick={() => {
+													setRejectReason("");
+													setRejectModalOpen(true);
+												}}
+												disabled={isApproving}
+											>
+												Reject
+											</Button>
+										</Stack>
+									)}
+
+									{/* Approval history timeline */}
+									{approvalHistory.length > 0 && (
+										<div>
+											<p
+												style={{
+													fontSize: "0.75rem",
+													fontWeight: 600,
+													textTransform: "uppercase",
+													color: "var(--cds-text-secondary)",
+													marginBottom: "0.5rem",
+													letterSpacing: "0.025em",
+												}}
+											>
+												Approval History
+											</p>
+											<Stack gap={3}>
+												{approvalHistory.map((entry) => (
+													<div
+														key={entry.id}
+														style={{
+															display: "flex",
+															gap: "0.5rem",
+															padding: "0.25rem 0",
+															borderLeft:
+																"2px solid var(--cds-border-subtle)",
+															paddingLeft: "0.75rem",
+														}}
+													>
+														<div>
+															<p
+																style={{
+																	fontSize: "0.8125rem",
+																	fontWeight: 500,
+																	color: "var(--cds-text-primary)",
+																}}
+															>
+																{entry.step}
+															</p>
+															<p
+																style={{
+																	fontSize: "0.75rem",
+																	color: "var(--cds-text-secondary)",
+																}}
+															>
+																{entry.approver} —{" "}
+																{formatDateTime(entry.createdAt)}
+															</p>
+															{entry.comment && (
+																<p
+																	style={{
+																		fontSize: "0.75rem",
+																		color:
+																			entry.action ===
+																			"rejected"
+																				? "var(--cds-support-error)"
+																				: "var(--cds-text-secondary)",
+																		fontStyle: "italic",
+																	}}
+																>
+																	{entry.comment}
+																</p>
+															)}
+														</div>
+													</div>
+												))}
+											</Stack>
+										</div>
+									)}
+								</Stack>
+							</Tile>
+
+							{/* Reject modal */}
+							<Modal
+								title="Reject Proposal"
+								description="Provide a reason for rejection."
+								isOpen={rejectModalOpen}
+								onClose={() => setRejectModalOpen(false)}
+							>
+								<Stack gap={5}>
+									<TextArea
+										id="reject-reason"
+										labelText="Reason (required)"
+										placeholder="Explain why this proposal is being rejected..."
+										value={rejectReason}
+										onChange={(e) => setRejectReason(e.target.value)}
+										invalid={isRejecting && !rejectReason.trim()}
+										invalidText="Reason is required"
+									/>
+									<Stack
+										orientation="horizontal"
+										gap={5}
+										style={{ justifyContent: "flex-end" }}
+									>
+										<Button
+											kind="secondary"
+											onClick={() => {
+												setRejectModalOpen(false);
+												setRejectReason("");
+											}}
+										>
+											Cancel
 										</Button>
 										<Button
 											kind="danger"
 											type="button"
-											renderIcon={Close}
-											onClick={() => {
-												setRejectReason("");
-												setRejectModalOpen(true);
-											}}
-											disabled={isApproving}
+											onClick={handleReject}
+											disabled={!rejectReason.trim() || isRejecting}
 										>
-											Reject
+											{isRejecting ? "Rejecting..." : "Reject"}
 										</Button>
 									</Stack>
-								)}
-
-								{/* Approval history timeline */}
-								{approvalHistory.length > 0 && (
-									<div>
-										<p
-											style={{
-												fontSize: "0.75rem",
-												fontWeight: 600,
-												textTransform: "uppercase",
-												color: "var(--cds-text-secondary)",
-												marginBottom: "0.5rem",
-												letterSpacing: "0.025em",
-											}}
-										>
-											Approval History
-										</p>
-										<Stack gap={3}>
-											{approvalHistory.map((entry) => (
-												<div
-													key={entry.id}
-													style={{
-														display: "flex",
-														gap: "0.5rem",
-														padding: "0.25rem 0",
-														borderLeft:
-															"2px solid var(--cds-border-subtle)",
-														paddingLeft: "0.75rem",
-													}}
-												>
-													<div>
-														<p
-															style={{
-																fontSize: "0.8125rem",
-																fontWeight: 500,
-																color: "var(--cds-text-primary)",
-															}}
-														>
-															{entry.step}
-														</p>
-														<p
-															style={{
-																fontSize: "0.75rem",
-																color: "var(--cds-text-secondary)",
-															}}
-														>
-															{entry.approver} —{" "}
-															{formatDateTime(entry.createdAt)}
-														</p>
-														{entry.comment && (
-															<p
-																style={{
-																	fontSize: "0.75rem",
-																	color:
-																		entry.action === "rejected"
-																			? "var(--cds-support-error)"
-																			: "var(--cds-text-secondary)",
-																	fontStyle: "italic",
-																}}
-															>
-																{entry.comment}
-															</p>
-														)}
-													</div>
-												</div>
-											))}
-										</Stack>
-									</div>
-								)}
-							</Stack>
-						</Tile>
-
-						{/* Reject modal */}
-						<Modal
-							title="Reject Proposal"
-							description="Provide a reason for rejection."
-							isOpen={rejectModalOpen}
-							onClose={() => setRejectModalOpen(false)}
-						>
-							<Stack gap={5}>
-								<TextArea
-									id="reject-reason"
-									labelText="Reason (required)"
-									placeholder="Explain why this proposal is being rejected..."
-									value={rejectReason}
-									onChange={(e) => setRejectReason(e.target.value)}
-									invalid={isRejecting && !rejectReason.trim()}
-									invalidText="Reason is required"
-								/>
-								<Stack
-									orientation="horizontal"
-									gap={5}
-									style={{ justifyContent: "flex-end" }}
-								>
-									<Button
-										kind="secondary"
-										onClick={() => {
-											setRejectModalOpen(false);
-											setRejectReason("");
-										}}
-									>
-										Cancel
-									</Button>
-									<Button
-										kind="danger"
-										type="button"
-										onClick={handleReject}
-										disabled={!rejectReason.trim() || isRejecting}
-									>
-										{isRejecting ? "Rejecting..." : "Reject"}
-									</Button>
 								</Stack>
-							</Stack>
-						</Modal>
-					</Column>
-				) : null}
-			</Grid>
+							</Modal>
+						</Column>
+					) : null}
+				</Grid>
+			</PageLayout>
 
 			<Modal
 				title={editingProposal ? "Edit Proposal" : "New Proposal"}
