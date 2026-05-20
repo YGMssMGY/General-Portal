@@ -49,6 +49,7 @@ export interface Task {
 	project: string;
 	dueDate: string;
 	assigneeName: string;
+	assigneeId?: string;
 	progress: number;
 	blockedReason?: string;
 }
@@ -59,6 +60,7 @@ export interface Proposal {
 	type: "Event" | "Purchase" | "Project";
 	status: ResourceStatus;
 	submittedBy: string;
+	submittedById?: string;
 	submittedAt: string;
 	budget: number;
 	summary: string;
@@ -68,6 +70,7 @@ export interface Proposal {
 export interface EventOwner {
 	id: string;
 	ownerLabel: string;
+	userId?: string;
 }
 
 export interface EventItem {
@@ -98,6 +101,7 @@ export interface FinanceTransaction {
 	category: string;
 	status: ResourceStatus;
 	submittedBy: string;
+	submittedById?: string;
 	amount: number;
 	occurredAt: string;
 }

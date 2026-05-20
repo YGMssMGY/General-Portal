@@ -33,10 +33,15 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
 				if (account?.provider !== "microsoft-entra-id") return false;
 				if (!p?.email) return false;
 				const email = p.email.toLowerCase();
-				const exists = await db.user.findUnique({ where: { email } });
-				if (!exists) return false;
-				if (p.name && p.name !== exists.name) {
-					await db.user.update({ where: { email }, data: { name: p.name } });
+				try {
+					const exists = await db.user.findUnique({ where: { email } });
+					if (!exists) return false;
+					if (p.name && p.name !== exists.name) {
+						await db.user.update({ where: { email }, data: { name: p.name } });
+					}
+				} catch (e) {
+					console.error("[auth] signIn error:", e);
+					return false;
 				}
 				return true;
 			},

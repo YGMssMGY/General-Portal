@@ -148,9 +148,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  memberships Membership[]
-  accounts    Account[]
-  sessions    Session[]
+  memberships           Membership[]
+  accounts              Account[]
+  sessions              Session[]
+  assignedTasks         TaskItem[]          @relation("TaskAssignee")
+  submittedProposals    Proposal[]          @relation("ProposalSubmitter")
+  submittedTransactions FinanceTransaction[] @relation("TransactionSubmitter")
+  eventOwnerships       EventOwner[]
 }
 
 model Account {
@@ -232,6 +236,8 @@ model TaskItem {
   project       String?
   dueDate       DateTime?
   assigneeName  String?
+  assigneeId    String?
+  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
   progress      Int          @default(0)
   blockedReason String?
   position      Int          @default(0)
@@ -257,13 +263,9 @@ model Proposal {
   approvalStep    String         @default("submitted")
   approvalHistory String?
   submittedBy     String
+  submittedById   String?
+  submittedByUser User?        @relation("ProposalSubmitter", fields: [submittedById], references: [id])
   submittedAt     DateTime
-  dateNeeded      DateTime?
-  budget          Decimal        @default(0)
-  summary         String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?
 
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String
@@ -299,6 +301,8 @@ model EventItem {
 model EventOwner {
   id         String   @id @default(uuid())
   ownerLabel String
+  userId     String?
+  user       User?   @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -329,13 +333,10 @@ model FinanceTransaction {
   title       String
   category    TransactionCategory
   status      TransactionStatus   @default(pending)
-  submittedBy String
-  amount      Decimal             @default(0)
-  type        String              @default("expense")
-  notes       String?
-  occurredAt  DateTime
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  submittedBy     String
+  submittedById   String?
+  submittedByUser User?            @relation("TransactionSubmitter", fields: [submittedById], references: [id])
+  amount          Decimal             @default(0)
 
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String

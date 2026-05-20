@@ -532,7 +532,6 @@ export function SettingsPage() {
 								}}
 							>
 								Customize how certain terms are displayed in the workspace.
-								API-backed editing coming soon.
 							</p>
 							<Stack gap={5}>
 								<TextInput
