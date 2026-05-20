@@ -559,7 +559,12 @@ export function AccountsPage() {
 							>
 								Whitelist
 							</h3>
-							<Button size="sm" renderIcon={Add} onClick={() => setWlModalOpen(true)}>
+							<Button
+								type="button"
+								size="sm"
+								renderIcon={Add}
+								onClick={() => setWlModalOpen(true)}
+							>
 								Add Person
 							</Button>
 						</div>
@@ -617,6 +622,7 @@ export function AccountsPage() {
 										</span>
 										<Button
 											kind="ghost"
+											type="button"
 											size="sm"
 											renderIcon={TrashCan}
 											iconDescription="Remove"
@@ -707,10 +713,14 @@ export function AccountsPage() {
 						<div
 							style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}
 						>
-							<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+							<Button
+								kind="secondary"
+								type="button"
+								onClick={() => setDeleteTarget(undefined)}
+							>
 								Cancel
 							</Button>
-							<Button kind="danger" onClick={handleDeleteWhitelist}>
+							<Button kind="danger" type="button" onClick={handleDeleteWhitelist}>
 								Remove
 							</Button>
 						</div>

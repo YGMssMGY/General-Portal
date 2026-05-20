@@ -382,6 +382,7 @@ export function SettingsPage() {
 				description="Configure workspace defaults, modules, and policies."
 				actions={
 					<Button
+						type="button"
 						renderIcon={saved ? Checkmark : Save}
 						onClick={handleSave}
 						disabled={saving}
@@ -710,6 +711,7 @@ export function SettingsPage() {
 									</h2>
 									<Button
 										kind="danger"
+										type="button"
 										size="sm"
 										onClick={() => setEndTermModalOpen(true)}
 									>
@@ -770,6 +772,7 @@ export function SettingsPage() {
 												</div>
 												<Button
 													kind="ghost"
+													type="button"
 													size="sm"
 													renderIcon={View}
 													hasIconOnly
@@ -804,6 +807,7 @@ export function SettingsPage() {
 								</h2>
 								<Button
 									kind="tertiary"
+									type="button"
 									size="sm"
 									renderIcon={Add}
 									onClick={() => setRuleModalOpen(true)}
@@ -864,6 +868,7 @@ export function SettingsPage() {
 											</div>
 											<Button
 												kind="ghost"
+												type="button"
 												size="sm"
 												renderIcon={TrashCan}
 												hasIconOnly

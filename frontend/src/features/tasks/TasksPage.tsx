@@ -5,7 +5,7 @@ import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { Badge } from "../../components/Badge";
 import { useUIStore } from "../../stores/useUIStore";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
@@ -37,11 +37,12 @@ import {
 	type DragEndEvent,
 	type DragStartEvent,
 } from "@dnd-kit/core";
+import { fetchJson } from "../../api/httpClient";
 import { workspaceApi } from "../../api/workspaceApi";
 import { useTasks, useActivityStats } from "../../hooks/useWorkspaceResources";
 import { useAuth } from "../../context/AuthContext";
 import type { Priority, Task, TaskStatus, Member } from "../../types";
-import { formatDate } from "../../utils/format";
+import { formatDate, formatDateTime } from "../../utils/format";
 import {
 	Add,
 	Edit,
@@ -362,7 +363,49 @@ function DraggedCardOverlay({ task }: { task: Task | null }) {
 
 /* ---------- Detail Drawer ---------- */
 
+interface TaskComment {
+	id: string;
+	authorName: string;
+	body: string;
+	createdAt: string;
+}
+
 function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () => void }) {
+	const [comments, setComments] = useState<TaskComment[]>([]);
+	const [commentsLoading, setCommentsLoading] = useState(false);
+	const [newComment, setNewComment] = useState("");
+	const [postingComment, setPostingComment] = useState(false);
+	const { user } = useAuth();
+
+	useEffect(() => {
+		if (!task) return;
+		setCommentsLoading(true);
+		fetchJson<TaskComment[]>(`/tasks/${task.id}/comments`)
+			.then(setComments)
+			.catch(() => setComments([]))
+			.finally(() => setCommentsLoading(false));
+	}, [task?.id]);
+
+	async function handlePostComment() {
+		if (!task || !newComment.trim()) return;
+		setPostingComment(true);
+		try {
+			const comment = await fetchJson<TaskComment>(`/tasks/${task.id}/comments`, {
+				method: "POST",
+				body: JSON.stringify({
+					authorName: user?.displayName || "Anonymous",
+					body: newComment.trim(),
+				}),
+			});
+			setComments((prev) => [...prev, comment]);
+			setNewComment("");
+		} catch {
+			toast.error("Could not post comment");
+		} finally {
+			setPostingComment(false);
+		}
+	}
+
 	if (!task) return null;
 
 	return (
@@ -414,6 +457,7 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
 				</div>
 				<Button
 					kind="ghost"
+					type="button"
 					size="sm"
 					renderIcon={Close}
 					hasIconOnly
@@ -527,7 +571,7 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
 						</div>
 					</div>
 
-					{/* Comments placeholder */}
+					{/* Comments section */}
 					<div>
 						<h3
 							className="cds--type-heading-01"
@@ -540,11 +584,98 @@ function TaskDetailDrawer({ task, onClose }: { task: Task | null; onClose: () =>
 						>
 							<Chat size={16} /> Comments
 						</h3>
+						{commentsLoading ? (
+							<div
+								className="cds--type-body-01"
+								style={{
+									color: "var(--cds-text-secondary)",
+									padding: "0.5rem 0",
+								}}
+							>
+								Loading comments...
+							</div>
+						) : comments.length === 0 ? (
+							<div
+								className="cds--type-body-01"
+								style={{
+									color: "var(--cds-text-secondary)",
+									padding: "0.5rem 0",
+								}}
+							>
+								No comments yet.
+							</div>
+						) : (
+							<Stack gap={4}>
+								{comments.map((c) => (
+									<div
+										key={c.id}
+										style={{
+											padding: "0.75rem",
+											background: "var(--cds-layer-02)",
+											borderRadius: "4px",
+										}}
+									>
+										<div
+											style={{
+												display: "flex",
+												justifyContent: "space-between",
+												marginBottom: "0.25rem",
+											}}
+										>
+											<span
+												style={{
+													fontWeight: 500,
+													fontSize: "0.8125rem",
+													color: "var(--cds-text-primary)",
+												}}
+											>
+												{c.authorName}
+											</span>
+											<span
+												style={{
+													fontSize: "0.6875rem",
+													color: "var(--cds-text-secondary)",
+												}}
+											>
+												{formatDateTime(c.createdAt)}
+											</span>
+										</div>
+										<p
+											style={{
+												fontSize: "0.875rem",
+												color: "var(--cds-text-primary)",
+												margin: 0,
+											}}
+										>
+											{c.body}
+										</p>
+									</div>
+								))}
+							</Stack>
+						)}
 						<div
-							className="cds--type-body-01"
-							style={{ color: "var(--cds-text-secondary)", padding: "0.5rem 0" }}
+							style={{
+								display: "flex",
+								gap: "0.5rem",
+								marginTop: "0.75rem",
+							}}
 						>
-							Comments will be available in a future update.
+							<TextInput
+								id="new-comment"
+								labelText=""
+								hideLabel
+								placeholder="Write a comment..."
+								value={newComment}
+								onChange={(e) => setNewComment(e.target.value)}
+							/>
+							<Button
+								type="button"
+								kind="primary"
+								onClick={handlePostComment}
+								disabled={!newComment.trim() || postingComment}
+							>
+								{postingComment ? "..." : "Post"}
+							</Button>
 						</div>
 					</div>
 				</Stack>
@@ -667,7 +798,7 @@ function DataToolbar({
 				<SelectItem value="blocked" text="Blocked" />
 				<SelectItem value="done" text="Done" />
 			</Select>
-			<Button size="sm" renderIcon={Add} onClick={onAddTask}>
+			<Button type="button" size="sm" renderIcon={Add} onClick={onAddTask}>
 				Add Task
 			</Button>
 		</div>
@@ -810,6 +941,7 @@ export function TasksPage() {
 					<Stack gap={3} orientation="horizontal">
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={Edit}
 							iconDescription="Edit"
@@ -836,6 +968,7 @@ export function TasksPage() {
 						/>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={TrashCan}
 							iconDescription="Delete"
@@ -946,6 +1079,8 @@ export function TasksPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !data)
 		return <ErrorState message={error ?? "Tasks are unavailable"} onRetry={refetch} />;
+	if (data.length === 0)
+		return <EmptyState title="No tasks" description="Tasks will appear here once created." />;
 
 	return (
 		<div style={{ position: "relative", minHeight: "calc(100vh - 4rem)" }}>
@@ -1189,10 +1324,19 @@ export function TasksPage() {
 					Are you sure you want to delete &quot;{deleteTarget?.title}&quot;?
 				</p>
 				<Stack gap={3} orientation="horizontal" style={{ justifyContent: "flex-end" }}>
-					<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+					<Button
+						kind="secondary"
+						type="button"
+						onClick={() => setDeleteTarget(undefined)}
+					>
 						Cancel
 					</Button>
-					<Button kind="danger" onClick={handleDeleteTask} disabled={isDeleting}>
+					<Button
+						kind="danger"
+						type="button"
+						onClick={handleDeleteTask}
+						disabled={isDeleting}
+					>
 						{isDeleting ? "Deleting..." : "Delete"}
 					</Button>
 				</Stack>

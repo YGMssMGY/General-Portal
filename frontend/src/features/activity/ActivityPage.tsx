@@ -18,7 +18,7 @@ import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { useActivity, useActivityStats } from "../../hooks/useWorkspaceResources";
 import { useUIStore } from "../../stores/useUIStore";
 import { formatDateTime } from "../../utils/format";
@@ -116,6 +116,13 @@ export function ActivityPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !activity)
 		return <ErrorState message={error ?? "Activity data unavailable"} onRetry={refetch} />;
+	if (activity.length === 0)
+		return (
+			<EmptyState
+				title="No activity"
+				description="Activity will appear here once members start contributing."
+			/>
+		);
 
 	return (
 		<div>

@@ -152,6 +152,7 @@ export function FinancePage() {
 					<Stack orientation="horizontal" gap={3}>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={Edit}
 							iconDescription="Edit"
@@ -172,6 +173,7 @@ export function FinancePage() {
 						/>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={TrashCan}
 							iconDescription="Delete"
@@ -322,7 +324,7 @@ export function FinancePage() {
 				title="Finance"
 				description="Track reimbursements, approvals, budgets, and spending."
 				actions={
-					<Button renderIcon={Add} onClick={openCreateModal}>
+					<Button type="button" renderIcon={Add} onClick={openCreateModal}>
 						New Transaction
 					</Button>
 				}
@@ -629,6 +631,7 @@ export function FinancePage() {
 											</div>
 											<Button
 												kind="ghost"
+												type="button"
 												size="sm"
 												renderIcon={Close}
 												iconDescription="Close"
@@ -744,6 +747,7 @@ export function FinancePage() {
 										<Stack orientation="horizontal" gap={5}>
 											<Button
 												kind="primary"
+												type="button"
 												onClick={async () => {
 													await workspaceApi.updateFinanceTransaction(
 														selectedTx.id,
@@ -759,6 +763,7 @@ export function FinancePage() {
 											</Button>
 											<Button
 												kind="danger"
+												type="button"
 												onClick={async () => {
 													await workspaceApi.updateFinanceTransaction(
 														selectedTx.id,
@@ -786,7 +791,11 @@ export function FinancePage() {
 								justifyContent: "flex-end",
 							}}
 						>
-							<Button renderIcon={Money} onClick={() => setBudgetModalOpen(true)}>
+							<Button
+								type="button"
+								renderIcon={Money}
+								onClick={() => setBudgetModalOpen(true)}
+							>
 								New Allocation
 							</Button>
 						</div>
@@ -878,6 +887,7 @@ export function FinancePage() {
 															user.role === "officer") && (
 															<Button
 																kind="primary"
+																type="button"
 																size="sm"
 																onClick={() =>
 																	handleApproveBudget(ba.id)
@@ -944,6 +954,7 @@ export function FinancePage() {
 										Cancel
 									</Button>
 									<Button
+										type="button"
 										onClick={handleCreateBudget}
 										disabled={budgetSaving || !budgetForm.title.trim()}
 									>
@@ -1107,10 +1118,19 @@ export function FinancePage() {
 						Delete &quot;{deleteTarget?.title}&quot;?
 					</p>
 					<Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
-						<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+						<Button
+							kind="secondary"
+							type="button"
+							onClick={() => setDeleteTarget(undefined)}
+						>
 							Cancel
 						</Button>
-						<Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+						<Button
+							kind="danger"
+							type="button"
+							onClick={handleDelete}
+							disabled={isDeleting}
+						>
 							{isDeleting ? "Deleting..." : "Delete"}
 						</Button>
 					</Stack>

@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
 import { useUIStore } from "../../stores/useUIStore";
 import {
@@ -119,6 +119,7 @@ export function EventsPage() {
 					<Stack orientation="horizontal" gap={3}>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={Edit}
 							iconDescription="Edit"
@@ -139,6 +140,7 @@ export function EventsPage() {
 						/>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={TrashCan}
 							iconDescription="Delete"
@@ -229,6 +231,8 @@ export function EventsPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !data)
 		return <ErrorState message={error ?? "Events are unavailable"} onRetry={refetch} />;
+	if (data.length === 0)
+		return <EmptyState title="No events" description="Events will appear here once created." />;
 
 	return (
 		<div>
@@ -248,7 +252,7 @@ export function EventsPage() {
 				title="Events"
 				description="Plan and track events, assign volunteers, and manage budgets."
 				actions={
-					<Button renderIcon={Add} onClick={openCreateModal}>
+					<Button type="button" renderIcon={Add} onClick={openCreateModal}>
 						Add Event
 					</Button>
 				}
@@ -462,6 +466,7 @@ export function EventsPage() {
 								</Tag>
 								<Button
 									kind="ghost"
+									type="button"
 									size="sm"
 									renderIcon={Close}
 									iconDescription="Close"
@@ -886,10 +891,19 @@ export function EventsPage() {
 						Delete &quot;{deleteTarget?.title}&quot;?
 					</p>
 					<Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
-						<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+						<Button
+							kind="secondary"
+							type="button"
+							onClick={() => setDeleteTarget(undefined)}
+						>
 							Cancel
 						</Button>
-						<Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+						<Button
+							kind="danger"
+							type="button"
+							onClick={handleDelete}
+							disabled={isDeleting}
+						>
 							{isDeleting ? "Deleting..." : "Delete"}
 						</Button>
 					</Stack>

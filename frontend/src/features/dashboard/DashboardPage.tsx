@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Tag, Button, ClickableTile, Tile, Grid, Column, Row, Stack } from "@carbon/react";
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { useAuth } from "../../context/AuthContext";
 import { useDashboard } from "../../hooks/useWorkspaceResources";
 import { useUIStore } from "../../stores/useUIStore";
@@ -181,6 +181,13 @@ export function DashboardPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !data)
 		return <ErrorState message={error ?? "Dashboard data is unavailable"} onRetry={refetch} />;
+	if (data.metrics.length === 0)
+		return (
+			<EmptyState
+				title="No dashboard data"
+				description="Dashboard data will populate as your workspace grows."
+			/>
+		);
 
 	const tasksDueToday = countToday(data.myTasks, "dueDate");
 	const eventsToday = countToday(data.upcomingEvents, "startsAt");

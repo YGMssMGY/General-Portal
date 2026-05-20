@@ -47,6 +47,7 @@ export function MeetingsPage() {
 	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string>();
 
+	const [confirmDelete, setConfirmDelete] = useState<Meeting | null>(null);
 	const [form, setForm] = useState({
 		title: "",
 		date: "",
@@ -156,11 +157,12 @@ export function MeetingsPage() {
 		}
 	}
 
-	async function handleDelete(m: Meeting) {
-		if (!window.confirm(`Delete "${m.title}"?`)) return;
+	async function handleConfirmDelete() {
+		if (!confirmDelete) return;
 		try {
-			await workspaceApi.deleteMeeting(m.id);
+			await workspaceApi.deleteMeeting(confirmDelete.id);
 			toast.success("Meeting deleted");
+			setConfirmDelete(null);
 			refetch();
 		} catch (e) {
 			toast.error(e instanceof Error ? e.message : "Delete failed");
@@ -188,7 +190,7 @@ export function MeetingsPage() {
 				title="Meetings"
 				description="Schedule, manage, and record meeting minutes."
 				actions={
-					<Button renderIcon={Add} onClick={openNewModal}>
+					<Button type="button" renderIcon={Add} onClick={openNewModal}>
 						New Meeting
 					</Button>
 				}
@@ -289,6 +291,7 @@ export function MeetingsPage() {
 											<Button
 												key={opt}
 												kind={rsvpStatus === opt ? "primary" : "ghost"}
+												type="button"
 												size="sm"
 												onClick={() => handleRsvp(m.id, opt)}
 											>
@@ -301,6 +304,7 @@ export function MeetingsPage() {
 												<>
 													<Button
 														kind="ghost"
+														type="button"
 														size="sm"
 														renderIcon={Edit}
 														hasIconOnly
@@ -309,11 +313,12 @@ export function MeetingsPage() {
 													/>
 													<Button
 														kind="ghost"
+														type="button"
 														size="sm"
 														renderIcon={TrashCan}
 														hasIconOnly
 														iconDescription="Delete"
-														onClick={() => handleDelete(m)}
+														onClick={() => setConfirmDelete(m)}
 													/>
 												</>
 											)}
@@ -702,6 +707,32 @@ export function MeetingsPage() {
 							{saving ? "Saving..." : "Save Minutes"}
 						</Button>
 					</div>
+				</Stack>
+			</Modal>
+
+			{/* Delete Confirmation Modal */}
+			<Modal
+				title="Delete Meeting"
+				description="This action cannot be undone."
+				isOpen={!!confirmDelete}
+				onClose={() => setConfirmDelete(null)}
+			>
+				<Stack gap={5}>
+					<p style={{ color: "var(--cds-text-secondary)" }}>
+						Delete &quot;{confirmDelete?.title}&quot;?
+					</p>
+					<Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
+						<Button
+							kind="secondary"
+							type="button"
+							onClick={() => setConfirmDelete(null)}
+						>
+							Cancel
+						</Button>
+						<Button kind="danger" type="button" onClick={handleConfirmDelete}>
+							Delete
+						</Button>
+					</Stack>
 				</Stack>
 			</Modal>
 		</div>
