@@ -87,7 +87,8 @@ export function EventsPage() {
 							(statusTagColors[event.status] || "gray") as "green" | "blue" | "gray"
 						}
 					>
-						{event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+						{(event.status || "").charAt(0).toUpperCase() +
+							(event.status || "").slice(1)}
 					</Tag>
 				),
 			},

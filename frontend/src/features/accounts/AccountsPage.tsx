@@ -180,7 +180,8 @@ export function AccountsPage() {
 								}
 							>
 								{user?.role
-									? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+									? (user.role?.charAt(0).toUpperCase() ?? "") +
+										(user.role?.slice(1) ?? "")
 									: "\u2014"}
 							</Tag>
 						</div>
@@ -357,7 +358,7 @@ export function AccountsPage() {
 											fontWeight: 600,
 										}}
 									>
-										{entry.displayName.charAt(0).toUpperCase()}
+										{(entry.displayName || "?").charAt(0).toUpperCase()}
 									</span>
 									<div style={{ flex: 1 }}>
 										<p
@@ -493,7 +494,7 @@ export function AccountsPage() {
 												fontWeight: 600,
 											}}
 										>
-											{u.displayName.charAt(0).toUpperCase()}
+											{(u.displayName || "?").charAt(0).toUpperCase()}
 										</div>
 										<div style={{ flex: 1 }}>
 											<p
@@ -525,7 +526,8 @@ export function AccountsPage() {
 															: "gray"
 											}
 										>
-											{u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+											{(u.role?.charAt(0).toUpperCase() ?? "") +
+												(u.role?.slice(1) ?? "")}
 										</Tag>
 									</div>
 								))}
