@@ -12,7 +12,7 @@ const FALLBACK_URLS: Record<string, string> = {
 
 function addConnectionLimit(url: string): string {
 	const separator = url.includes("?") ? "&" : "?";
-	return `${url}${separator}connection_limit=5`;
+	return `${url}${separator}connection_limit=10`;
 }
 
 function getDbUrl(portal: string): string {

@@ -65,7 +65,7 @@ function getNavConfig(portal: string): NavGroup[] {
 		{
 			title: "Main",
 			items: [
-				{ label: "Dashboard", to: `/${p}`, icon: Dashboard, end: true },
+				{ label: "Dashboard", to: `/${p}/dashboard`, icon: Dashboard, end: true },
 				{ label: "Search", to: `/${p}/search`, icon: Search },
 			],
 		},
@@ -232,7 +232,7 @@ export function UIShell() {
 							onClick={onClickSideNavExpand}
 							isActive={isSideNavExpanded}
 						/>
-						<HeaderName as={Link} to={`/${portal}`} prefix={config.shortName}>
+						<HeaderName as={Link} to={`/${portal}/dashboard`} prefix={config.shortName}>
 							{config.displayName}
 						</HeaderName>
 						<HeaderGlobalBar>
@@ -433,14 +433,18 @@ export function UIShell() {
 									</div>
 								)}
 							</div>
-							<div
+							<Link
+								to={`/${portal}/accounts`}
 								style={{
 									display: "flex",
 									alignItems: "center",
 									gap: "0.375rem",
 									padding: "0 0.5rem",
 									height: "3rem",
+									textDecoration: "none",
+									color: "inherit",
 								}}
+								aria-label="Account settings"
 							>
 								<span
 									style={{
@@ -464,11 +468,12 @@ export function UIShell() {
 										color: "#fff",
 										fontSize: "0.6875rem",
 										fontWeight: 600,
+										cursor: "pointer",
 									}}
 								>
 									{(sessionUser?.name ?? "?").charAt(0).toUpperCase()}
 								</span>
-							</div>
+							</Link>
 							<HeaderGlobalAction
 								aria-label={
 									theme === "dark"
