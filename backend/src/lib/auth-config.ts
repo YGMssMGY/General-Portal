@@ -1,126 +1,95 @@
 import { initAuthConfig } from "@hono/auth-js";
 import type { AuthConfig } from "@auth/core";
-import GitHub from "@auth/core/providers/github";
-import Google from "@auth/core/providers/google";
+import type { Context } from "hono";
 import Microsoft from "@auth/core/providers/microsoft-entra-id";
-import Credentials from "@auth/core/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { sign } from "hono/jwt";
-import { env, IS_PRODUCTION } from "./env.js";
-import { db } from "./db.js";
+import { env } from "./env.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
 
-function getAuthConfig(): AuthConfig {
-  const providers: AuthConfig["providers"] = [];
+async function getAuthConfig(c: Context): Promise<AuthConfig> {
+    let db: any = c.get("db");
+    if (!db) {
+        const { getDb } = await import("./db.js");
+        db = getDb("developers");
+    }
 
-  if (IS_PRODUCTION) {
-    if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
-      providers.push(
-        Microsoft({
-          clientId: env.MICROSOFT_CLIENT_ID,
-          clientSecret: env.MICROSOFT_CLIENT_SECRET,
-        }),
-      );
-    }
-  } else {
-    if (env.GITHUB_ID && env.GITHUB_SECRET) {
-      providers.push(
-        GitHub({ clientId: env.GITHUB_ID, clientSecret: env.GITHUB_SECRET }),
-      );
-    }
-    if (env.GOOGLE_ID && env.GOOGLE_SECRET) {
-      providers.push(
-        Google({ clientId: env.GOOGLE_ID, clientSecret: env.GOOGLE_SECRET }),
-      );
-    }
-    if (env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET) {
-      providers.push(
-        Microsoft({
-          clientId: env.MICROSOFT_CLIENT_ID,
-          clientSecret: env.MICROSOFT_CLIENT_SECRET,
-        }),
-      );
-    }
-    if (env.DEV_AUTH_PASSWORD) {
-      providers.push(
-        Credentials({
-          id: "credentials",
-          name: "Dev Login",
-          credentials: {
-            username: { label: "Username" },
-            password: { label: "Password", type: "password" },
-          },
-          async authorize(credentials) {
-            const email = credentials?.username as string;
-            const pw = credentials?.password as string;
-            if (!email) return null;
-            try {
-              const user = await db.userAccount.findUnique({
-                where: { email },
-              });
-              if (!user) return null;
-              if (user.password) {
-                if (pw !== user.password) return null;
-              } else if (pw !== env.DEV_AUTH_PASSWORD) {
-                return null;
-              }
-              return { id: user.id, email: user.email, name: user.displayName };
-            } catch (e) {
-              console.error("[auth] authorize error:", e);
-              return null;
-            }
-            return { id: email, email, name: email.split("@")[0] };
-          },
-        }),
-      );
-    }
-  }
-
-  return {
-    secret: env.AUTH_SECRET,
-    basePath: "/api/auth",
-    trustHost: true,
-    adapter: PrismaAdapter(db),
-    session: { strategy: "jwt" },
-    providers,
-    callbacks: {
-      async jwt({ token, user }) {
-        if (user?.id) {
-          (token as any).id = user.id;
-          (token as any).email = user.email;
-          (token as any).name = user.name;
-          try {
-            const membership = await db.membership.findFirst({
-              where: { userId: user.id },
-            });
-            if (membership) {
-              (token as any).workspaceId = (membership as any).workspaceId;
-              (token as any).role = membership.accessLabel?.toLowerCase();
-            }
-          } catch {
-            /* DB not available */
-          }
-          (token as any).workspaceId =
-            (token as any).workspaceId || "ws-default";
-          (token as any).workspaceName = "General Portal";
-          (token as any).role = (token as any).role || "admin";
-          (token as any).permissions = ["*"];
-        }
-        return token;
-      },
-      async session({ session, token }) {
-        if (session.user) {
-          (session.user as any).id = (token as any).id || token.sub;
-          (session.user as any).workspaceId = (token as any).workspaceId;
-          (session.user as any).workspaceName = (token as any).workspaceName;
-          (session.user as any).role = (token as any).role;
-          (session.user as any).permissions = (token as any).permissions || [];
-        }
-        const rawToken = await sign(token as any, env.AUTH_SECRET, "HS256");
-        (session as any).token = rawToken;
-        return session;
-      },
-    },
-  };
+    return {
+        secret: env.AUTH_SECRET,
+        basePath: "/api/auth",
+        trustHost: true,
+        adapter: PrismaAdapter(db),
+        session: { strategy: "jwt" },
+        providers: [
+            Microsoft({
+                clientId: env.MICROSOFT_CLIENT_ID,
+                clientSecret: env.MICROSOFT_CLIENT_SECRET,
+                issuer: `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/v2.0`,
+            }),
+        ],
+        callbacks: {
+            async signIn({ account, profile: p }) {
+                if (account?.provider !== "microsoft-entra-id") return false;
+                if (!p?.email) return false;
+                const email = p.email.toLowerCase();
+                try {
+                    const exists = await db.user.findUnique({ where: { email } });
+                    if (!exists) return false;
+                    if (p.name && p.name !== exists.name) {
+                        await db.user.update({ where: { email }, data: { name: p.name } });
+                    }
+                } catch (e) {
+                    console.error("[auth] signIn error:", e);
+                    return false;
+                }
+                return true;
+            },
+            async jwt({ token, user, account }) {
+                if (user?.id && account?.provider === "microsoft-entra-id") {
+                    // First login after Microsoft OAuth2 callback
+                    (token as any).id = user.id;
+                    (token as any).email = user.email;
+                    (token as any).name = user.name;
+                }
+                // Look up workspace membership from token email
+                if ((token as any).email) {
+                    try {
+                        const membership = await db.membership.findFirst({
+                            where: { user: { email: (token as any).email } },
+                            include: { workspace: true },
+                        });
+                        if (membership) {
+                            (token as any).workspaceId = membership.workspaceId;
+                            (token as any).workspaceName = membership.workspace.name;
+                            (token as any).role = membership.accessLabel?.toLowerCase() || "admin";
+                        }
+                    } catch {
+                        /* DB not available */
+                    }
+                }
+                if (!(token as any).workspaceId) {
+                    (token as any).workspaceId = "ws-default";
+                    (token as any).workspaceName = "General Portal";
+                }
+                (token as any).role = (token as any).role || "admin";
+                (token as any).permissions = ["*"];
+                return token;
+            },
+            async session({ session, token }) {
+                if (session.user) {
+                    (session.user as any).id = (token as any).id || token.sub;
+                    (session.user as any).email = (token as any).email;
+                    (session.user as any).name = (token as any).name;
+                    (session.user as any).workspaceId = (token as any).workspaceId;
+                    (session.user as any).workspaceName = (token as any).workspaceName;
+                    (session.user as any).role = (token as any).role;
+                    (session.user as any).permissions = (token as any).permissions || [];
+                }
+                const rawToken = await sign(token as any, env.AUTH_SECRET, "HS256");
+                (session as any).token = rawToken;
+                return session;
+            },
+        },
+    };
 }

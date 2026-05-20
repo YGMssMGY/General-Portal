@@ -2,33 +2,38 @@ import js from "@eslint/js";
 import ts from "typescript-eslint";
 import globals from "globals";
 
+const ignores = [
+  "**/node_modules/",
+  "**/dist/",
+  "**/build/",
+  "**/.next/",
+  "**/coverage/",
+  "**/*.min.js",
+  "**/eslint.config.js",
+];
+
+const testGlobals = {
+  describe: "readonly",
+  it: "readonly",
+  test: "readonly",
+  expect: "readonly",
+  vi: "readonly",
+  beforeEach: "readonly",
+  afterEach: "readonly",
+  beforeAll: "readonly",
+  afterAll: "readonly",
+};
+
 export default [
   js.configs.recommended,
   ...ts.configs.recommended,
+  { ignores },
   {
-    ignores: [
-      "**/node_modules/",
-      "**/dist/",
-      "**/build/",
-      "**/.next/",
-      "**/coverage/",
-      "**/*.min.js",
-      "**/eslint.config.js",
-      "**/*.test.ts",
-      "**/*.test.tsx",
-      "**/test/**",
-    ],
-  },
-  {
-    files: ["backend/src/**/*.ts"],
+    files: ["backend/src/**/*.ts", "backend/tests/**/*.ts"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: { ...globals.node, ...globals.es2021 },
-      parserOptions: {
-        project: "backend/tsconfig.json",
-        tsconfigRootDir: import.meta.dirname,
-      },
+      globals: { ...globals.node, ...globals.es2021, ...testGlobals },
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
@@ -41,15 +46,11 @@ export default [
     },
   },
   {
-    files: ["frontend/src/**/*.{ts,tsx}"],
+    files: ["frontend/src/**/*.{ts,tsx}", "frontend/tests/**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: { ...globals.browser, ...globals.es2021 },
-      parserOptions: {
-        project: "frontend/tsconfig.json",
-        tsconfigRootDir: import.meta.dirname,
-      },
+      globals: { ...globals.browser, ...globals.es2021, ...testGlobals },
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
