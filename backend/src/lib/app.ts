@@ -47,101 +47,101 @@ import publicApiRoute from "../routes/public-api.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface CreateAppOptions {
-	serveFrontend?: boolean;
+    serveFrontend?: boolean;
 }
 
 export function createApp(opts: CreateAppOptions = {}) {
-	const t0 = Date.now();
-	process.stdout.write(`[${Date.now() - t0}ms] [app] Creating Hono app...\n`);
-	const app = new Hono();
+    const t0 = Date.now();
+    process.stdout.write(`[${Date.now() - t0}ms] [app] Creating Hono app...\n`);
+    const app = new Hono();
 
-	app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
-	app.use("*", secureHeaders());
-	app.use("*", compress());
-	app.use("*", portalMiddleware);
-	app.use("/api/*", apiLimiter);
-	app.use("/api/auth/*", authLimiter);
-	app.use(authConfig);
-	app.use("/api/auth/*", authHandler());
+    app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
+    app.use("*", secureHeaders());
+    app.use("*", compress());
+    app.use("*", portalMiddleware);
+    app.use("/api/*", apiLimiter);
+    app.use("/api/auth/*", authLimiter);
+    app.use(authConfig);
+    app.use("/api/auth/*", authHandler());
 
-	app.route("/api", healthRoute);
-	app.route("/api", authRoute);
-	app.route("/api", docsRoute);
+    app.route("/api", healthRoute);
+    app.route("/api", authRoute);
+    app.route("/api", docsRoute);
 
-	app.use("/api/dashboard", requireWorkspace);
-	app.use("/api/tasks", requireWorkspace);
-	app.use("/api/proposals", requireWorkspace);
-	app.use("/api/events", requireWorkspace);
-	app.use("/api/volunteers", requireWorkspace);
-	app.use("/api/finance", requireWorkspace);
-	app.use("/api/messages/*", requireWorkspace);
-	app.use("/api/files", requireWorkspace);
-	app.use("/api/members", requireWorkspace);
-	app.use("/api/activity", requireWorkspace);
-	app.use("/api/search", requireWorkspace);
-	app.use("/api/settings", requireWorkspace);
-	app.use("/api/roles/*", requireWorkspace);
-	app.use("/api/notifications", requireWorkspace);
-	app.use("/api/audit", requireWorkspace);
-	app.use("/api/modules/*", requireWorkspace);
-	app.use("/api/workspace/*", requireWorkspace);
-	app.use("/api/gamification", requireWorkspace);
-	app.use("/api/kudos", requireWorkspace);
-	app.use("/api/budget", requireWorkspace);
-	app.use("/api/meetings", requireWorkspace);
-	app.use("/api/archive", requireWorkspace);
+    app.use("/api/dashboard", requireWorkspace);
+    app.use("/api/tasks", requireWorkspace);
+    app.use("/api/proposals", requireWorkspace);
+    app.use("/api/events", requireWorkspace);
+    app.use("/api/volunteers", requireWorkspace);
+    app.use("/api/finance", requireWorkspace);
+    app.use("/api/messages/*", requireWorkspace);
+    app.use("/api/files", requireWorkspace);
+    app.use("/api/members", requireWorkspace);
+    app.use("/api/activity", requireWorkspace);
+    app.use("/api/search", requireWorkspace);
+    app.use("/api/settings", requireWorkspace);
+    app.use("/api/roles/*", requireWorkspace);
+    app.use("/api/notifications", requireWorkspace);
+    app.use("/api/audit", requireWorkspace);
+    app.use("/api/modules/*", requireWorkspace);
+    app.use("/api/workspace/*", requireWorkspace);
+    app.use("/api/gamification", requireWorkspace);
+    app.use("/api/kudos", requireWorkspace);
+    app.use("/api/budget", requireWorkspace);
+    app.use("/api/meetings", requireWorkspace);
+    app.use("/api/archive", requireWorkspace);
 
-	app.route("/api", dashboardRoute);
-	app.route("/api", tasksRoute);
-	app.route("/api", proposalsRoute);
-	app.route("/api", eventsRoute);
-	app.route("/api", volunteersRoute);
-	app.route("/api", financeRoute);
-	app.route("/api", messagesRoute);
-	app.route("/api", filesRoute);
-	app.route("/api", membersRoute);
-	app.route("/api", activityRoute);
-	app.route("/api", searchRoute);
-	app.route("/api", settingsRoute);
-	app.route("/api", publicRoute);
-	app.route("/api", notificationRoute);
-	app.route("/api", auditRoute);
-	app.route("/api", gamificationRoute);
-	app.route("/api", kudosRoute);
-	app.route("/api", budgetRoute);
-	app.route("/api", meetingsRoute);
-	app.route("/api", archiveRoute);
-	if (env.API_KEY) app.route("/api", publicApiRoute);
-	app.route("/api", adminRoute);
+    app.route("/api", dashboardRoute);
+    app.route("/api", tasksRoute);
+    app.route("/api", proposalsRoute);
+    app.route("/api", eventsRoute);
+    app.route("/api", volunteersRoute);
+    app.route("/api", financeRoute);
+    app.route("/api", messagesRoute);
+    app.route("/api", filesRoute);
+    app.route("/api", membersRoute);
+    app.route("/api", activityRoute);
+    app.route("/api", searchRoute);
+    app.route("/api", settingsRoute);
+    app.route("/api", publicRoute);
+    app.route("/api", notificationRoute);
+    app.route("/api", auditRoute);
+    app.route("/api", gamificationRoute);
+    app.route("/api", kudosRoute);
+    app.route("/api", budgetRoute);
+    app.route("/api", meetingsRoute);
+    app.route("/api", archiveRoute);
+    if (env.API_KEY) app.route("/api", publicApiRoute);
+    app.route("/api", adminRoute);
 
-	if (opts.serveFrontend) {
-		const frontendDist = resolve(__dirname, "../../../frontend/dist");
-		app.use("/*", serveStatic({ root: frontendDist }));
-		app.get("*", (c) => {
-			return c.html(readFileSync(resolve(frontendDist, "index.html"), "utf-8"));
-		});
-	}
+    if (opts.serveFrontend) {
+        const frontendDist = resolve(__dirname, "../../../frontend/dist");
+        app.use("/*", serveStatic({ root: frontendDist }));
+        app.get("*", (c) => {
+            return c.html(readFileSync(resolve(frontendDist, "index.html"), "utf-8"));
+        });
+    }
 
-	app.onError(errorHandler);
+    app.onError(errorHandler);
 
-	return app;
+    return app;
 }
 
 export interface StartOptions extends CreateAppOptions {
-	port?: number;
+    port?: number;
 }
 
 export function startApp(opts: StartOptions = {}) {
-	const app = createApp(opts);
-	const port = opts.port ?? (opts.serveFrontend ? env.PROD_PORT : env.PORT);
+    const app = createApp(opts);
+    const port = opts.port ?? (opts.serveFrontend ? env.PROD_PORT : env.PORT);
 
-	cron.schedule("0 * * * *", () => {
-		runNudges().catch((err) => console.error("[cron] nudge error:", err));
-	});
+    cron.schedule("0 * * * *", () => {
+        runNudges().catch((err) => console.error("[cron] nudge error:", err));
+    });
 
-	const server = serve({ fetch: app.fetch, port }, (info) => {
-		process.stdout.write(`[server] Running on http://localhost:${info.port}\n`);
-	});
+    const server = serve({ fetch: app.fetch, port }, (info) => {
+        process.stdout.write(`[server] Running on http://localhost:${info.port}\n`);
+    });
 
-	return { app, server };
+    return { app, server };
 }

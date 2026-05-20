@@ -1,85 +1,85 @@
 export interface ClientConfig {
-	displayName: string;
-	shortName: string;
-	tagline: string;
-	description: string;
-	favicon: string;
-	primaryColor: string;
-	secondaryColor: string;
-	features: {
-		showFinance: boolean;
-		showVolunteers: boolean;
-		showProposals: boolean;
-		showFiles: boolean;
-		showActivity: boolean;
-		showMembers: boolean;
-		showSettings: boolean;
-		showMeetings: boolean;
-	};
+    displayName: string;
+    shortName: string;
+    tagline: string;
+    description: string;
+    favicon: string;
+    primaryColor: string;
+    secondaryColor: string;
+    features: {
+        showFinance: boolean;
+        showVolunteers: boolean;
+        showProposals: boolean;
+        showFiles: boolean;
+        showActivity: boolean;
+        showMembers: boolean;
+        showSettings: boolean;
+        showMeetings: boolean;
+    };
 }
 
 const clients: Record<string, ClientConfig> = {
-	developers: {
-		displayName: "Developers' Club",
-		shortName: "DC",
-		tagline: "Code. Create. Collaborate.",
-		description: "A community of student developers building innovative projects.",
-		favicon: "/developers.png",
-		primaryColor: "#0f62fe",
-		secondaryColor: "#0043ce",
-		features: {
-			showFinance: false,
-			showVolunteers: true,
-			showProposals: true,
-			showFiles: true,
-			showActivity: true,
-			showMembers: false,
-			showSettings: false,
-			showMeetings: true,
-		},
-	},
-	stuco: {
-		displayName: "Student Council",
-		shortName: "SC",
-		tagline: "Leading with purpose.",
-		description: "Student council management and event coordination.",
-		favicon: "/stuco.png",
-		primaryColor: "#8b3b8b",
-		secondaryColor: "#6f2d6f",
-		features: {
-			showFinance: true,
-			showVolunteers: false,
-			showProposals: true,
-			showFiles: true,
-			showActivity: true,
-			showMembers: true,
-			showSettings: true,
-			showMeetings: true,
-		},
-	},
+    developers: {
+        displayName: "Developers' Club",
+        shortName: "DC",
+        tagline: "Code. Create. Collaborate.",
+        description: "A community of student developers building innovative projects.",
+        favicon: "/developers.png",
+        primaryColor: "#0f62fe",
+        secondaryColor: "#0043ce",
+        features: {
+            showFinance: false,
+            showVolunteers: true,
+            showProposals: true,
+            showFiles: true,
+            showActivity: true,
+            showMembers: false,
+            showSettings: false,
+            showMeetings: true,
+        },
+    },
+    stuco: {
+        displayName: "Student Council",
+        shortName: "SC",
+        tagline: "Leading with purpose.",
+        description: "Student council management and event coordination.",
+        favicon: "/stuco.png",
+        primaryColor: "#8b3b8b",
+        secondaryColor: "#6f2d6f",
+        features: {
+            showFinance: true,
+            showVolunteers: false,
+            showProposals: true,
+            showFiles: true,
+            showActivity: true,
+            showMembers: true,
+            showSettings: true,
+            showMeetings: true,
+        },
+    },
 };
 
 const defaultClient: ClientConfig = {
-	displayName: "General Portal",
-	shortName: "GP",
-	tagline: "Manage your organizations",
-	description: "Choose a portal to get started.",
-	favicon: "",
-	primaryColor: "#0f62fe",
-	secondaryColor: "#0043ce",
-	features: {
-		showFinance: false,
-		showVolunteers: false,
-		showProposals: false,
-		showFiles: false,
-		showActivity: false,
-		showMembers: false,
-		showSettings: false,
-		showMeetings: false,
-	},
+    displayName: "General Portal",
+    shortName: "GP",
+    tagline: "Manage your organizations",
+    description: "Choose a portal to get started.",
+    favicon: "",
+    primaryColor: "#0f62fe",
+    secondaryColor: "#0043ce",
+    features: {
+        showFinance: false,
+        showVolunteers: false,
+        showProposals: false,
+        showFiles: false,
+        showActivity: false,
+        showMembers: false,
+        showSettings: false,
+        showMeetings: false,
+    },
 };
 
 export function getClientConfig(portal?: string): ClientConfig {
-	if (!portal) return defaultClient;
-	return clients[portal] || defaultClient;
+    if (!portal) return defaultClient;
+    return clients[portal] || defaultClient;
 }

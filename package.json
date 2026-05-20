@@ -1,52 +1,52 @@
 {
-	"name": "general-portal",
-	"private": true,
-	"version": "0.2.0",
-	"type": "module",
-	"workspaces": [
-		"frontend",
-		"backend"
-	],
-	"scripts": {
-		"dev": "node scripts/stop.mjs && concurrently -n be,fe -c cyan,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-		"build": "npm run build -w backend && npm run build -w frontend",
-		"start": "npm run build && node backend/dist/prod.js",
-		"stop": "node scripts/stop.mjs",
-		"test": "npm run test -w backend && npm run test -w frontend",
-		"test:backend": "npm run test -w backend",
-		"test:frontend": "npm run test -w frontend",
-		"test:watch": "npm run test:watch -w frontend",
-		"lint": "eslint \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx}\"",
-		"lint:fix": "eslint --fix \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx}\"",
-		"format": "prettier --write \"**/*.{ts,tsx,css,json,md}\"",
-		"format:check": "prettier --check \"**/*.{ts,tsx,css,json,md}\"",
-		"typecheck": "npm run build -w backend -- --noEmit && npm run build -w frontend -- --noEmit",
-		"db:migrate": "node scripts/dev-setup.mjs",
-		"db:seed": "npm run db:seed -w backend",
-		"db:reset": "npm run db:reset -w backend",
-		"prepare": "husky"
-	},
-	"devDependencies": {
-		"@eslint/js": "^9.39.4",
-		"concurrently": "^9.1.2",
-		"eslint": "^9.39.4",
-		"globals": "^17.6.0",
-		"husky": "^9.0.0",
-		"lint-staged": "^15.0.0",
-		"prettier": "^3.8.3",
-		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.59.3"
-	},
-	"dependencies": {
-		"@carbon/charts-react": "^1.27.11",
-		"@emoji-mart/react": "^1.1.1"
-	},
-	"lint-staged": {
-		"*.{ts,tsx}": [
-			"eslint --fix"
-		],
-		"*.{ts,tsx,css,json,md}": [
-			"prettier --write"
-		]
-	}
+    "name": "general-portal",
+    "private": true,
+    "version": "0.2.0",
+    "type": "module",
+    "workspaces": [
+        "frontend",
+        "backend"
+    ],
+    "scripts": {
+        "dev": "node scripts/stop.mjs && concurrently -n be,fe -c cyan,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+        "build": "npm run build -w backend && npm run build -w frontend",
+        "start": "npm run build && node backend/dist/prod.js",
+        "stop": "node scripts/stop.mjs",
+        "test": "npm run test -w backend && npm run test -w frontend",
+        "test:backend": "npm run test -w backend",
+        "test:frontend": "npm run test -w frontend",
+        "test:watch": "npm run test:watch -w frontend",
+        "lint": "eslint \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx}\"",
+        "lint:fix": "eslint --fix \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx}\"",
+        "format": "prettier --write \"**/*.{ts,tsx,css,json,md}\"",
+        "format:check": "prettier --check \"**/*.{ts,tsx,css,json,md}\"",
+        "typecheck": "npm run build -w backend -- --noEmit && npm run build -w frontend -- --noEmit",
+        "db:migrate": "node scripts/dev-setup.mjs",
+        "db:seed": "npm run db:seed -w backend",
+        "db:reset": "npm run db:reset -w backend",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.4",
+        "concurrently": "^9.1.2",
+        "eslint": "^9.39.4",
+        "globals": "^17.6.0",
+        "husky": "^9.0.0",
+        "lint-staged": "^15.0.0",
+        "prettier": "^3.8.3",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.59.3"
+    },
+    "dependencies": {
+        "@carbon/charts-react": "^1.27.11",
+        "@emoji-mart/react": "^1.1.1"
+    },
+    "lint-staged": {
+        "*.{ts,tsx}": [
+            "eslint --fix"
+        ],
+        "*.{ts,tsx,css,json,md}": [
+            "prettier --write"
+        ]
+    }
 }
