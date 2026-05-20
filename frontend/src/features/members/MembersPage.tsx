@@ -6,7 +6,7 @@ import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Badge } from "../../components/Badge";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import {
 	Button,
 	TextInput,
@@ -134,6 +134,7 @@ export function MembersPage() {
 				render: (member) => (
 					<Button
 						kind="ghost"
+						type="button"
 						size="sm"
 						renderIcon={TrashCan}
 						iconDescription="Remove"
@@ -198,6 +199,10 @@ export function MembersPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !data)
 		return <ErrorState message={error ?? "Members are unavailable"} onRetry={refetch} />;
+	if (data.length === 0)
+		return (
+			<EmptyState title="No members" description="Members will appear here once invited." />
+		);
 
 	return (
 		<div>
@@ -217,7 +222,7 @@ export function MembersPage() {
 				title="Members"
 				description="Manage people, roles, positions, and access."
 				actions={
-					<Button renderIcon={Add} onClick={() => setIsModalOpen(true)}>
+					<Button type="button" renderIcon={Add} onClick={() => setIsModalOpen(true)}>
 						Add Member
 					</Button>
 				}
@@ -569,10 +574,19 @@ export function MembersPage() {
 					Remove {deleteTarget?.user.displayName} ({deleteTarget?.user.email})?
 				</p>
 				<div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-					<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+					<Button
+						kind="secondary"
+						type="button"
+						onClick={() => setDeleteTarget(undefined)}
+					>
 						Cancel
 					</Button>
-					<Button kind="danger" onClick={handleRemove} disabled={isDeleting}>
+					<Button
+						kind="danger"
+						type="button"
+						onClick={handleRemove}
+						disabled={isDeleting}
+					>
 						{isDeleting ? "Removing..." : "Remove"}
 					</Button>
 				</div>

@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
 import {
@@ -138,6 +138,7 @@ export function ProposalsPage() {
 					<Stack orientation="horizontal" gap={3}>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={Edit}
 							iconDescription="Edit"
@@ -157,6 +158,7 @@ export function ProposalsPage() {
 						/>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={TrashCan}
 							iconDescription="Delete"
@@ -320,6 +322,13 @@ export function ProposalsPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !data)
 		return <ErrorState message={error ?? "Proposals unavailable"} onRetry={refetch} />;
+	if (data.length === 0)
+		return (
+			<EmptyState
+				title="No proposals"
+				description="Proposals will appear here once created."
+			/>
+		);
 
 	return (
 		<div>
@@ -339,7 +348,7 @@ export function ProposalsPage() {
 				title="Proposals"
 				description="Submit, review, and track proposals for events, purchases, and projects."
 				actions={
-					<Button renderIcon={Add} onClick={openCreateModal}>
+					<Button type="button" renderIcon={Add} onClick={openCreateModal}>
 						New Proposal
 					</Button>
 				}
@@ -382,7 +391,7 @@ export function ProposalsPage() {
 					<SelectItem value="Purchase" text="Purchase" />
 					<SelectItem value="Project" text="Project" />
 				</Select>
-				<Button renderIcon={Add} size="sm" onClick={openCreateModal}>
+				<Button type="button" renderIcon={Add} size="sm" onClick={openCreateModal}>
 					Add Proposal
 				</Button>
 			</Stack>
@@ -554,6 +563,7 @@ export function ProposalsPage() {
 									<Stack orientation="horizontal" gap={5}>
 										<Button
 											kind="primary"
+											type="button"
 											renderIcon={Checkmark}
 											onClick={() => handleApprove(selected.id)}
 											disabled={isApproving}
@@ -562,6 +572,7 @@ export function ProposalsPage() {
 										</Button>
 										<Button
 											kind="danger"
+											type="button"
 											renderIcon={Close}
 											onClick={() => {
 												setRejectReason("");
@@ -677,6 +688,7 @@ export function ProposalsPage() {
 									</Button>
 									<Button
 										kind="danger"
+										type="button"
 										onClick={handleReject}
 										disabled={!rejectReason.trim() || isRejecting}
 									>
@@ -820,10 +832,19 @@ export function ProposalsPage() {
 						Delete &quot;{deleteTarget?.title}&quot;?
 					</p>
 					<Stack orientation="horizontal" gap={5} style={{ justifyContent: "flex-end" }}>
-						<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+						<Button
+							kind="secondary"
+							type="button"
+							onClick={() => setDeleteTarget(undefined)}
+						>
 							Cancel
 						</Button>
-						<Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+						<Button
+							kind="danger"
+							type="button"
+							onClick={handleDelete}
+							disabled={isDeleting}
+						>
 							{isDeleting ? "Deleting..." : "Delete"}
 						</Button>
 					</Stack>

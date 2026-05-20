@@ -5,7 +5,7 @@ import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { Modal } from "../../components/Modal";
 import { PageHeader } from "../../components/PageHeader";
-import { ErrorState, LoadingState } from "../../components/StateViews";
+import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { SimpleBarChart } from "@carbon/charts-react";
 import "@carbon/charts/styles.css";
 import {
@@ -149,6 +149,7 @@ export function VolunteersPage() {
 					<div style={{ display: "flex", gap: "0.5rem" }}>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={Edit}
 							iconDescription="Edit"
@@ -168,6 +169,7 @@ export function VolunteersPage() {
 						/>
 						<Button
 							kind="ghost"
+							type="button"
 							size="sm"
 							renderIcon={TrashCan}
 							iconDescription="Delete"
@@ -262,6 +264,13 @@ export function VolunteersPage() {
 	if (isLoading) return <LoadingState />;
 	if (error || !data)
 		return <ErrorState message={error ?? "Volunteer data unavailable"} onRetry={refetch} />;
+	if (data.length === 0)
+		return (
+			<EmptyState
+				title="No volunteer slots"
+				description="Volunteer slots will appear here once created."
+			/>
+		);
 
 	return (
 		<div>
@@ -281,7 +290,7 @@ export function VolunteersPage() {
 				title="Volunteers"
 				description="Manage volunteer slots, sign-ups, and hours."
 				actions={
-					<Button renderIcon={Add} onClick={openCreateModal}>
+					<Button type="button" renderIcon={Add} onClick={openCreateModal}>
 						Add Slot
 					</Button>
 				}
@@ -662,10 +671,19 @@ export function VolunteersPage() {
 					Delete &quot;{deleteTarget?.title}&quot;?
 				</p>
 				<div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-					<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+					<Button
+						kind="secondary"
+						type="button"
+						onClick={() => setDeleteTarget(undefined)}
+					>
 						Cancel
 					</Button>
-					<Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+					<Button
+						kind="danger"
+						type="button"
+						onClick={handleDelete}
+						disabled={isDeleting}
+					>
 						{isDeleting ? "Deleting..." : "Delete"}
 					</Button>
 				</div>

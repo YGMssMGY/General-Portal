@@ -230,6 +230,7 @@ export function MessagesPage() {
 								</h1>
 								<Button
 									kind="ghost"
+									type="button"
 									size="sm"
 									renderIcon={Add}
 									iconDescription="Compose"
@@ -269,6 +270,7 @@ export function MessagesPage() {
 								<Button
 									key={f}
 									kind={contextFilter === f ? "primary" : "ghost"}
+									type="button"
 									size="sm"
 									onClick={() => setContextFilter(f)}
 									style={{ fontSize: "0.75rem" }}
@@ -494,6 +496,7 @@ export function MessagesPage() {
 										<Badge>{selected.context}</Badge>
 										<Button
 											kind="ghost"
+											type="button"
 											size="sm"
 											renderIcon={TrashCan}
 											iconDescription="Archive"
@@ -1016,10 +1019,14 @@ export function MessagesPage() {
 					Archive &quot;{deleteTarget?.title}&quot;?
 				</p>
 				<div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-					<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+					<Button
+						kind="secondary"
+						type="button"
+						onClick={() => setDeleteTarget(undefined)}
+					>
 						Cancel
 					</Button>
-					<Button kind="danger" onClick={handleArchive}>
+					<Button kind="danger" type="button" onClick={handleArchive}>
 						Archive
 					</Button>
 				</div>
