@@ -86,7 +86,7 @@ function NewRuleModal({
 	isOpen: boolean;
 	onClose: () => void;
 	onSave: (
-		rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approvers">,
+		rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approverIds">,
 	) => Promise<void>;
 }) {
 	const [triggerType, setTriggerType] = useState("amount");
@@ -101,7 +101,7 @@ function NewRuleModal({
 			await onSave({
 				triggerType,
 				triggerValue: triggerValue.trim(),
-				approvers: approvers.split(",").map((a) => a.trim()),
+				approverIds: approvers,
 			});
 			setTriggerValue("");
 			setApprovers("");
@@ -316,7 +316,7 @@ export function SettingsPage() {
 	}
 
 	async function handleAddRule(
-		rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approvers">,
+		rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approverIds">,
 	) {
 		await workspaceApi.createApprovalRule(rule);
 		refetchRules();
@@ -859,7 +859,7 @@ export function SettingsPage() {
 														color: "var(--cds-text-secondary)",
 													}}
 												>
-													Approvers: {rule.approvers.join(", ")}
+													Approvers: {rule.approverIds}
 												</p>
 											</div>
 											<Button

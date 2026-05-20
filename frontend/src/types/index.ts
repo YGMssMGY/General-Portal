@@ -117,7 +117,7 @@ export interface MessageParticipant {
 export interface MessageThread {
 	id: string;
 	title: string;
-	context: "event" | "task" | "proposal" | "file" | "general";
+	context: "event" | "task" | "proposal" | "general";
 	status: ResourceStatus;
 	preview: string;
 	unreadCount: number;
@@ -169,7 +169,7 @@ export interface ApprovalRule {
 	id: string;
 	triggerType: string;
 	triggerValue: string;
-	approvers: string[];
+	approverIds: string;
 }
 
 export interface OrganizationSettings {

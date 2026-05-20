@@ -56,14 +56,15 @@ export const workspaceApi = {
 		return fetchJson<SearchResult[]>(`/search?${params.toString()}`);
 	},
 	getModules: () => fetchJson<ModuleSettings>("/modules"),
-	updateModule: (module: string, enabled: boolean) =>
+	updateModule: (moduleKey: string, enabled: boolean) =>
 		fetchJson<ModuleSettings>("/modules", {
 			method: "PATCH",
-			...jsonBody({ [module]: enabled }),
+			...jsonBody({ moduleKey, enabled }),
 		}),
 	getApprovalRules: () => fetchPage<ApprovalRule>("/modules/rules"),
-	createApprovalRule: (rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approvers">) =>
-		fetchJson<ApprovalRule>("/modules/rules", { method: "POST", ...jsonBody(rule) }),
+	createApprovalRule: (
+		rule: Pick<ApprovalRule, "triggerType" | "triggerValue" | "approverIds">,
+	) => fetchJson<ApprovalRule>("/modules/rules", { method: "POST", ...jsonBody(rule) }),
 	deleteApprovalRule: (id: string) =>
 		fetchJson<void>(`/modules/rules/${id}`, { method: "DELETE" }),
 	uploadLogo: (formData: FormData) =>

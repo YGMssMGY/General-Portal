@@ -52,7 +52,7 @@ export function EventsPage() {
 
 	const [form, setForm] = useState({
 		title: "",
-		status: "draft",
+		status: "pending",
 		startsAt: new Date().toISOString().slice(0, 10),
 		endsAt: new Date().toISOString().slice(0, 10),
 		progress: 0,
@@ -63,7 +63,7 @@ export function EventsPage() {
 	const upcoming = useMemo(() => {
 		if (!data) return [];
 		return [...data]
-			.filter((e) => e.status === "active" || e.status === "draft")
+			.filter((e) => e.status === "active" || e.status === "pending")
 			.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
 			.slice(0, 3);
 	}, [data]);
@@ -161,7 +161,7 @@ export function EventsPage() {
 		setEditingEvent(undefined);
 		setForm({
 			title: "",
-			status: "draft",
+			status: "pending",
 			startsAt: new Date().toISOString().slice(0, 10),
 			endsAt: new Date().toISOString().slice(0, 10),
 			progress: 0,
@@ -769,7 +769,7 @@ export function EventsPage() {
 										setForm((c) => ({ ...c, status: e.target.value }))
 									}
 								>
-									<SelectItem value="draft" text="Draft" />
+									<SelectItem value="pending" text="Pending" />
 									<SelectItem value="active" text="Active" />
 									<SelectItem value="completed" text="Completed" />
 								</Select>
