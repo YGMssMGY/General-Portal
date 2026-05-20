@@ -334,6 +334,11 @@ export function ProposalsPage() {
 			<EmptyState
 				title="No proposals"
 				description="Proposals will appear here once created."
+				action={
+					<Button type="button" renderIcon={Add} onClick={openCreateModal}>
+						Create Proposal
+					</Button>
+				}
 			/>
 		);
 

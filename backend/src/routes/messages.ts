@@ -31,6 +31,7 @@ route.post("/messages/threads", async (c) => {
 	const wid = c.get("workspaceId");
 	const body = await c.req.json();
 	const db = c.get("db");
+	const userName = c.get("user")?.name as string | undefined;
 	try {
 		const item = await db.messageThread.create({
 			data: {
@@ -45,7 +46,7 @@ route.post("/messages/threads", async (c) => {
 				messages: body.body
 					? {
 							create: {
-								authorName: body.authorName || "System",
+								authorName: userName || "System",
 								body: body.body,
 								sentAt: new Date(),
 							},
@@ -69,6 +70,7 @@ route.post("/messages/threads/:id/reply", async (c) => {
 	const id = c.req.param("id");
 	const body = await c.req.json();
 	const db = c.get("db");
+	const userName = (c.get("user") as any)?.name as string | undefined;
 	if (!body?.body) return c.json({ error: "Body is required" }, 400);
 	try {
 		const thread = await db.messageThread.findUnique({
@@ -78,7 +80,7 @@ route.post("/messages/threads/:id/reply", async (c) => {
 		const msg = await db.message.create({
 			data: {
 				threadId: id,
-				authorName: body.authorName || "Unknown",
+				authorName: userName || "Unknown",
 				body: body.body,
 				sentAt: new Date(),
 			},
