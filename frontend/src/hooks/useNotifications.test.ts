@@ -6,10 +6,6 @@ vi.mock("../api/httpClient", () => ({
 	fetchJson: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("./useWebSocket", () => ({
-	subscribe: vi.fn(() => () => {}),
-}));
-
 describe("useNotifications", () => {
 	it("returns unreadCount starting at 0", async () => {
 		const { result } = renderHook(() => useNotifications());

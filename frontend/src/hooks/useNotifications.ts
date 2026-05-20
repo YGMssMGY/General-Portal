@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { fetchJson } from "../api/httpClient";
-import { subscribe } from "./useWebSocket";
 import type { NotificationItem } from "../types";
 
 export function useNotifications() {
@@ -20,16 +19,6 @@ export function useNotifications() {
 		const poll = setInterval(fetchNotifications, 30_000);
 		return () => clearInterval(poll);
 	}, [fetchNotifications]);
-
-	useEffect(() => {
-		const unsub = subscribe("notification", (payload: unknown) => {
-			const notif = payload as NotificationItem;
-			if (notif?.id) {
-				setNotifications((prev) => [notif, ...prev]);
-			}
-		});
-		return unsub;
-	}, []);
 
 	const markRead = useCallback(async (id: string) => {
 		await fetchJson(`/notifications/${id}/read`, { method: "PATCH" });

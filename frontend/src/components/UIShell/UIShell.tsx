@@ -39,7 +39,6 @@ import {
 import { useSession, signOut } from "@hono/auth-js/react";
 import { useTheme } from "../../context/ThemeContext";
 import { useNotifications } from "../../hooks/useNotifications";
-import { useWebSocket } from "../../hooks/useWebSocket";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useUIStore } from "../../stores/useUIStore";
 import { formatDate } from "../../utils/format";
@@ -154,7 +153,6 @@ export function UIShell() {
 	const notifRef = useRef<HTMLDivElement>(null);
 	const notifBtnRef = useRef<HTMLButtonElement>(null);
 	const { unreadCount, notifications, markRead, markAllRead } = useNotifications();
-	const { isConnected } = useWebSocket();
 	const portal = useUIStore((s) => s.portal) || "developers";
 	const setPortal = useUIStore((s) => s.setPortal);
 	const config = useMemo(() => getClientConfig(portal ?? undefined), [portal]);
@@ -451,7 +449,7 @@ export function UIShell() {
 										width: "0.5rem",
 										height: "0.5rem",
 										borderRadius: "50%",
-										background: isConnected ? "#24a148" : "#6f6f6f",
+										background: "#24a148",
 										display: "inline-block",
 										flexShrink: 0,
 									}}
