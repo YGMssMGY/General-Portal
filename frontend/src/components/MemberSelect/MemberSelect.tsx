@@ -39,10 +39,10 @@ export function MemberSelect({
 		let cancelled = false;
 		setLoading(true);
 		setError(undefined);
-		fetchJson<Member[]>("/members")
+		fetchJson<{ total: number; members: Member[] }>("/members")
 			.then((data) => {
 				if (!cancelled) {
-					setMembers(data);
+					setMembers(Array.isArray(data) ? data : (data.members ?? []));
 					setLoading(false);
 				}
 			})
@@ -59,10 +59,10 @@ export function MemberSelect({
 
 	const items: MemberOption[] = useMemo(
 		() =>
-			members.map((m) => ({
+			members.map((m: any) => ({
 				id: m.id,
-				label: m.user?.displayName || m.id,
-				subtitle: m.user?.email || "",
+				label: m.name || m.user?.name || m.email || m.id,
+				subtitle: m.email || m.user?.email || "",
 			})),
 		[members],
 	);
