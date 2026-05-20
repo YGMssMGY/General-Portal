@@ -26,17 +26,6 @@ vi.mock("../lib/db.js", () => {
 	};
 });
 
-vi.mock("@hono/auth-js", () => ({
-	getAuthUser: vi.fn().mockResolvedValue({
-		token: {
-			id: "admin-id",
-			name: "Admin",
-			role: "admin",
-			workspaceId: "test-ws-id",
-		},
-	}),
-}));
-
 import archiveRoute from "./archive.js";
 
 const rejectAll = createMiddleware(async (c) => {
@@ -61,6 +50,14 @@ const mockDb = {
 const mockWorkspace = createMiddleware(async (c, next) => {
 	c.set("workspaceId", "test-ws-id");
 	c.set("db", mockDb as any);
+	c.set("user", {
+		id: "admin-id",
+		email: "admin@test.com",
+		name: "Admin",
+		workspaceId: "test-ws-id",
+		role: "admin",
+		permissions: ["*"],
+	});
 	await next();
 });
 

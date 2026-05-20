@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getAuthUser } from "@hono/auth-js";
+import { getAuthUser } from "../lib/get-auth-user.js";
 import { z } from "zod";
 
 const route = new Hono();
@@ -12,9 +12,8 @@ const createSchema = z.object({
 route.post("/kudos", async (c) => {
 	const db = c.get("db");
 	const wid = c.get("workspaceId");
-	const auth = await getAuthUser(c);
-	const fromUserId = (auth?.token as any)?.id as string;
-	if (!fromUserId) return c.json({ error: "Unauthorized" }, 401);
+	const user = getAuthUser(c);
+	const fromUserId = user.id;
 
 	const body = await c.req.json();
 	const parsed = createSchema.parse(body);
@@ -39,9 +38,8 @@ route.post("/kudos", async (c) => {
 route.get("/kudos", async (c) => {
 	const db = c.get("db");
 	const wid = c.get("workspaceId");
-	const auth = await getAuthUser(c);
-	const userId = (auth?.token as any)?.id as string;
-	if (!userId) return c.json({ error: "Unauthorized" }, 401);
+	const user = getAuthUser(c);
+	const userId = user.id;
 
 	const kudosList = await db.kudos.findMany({
 		where: { workspaceId: wid, toUserId: userId },

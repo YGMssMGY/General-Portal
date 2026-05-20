@@ -19,12 +19,6 @@ vi.mock("../lib/db.js", () => {
 	return { db: { membership: m(), user: m(), notification: m() } };
 });
 
-vi.mock("@hono/auth-js", () => ({
-	getAuthUser: vi.fn().mockResolvedValue({
-		token: { id: "test-user-id", name: "Test User" },
-	}),
-}));
-
 import gamificationRoute from "./gamification.js";
 
 const rejectAll = createMiddleware(async (c) => {
@@ -48,6 +42,14 @@ const mockDb = {
 const mockWorkspace = createMiddleware(async (c, next) => {
 	c.set("workspaceId", "test-ws-id");
 	c.set("db", mockDb as any);
+	c.set("user", {
+		id: "test-user-id",
+		email: "test@test.com",
+		name: "Test User",
+		workspaceId: "test-ws-id",
+		role: "member",
+		permissions: [],
+	});
 	await next();
 });
 

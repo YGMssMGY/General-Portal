@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getAuthUser } from "@hono/auth-js";
+import { getAuthUser } from "../lib/get-auth-user.js";
 import { z } from "zod";
 import { createNotification } from "../lib/notifications.js";
 
@@ -102,31 +102,30 @@ route.get("/gamification/leaderboard", async (c) => {
 });
 
 route.post("/gamification/check-streak", async (c) => {
-	const auth = await getAuthUser(c);
-	const userId = (auth?.token as any)?.id as string;
-	if (!userId) return c.json({ error: "Unauthorized" }, 401);
+	const user = getAuthUser(c);
+	const userId = user.id;
 
 	const db = c.get("db");
-	const user = await db.user.findUnique({ where: { id: userId } });
-	if (!user) return c.json({ error: "User not found" }, 404);
+	const dbUser = await db.user.findUnique({ where: { id: userId } });
+	if (!dbUser) return c.json({ error: "User not found" }, 404);
 
 	const now = new Date();
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	const lastLogin = user.lastLoginAt
+	const lastLogin = dbUser.lastLoginAt
 		? new Date(
-				user.lastLoginAt.getFullYear(),
-				user.lastLoginAt.getMonth(),
-				user.lastLoginAt.getDate(),
+				dbUser.lastLoginAt.getFullYear(),
+				dbUser.lastLoginAt.getMonth(),
+				dbUser.lastLoginAt.getDate(),
 			)
 		: null;
 
-	let newStreak = user.streak;
+	let newStreak = dbUser.streak;
 
 	if (!lastLogin) {
 		newStreak = 1;
 	} else {
 		const diffDays = Math.round((today.getTime() - lastLogin.getTime()) / 86400000);
-		if (diffDays === 1) newStreak = user.streak + 1;
+		if (diffDays === 1) newStreak = dbUser.streak + 1;
 		else if (diffDays > 1) newStreak = 1;
 	}
 
@@ -135,7 +134,7 @@ route.post("/gamification/check-streak", async (c) => {
 		data: { streak: newStreak, lastLoginAt: now },
 	});
 
-	return c.json({ streak: newStreak, xp: user.xp });
+	return c.json({ streak: newStreak, xp: dbUser.xp });
 });
 
 export default route;
