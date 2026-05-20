@@ -51,9 +51,10 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
 interface EmptyStateProps {
 	title: string;
 	description: string;
+	action?: React.ReactNode;
 }
 
-export function EmptyState({ title, description }: EmptyStateProps) {
+export function EmptyState({ title, description, action }: EmptyStateProps) {
 	return (
 		<Tile style={{ textAlign: "center", padding: "2rem" }}>
 			<h2 className="cds--type-heading-02">{title}</h2>
@@ -63,6 +64,7 @@ export function EmptyState({ title, description }: EmptyStateProps) {
 			>
 				{description}
 			</p>
+			{action ? <div style={{ marginTop: "1rem" }}>{action}</div> : null}
 		</Tile>
 	);
 }
