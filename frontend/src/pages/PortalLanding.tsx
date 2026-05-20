@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ClickableTile, Layer, InlineLoading } from "@carbon/react";
+import { useNavigate, Link } from "react-router-dom";
+import { ClickableTile, Layer, InlineLoading, Button } from "@carbon/react";
 import { useUIStore } from "../stores/useUIStore";
 
 const portals = [
@@ -108,15 +108,40 @@ export function PortalLanding() {
 				)}
 
 				{!navigating && (
-					<p
-						style={{
-							marginTop: "2rem",
-							fontSize: "0.75rem",
-							color: "var(--cds-text-helper, #6f6f6f)",
-						}}
-					>
-						Select a portal to continue. You can switch portals later from settings.
-					</p>
+					<>
+						<p
+							style={{
+								marginTop: "2rem",
+								fontSize: "0.75rem",
+								color: "var(--cds-text-helper, #6f6f6f)",
+							}}
+						>
+							Select a portal to continue. You can switch portals later from settings.
+						</p>
+						<div
+							style={{
+								marginTop: "1.5rem",
+								display: "flex",
+								gap: "1rem",
+							}}
+						>
+							<Link to="/events">
+								<Button kind="ghost" size="sm">
+									Showcase Events
+								</Button>
+							</Link>
+							<Link to="/photos">
+								<Button kind="ghost" size="sm">
+									Photo Gallery
+								</Button>
+							</Link>
+							<Link to="/about">
+								<Button kind="ghost" size="sm">
+									About
+								</Button>
+							</Link>
+						</div>
+					</>
 				)}
 			</div>
 		</Layer>
