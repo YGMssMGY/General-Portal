@@ -69,7 +69,7 @@ route.get("/v1/proposals", async (c) => {
 			where,
 			skip: p.skip,
 			take: p.limit,
-			orderBy: { createdAt: "desc" },
+			orderBy: { submittedAt: "desc" },
 		}),
 		db.proposal.count({ where }),
 	]);
