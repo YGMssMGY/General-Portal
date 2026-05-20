@@ -1,6 +1,4 @@
-import { Outlet, Link } from "react-router-dom";
-import { Button } from "@carbon/react";
-import { getClientConfig } from "../../config/clientConfig";
+import { Outlet, Link, useLocation } from "react-router-dom";
 
 const navLinkStyle: React.CSSProperties = {
 	padding: "0.5rem 0.75rem",
@@ -9,8 +7,15 @@ const navLinkStyle: React.CSSProperties = {
 	textDecoration: "none",
 };
 
+const activeNavStyle: React.CSSProperties = {
+	...navLinkStyle,
+	color: "var(--cds-text-primary)",
+	fontWeight: 600,
+};
+
 export function PublicLayout() {
-	const config = getClientConfig();
+	const location = useLocation();
+	const isActive = (path: string) => location.pathname === path;
 
 	return (
 		<div
@@ -52,61 +57,36 @@ export function PublicLayout() {
 							textDecoration: "none",
 						}}
 					>
-						{config.favicon ? (
-							<img
-								src={config.favicon}
-								alt={config.shortName}
-								style={{ width: "2rem", height: "2rem", borderRadius: "2px" }}
-							/>
-						) : (
-							<div
-								style={{
-									width: "2rem",
-									height: "2rem",
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									background: "#0043ce",
-									fontSize: "0.875rem",
-									fontWeight: 600,
-									color: "#ffffff",
-								}}
-							>
-								{config.shortName}
-							</div>
-						)}
 						<span style={{ fontSize: "1.125rem", fontWeight: 600 }}>
-							{config.displayName}
+							General Portal
 						</span>
 					</Link>
-					<nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-						<div
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: "0.25rem",
-								flexWrap: "wrap",
-								justifyContent: "flex-end",
-							}}
+					<nav
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "0.25rem",
+							overflowX: "auto",
+						}}
+					>
+						<Link
+							to="/events"
+							style={isActive("/events") ? activeNavStyle : navLinkStyle}
 						>
-							<Link to="/" style={navLinkStyle}>
-								Home
-							</Link>
-							<Link to="/events" style={navLinkStyle}>
-								Events
-							</Link>
-							<Link to="/photos" style={navLinkStyle}>
-								Photos
-							</Link>
-							<Link to="/about" style={navLinkStyle}>
-								About
-							</Link>
-							<Link to="/login" style={{ marginLeft: "0.5rem" }}>
-								<Button kind="tertiary" size="sm">
-									Sign In
-								</Button>
-							</Link>
-						</div>
+							Events
+						</Link>
+						<Link
+							to="/photos"
+							style={isActive("/photos") ? activeNavStyle : navLinkStyle}
+						>
+							Photos
+						</Link>
+						<Link
+							to="/about"
+							style={isActive("/about") ? activeNavStyle : navLinkStyle}
+						>
+							About
+						</Link>
 					</nav>
 				</div>
 			</header>
@@ -121,7 +101,7 @@ export function PublicLayout() {
 			>
 				<div style={{ margin: "0 auto", maxWidth: "80rem", padding: "2rem 1rem" }}>
 					<p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-						&copy; {new Date().getFullYear()} {config.displayName}. All rights reserved.
+						&copy; {new Date().getFullYear()} General Portal. All rights reserved.
 					</p>
 				</div>
 			</footer>

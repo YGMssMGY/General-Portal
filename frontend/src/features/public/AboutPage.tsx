@@ -17,7 +17,7 @@ const leadership = [
 
 export function AboutPage() {
 	return (
-		<div style={{ margin: "0 auto", maxWidth: "80rem", padding: "3rem 1rem" }}>
+		<div style={{ margin: "0 auto", maxWidth: "80rem", padding: "1.5rem 1rem" }}>
 			<h1 style={{ fontSize: "2rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
 				About Us
 			</h1>
@@ -39,8 +39,10 @@ export function AboutPage() {
 				style={{
 					marginTop: "3rem",
 					display: "grid",
-					gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-					gap: "2rem",
+					gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+					gap: "1rem",
+					overflowX: "auto",
+					maxWidth: "100%",
 				}}
 			>
 				<Tile>
