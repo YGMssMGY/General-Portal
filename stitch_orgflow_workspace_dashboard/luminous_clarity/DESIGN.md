@@ -1,105 +1,105 @@
 ---
 name: Luminous Clarity
 colors:
-  surface: "#f5faf8"
-  surface-dim: "#d6dbd9"
-  surface-bright: "#f5faf8"
-  surface-container-lowest: "#ffffff"
-  surface-container-low: "#f0f5f2"
-  surface-container: "#eaefed"
-  surface-container-high: "#e4e9e7"
-  surface-container-highest: "#dee4e1"
-  on-surface: "#171d1c"
-  on-surface-variant: "#3d4947"
-  inverse-surface: "#2c3130"
-  inverse-on-surface: "#edf2f0"
-  outline: "#6d7a77"
-  outline-variant: "#bcc9c6"
-  surface-tint: "#006a61"
-  primary: "#00685f"
-  on-primary: "#ffffff"
-  primary-container: "#008378"
-  on-primary-container: "#f4fffc"
-  inverse-primary: "#6bd8cb"
-  secondary: "#4b41e1"
-  on-secondary: "#ffffff"
-  secondary-container: "#645efb"
-  on-secondary-container: "#fffbff"
-  tertiary: "#924628"
-  on-tertiary: "#ffffff"
-  tertiary-container: "#b05e3d"
-  on-tertiary-container: "#fffbff"
-  error: "#ba1a1a"
-  on-error: "#ffffff"
-  error-container: "#ffdad6"
-  on-error-container: "#93000a"
-  primary-fixed: "#89f5e7"
-  primary-fixed-dim: "#6bd8cb"
-  on-primary-fixed: "#00201d"
-  on-primary-fixed-variant: "#005049"
-  secondary-fixed: "#e2dfff"
-  secondary-fixed-dim: "#c3c0ff"
-  on-secondary-fixed: "#0f0069"
-  on-secondary-fixed-variant: "#3323cc"
-  tertiary-fixed: "#ffdbce"
-  tertiary-fixed-dim: "#ffb59a"
-  on-tertiary-fixed: "#370e00"
-  on-tertiary-fixed-variant: "#773215"
-  background: "#f5faf8"
-  on-background: "#171d1c"
-  surface-variant: "#dee4e1"
+    surface: "#f5faf8"
+    surface-dim: "#d6dbd9"
+    surface-bright: "#f5faf8"
+    surface-container-lowest: "#ffffff"
+    surface-container-low: "#f0f5f2"
+    surface-container: "#eaefed"
+    surface-container-high: "#e4e9e7"
+    surface-container-highest: "#dee4e1"
+    on-surface: "#171d1c"
+    on-surface-variant: "#3d4947"
+    inverse-surface: "#2c3130"
+    inverse-on-surface: "#edf2f0"
+    outline: "#6d7a77"
+    outline-variant: "#bcc9c6"
+    surface-tint: "#006a61"
+    primary: "#00685f"
+    on-primary: "#ffffff"
+    primary-container: "#008378"
+    on-primary-container: "#f4fffc"
+    inverse-primary: "#6bd8cb"
+    secondary: "#4b41e1"
+    on-secondary: "#ffffff"
+    secondary-container: "#645efb"
+    on-secondary-container: "#fffbff"
+    tertiary: "#924628"
+    on-tertiary: "#ffffff"
+    tertiary-container: "#b05e3d"
+    on-tertiary-container: "#fffbff"
+    error: "#ba1a1a"
+    on-error: "#ffffff"
+    error-container: "#ffdad6"
+    on-error-container: "#93000a"
+    primary-fixed: "#89f5e7"
+    primary-fixed-dim: "#6bd8cb"
+    on-primary-fixed: "#00201d"
+    on-primary-fixed-variant: "#005049"
+    secondary-fixed: "#e2dfff"
+    secondary-fixed-dim: "#c3c0ff"
+    on-secondary-fixed: "#0f0069"
+    on-secondary-fixed-variant: "#3323cc"
+    tertiary-fixed: "#ffdbce"
+    tertiary-fixed-dim: "#ffb59a"
+    on-tertiary-fixed: "#370e00"
+    on-tertiary-fixed-variant: "#773215"
+    background: "#f5faf8"
+    on-background: "#171d1c"
+    surface-variant: "#dee4e1"
 typography:
-  display-xl:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 36px
-    fontWeight: "700"
-    lineHeight: 44px
-    letterSpacing: -0.02em
-  headline-lg:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 24px
-    fontWeight: "600"
-    lineHeight: 32px
-    letterSpacing: -0.01em
-  headline-md:
-    fontFamily: Plus Jakarta Sans
-    fontSize: 20px
-    fontWeight: "600"
-    lineHeight: 28px
-  body-lg:
-    fontFamily: Inter
-    fontSize: 16px
-    fontWeight: "400"
-    lineHeight: 24px
-  body-md:
-    fontFamily: Inter
-    fontSize: 14px
-    fontWeight: "400"
-    lineHeight: 20px
-  label-md:
-    fontFamily: Inter
-    fontSize: 14px
-    fontWeight: "500"
-    lineHeight: 20px
-  label-sm:
-    fontFamily: Inter
-    fontSize: 12px
-    fontWeight: "600"
-    lineHeight: 16px
+    display-xl:
+        fontFamily: Plus Jakarta Sans
+        fontSize: 36px
+        fontWeight: "700"
+        lineHeight: 44px
+        letterSpacing: -0.02em
+    headline-lg:
+        fontFamily: Plus Jakarta Sans
+        fontSize: 24px
+        fontWeight: "600"
+        lineHeight: 32px
+        letterSpacing: -0.01em
+    headline-md:
+        fontFamily: Plus Jakarta Sans
+        fontSize: 20px
+        fontWeight: "600"
+        lineHeight: 28px
+    body-lg:
+        fontFamily: Inter
+        fontSize: 16px
+        fontWeight: "400"
+        lineHeight: 24px
+    body-md:
+        fontFamily: Inter
+        fontSize: 14px
+        fontWeight: "400"
+        lineHeight: 20px
+    label-md:
+        fontFamily: Inter
+        fontSize: 14px
+        fontWeight: "500"
+        lineHeight: 20px
+    label-sm:
+        fontFamily: Inter
+        fontSize: 12px
+        fontWeight: "600"
+        lineHeight: 16px
 rounded:
-  sm: 0.25rem
-  DEFAULT: 0.5rem
-  md: 0.75rem
-  lg: 1rem
-  xl: 1.5rem
-  full: 9999px
+    sm: 0.25rem
+    DEFAULT: 0.5rem
+    md: 0.75rem
+    lg: 1rem
+    xl: 1.5rem
+    full: 9999px
 spacing:
-  unit: 8px
-  container-margin: 24px
-  gutter: 24px
-  sidebar-width: 280px
-  topbar-height: 64px
-  card-padding: 20px
+    unit: 8px
+    container-margin: 24px
+    gutter: 24px
+    sidebar-width: 280px
+    topbar-height: 64px
+    card-padding: 20px
 ---
 
 ## Brand & Style

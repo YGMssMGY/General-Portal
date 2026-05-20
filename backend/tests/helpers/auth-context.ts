@@ -57,7 +57,7 @@ const ROLE_TOKENS: Record<string, string> = {
  * Create a mock Hono context that returns a typed auth user via c.get("user").
  * Useful for testing service functions or route handlers in isolation.
  */
- 
+
 export function createMockAuthContext(overrides?: Partial<AuthUser>): any {
 	const user: AuthUser = { ...defaultUser, ...overrides };
 	return {
@@ -95,7 +95,7 @@ export function createMockAuthHeader(role: keyof typeof ROLE_TOKENS = "admin"): 
  * Hono middleware that sets user, workspaceId, and portal on the context.
  * Use this in route tests to simulate an authenticated request.
  */
- 
+
 type HonoContext = Record<string, any>;
 
 export function mockAuthMiddleware(userOverrides?: Partial<AuthUser>) {

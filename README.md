@@ -95,22 +95,22 @@ Features: Zod validation, XSS sanitization, audit logging, soft delete with rest
 
 ### Admin Dashboard (14 pages)
 
-| Page           | Features                                                                                                                                                 |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**  | Contextual greeting (time-aware), 5-column metrics, attention items, tasks, events timeline, activity feed, top contributors widget, motivational quotes |
-| **Tasks**      | Kanban board with drag-and-drop (`@dnd-kit`), list view, detail drawer with subtasks/comments/attachments, DataToolbar search+filter                     |
-| **Proposals**  | Multi-step approval workflow (Member → Officer → President → Approved), approval history timeline, detail panel with approve/reject                      |
-| **Events**     | Upcoming cards with progress bars, QR attendance check-in, detail tabs, budget tracking                                                                  |
-| **Volunteers** | Stats summary, capacity bars, hours-by-member, signups, hours from events                                                                                |
-| **Finance**    | 4 summary cards with trends, budget lifecycle (request→approve→spend→reconcile), color-coded amounts, chart                                              |
-| **Messages**   | 3-column layout (threads, conversation, context panel), chat bubbles, date dividers, markdown support, emoji picker                                      |
-| **Files**      | Type-aware icons, drag-drop upload, image preview, OneDrive tab                                                                                          |
-| **Members**    | Role management, pagination, CSV import, member search                                                                                                   |
-| **Meetings**   | Create with agenda, RSVP system, minutes editor, action item extraction                                                                                  |
-| **Activity**   | Charts (Carbon-native), progress bars, live activity feed, WebSocket updates                                                                             |
-| **Search**     | Debounced search, category filters, keyboard navigation, type icons                                                                                      |
-| **Settings**   | Teams webhook URL, term archive/management, module toggles, logo upload                                                                                  |
-| **Accounts**   | Your profile, XP/level/streak, leaderboard, kudos, admin user creation                                                                                   |
+| Page | Features |
+| --- | --- |
+| **Dashboard** | Contextual greeting (time-aware), 5-column metrics, attention items, tasks, events timeline, activity feed, top contributors widget, motivational quotes |
+| **Tasks** | Kanban board with drag-and-drop (`@dnd-kit`), list view, detail drawer with subtasks/comments/attachments, DataToolbar search+filter |
+| **Proposals** | Multi-step approval workflow (Member → Officer → President → Approved), approval history timeline, detail panel with approve/reject |
+| **Events** | Upcoming cards with progress bars, QR attendance check-in, detail tabs, budget tracking |
+| **Volunteers** | Stats summary, capacity bars, hours-by-member, signups, hours from events |
+| **Finance** | 4 summary cards with trends, budget lifecycle (request→approve→spend→reconcile), color-coded amounts, chart |
+| **Messages** | 3-column layout (threads, conversation, context panel), chat bubbles, date dividers, markdown support, emoji picker |
+| **Files** | Type-aware icons, drag-drop upload, image preview, OneDrive tab |
+| **Members** | Role management, pagination, CSV import, member search |
+| **Meetings** | Create with agenda, RSVP system, minutes editor, action item extraction |
+| **Activity** | Charts (Carbon-native), progress bars, live activity feed, WebSocket updates |
+| **Search** | Debounced search, category filters, keyboard navigation, type icons |
+| **Settings** | Teams webhook URL, term archive/management, module toggles, logo upload |
+| **Accounts** | Your profile, XP/level/streak, leaderboard, kudos, admin user creation |
 
 ### Production-Grade Infrastructure
 
@@ -152,31 +152,31 @@ npm run db:reset     # Reset database
 
 ## Tests (188 total)
 
-| Suite        | Tests | Files | What's covered                                                                                                                                                                                                                                                                            |
-| ------------ | ----- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Backend**  | 101   | 22    | All route modules (health, auth, dashboard, tasks, proposals, events, volunteers, finance, messages, files, members, activity, search, settings, public, docs, admin) + budget, meetings, archive, notifications, gamification + rate-limit middleware + WebSocket + env + error handling |
-| **Frontend** | 87    | 21    | Components (Card, PageHeader, StateViews, ErrorBoundary, PageTransition), pages (LoginPage, PublicHome, DashboardPage, AccountsPage, AdminUserManager, MeetingsPage), hooks (useWebSocket, useNotifications), API (httpClient, workspaceApi), config (clientConfig)                       |
+| Suite | Tests | Files | What's covered |
+| --- | --- | --- | --- |
+| **Backend** | 101 | 22 | All route modules (health, auth, dashboard, tasks, proposals, events, volunteers, finance, messages, files, members, activity, search, settings, public, docs, admin) + budget, meetings, archive, notifications, gamification + rate-limit middleware + WebSocket + env + error handling |
+| **Frontend** | 87 | 21 | Components (Card, PageHeader, StateViews, ErrorBoundary, PageTransition), pages (LoginPage, PublicHome, DashboardPage, AccountsPage, AdminUserManager, MeetingsPage), hooks (useWebSocket, useNotifications), API (httpClient, workspaceApi), config (clientConfig) |
 
 ---
 
 ## API Endpoints
 
-| Area              | Endpoints                                                                                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------- |
-| **Auth**          | `GET /api/auth/session`, `GET /api/me`                                                                                                                              |
-| **Dashboard**     | `GET /api/dashboard`                                                                                                                                                |
-| **Docs**          | `GET /api/docs`                                                                                                                                                     |
-| **CRUD**          | `GET/POST /api/tasks`, `/api/proposals`, `/api/events`, `/api/volunteers/slots`, `/api/finance/transactions`, `/api/messages/threads`, `/api/files`, `/api/members` |
-| **Workflow**      | `POST /api/proposals/:id/approve                                                                                                                                    | reject`, `GET /api/proposals/:id/approval-history` |
-| **Budget**        | `GET/POST /api/budget`, `PATCH /api/budget/:id/approve                                                                                                              | spend                                              | reconcile` |
-| **Meetings**      | `GET/POST /api/meetings`, `POST /api/meetings/:id/rsvp`                                                                                                             |
-| **Notifications** | `GET /api/notifications`, `PATCH /api/notifications/:id/read`                                                                                                       |
-| **Gamification**  | `POST /api/gamification/check-streak`, `GET /api/gamification/leaderboard`                                                                                          |
-| **Kudos**         | `POST /api/kudos`                                                                                                                                                   |
-| **Audit**         | `GET /api/audit`, `GET /api/audit/export`                                                                                                                           |
-| **Archive**       | `POST /api/archive/end-term`, `GET /api/archive`                                                                                                                    |
-| **Public API**    | `GET /api/v1/tasks`, `/api/v1/events`, `/api/v1/proposals` (API key required)                                                                                       |
-| **Presence**      | `GET /api/presence`                                                                                                                                                 |
+| Area | Endpoints |
+| --- | --- | --- | --- |
+| **Auth** | `GET /api/auth/session`, `GET /api/me` |
+| **Dashboard** | `GET /api/dashboard` |
+| **Docs** | `GET /api/docs` |
+| **CRUD** | `GET/POST /api/tasks`, `/api/proposals`, `/api/events`, `/api/volunteers/slots`, `/api/finance/transactions`, `/api/messages/threads`, `/api/files`, `/api/members` |
+| **Workflow** | `POST /api/proposals/:id/approve | reject`, `GET /api/proposals/:id/approval-history` |
+| **Budget** | `GET/POST /api/budget`, `PATCH /api/budget/:id/approve | spend | reconcile` |
+| **Meetings** | `GET/POST /api/meetings`, `POST /api/meetings/:id/rsvp` |
+| **Notifications** | `GET /api/notifications`, `PATCH /api/notifications/:id/read` |
+| **Gamification** | `POST /api/gamification/check-streak`, `GET /api/gamification/leaderboard` |
+| **Kudos** | `POST /api/kudos` |
+| **Audit** | `GET /api/audit`, `GET /api/audit/export` |
+| **Archive** | `POST /api/archive/end-term`, `GET /api/archive` |
+| **Public API** | `GET /api/v1/tasks`, `/api/v1/events`, `/api/v1/proposals` (API key required) |
+| **Presence** | `GET /api/presence` |
 
 ---
 
