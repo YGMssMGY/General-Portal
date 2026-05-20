@@ -4,20 +4,20 @@ import { Theme } from "@carbon/react";
 import { type ReactElement, type ReactNode } from "react";
 
 interface ProvidersWrapperProps {
-	children: ReactNode;
-	initialEntries?: MemoryRouterProps["initialEntries"];
+    children: ReactNode;
+    initialEntries?: MemoryRouterProps["initialEntries"];
 }
 
 function ProvidersWrapper({ children, initialEntries }: ProvidersWrapperProps) {
-	return (
-		<MemoryRouter initialEntries={initialEntries}>
-			<Theme theme="g10">{children}</Theme>
-		</MemoryRouter>
-	);
+    return (
+        <MemoryRouter initialEntries={initialEntries}>
+            <Theme theme="g10">{children}</Theme>
+        </MemoryRouter>
+    );
 }
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
-	initialEntries?: MemoryRouterProps["initialEntries"];
+    initialEntries?: MemoryRouterProps["initialEntries"];
 }
 
 /**
@@ -29,15 +29,15 @@ interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
  * needed by composing inside the test or extending this function.
  */
 export function renderWithProviders(
-	ui: ReactElement,
-	options?: RenderWithProvidersOptions,
+    ui: ReactElement,
+    options?: RenderWithProvidersOptions,
 ): RenderResult {
-	const { initialEntries, ...renderOptions } = options ?? {};
+    const { initialEntries, ...renderOptions } = options ?? {};
 
-	return render(ui, {
-		wrapper: ({ children }) => (
-			<ProvidersWrapper initialEntries={initialEntries}>{children}</ProvidersWrapper>
-		),
-		...renderOptions,
-	});
+    return render(ui, {
+        wrapper: ({ children }) => (
+            <ProvidersWrapper initialEntries={initialEntries}>{children}</ProvidersWrapper>
+        ),
+        ...renderOptions,
+    });
 }

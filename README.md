@@ -155,7 +155,7 @@ npm run db:reset     # Reset database
 | Suite | Tests | Files | What's covered |
 | --- | --- | --- | --- |
 | **Backend** | 101 | 22 | All route modules (health, auth, dashboard, tasks, proposals, events, volunteers, finance, messages, files, members, activity, search, settings, public, docs, admin) + budget, meetings, archive, notifications, gamification + rate-limit middleware + WebSocket + env + error handling |
-| **Frontend** | 87 | 21 | Components (Card, PageHeader, StateViews, ErrorBoundary, PageTransition), pages (LoginPage, PublicHome, DashboardPage, AccountsPage, AdminUserManager, MeetingsPage), hooks (useWebSocket, useNotifications), API (httpClient, workspaceApi), config (clientConfig) |
+| **Frontend** | 87 | 21 | Components (Card, PageHeader, StateViews, ErrorBoundary, PageTransition), pages (LoginPage, PublicHome, DashboardPage, AccountsPage, MeetingsPage), hooks (useWebSocket, useNotifications), API (httpClient, workspaceApi), config (clientConfig) |
 
 ---
 
