@@ -106,7 +106,9 @@ const whitelistSchema = z.object({
 route.get("/admin/whitelist", async (c) => {
 	try {
 		const db = c.get("db");
-		const workspace = await db.workspace.findFirst();
+		const portal = c.get("portal") || "developers";
+		const wsName = portal === "developers" ? "Developers Club" : "Student Council";
+		const workspace = await db.workspace.findFirst({ where: { name: wsName } });
 		if (!workspace) return c.json([]);
 
 		const users = await db.user.findMany({
@@ -142,6 +144,7 @@ route.get("/admin/whitelist", async (c) => {
 route.post("/admin/whitelist", async (c) => {
 	try {
 		const db = c.get("db");
+		const portal = c.get("portal") || "developers";
 		const body = await c.req.json();
 		const parsed = whitelistSchema.parse(body);
 
@@ -150,7 +153,8 @@ route.post("/admin/whitelist", async (c) => {
 		});
 		if (existing) return c.json({ error: "User already exists" }, 409);
 
-		let workspace = await db.workspace.findFirst();
+		const wsName = portal === "developers" ? "Developers Club" : "Student Council";
+		let workspace = await db.workspace.findFirst({ where: { name: wsName } });
 		if (!workspace) {
 			workspace = await db.workspace.create({
 				data: { name: "General Portal Workspace", description: "Auto-created" },

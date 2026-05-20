@@ -5,6 +5,9 @@ const dbUrl =
 	process.env["DATABASE_URL_DEVELOPERS"] || "postgresql://localhost:5432/general_portal_dev";
 process.env["DATABASE_URL"] = dbUrl;
 
+const isStuco = dbUrl.includes("general_portal_stuco");
+const portal = isStuco ? "stuco" : "developers";
+
 const prisma = new PrismaClient({
 	datasources: { db: { url: dbUrl } },
 });
@@ -31,10 +34,10 @@ const WHITELIST = [
 
 async function main() {
 	for (const entry of WHITELIST) {
-		for (const portal of entry.portals) {
-			const wsName = portal === "developers" ? "Developers Club" : "Student Council";
+		if (!entry.portals.includes(portal as any)) continue;
+		const wsName = portal === "developers" ? "Developers Club" : "Student Council";
 
-			let workspace = await prisma.workspace.findFirst({ where: { name: wsName } });
+		let workspace = await prisma.workspace.findFirst({ where: { name: wsName } });
 			if (!workspace) {
 				workspace = await prisma.workspace.create({
 					data: { name: wsName, description: `${wsName} workspace` },
