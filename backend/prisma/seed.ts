@@ -1,682 +1,134 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, TaskStatus, TaskPriority, EventStatus } from "@prisma/client";
+import { ROLE_PERMISSIONS } from "../src/lib/permissions.js";
 
-const prisma = new PrismaClient();
+const dbUrl =
+	process.env["DATABASE_URL_DEVELOPERS"] || "postgresql://localhost:5432/general_portal_dev";
+process.env["DATABASE_URL"] = dbUrl;
+
+const isStuco = dbUrl.includes("general_portal_stuco");
+const portal = isStuco ? "stuco" : "developers";
+
+const prisma = new PrismaClient({
+	datasources: { db: { url: dbUrl } },
+});
+
+const WHITELIST = [
+	{
+		email: "zhiyu.jiang90454-bisz@basischina.com",
+		name: "Jiang, Zhiyu Richard",
+		portals: ["developers", "stuco"] as const,
+	},
+	{
+		email: "chunping.wong12024-bisz@basischina.com",
+		name: "Wong, Chun Ping Eric",
+		portals: ["developers"] as const,
+	},
+	{
+		email: "zuheng.liu13010-bisz@basischina.com",
+		name: "Liu, Zuheng Harry",
+		portals: ["developers"] as const,
+	},
+	{ email: "chris.xu11265-bisz@basischina.com", name: "Xu, Chris", portals: ["stuco"] as const },
+	{ email: "alice.wu10926-bisz@basischina.com", name: "Wu, Alice", portals: ["stuco"] as const },
+];
 
 async function main() {
-  /* ── Workspace ── */
-  let workspace = await prisma.workspace.findFirst();
-  if (!workspace) {
-    workspace = await prisma.workspace.create({
-      data: {
-        name: "General Portal Workspace",
-        description: "Student Council Workspace",
-      },
-    });
-    console.log("[seed] Created workspace");
-  } else {
-    console.log("[seed] Workspace exists, reusing");
-  }
+	for (const entry of WHITELIST) {
+		if (!entry.portals.includes(portal as any)) continue;
+		const wsName = portal === "developers" ? "Developers Club" : "Student Council";
 
-  /* ── Users (by email) ── */
-  const userDefs = [
-    { email: "chris@example.edu", displayName: "Chris Rivera" },
-    { email: "sarah.j@example.edu", displayName: "Sarah Jenkins" },
-    { email: "maya.c@example.edu", displayName: "Maya Chen" },
-    { email: "jordan.d@example.edu", displayName: "Jordan Diaz" },
-    { email: "dev@generalportal.local", displayName: "Dev Admin" },
-    { email: "dev.admin@generalportal.local", displayName: "Dev Admin" },
-    {
-      email: "dev.president@generalportal.local",
-      displayName: "Dev President",
-    },
-    { email: "dev.officer@generalportal.local", displayName: "Dev Officer" },
-    { email: "dev.member@generalportal.local", displayName: "Dev Member" },
-  ];
+		let workspace = await prisma.workspace.findFirst({ where: { name: wsName } });
+			if (!workspace) {
+				workspace = await prisma.workspace.create({
+					data: { name: wsName, description: `${wsName} workspace` },
+				});
+				console.log(`[seed] Created workspace: ${wsName}`);
+			}
 
-  const users = await Promise.all(
-    userDefs.map((u) =>
-      prisma.userAccount.upsert({
-        where: { email: u.email },
-        create: u,
-        update: {},
-      }),
-    ),
-  );
+			let user = await prisma.user.findUnique({ where: { email: entry.email } });
+			if (!user) {
+				user = await prisma.user.create({
+					data: { email: entry.email, name: entry.name },
+				});
+				console.log(`[seed] Created user: ${entry.email}`);
+			}
 
-  const [
-    chris,
-    sarah,
-    maya,
-    jordan,
-    dev,
-    devAdmin,
-    devPresident,
-    devOfficer,
-    devMember,
-  ] = users;
+			const existing = await prisma.membership.findUnique({
+				where: { workspaceId_userId: { workspaceId: workspace.id, userId: user.id } },
+			});
 
-  /* ── Memberships (by workspaceId + userId) ── */
-  const membershipDefs = [
-    { user: users[0], position: "Admin", accessLabel: "Admin", tc: 4, vh: 88 },
-    {
-      user: users[1],
-      position: "President",
-      accessLabel: "President",
-      tc: 5,
-      vh: 120,
-    },
-    {
-      user: users[2],
-      position: "Officer",
-      accessLabel: "Officer",
-      tc: 3,
-      vh: 96,
-    },
-    {
-      user: users[3],
-      position: "Member",
-      accessLabel: "Member",
-      tc: 7,
-      vh: 142,
-    },
-    { user: users[4], position: "Admin", accessLabel: "Admin", tc: 0, vh: 0 },
-    { user: users[5], position: "Admin", accessLabel: "Admin", tc: 0, vh: 0 },
-    {
-      user: users[6],
-      position: "President",
-      accessLabel: "President",
-      tc: 0,
-      vh: 0,
-    },
-    {
-      user: users[7],
-      position: "Officer",
-      accessLabel: "Officer",
-      tc: 0,
-      vh: 0,
-    },
-    { user: users[8], position: "Member", accessLabel: "Member", tc: 0, vh: 0 },
-  ];
+			if (!existing) {
+				const membership = await prisma.membership.create({
+					data: {
+						workspaceId: workspace.id,
+						userId: user.id,
+						position: "Admin",
+						accessLabel: "Admin",
+						taskCount: 0,
+						volunteerHours: 0,
+					},
+				});
+				for (const perm of ROLE_PERMISSIONS.admin) {
+					await prisma.permissionGrant.upsert({
+						where: {
+							membershipId_permission: {
+								membershipId: membership.id,
+								permission: perm,
+							},
+						},
+						create: { membershipId: membership.id, permission: perm },
+						update: {},
+					});
+				}
+				console.log(`[seed] Created admin membership for ${entry.name} in ${wsName}`);
+			}
+		}
+	}
 
-  const permSets = [
-    adminPerms(),
-    adminPerms(),
-    presidentPerms(),
-    officerPerms(),
-    memberPerms(),
-    adminPerms(),
-    presidentPerms(),
-    officerPerms(),
-    memberPerms(),
-  ];
+	// Minimal demo data
+	for (const ws of await prisma.workspace.findMany()) {
+		const taskCount = await prisma.taskItem.count({ where: { workspaceId: ws.id } });
+		if (taskCount === 0) {
+			await prisma.taskItem.createMany({
+				data: [
+					{
+						workspaceId: ws.id,
+						title: "Welcome — set up your workspace",
+						status: TaskStatus.todo,
+						priority: TaskPriority.high,
+					},
+					{
+						workspaceId: ws.id,
+						title: "Review upcoming events",
+						status: TaskStatus.todo,
+						priority: TaskPriority.medium,
+					},
+				],
+			});
+		}
 
-  for (let i = 0; i < membershipDefs.length; i++) {
-    const def = membershipDefs[i];
-    let membership = await prisma.membership.findUnique({
-      where: {
-        workspaceId_userId: { workspaceId: workspace.id, userId: def.user.id },
-      },
-    });
-    if (!membership) {
-      membership = await prisma.membership.create({
-        data: {
-          workspaceId: workspace.id,
-          userId: def.user.id,
-          position: def.position,
-          accessLabel: def.accessLabel,
-          taskCount: def.tc,
-          volunteerHours: def.vh,
-        },
-      });
-    }
-    for (const perm of permSets[i]) {
-      await prisma.permissionGrant.upsert({
-        where: {
-          membershipId_permission: {
-            membershipId: membership.id,
-            permission: perm,
-          },
-        },
-        create: { membershipId: membership.id, permission: perm },
-        update: {},
-      });
-    }
-  }
+		const eventCount = await prisma.eventItem.count({ where: { workspaceId: ws.id } });
+		if (eventCount === 0) {
+			await prisma.eventItem.create({
+				data: {
+					workspaceId: ws.id,
+					title: "Kickoff Meeting",
+					status: EventStatus.active,
+					startsAt: new Date(Date.now() + 7 * 86400000),
+					progress: 0,
+					budgetUsed: 0,
+					budgetTotal: 0,
+				},
+			});
+		}
+	}
 
-  /* ── Seed data: only create when empty ── */
-  async function seedTasks() {
-    const count = await prisma.taskItem.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Tasks exist, skipping");
-      return;
-    }
-    await prisma.taskItem.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          title: "Confirm gym reservation",
-          status: "todo",
-          priority: "high",
-          project: "Winter Formal",
-          dueDate: new Date(Date.now() + 8 * 86400000),
-          assigneeName: "Maya Chen",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Update volunteer contact list",
-          status: "todo",
-          priority: "low",
-          project: "General Admin",
-          dueDate: new Date(Date.now() + 12 * 86400000),
-          assigneeName: "Jordan Diaz",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Design fundraiser poster",
-          status: "in_progress",
-          priority: "medium",
-          project: "Fall Drive",
-          dueDate: new Date(Date.now() + 86400000),
-          assigneeName: "Chris Rivera",
-          progress: 50,
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Approve catering budget",
-          status: "blocked",
-          priority: "high",
-          project: "Winter Formal",
-          dueDate: new Date(Date.now() - 86400000),
-          assigneeName: "Sarah Jenkins",
-          progress: 20,
-          blockedReason: "Waiting on Finance Dept",
-        },
-      ],
-    });
-  }
-  await seedTasks();
-
-  async function seedProposals() {
-    const count = await prisma.proposal.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Proposals exist, skipping");
-      return;
-    }
-    await prisma.proposal.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          title: "Winter Formal Decoration Plan",
-          type: "Event",
-          status: "under_review",
-          submittedBy: "Sarah Jenkins",
-          submittedAt: new Date(Date.now() - 86400000),
-          budget: 1850,
-          summary:
-            "Decor, lighting, and table styling plan for the winter formal venue.",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Fall Merchandise Design",
-          type: "Purchase",
-          status: "submitted",
-          submittedBy: "Maya Chen",
-          submittedAt: new Date(Date.now() - 7200000),
-          budget: 940,
-          summary: "Hoodie and sticker set for the fall membership drive.",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Community Garden Workday",
-          type: "Project",
-          status: "approved",
-          submittedBy: "Jordan Diaz",
-          submittedAt: new Date(Date.now() - 420000000),
-          budget: 420,
-          summary:
-            "Volunteer event for cleanup, planting, and signage updates.",
-        },
-      ],
-    });
-  }
-  await seedProposals();
-
-  async function seedEvents() {
-    const count = await prisma.eventItem.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Events exist, skipping");
-      return;
-    }
-    await prisma.eventItem.create({
-      data: {
-        workspaceId: workspace.id,
-        title: "Spirit Week 2026",
-        status: "active",
-        startsAt: new Date(Date.now() + 1296000000),
-        endsAt: new Date(Date.now() + 1641600000),
-        progress: 75,
-        budgetUsed: 2500,
-        budgetTotal: 3000,
-        owners: {
-          create: [
-            { ownerLabel: "JD" },
-            { ownerLabel: "AL" },
-            { ownerLabel: "+3" },
-          ],
-        },
-      },
-    });
-
-    await prisma.eventItem.create({
-      data: {
-        workspaceId: workspace.id,
-        title: "Winter Formal",
-        status: "pending",
-        startsAt: new Date("2026-12-10T19:00:00Z"),
-        progress: 30,
-        budgetUsed: 1200,
-        budgetTotal: 6200,
-        owners: { create: [{ ownerLabel: "SJ" }, { ownerLabel: "MC" }] },
-      },
-    });
-  }
-  await seedEvents();
-
-  async function seedVolunteerSlots() {
-    const count = await prisma.volunteerSlot.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Volunteer slots exist, skipping");
-      return;
-    }
-    await prisma.volunteerSlot.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          title: "Food Booth Setup",
-          eventName: "Spirit Week",
-          startsAt: new Date(Date.now() + 1292400000),
-          capacity: 10,
-          filled: 8,
-          hours: 4,
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Check-in Table",
-          eventName: "Winter Formal",
-          startsAt: new Date("2026-12-10T18:00:00Z"),
-          capacity: 6,
-          filled: 4,
-          hours: 3,
-        },
-      ],
-    });
-  }
-  await seedVolunteerSlots();
-
-  async function seedFinance() {
-    const count = await prisma.financeTransaction.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Finance transactions exist, skipping");
-      return;
-    }
-    await prisma.financeTransaction.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          title: "Receipt for event posters",
-          category: "Printing",
-          status: "pending",
-          submittedBy: "Maya Chen",
-          amount: 86.25,
-          occurredAt: new Date(Date.now() - 7200000),
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Venue deposit",
-          category: "Event",
-          status: "approved",
-          submittedBy: "Sarah Jenkins",
-          amount: 500,
-          occurredAt: new Date(Date.now() - 260000000),
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Catering quote",
-          category: "Food",
-          status: "under_review",
-          submittedBy: "Chris Rivera",
-          amount: 1280,
-          occurredAt: new Date(Date.now() - 160000000),
-        },
-      ],
-    });
-  }
-  await seedFinance();
-
-  async function seedMessages() {
-    const count = await prisma.messageThread.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Message threads exist, skipping");
-      return;
-    }
-    await prisma.messageThread.create({
-      data: {
-        workspaceId: workspace.id,
-        title: "Winter Formal Planning",
-        context: "event",
-        status: "active",
-        preview: "Sarah: I updated the seating chart for the VIP section.",
-        unreadCount: 2,
-        lastMessageAt: new Date(Date.now() - 3600000),
-        participants: {
-          create: [{ name: "Sarah" }, { name: "Maya" }, { name: "Chris" }],
-        },
-        messages: {
-          create: [
-            {
-              authorName: "Sarah",
-              body: "I updated the seating chart for the VIP section.",
-              sentAt: new Date(Date.now() - 3600000),
-            },
-            {
-              authorName: "Chris",
-              body: "Great, please attach it to the event file list too.",
-              sentAt: new Date(Date.now() - 3300000),
-            },
-          ],
-        },
-      },
-    });
-
-    await prisma.messageThread.create({
-      data: {
-        workspaceId: workspace.id,
-        title: "Confirm Decorations Task",
-        context: "task",
-        status: "completed",
-        preview: "Mark: All balloons and banners ordered.",
-        lastMessageAt: new Date(Date.now() - 90000000),
-        participants: { create: [{ name: "Mark" }, { name: "Chris" }] },
-        messages: {
-          create: [
-            {
-              authorName: "Mark",
-              body: "All balloons and banners ordered.",
-              sentAt: new Date(Date.now() - 90000000),
-            },
-          ],
-        },
-      },
-    });
-  }
-  await seedMessages();
-
-  async function seedFiles() {
-    const count = await prisma.workspaceFile.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Files exist, skipping");
-      return;
-    }
-    await prisma.workspaceFile.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          name: "Winter Formal Budget.xlsx",
-          fileType: "Spreadsheet",
-          ownerName: "Sarah Jenkins",
-          linkedResource: "Winter Formal",
-          sizeLabel: "84 KB",
-          storageKey: "files/winter-formal-budget",
-          fileUpdatedAt: new Date(Date.now() - 1800000),
-        },
-        {
-          workspaceId: workspace.id,
-          name: "Volunteer Roster.pdf",
-          fileType: "PDF",
-          ownerName: "Jordan Diaz",
-          linkedResource: "Volunteer Program",
-          sizeLabel: "1.2 MB",
-          storageKey: "files/volunteer-roster",
-          fileUpdatedAt: new Date(Date.now() - 180000000),
-        },
-      ],
-    });
-  }
-  await seedFiles();
-
-  async function seedActivityLogs() {
-    const count = await prisma.activityLog.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Activity logs exist, skipping");
-      return;
-    }
-    await prisma.activityLog.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          actorName: "Maya Chen",
-          action: "uploaded a receipt",
-          resourceType: "Finance",
-          resourceTitle: "Event posters",
-          occurredAt: new Date(Date.now() - 7200000),
-        },
-        {
-          workspaceId: workspace.id,
-          actorName: "Chris Rivera",
-          action: "approved proposal",
-          resourceType: "Proposal",
-          resourceTitle: "#142",
-          occurredAt: new Date(Date.now() - 18000000),
-        },
-        {
-          workspaceId: workspace.id,
-          actorName: "Sarah Jenkins",
-          action: "created an event",
-          resourceType: "Event",
-          resourceTitle: "Spirit Week 2026",
-          occurredAt: new Date(Date.now() - 96000000),
-        },
-      ],
-    });
-  }
-  await seedActivityLogs();
-
-  async function seedSettings() {
-    const existing = await prisma.workspaceSettings.findUnique({
-      where: { workspaceId: workspace.id },
-    });
-    if (existing) {
-      console.log("[seed] Settings exist, skipping");
-      return;
-    }
-    await prisma.workspaceSettings.create({
-      data: {
-        workspaceId: workspace.id,
-        defaultVisibility: "members",
-        requireProposalApproval: false,
-        allowMemberInvites: true,
-        fiscalYearStart: "August",
-      },
-    });
-  }
-  await seedSettings();
-
-  async function seedPublicEvents() {
-    const count = await prisma.publicEvent.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Public events exist, skipping");
-      return;
-    }
-    await prisma.publicEvent.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          title: "Annual Hackathon 2025",
-          eventDate: new Date("2025-11-15"),
-          description:
-            "Our flagship event brought together over 200 participants.",
-          category: "Competition",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Spring Coding Workshop",
-          eventDate: new Date("2025-04-10"),
-          description:
-            "Hands-on sessions covering web development, Python, and introductory programming.",
-          category: "Workshop",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Leadership Summit",
-          eventDate: new Date("2025-09-22"),
-          description:
-            "An inspiring gathering of students, mentors, and industry professionals.",
-          category: "Conference",
-        },
-      ],
-    });
-  }
-  await seedPublicEvents();
-
-  async function seedPhotos() {
-    const count = await prisma.photo.count({
-      where: { workspaceId: workspace.id },
-    });
-    if (count > 0) {
-      console.log("[seed] Photos exist, skipping");
-      return;
-    }
-    await prisma.photo.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          title: "Group Photo",
-          photoDate: new Date("2025-11-15"),
-          description: "Participants at the Annual Hackathon.",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Workshop Session",
-          photoDate: new Date("2025-04-10"),
-          description: "Students engaged in hands-on coding.",
-        },
-        {
-          workspaceId: workspace.id,
-          title: "Award Ceremony",
-          photoDate: new Date("2025-09-22"),
-          description: "Award recipients at the Leadership Summit.",
-        },
-      ],
-    });
-  }
-  await seedPhotos();
-
-  console.log("[seed] Database seeded successfully");
-}
-
-function adminPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "task:delete",
-    "proposal:read",
-    "proposal:write",
-    "proposal:delete",
-    "event:read",
-    "event:write",
-    "event:delete",
-    "volunteer:read",
-    "volunteer:write",
-    "volunteer:delete",
-    "finance:read",
-    "finance:write",
-    "finance:delete",
-    "message:read",
-    "message:write",
-    "message:delete",
-    "file:read",
-    "file:write",
-    "file:delete",
-    "member:read",
-    "member:write",
-    "member:delete",
-    "activity:read",
-    "settings:read",
-    "settings:write",
-  ];
-}
-
-function presidentPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "volunteer:write",
-    "finance:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-    "settings:read",
-  ];
-}
-
-function officerPerms() {
-  return [
-    "task:read",
-    "task:write",
-    "proposal:read",
-    "proposal:write",
-    "event:read",
-    "event:write",
-    "volunteer:read",
-    "message:read",
-    "message:write",
-    "file:read",
-    "member:read",
-    "activity:read",
-  ];
-}
-
-function memberPerms() {
-  return [
-    "task:read",
-    "event:read",
-    "volunteer:read",
-    "message:read",
-    "file:read",
-    "activity:read",
-  ];
+	console.log("[seed] Done");
 }
 
 main()
-  .catch((e) => {
-    console.error("[seed] Error:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+	.catch((e) => {
+		console.error("[seed] Error:", e);
+		process.exit(1);
+	})
+	.finally(() => prisma.$disconnect());

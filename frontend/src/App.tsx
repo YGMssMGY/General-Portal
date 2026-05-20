@@ -8,26 +8,26 @@ import { AppRoutes } from "./routes/AppRoutes";
 import { useClientTheme } from "./hooks/useClientTheme";
 
 function ThemedApp() {
-  const { theme } = useTheme();
-  useClientTheme();
-  return (
-    <Theme theme={theme === "dark" ? "g100" : "g10"}>
-      <WorkspaceProvider>
-        <AppRoutes />
-      </WorkspaceProvider>
-    </Theme>
-  );
+    const { theme } = useTheme();
+    useClientTheme();
+    return (
+        <Theme theme={theme === "dark" ? "g100" : "g10"}>
+            <WorkspaceProvider>
+                <AppRoutes />
+            </WorkspaceProvider>
+        </Theme>
+    );
 }
 
 export function App() {
-  return (
-    <BrowserRouter>
-      <ErrorBoundary>
-        <ThemeProvider>
-          <ThemedApp />
-        </ThemeProvider>
-      </ErrorBoundary>
-      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-    </BrowserRouter>
-  );
+    return (
+        <BrowserRouter>
+            <ErrorBoundary>
+                <ThemeProvider>
+                    <ThemedApp />
+                </ThemeProvider>
+            </ErrorBoundary>
+            <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+        </BrowserRouter>
+    );
 }

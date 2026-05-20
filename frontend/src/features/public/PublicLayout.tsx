@@ -1,125 +1,167 @@
-import { Outlet, Link } from "react-router-dom";
-import { Button } from "@carbon/react";
-import { getClientConfig } from "../../config/clientConfig";
+import { useState } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
+
+export type ShowPortal = "developers" | "stuco";
 
 const navLinkStyle: React.CSSProperties = {
-  padding: "0.5rem 0.75rem",
-  fontSize: "0.875rem",
-  color: "var(--cds-text-secondary)",
-  textDecoration: "none",
+    padding: "0.5rem 0.75rem",
+    fontSize: "0.875rem",
+    color: "var(--cds-text-secondary)",
+    textDecoration: "none",
+};
+
+const activeNavStyle: React.CSSProperties = {
+    ...navLinkStyle,
+    color: "var(--cds-text-primary)",
+    fontWeight: 600,
+};
+
+const portalButtonStyle: React.CSSProperties = {
+    padding: "0.25rem 0.625rem",
+    fontSize: "0.8125rem",
+    fontFamily: "inherit",
+    border: "1px solid var(--cds-border-strong)",
+    background: "var(--cds-layer)",
+    color: "var(--cds-text-secondary)",
+    cursor: "pointer",
+};
+
+const activePortalButtonStyle: React.CSSProperties = {
+    ...portalButtonStyle,
+    background: "var(--cds-layer-selected)",
+    color: "var(--cds-text-primary)",
+    fontWeight: 600,
+    borderColor: "var(--cds-border-interactive)",
 };
 
 export function PublicLayout() {
-  const config = getClientConfig();
+    const location = useLocation();
+    const isActive = (path: string) => location.pathname === path;
+    const [showPortal, setShowPortal] = useState<ShowPortal>("developers");
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--cds-background)",
-        color: "var(--cds-text-primary)",
-      }}
-    >
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          borderBottom: "1px solid var(--cds-border-subtle)",
-          background: "var(--cds-layer)",
-        }}
-      >
+    return (
         <div
-          style={{
-            margin: "0 auto",
-            maxWidth: "80rem",
-            display: "flex",
-            height: "3.5rem",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 1rem",
-          }}
-        >
-          <Link
-            to="/"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              color: "var(--cds-text-primary)",
-              textDecoration: "none",
-            }}
-          >
-            {config.favicon ? (
-              <img
-                src={config.favicon}
-                alt={config.shortName}
-                style={{ width: "2rem", height: "2rem", borderRadius: "2px" }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "2rem",
-                  height: "2rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "#0043ce",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  color: "#ffffff",
-                }}
-              >
-                {config.shortName}
-              </div>
-            )}
-            <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>{config.displayName}</span>
-          </Link>
-          <nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <div
-              style={{
+                minHeight: "100vh",
                 display: "flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-              }}
+                flexDirection: "column",
+                background: "var(--cds-background)",
+                color: "var(--cds-text-primary)",
+            }}
+        >
+            <header
+                style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 40,
+                    borderBottom: "1px solid var(--cds-border-subtle)",
+                    background: "var(--cds-layer)",
+                }}
             >
-              <Link to="/" style={navLinkStyle}>
-                Home
-              </Link>
-              <Link to="/events" style={navLinkStyle}>
-                Events
-              </Link>
-              <Link to="/photos" style={navLinkStyle}>
-                Photos
-              </Link>
-              <Link to="/about" style={navLinkStyle}>
-                About
-              </Link>
-              <Link to="/login" style={{ marginLeft: "0.5rem" }}>
-                <Button kind="tertiary" size="sm">
-                  Sign In
-                </Button>
-              </Link>
-            </div>
-          </nav>
+                <div
+                    style={{
+                        margin: "0 auto",
+                        maxWidth: "80rem",
+                        display: "flex",
+                        height: "3.5rem",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "0 1rem",
+                        gap: "1rem",
+                    }}
+                >
+                    <Link
+                        to="/"
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            color: "var(--cds-text-primary)",
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        <span style={{ fontSize: "1.125rem", fontWeight: 600 }}>
+                            General Portal
+                        </span>
+                    </Link>
+
+                    <div
+                        style={{
+                            display: "flex",
+                            borderRadius: "4px",
+                            overflow: "hidden",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setShowPortal("developers")}
+                            style={
+                                showPortal === "developers"
+                                    ? activePortalButtonStyle
+                                    : portalButtonStyle
+                            }
+                        >
+                            Developers
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowPortal("stuco")}
+                            style={
+                                showPortal === "stuco"
+                                    ? activePortalButtonStyle
+                                    : { ...portalButtonStyle, borderLeft: "none" }
+                            }
+                        >
+                            Student Council
+                        </button>
+                    </div>
+
+                    <nav
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            overflowX: "auto",
+                        }}
+                    >
+                        <Link
+                            to="/events"
+                            style={isActive("/events") ? activeNavStyle : navLinkStyle}
+                        >
+                            Events
+                        </Link>
+                        <Link
+                            to="/photos"
+                            style={isActive("/photos") ? activeNavStyle : navLinkStyle}
+                        >
+                            Photos
+                        </Link>
+                        <Link
+                            to="/about"
+                            style={isActive("/about") ? activeNavStyle : navLinkStyle}
+                        >
+                            About
+                        </Link>
+                    </nav>
+                </div>
+            </header>
+            <main style={{ flex: 1 }}>
+                <Outlet context={showPortal} />
+            </main>
+            <footer
+                style={{
+                    borderTop: "1px solid var(--cds-border-subtle)",
+                    background: "var(--cds-layer)",
+                }}
+            >
+                <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "2rem 1rem" }}>
+                    <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+                        &copy; {new Date().getFullYear()} General Portal. All rights reserved.
+                    </p>
+                </div>
+            </footer>
         </div>
-      </header>
-      <main style={{ flex: 1 }}>
-        <Outlet />
-      </main>
-      <footer
-        style={{ borderTop: "1px solid var(--cds-border-subtle)", background: "var(--cds-layer)" }}
-      >
-        <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "2rem 1rem" }}>
-          <p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
-            &copy; {new Date().getFullYear()} {config.displayName}. All rights reserved.
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
+    );
 }

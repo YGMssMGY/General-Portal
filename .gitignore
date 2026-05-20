@@ -40,7 +40,9 @@ backend/uploads/*
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.swp
 *.swo
 
@@ -52,6 +54,7 @@ Thumbs.db
 .vite/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+stats.html
 
 # Temp
 tmp/

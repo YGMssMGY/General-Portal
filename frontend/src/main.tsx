@@ -6,9 +6,9 @@ import "@carbon/styles/css/styles.css";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <SessionProvider>
-      <App />
-    </SessionProvider>
-  </React.StrictMode>,
+    <React.StrictMode>
+        <SessionProvider>
+            <App />
+        </SessionProvider>
+    </React.StrictMode>,
 );
