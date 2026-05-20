@@ -12,7 +12,7 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
 	let db: any = c.get("db");
 	if (!db) {
 		const { getDb } = await import("./db.js");
-		db = await getDb("developers");
+		db = getDb("developers");
 	}
 
 	return {
@@ -40,21 +40,42 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
 				}
 				return true;
 			},
-			async jwt({ token, user }) {
-				if (user?.id) {
+			async jwt({ token, user, account }) {
+				if (user?.id && account?.provider === "microsoft-entra-id") {
+					// First login after Microsoft OAuth2 callback
 					(token as any).id = user.id;
 					(token as any).email = user.email;
 					(token as any).name = user.name;
+				}
+				// Look up workspace membership from token email
+				if ((token as any).email) {
+					try {
+						const membership = await db.membership.findFirst({
+							where: { user: { email: (token as any).email } },
+							include: { workspace: true },
+						});
+						if (membership) {
+							(token as any).workspaceId = membership.workspaceId;
+							(token as any).workspaceName = membership.workspace.name;
+							(token as any).role = membership.accessLabel?.toLowerCase() || "admin";
+						}
+					} catch {
+						/* DB not available */
+					}
+				}
+				if (!(token as any).workspaceId) {
 					(token as any).workspaceId = "ws-default";
 					(token as any).workspaceName = "General Portal";
-					(token as any).role = "admin";
-					(token as any).permissions = ["*"];
 				}
+				(token as any).role = (token as any).role || "admin";
+				(token as any).permissions = ["*"];
 				return token;
 			},
 			async session({ session, token }) {
 				if (session.user) {
 					(session.user as any).id = (token as any).id || token.sub;
+					(session.user as any).email = (token as any).email;
+					(session.user as any).name = (token as any).name;
 					(session.user as any).workspaceId = (token as any).workspaceId;
 					(session.user as any).workspaceName = (token as any).workspaceName;
 					(session.user as any).role = (token as any).role;
