@@ -131,14 +131,14 @@ export function MessagesPage() {
 		event.preventDefault();
 		setComposeError(undefined);
 		try {
+			const participants = composeForm.participants
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean);
 			await workspaceApi.sendMessage({
 				title: composeForm.title,
 				context: composeForm.context,
-				participants: composeForm.participants
-					.split(",")
-					.map((s) => s.trim())
-					.filter(Boolean),
-				participantIds: composeForm.participantIds,
+				participants,
 				body: composeForm.body,
 			});
 			setComposeForm({
