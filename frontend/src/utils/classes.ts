@@ -3,7 +3,6 @@ import type { Priority, ResourceStatus } from "../types";
 export function priorityBadgeClass(priority: Priority): string {
 	const classes: Record<Priority, string> = {
 		low: "border-border-subtle bg-surface text-text-secondary",
-		normal: "border-carbon-blue-30 bg-carbon-blue-10 text-carbon-blue-70",
 		medium: "border-carbon-yellow-30 bg-carbon-yellow-10 text-carbon-yellow-50",
 		high: "border-carbon-red-30 bg-carbon-red-10 text-carbon-red-60",
 	};

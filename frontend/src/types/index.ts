@@ -13,7 +13,7 @@ export type ResourceStatus =
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 
-export type Priority = "low" | "normal" | "medium" | "high";
+export type Priority = "low" | "medium" | "high";
 
 export interface UserProfile {
 	id: string;

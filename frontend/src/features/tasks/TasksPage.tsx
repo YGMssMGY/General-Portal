@@ -67,7 +67,6 @@ const columnMeta: Record<TaskStatus, { title: string; dotColor: string }> = {
 const priorityLabel: Record<Priority, string> = {
 	high: "High",
 	medium: "Medium",
-	normal: "Normal",
 	low: "Low",
 };
 
@@ -719,7 +718,7 @@ export function TasksPage() {
 	const [selectedAssignees, setSelectedAssignees] = useState<{ id: string; label: string }[]>([]);
 	const [taskForm, setTaskForm] = useState({
 		title: "",
-		priority: "normal" as Priority,
+		priority: "medium" as Priority,
 		project: "",
 		dueDate: new Date().toISOString().slice(0, 10),
 		assigneeName: "",
@@ -858,7 +857,7 @@ export function TasksPage() {
 		setEditingTask(undefined);
 		setTaskForm({
 			title: "",
-			priority: "normal",
+			priority: "medium",
 			project: "",
 			dueDate: new Date().toISOString().slice(0, 10),
 			assigneeName: "",
@@ -1138,7 +1137,7 @@ export function TasksPage() {
 									}
 								>
 									<SelectItem value="low" text="Low" />
-									<SelectItem value="normal" text="Normal" />
+									<SelectItem value="medium" text="Medium" />
 									<SelectItem value="medium" text="Medium" />
 									<SelectItem value="high" text="High" />
 								</Select>
