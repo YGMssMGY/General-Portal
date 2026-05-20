@@ -47,7 +47,6 @@ Object.defineProperty(window, "IntersectionObserver", {
 process.env.VITE_SENTRY_DSN = "";
 process.env.SENTRY_DSN = "";
 Object.defineProperty(import.meta, "env", {
-	 
 	value: { ...(import.meta as any).env, VITE_SENTRY_DSN: "" },
 	configurable: true,
 });

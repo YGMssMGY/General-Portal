@@ -38,27 +38,27 @@ Vite proxy: /api/* → localhost:30001
 
 ## Key files
 
-| Path                                   | Role                                                                       |
-| -------------------------------------- | -------------------------------------------------------------------------- |
-| `backend/src/lib/app.ts`               | App factory: creates Hono app with middleware, routes, WebSocket, cron     |
-| `backend/src/index.ts`                 | Dev entry — starts app on `BACKEND_PORT` (30001)                           |
-| `backend/src/prod.ts`                  | Production entry — same + serves frontend `dist/` + SPA fallback on :3000  |
-| `backend/src/lib/env.ts`               | Typed env access (reads from `process.env`, no dotenv)                     |
-| `backend/src/lib/db.ts`                | Dual PrismaClient factory — cached in `globalThis` Map per portal          |
-| `backend/src/lib/portal-middleware.ts` | Reads `portal` cookie → sets `c.get("portal")` + `c.get("db")`             |
-| `backend/src/lib/auth-config.ts`       | Auth.js providers + callbacks (Microsoft OAuth2 + dev credentials)         |
-| `backend/src/lib/route-factory.ts`     | `resourceRoute()` — generic CRUD factory with Zod, audit log, soft delete  |
-| `backend/src/lib/api-response.ts`      | Standard response shapes: `{ success, data, meta }` / `{ success, error }` |
-| `backend/src/lib/permissions.ts`       | Role-based permission matrix (admin/president/officer/member)              |
-| `backend/src/lib/audit.ts`             | Tamper-evident audit log for financial + approval actions                  |
-| `backend/src/lib/websocket.ts`         | WebSocket setup + presence tracking                                        |
-| `backend/src/routes/*.ts`              | 22 route modules + admin.ts (admin-only user creation)                     |
-| `backend/prisma/schema.prisma`         | PostgreSQL schema (19 models + Account/Session/VerificationToken)          |
-| `backend/scripts/dev-setup.mjs`        | Dev DB setup — runs migrations, seeds both databases                       |
-| `backend/scripts/manage-accounts.mjs`  | CLI tool: `create-admin`, `create-user`, `list`, `delete`                  |
-| `frontend/src/config/clientConfig.ts`  | Multi-client branding config                                               |
-| `frontend/src/hooks/useClientTheme.ts` | Sets favicon, title, CSS vars                                              |
-| `frontend/src/api/httpClient.ts`       | `fetchJson()` with retry (2x on 5xx/network err)                           |
+| Path | Role |
+| --- | --- |
+| `backend/src/lib/app.ts` | App factory: creates Hono app with middleware, routes, WebSocket, cron |
+| `backend/src/index.ts` | Dev entry — starts app on `BACKEND_PORT` (30001) |
+| `backend/src/prod.ts` | Production entry — same + serves frontend `dist/` + SPA fallback on :3000 |
+| `backend/src/lib/env.ts` | Typed env access (reads from `process.env`, no dotenv) |
+| `backend/src/lib/db.ts` | Dual PrismaClient factory — cached in `globalThis` Map per portal |
+| `backend/src/lib/portal-middleware.ts` | Reads `portal` cookie → sets `c.get("portal")` + `c.get("db")` |
+| `backend/src/lib/auth-config.ts` | Auth.js providers + callbacks (Microsoft OAuth2 + dev credentials) |
+| `backend/src/lib/route-factory.ts` | `resourceRoute()` — generic CRUD factory with Zod, audit log, soft delete |
+| `backend/src/lib/api-response.ts` | Standard response shapes: `{ success, data, meta }` / `{ success, error }` |
+| `backend/src/lib/permissions.ts` | Role-based permission matrix (admin/president/officer/member) |
+| `backend/src/lib/audit.ts` | Tamper-evident audit log for financial + approval actions |
+| `backend/src/lib/websocket.ts` | WebSocket setup + presence tracking |
+| `backend/src/routes/*.ts` | 22 route modules + admin.ts (admin-only user creation) |
+| `backend/prisma/schema.prisma` | PostgreSQL schema (19 models + Account/Session/VerificationToken) |
+| `backend/scripts/dev-setup.mjs` | Dev DB setup — runs migrations, seeds both databases |
+| `backend/scripts/manage-accounts.mjs` | CLI tool: `create-admin`, `create-user`, `list`, `delete` |
+| `frontend/src/config/clientConfig.ts` | Multi-client branding config |
+| `frontend/src/hooks/useClientTheme.ts` | Sets favicon, title, CSS vars |
+| `frontend/src/api/httpClient.ts` | `fetchJson()` with retry (2x on 5xx/network err) |
 
 ## Critical gotchas
 

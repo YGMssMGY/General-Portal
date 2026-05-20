@@ -8,7 +8,7 @@
 const DEFAULT_TEST_URL = "postgresql://localhost:5432/general_portal_test";
 
 function getTestDbUrl(): string {
-  return process.env["DATABASE_URL_TEST"] || DEFAULT_TEST_URL;
+	return process.env["DATABASE_URL_TEST"] || DEFAULT_TEST_URL;
 }
 
 /**
@@ -16,13 +16,11 @@ function getTestDbUrl(): string {
  * In the future this will create a transient PostgreSQL schema.
  */
 export async function setupTestDb(): Promise<void> {
-  const url = getTestDbUrl();
-  if (!url) {
-    throw new Error(
-      "DATABASE_URL_TEST is not set — cannot initialize test database",
-    );
-  }
-  // Connection string is present; real DB creation will go here.
+	const url = getTestDbUrl();
+	if (!url) {
+		throw new Error("DATABASE_URL_TEST is not set — cannot initialize test database");
+	}
+	// Connection string is present; real DB creation will go here.
 }
 
 /**
@@ -30,5 +28,5 @@ export async function setupTestDb(): Promise<void> {
  * In the future this will drop the transient schema created by setupTestDb().
  */
 export async function teardownTestDb(): Promise<void> {
-  // Real DB cleanup will go here.
+	// Real DB cleanup will go here.
 }
