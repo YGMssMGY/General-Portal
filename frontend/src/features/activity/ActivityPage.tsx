@@ -133,7 +133,7 @@ export function ActivityPage() {
 					color: "var(--cds-link-primary)",
 					textDecoration: "none",
 					display: "inline-block",
-					marginBottom: "0.75rem",
+					marginBottom: "0.5rem",
 				}}
 			>
 				&larr; Back to Dashboard
@@ -149,8 +149,8 @@ export function ActivityPage() {
 				{/* 3 Summary Cards */}
 				<Column lg={16} md={8} sm={4}>
 					<Row>
-						<Column lg={5} md={4} sm={4} style={{ marginBottom: "1rem" }}>
-							<Tile style={{ padding: "1.5rem" }}>
+						<Column lg={5} md={4} sm={4} style={{ marginBottom: "0.75rem" }}>
+							<Tile style={{ padding: "1rem" }}>
 								<div
 									style={{
 										display: "flex",
@@ -229,8 +229,8 @@ export function ActivityPage() {
 								</div>
 							</Tile>
 						</Column>
-						<Column lg={5} md={4} sm={4} style={{ marginBottom: "1rem" }}>
-							<Tile style={{ padding: "1.5rem" }}>
+						<Column lg={5} md={4} sm={4} style={{ marginBottom: "0.75rem" }}>
+							<Tile style={{ padding: "1rem" }}>
 								<div
 									style={{
 										display: "flex",
@@ -270,8 +270,8 @@ export function ActivityPage() {
 								</div>
 							</Tile>
 						</Column>
-						<Column lg={6} md={4} sm={4} style={{ marginBottom: "1rem" }}>
-							<Tile style={{ padding: "1.5rem" }}>
+						<Column lg={6} md={4} sm={4} style={{ marginBottom: "0.75rem" }}>
+							<Tile style={{ padding: "1rem" }}>
 								<div
 									style={{
 										display: "flex",
@@ -315,13 +315,13 @@ export function ActivityPage() {
 				</Column>
 
 				{/* Bar Chart + Progress Bars */}
-				<Column lg={10} md={8} sm={4} style={{ marginBottom: "1.5rem" }}>
-					<Card padding="lg">
+				<Column lg={10} md={8} sm={4} style={{ marginBottom: "1rem" }}>
+					<Card padding="md">
 						<h2
 							style={{
 								fontSize: "1rem",
 								fontWeight: 600,
-								marginBottom: "1rem",
+								marginBottom: "0.75rem",
 								color: "var(--cds-text-primary)",
 							}}
 						>
@@ -346,13 +346,13 @@ export function ActivityPage() {
 					</Card>
 				</Column>
 
-				<Column lg={6} md={8} sm={4} style={{ marginBottom: "1.5rem" }}>
-					<Card padding="lg">
+				<Column lg={6} md={8} sm={4} style={{ marginBottom: "1rem" }}>
+					<Card padding="md">
 						<h2
 							style={{
 								fontSize: "1rem",
 								fontWeight: 600,
-								marginBottom: "1rem",
+								marginBottom: "0.75rem",
 								color: "var(--cds-text-primary)",
 							}}
 						>
@@ -405,13 +405,13 @@ export function ActivityPage() {
 				</Column>
 
 				{/* Top Contributors */}
-				<Column lg={16} md={8} sm={4} style={{ marginBottom: "1.5rem" }}>
-					<Card padding="lg">
+				<Column lg={16} md={8} sm={4} style={{ marginBottom: "1rem" }}>
+					<Card padding="md">
 						<h2
 							style={{
 								fontSize: "1rem",
 								fontWeight: 600,
-								marginBottom: "1rem",
+								marginBottom: "0.75rem",
 								color: "var(--cds-text-primary)",
 							}}
 						>
@@ -441,13 +441,13 @@ export function ActivityPage() {
 				</Column>
 
 				{/* Activity Feed */}
-				<Column lg={16} md={8} sm={4} style={{ marginBottom: "2rem" }}>
-					<Card padding="lg">
+				<Column lg={16} md={8} sm={4} style={{ marginBottom: "1rem" }}>
+					<Card padding="md">
 						<h2
 							style={{
 								fontSize: "1rem",
 								fontWeight: 600,
-								marginBottom: "1rem",
+								marginBottom: "0.75rem",
 								color: "var(--cds-text-primary)",
 							}}
 						>

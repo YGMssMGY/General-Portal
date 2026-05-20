@@ -10,7 +10,7 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
 	return (
 		<div
 			style={{
-				marginBottom: "1.5rem",
+				marginBottom: "1rem",
 				display: "flex",
 				flexDirection: "column",
 				justifyContent: "space-between",

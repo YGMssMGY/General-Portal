@@ -137,7 +137,11 @@ export function DataTable({
 
 	return (
 		<div
-			style={{ border: "1px solid var(--cds-border-subtle)", background: "var(--cds-layer)" }}
+			style={{
+				border: "1px solid var(--cds-border-subtle)",
+				background: "var(--cds-layer)",
+				overflowX: "auto",
+			}}
 		>
 			{filterable ? (
 				<div

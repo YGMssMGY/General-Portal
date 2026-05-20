@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
 	Tile,
 	Stack,
@@ -81,8 +82,10 @@ export function AccountsPage() {
 			setWlRole("admin");
 			const updated = await fetchJson<any[]>("/admin/whitelist");
 			setWhitelist(updated);
+			toast.success("User added to whitelist");
 		} catch (err: any) {
 			setWlError(err?.message || "Failed to add user");
+			toast.error(err?.message || "Failed to add user");
 		} finally {
 			setWlSaving(false);
 		}
@@ -94,8 +97,9 @@ export function AccountsPage() {
 			await fetchJson(`/admin/whitelist/${deleteTarget.id}`, { method: "DELETE" });
 			setDeleteTarget(undefined);
 			setWhitelist((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+			toast.success("User removed from whitelist");
 		} catch (err: any) {
-			console.error("Failed to delete whitelist user:", err);
+			toast.error(err?.message || "Failed to remove user");
 		}
 	}
 
@@ -114,26 +118,26 @@ export function AccountsPage() {
 					color: "var(--cds-link-primary)",
 					textDecoration: "none",
 					display: "inline-block",
-					marginBottom: "0.75rem",
+					marginBottom: "0.5rem",
 				}}
 			>
 				&larr; Back to Dashboard
 			</Link>
 			<PageHeader title="Account" description="View your account details and manage users." />
 
-			<Stack gap={6}>
-				<Tile style={{ padding: "1.5rem" }}>
+			<Stack gap={4}>
+				<Tile style={{ padding: "1rem" }}>
 					<h3
 						style={{
 							fontSize: "1rem",
 							fontWeight: 600,
-							marginBottom: "1rem",
+							marginBottom: "0.75rem",
 							color: "var(--cds-text-primary)",
 						}}
 					>
 						Your Account
 					</h3>
-					<Stack gap={5}>
+					<Stack gap={4}>
 						<div>
 							<p
 								style={{
@@ -207,19 +211,19 @@ export function AccountsPage() {
 				</Tile>
 
 				{/* Gamification */}
-				<Tile style={{ padding: "1.5rem" }}>
+				<Tile style={{ padding: "1rem" }}>
 					<h3
 						style={{
 							fontSize: "1rem",
 							fontWeight: 600,
-							marginBottom: "1rem",
+							marginBottom: "0.75rem",
 							color: "var(--cds-text-primary)",
 						}}
 					>
 						Progress
 					</h3>
-					<Stack gap={4}>
-						<Stack orientation="horizontal" gap={6}>
+					<Stack gap={3}>
+						<Stack orientation="horizontal" gap={4}>
 							<div>
 								<p
 									style={{
@@ -301,12 +305,12 @@ export function AccountsPage() {
 				</Tile>
 
 				{/* Leaderboard */}
-				<Tile style={{ padding: "1.5rem" }}>
+				<Tile style={{ padding: "1rem" }}>
 					<h3
 						style={{
 							fontSize: "1rem",
 							fontWeight: 600,
-							marginBottom: "1rem",
+							marginBottom: "0.75rem",
 							color: "var(--cds-text-primary)",
 						}}
 					>
@@ -392,12 +396,12 @@ export function AccountsPage() {
 				</Tile>
 
 				{/* Recent Kudos */}
-				<Tile style={{ padding: "1.5rem" }}>
+				<Tile style={{ padding: "1rem" }}>
 					<h3
 						style={{
 							fontSize: "1rem",
 							fontWeight: 600,
-							marginBottom: "1rem",
+							marginBottom: "0.75rem",
 							color: "var(--cds-text-primary)",
 						}}
 					>
@@ -453,12 +457,12 @@ export function AccountsPage() {
 				</Tile>
 
 				{user?.role === "admin" && (
-					<Tile style={{ padding: "1.5rem" }}>
+					<Tile style={{ padding: "1rem" }}>
 						<h3
 							style={{
 								fontSize: "1rem",
 								fontWeight: 600,
-								marginBottom: "1rem",
+								marginBottom: "0.75rem",
 								color: "var(--cds-text-primary)",
 							}}
 						>
@@ -541,13 +545,13 @@ export function AccountsPage() {
 				)}
 
 				{user?.role === "admin" && (
-					<Tile style={{ padding: "1.5rem" }}>
+					<Tile style={{ padding: "1rem" }}>
 						<div
 							style={{
 								display: "flex",
 								justifyContent: "space-between",
 								alignItems: "center",
-								marginBottom: "1rem",
+								marginBottom: "0.75rem",
 							}}
 						>
 							<h3
