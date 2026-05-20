@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tile, Button, TextInput, InlineNotification, Stack } from "@carbon/react";
+import { Tile, Button, InlineNotification } from "@carbon/react";
 import { useSession, signIn } from "@hono/auth-js/react";
 import { LoadingState } from "../components/StateViews";
 import { getClientConfig } from "../config/clientConfig";
@@ -12,8 +12,6 @@ export function LoginPage() {
 	const portal = useUIStore((s) => s.portal);
 	const setPortal = useUIStore((s) => s.setPortal);
 	const config = getClientConfig(portal ?? undefined);
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 
@@ -24,10 +22,9 @@ export function LoginPage() {
 		const oauthError = params.get("error");
 		if (oauthError) {
 			const messages: Record<string, string> = {
-				AccessDenied: "Sign-in was cancelled or denied.",
+				AccessDenied: "You don't have access. Contact an admin to be whitelisted.",
 				Configuration: "Authentication is not configured correctly.",
 				OAuthCallbackError: "Authentication service encountered an error.",
-				OAuthAccountNotLinked: "This account is already linked to another sign-in method.",
 				SessionRequired: "Please sign in to continue.",
 			};
 			setError(messages[oauthError] || `Sign-in failed: ${oauthError}`);
@@ -41,30 +38,6 @@ export function LoginPage() {
 		}
 	}, [status, navigate, dashboardPath]);
 
-	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
-		setError(null);
-		setLoading(true);
-		try {
-			const result = await signIn("credentials", { username, password, redirect: false });
-			if (result?.error) {
-				setError(
-					result.error === "CredentialsSignin"
-						? "Invalid username or password"
-						: result.error,
-				);
-			} else {
-				window.location.href = dashboardPath;
-			}
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Login failed");
-		} finally {
-			setLoading(false);
-		}
-	}
-
-	if (status === "loading") return <LoadingState label="Checking session..." />;
-
 	function goBack() {
 		setPortal(null);
 		document.title = "General Portal";
@@ -73,6 +46,8 @@ export function LoginPage() {
 		document.documentElement.style.removeProperty("--client-secondary");
 		navigate("/", { replace: true });
 	}
+
+	if (status === "loading") return <LoadingState label="Checking session..." />;
 
 	return (
 		<div
@@ -85,7 +60,12 @@ export function LoginPage() {
 			}}
 		>
 			<Tile
-				style={{ maxWidth: "24rem", width: "100%", padding: "2rem", position: "relative" }}
+				style={{
+					maxWidth: "24rem",
+					width: "100%",
+					padding: "2rem",
+					position: "relative",
+				}}
 			>
 				<button
 					type="button"
@@ -108,6 +88,7 @@ export function LoginPage() {
 				>
 					&#x2190;
 				</button>
+
 				<div
 					style={{
 						margin: "0 auto",
@@ -129,7 +110,7 @@ export function LoginPage() {
 							style={{ width: "3rem", height: "3rem", borderRadius: "4px" }}
 						/>
 					) : (
-						<span style={{ fontSize: "1.125rem", fontWeight: 600, color: "#ffffff" }}>
+						<span style={{ fontSize: "1.125rem", fontWeight: 600 }}>
 							{config.shortName}
 						</span>
 					)}
@@ -168,14 +149,24 @@ export function LoginPage() {
 					</div>
 				)}
 
-				<Stack gap={5} style={{ marginTop: "1.5rem" }}>
+				<div style={{ marginTop: "1.5rem" }}>
 					<Button
 						kind="tertiary"
 						style={{ width: "100%" }}
-						onClick={() => signIn("microsoft-entra-id", { redirect: true })}
+						onClick={() => {
+							setLoading(true);
+							signIn("microsoft-entra-id", { redirect: true });
+						}}
 						disabled={loading}
 					>
-						<span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+						<span
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: "0.5rem",
+								justifyContent: "center",
+							}}
+						>
 							<svg viewBox="0 0 21 21" width="20" height="20">
 								<rect x="1" y="1" width="9" height="9" fill="#f25022" />
 								<rect x="11" y="1" width="9" height="9" fill="#7fba00" />
@@ -185,66 +176,7 @@ export function LoginPage() {
 							Sign in with Microsoft
 						</span>
 					</Button>
-
-					{!import.meta.env.VITE_DISABLE_DEV_AUTH && (
-						<>
-							<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-								<div
-									style={{
-										flex: 1,
-										height: "1px",
-										background: "var(--cds-border-subtle)",
-									}}
-								/>
-								<span
-									style={{
-										fontSize: "0.875rem",
-										color: "var(--cds-text-secondary)",
-									}}
-								>
-									or
-								</span>
-								<div
-									style={{
-										flex: 1,
-										height: "1px",
-										background: "var(--cds-border-subtle)",
-									}}
-								/>
-							</div>
-
-							<form onSubmit={handleSubmit}>
-								<Stack gap={5}>
-									<TextInput
-										id="username"
-										labelText="Username"
-										value={username}
-										onChange={(e: any) => setUsername(e.target.value)}
-										placeholder="dev@generalportal.local"
-										disabled={loading}
-									/>
-									<TextInput
-										id="password"
-										labelText="Password"
-										type="password"
-										value={password}
-										onChange={(e: any) => setPassword(e.target.value)}
-										placeholder="Enter password"
-										disabled={loading}
-									/>
-									<Button
-										type="submit"
-										kind="primary"
-										style={{ width: "100%" }}
-										disabled={loading}
-									>
-										{loading ? "Signing in..." : "Dev Sign In"}
-									</Button>
-								</Stack>
-							</form>
-						</>
-					)}
-				</Stack>
+				</div>
 			</Tile>
 		</div>
 	);
