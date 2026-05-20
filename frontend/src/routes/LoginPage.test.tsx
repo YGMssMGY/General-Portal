@@ -28,25 +28,12 @@ describe("LoginPage", () => {
 		expect(screen.getByRole("heading", { name: /general portal/i })).toBeInTheDocument();
 	});
 
-	it("has username and password inputs", () => {
+	it("has Microsoft sign in button", () => {
 		render(
 			<MemoryRouter>
 				<LoginPage />
 			</MemoryRouter>,
 		);
-		expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-		expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-	});
-
-	it("has sign in buttons", () => {
-		render(
-			<MemoryRouter>
-				<LoginPage />
-			</MemoryRouter>,
-		);
-		expect(screen.getAllByRole("button", { name: /sign in/i }).length).toBeGreaterThanOrEqual(
-			1,
-		);
-		expect(screen.getByRole("button", { name: /dev sign in/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /sign in with microsoft/i })).toBeInTheDocument();
 	});
 });
