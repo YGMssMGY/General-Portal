@@ -1,4 +1,4 @@
-import { useSession, signIn, signOut } from "@hono/auth-js/react";
+import { useSession, signOut } from "@hono/auth-js/react";
 import type { UserProfile, UserRole } from "../types";
 
 export interface AuthState {
@@ -6,7 +6,6 @@ export interface AuthState {
 	isAuthenticated: boolean;
 	isLoading: boolean;
 	error: string | null;
-	login: (username: string, password: string) => Promise<void>;
 	logout: () => Promise<void>;
 	hasPermission: (permission: string) => boolean;
 	role: UserRole | null;
@@ -34,18 +33,6 @@ export function useAuth(): AuthState {
 		isAuthenticated: status === "authenticated",
 		isLoading: status === "loading",
 		error: null,
-		login: async (username: string, password: string) => {
-			const result = await signIn("credentials", {
-				username,
-				password,
-				redirect: false,
-			});
-			if (result?.error) {
-				throw new Error(
-					result.error === "CredentialsSignin" ? "Invalid credentials" : result.error,
-				);
-			}
-		},
 		logout: async () => {
 			await signOut({ redirect: false });
 			window.location.href = "/";

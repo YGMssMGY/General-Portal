@@ -194,7 +194,7 @@ export function DashboardPage() {
 		<Grid style={{ padding: 0 }}>
 			<Column lg={16} md={8} sm={4}>
 				<PageHeader
-					title={`${greeting}, ${(user?.displayName ?? "").split(" ")[0]}`}
+					title={`${greeting}, ${user?.displayName ?? "Guest"}`}
 					description={
 						<div>
 							<p>{greetingDescription}</p>
