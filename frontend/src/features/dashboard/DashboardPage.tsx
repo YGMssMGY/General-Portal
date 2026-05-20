@@ -171,7 +171,7 @@ export function DashboardPage() {
 					title={`${greeting}, ${user?.displayName ?? "Guest"}`}
 					description={greetingDescription}
 					actions={
-						<Stack gap={3} orientation="horizontal">
+						<div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
 							{getQuickActions(portal).map((action) => (
 								<Button
 									key={action.label}
@@ -184,7 +184,7 @@ export function DashboardPage() {
 									{action.label}
 								</Button>
 							))}
-						</Stack>
+						</div>
 					}
 				/>
 			</Column>
