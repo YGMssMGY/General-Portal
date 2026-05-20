@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Search as CarbonSearch, Tag, Tile } from "@carbon/react";
 import { Task, Document, Calendar, Folder, Money, Result } from "@carbon/icons-react";
 import { ErrorState, LoadingState, EmptyState } from "../../components/StateViews";
 import { useSearch } from "../../hooks/useWorkspaceResources";
+import { useUIStore } from "../../stores/useUIStore";
 import { Badge } from "../../components/Badge";
 
 const categories = ["All", "Tasks", "Proposals", "Events", "Files", "Finance"];
@@ -35,6 +36,7 @@ function getTypeMeta(type: string) {
 }
 
 export function SearchPage() {
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const [searchParams] = useSearchParams();
 	const [query, setQuery] = useState(searchParams.get("q") ?? "");
 	const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -70,6 +72,18 @@ export function SearchPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			{/* Search Hero */}
 			<div
 				style={{

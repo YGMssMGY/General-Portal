@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi } from "vitest";
 
 const { mockUseAuth } = vi.hoisted(() => ({
@@ -48,36 +49,44 @@ vi.mock("../../config/clientConfig", () => ({
 	}),
 }));
 
+vi.mock("../../stores/useUIStore", () => ({
+	useUIStore: (sel: any) => sel?.({ portal: "developers" }) ?? "developers",
+}));
+
 import { AccountsPage } from "./AccountsPage";
+
+function renderWithRouter(el: React.ReactElement) {
+	return render(<MemoryRouter>{el}</MemoryRouter>);
+}
 
 describe("AccountsPage", () => {
 	it("renders without crashing", () => {
-		render(<AccountsPage />);
+		renderWithRouter(<AccountsPage />);
 		expect(screen.getByText("Account")).toBeInTheDocument();
 	});
 
 	it('shows "Your Account" section', () => {
-		render(<AccountsPage />);
+		renderWithRouter(<AccountsPage />);
 		expect(screen.getByText("Your Account")).toBeInTheDocument();
 	});
 
 	it("shows user display name", () => {
-		render(<AccountsPage />);
+		renderWithRouter(<AccountsPage />);
 		expect(screen.getByText("Test Member")).toBeInTheDocument();
 	});
 
 	it("shows user role as tag", () => {
-		render(<AccountsPage />);
+		renderWithRouter(<AccountsPage />);
 		expect(screen.getByText("Member")).toBeInTheDocument();
 	});
 
 	it("shows user email", () => {
-		render(<AccountsPage />);
+		renderWithRouter(<AccountsPage />);
 		expect(screen.getByText("dev.member@generalportal.local")).toBeInTheDocument();
 	});
 
 	it("shows user workspace name", () => {
-		render(<AccountsPage />);
+		renderWithRouter(<AccountsPage />);
 		expect(screen.getByText("Developers' Club")).toBeInTheDocument();
 	});
 });

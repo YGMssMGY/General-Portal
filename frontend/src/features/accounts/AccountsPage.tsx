@@ -1,15 +1,29 @@
-import { useMemo, useState, useEffect } from "react";
-import { Tile, Stack, Tag, ProgressBar } from "@carbon/react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import {
+	Tile,
+	Stack,
+	Tag,
+	ProgressBar,
+	Button,
+	TextInput,
+	InlineNotification,
+} from "@carbon/react";
+import { Add, TrashCan } from "@carbon/icons-react";
 import { PageHeader } from "../../components/PageHeader";
 import { useAuth } from "../../context/AuthContext";
 import { AdminUserManager } from "./AdminUserManager";
 import { getClientConfig } from "../../config/clientConfig";
 import { workspaceApi } from "../../api/workspaceApi";
+import { Modal } from "../../components/Modal";
+import { fetchJson } from "../../api/httpClient";
+import { useUIStore } from "../../stores/useUIStore";
 import type { LeaderboardEntry, KudosEntry } from "../../types";
 import { formatDateTime } from "../../utils/format";
 
 export function AccountsPage() {
 	const { user } = useAuth();
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const config = useMemo(() => getClientConfig(), []);
 	const [allUsers, setAllUsers] = useState<any[]>([]);
 	const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -36,6 +50,51 @@ export function AccountsPage() {
 			.catch(() => {});
 	}, []);
 
+	const [whitelist, setWhitelist] = useState<any[]>([]);
+	const [wlModalOpen, setWlModalOpen] = useState(false);
+	const [wlEmail, setWlEmail] = useState("");
+	const [wlError, setWlError] = useState<string>();
+	const [wlSaving, setWlSaving] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<any>();
+
+	useEffect(() => {
+		fetchJson<any[]>("/admin/whitelist")
+			.then(setWhitelist)
+			.catch(() => {});
+	}, []);
+
+	async function handleAddWhitelist(e: FormEvent) {
+		e.preventDefault();
+		setWlError(undefined);
+		setWlSaving(true);
+		try {
+			await fetchJson("/admin/whitelist", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email: wlEmail }),
+			});
+			setWlModalOpen(false);
+			setWlEmail("");
+			const updated = await fetchJson<any[]>("/admin/whitelist");
+			setWhitelist(updated);
+		} catch (err: any) {
+			setWlError(err?.message || "Failed to add user");
+		} finally {
+			setWlSaving(false);
+		}
+	}
+
+	async function handleDeleteWhitelist() {
+		if (!deleteTarget) return;
+		try {
+			await fetchJson(`/admin/whitelist/${deleteTarget.id}`, { method: "DELETE" });
+			setDeleteTarget(undefined);
+			setWhitelist((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+		} catch (err: any) {
+			console.error("Failed to delete whitelist user:", err);
+		}
+	}
+
 	const xp = user?.xp ?? 0;
 	const level = user?.level ?? 0;
 	const streak = user?.streak ?? 0;
@@ -44,6 +103,18 @@ export function AccountsPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader title="Account" description="View your account details and manage users." />
 
 			<Stack gap={6}>
@@ -462,6 +533,171 @@ export function AccountsPage() {
 						)}
 					</Tile>
 				)}
+
+				{user?.role === "admin" && (
+					<Tile style={{ padding: "1.5rem" }}>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								marginBottom: "1rem",
+							}}
+						>
+							<h3
+								style={{
+									fontSize: "1rem",
+									fontWeight: 600,
+									color: "var(--cds-text-primary)",
+								}}
+							>
+								Whitelist
+							</h3>
+							<Button size="sm" renderIcon={Add} onClick={() => setWlModalOpen(true)}>
+								Add Person
+							</Button>
+						</div>
+						{whitelist.length === 0 ? (
+							<p style={{ fontSize: "0.875rem", color: "var(--cds-text-secondary)" }}>
+								No whitelisted users.
+							</p>
+						) : (
+							<div
+								style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+							>
+								{whitelist.map((u: any) => (
+									<div
+										key={u.id}
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: "0.75rem",
+											padding: "0.5rem 0.75rem",
+											background: "var(--cds-layer)",
+											borderRadius: "4px",
+										}}
+									>
+										<div style={{ flex: 1 }}>
+											<p
+												style={{
+													fontSize: "0.875rem",
+													fontWeight: 500,
+													color: "var(--cds-text-primary)",
+												}}
+											>
+												{u.name}
+											</p>
+											<p
+												style={{
+													fontSize: "0.75rem",
+													color: "var(--cds-text-secondary)",
+												}}
+											>
+												{u.email}
+											</p>
+										</div>
+										{u.workspaceName && (
+											<Tag type="blue" size="sm">
+												{u.workspaceName}
+											</Tag>
+										)}
+										<span
+											style={{
+												fontSize: "0.6875rem",
+												color: "var(--cds-text-helper)",
+											}}
+										>
+											{formatDateTime(u.createdAt)}
+										</span>
+										<Button
+											kind="ghost"
+											size="sm"
+											renderIcon={TrashCan}
+											iconDescription="Remove"
+											hasIconOnly
+											onClick={() => setDeleteTarget(u)}
+										/>
+									</div>
+								))}
+							</div>
+						)}
+					</Tile>
+				)}
+
+				<Modal
+					title="Add Person to Whitelist"
+					isOpen={wlModalOpen}
+					onClose={() => {
+						setWlModalOpen(false);
+						setWlEmail("");
+						setWlError(undefined);
+					}}
+				>
+					<form onSubmit={handleAddWhitelist}>
+						<Stack gap={5}>
+							<TextInput
+								id="wl-email"
+								labelText="Email"
+								type="email"
+								required
+								value={wlEmail}
+								onChange={(e) => setWlEmail(e.target.value)}
+							/>
+							{wlError ? (
+								<InlineNotification
+									kind="error"
+									subtitle={wlError}
+									hideCloseButton
+									lowContrast
+								/>
+							) : null}
+							<div
+								style={{
+									display: "flex",
+									justifyContent: "flex-end",
+									gap: "0.75rem",
+								}}
+							>
+								<Button
+									kind="secondary"
+									type="button"
+									onClick={() => {
+										setWlModalOpen(false);
+										setWlEmail("");
+										setWlError(undefined);
+									}}
+								>
+									Cancel
+								</Button>
+								<Button type="submit" disabled={wlSaving || !wlEmail.trim()}>
+									{wlSaving ? "Adding..." : "Add"}
+								</Button>
+							</div>
+						</Stack>
+					</form>
+				</Modal>
+
+				<Modal
+					title="Remove from Whitelist"
+					isOpen={!!deleteTarget}
+					onClose={() => setDeleteTarget(undefined)}
+				>
+					<Stack gap={5}>
+						<p style={{ color: "var(--cds-text-secondary)" }}>
+							Remove <strong>{deleteTarget?.name}</strong> ({deleteTarget?.email})?
+						</p>
+						<div
+							style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}
+						>
+							<Button kind="secondary" onClick={() => setDeleteTarget(undefined)}>
+								Cancel
+							</Button>
+							<Button kind="danger" onClick={handleDeleteWhitelist}>
+								Remove
+							</Button>
+						</div>
+					</Stack>
+				</Modal>
 
 				<AdminUserManager />
 			</Stack>

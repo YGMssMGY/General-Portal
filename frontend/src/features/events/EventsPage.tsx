@@ -1,10 +1,12 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { DataTable } from "../../components/DataTable/DataTable";
 import type { ColumnDef } from "../../components/DataTable/DataTable";
 import { PageHeader } from "../../components/PageHeader";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { Modal } from "../../components/Modal";
+import { useUIStore } from "../../stores/useUIStore";
 import {
 	Button,
 	TextInput,
@@ -37,6 +39,7 @@ const statusTagColors: Record<string, string> = {
 };
 
 export function EventsPage() {
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const { data, error, isLoading, refetch } = useEvents();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingEvent, setEditingEvent] = useState<EventItem>();
@@ -228,6 +231,18 @@ export function EventsPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<PageHeader
 				title="Events"
 				description="Plan and track events, assign volunteers, and manage budgets."

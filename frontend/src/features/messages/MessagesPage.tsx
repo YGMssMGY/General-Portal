@@ -1,10 +1,12 @@
 import { useMemo, useState, useEffect, useRef, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Badge } from "../../components/Badge";
 import { Modal } from "../../components/Modal";
 import { ErrorState, LoadingState } from "../../components/StateViews";
 import { useMessageThreads } from "../../hooks/useWorkspaceResources";
 import { workspaceApi } from "../../api/workspaceApi";
+import { useUIStore } from "../../stores/useUIStore";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer/MarkdownRenderer";
 import { EmojiPicker } from "../../components/EmojiPicker/EmojiPicker";
 
@@ -74,6 +76,7 @@ const contextIcon: Record<string, any> = {
 };
 
 export function MessagesPage() {
+	const portal = useUIStore((s) => s.portal) || "developers";
 	const { data, error, isLoading, refetch } = useMessageThreads();
 	const [selectedId, setSelectedId] = useState<string>();
 	const [contextFilter, setContextFilter] = useState<"all" | "event" | "task" | "general">("all");
@@ -178,6 +181,18 @@ export function MessagesPage() {
 
 	return (
 		<div>
+			<Link
+				to={`/${portal}/dashboard`}
+				style={{
+					fontSize: "0.8125rem",
+					color: "var(--cds-link-primary)",
+					textDecoration: "none",
+					display: "inline-block",
+					marginBottom: "0.75rem",
+				}}
+			>
+				&larr; Back to Dashboard
+			</Link>
 			<Grid fullWidth style={{ minHeight: "calc(100vh - 10rem)" }}>
 				{/* Thread List — left panel */}
 				<Column lg={4} md={4} sm={4}>
