@@ -16,7 +16,6 @@ import { errorHandler } from "../middleware/error.js";
 import { requireWorkspace } from "../middleware/auth.js";
 import { apiLimiter, authLimiter } from "../middleware/rate-limit.js";
 import { portalMiddleware } from "./portal-middleware.js";
-import { setupWebSocket, presenceRoute } from "./websocket.js";
 import { runNudges } from "../workers/nudges.js";
 
 import healthRoute from "../routes/health.js";
@@ -88,12 +87,10 @@ export function createApp(opts: CreateAppOptions = {}) {
 	app.use("/api/workspace/*", requireWorkspace);
 	app.use("/api/gamification", requireWorkspace);
 	app.use("/api/kudos", requireWorkspace);
-	app.use("/api/presence", requireWorkspace);
 	app.use("/api/budget", requireWorkspace);
 	app.use("/api/meetings", requireWorkspace);
 	app.use("/api/archive", requireWorkspace);
 
-	app.route("/api", presenceRoute);
 	app.route("/api", dashboardRoute);
 	app.route("/api", tasksRoute);
 	app.route("/api", proposalsRoute);
@@ -145,7 +142,6 @@ export function startApp(opts: StartOptions = {}) {
 	const server = serve({ fetch: app.fetch, port }, (info) => {
 		process.stdout.write(`[server] Running on http://localhost:${info.port}\n`);
 	});
-	setupWebSocket(server);
 
 	return { app, server };
 }
