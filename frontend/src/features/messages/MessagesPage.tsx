@@ -115,8 +115,8 @@ export function MessagesPage() {
 			result = result.filter(
 				(t) =>
 					t.title.toLowerCase().includes(q) ||
-					t.preview.toLowerCase().includes(q) ||
-					t.participants.some((p) => p.name.toLowerCase().includes(q)),
+					(t.preview ?? "").toLowerCase().includes(q) ||
+					(t.participants ?? []).some((p) => p.name.toLowerCase().includes(q)),
 			);
 		}
 		return result;
@@ -490,7 +490,9 @@ export function MessagesPage() {
 												marginTop: "0.125rem",
 											}}
 										>
-											{selected.participants.map((p) => p.name).join(", ")}
+											{(selected.participants ?? [])
+												.map((p) => p.name)
+												.join(", ")}
 										</p>
 									</div>
 									<div
@@ -525,7 +527,7 @@ export function MessagesPage() {
 										gap: "0.25rem",
 									}}
 								>
-									{selected.messages.map((msg, idx) => {
+									{(selected.messages ?? []).map((msg, idx) => {
 										const isMe = currentUser?.displayName === msg.authorName;
 										const divider = computeDateDivider(
 											idx > 0 ? selected.messages[idx - 1].sentAt : null,
@@ -790,7 +792,7 @@ export function MessagesPage() {
 													lineHeight: 1.5,
 												}}
 											>
-												{selected.participants
+												{(selected.participants ?? [])
 													.map((p) => p.name)
 													.join(", ")}
 											</dd>

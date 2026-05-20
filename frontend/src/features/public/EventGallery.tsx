@@ -25,8 +25,8 @@ export function EventGallery() {
 	const events = Array.isArray(data) ? data : data.content;
 
 	return (
-		<div style={{ margin: "0 auto", maxWidth: "80rem", padding: "3rem 1rem" }}>
-			<div style={{ marginBottom: "2rem" }}>
+		<div style={{ margin: "0 auto", maxWidth: "80rem", padding: "1.5rem 1rem" }}>
+			<div style={{ marginBottom: "1rem" }}>
 				<h1 style={{ fontSize: "2rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
 					Past Events
 				</h1>
@@ -45,15 +45,17 @@ export function EventGallery() {
 			<div
 				style={{
 					display: "grid",
-					gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-					gap: "1.5rem",
+					gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+					gap: "1rem",
+					overflowX: "auto",
+					maxWidth: "100%",
 				}}
 			>
 				{events.map((event) => (
 					<Tile key={event.id}>
 						<div
 							style={{
-								height: "12rem",
+								height: "8rem",
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "center",

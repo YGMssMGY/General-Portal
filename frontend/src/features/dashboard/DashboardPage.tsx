@@ -598,7 +598,7 @@ export function DashboardPage() {
 													borderRadius: "50%",
 												}}
 											>
-												{activity.actorName
+												{(activity.actorName ?? "")
 													.split(" ")
 													.map((p: string) => p[0])
 													.join("")
