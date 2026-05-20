@@ -100,28 +100,43 @@ route.get("/admin/users", async (c) => {
 
 const whitelistSchema = z.object({
 	email: z.string().email(),
+	role: z.enum(["admin", "president", "officer", "member"]).optional().default("admin"),
 });
 
 route.get("/admin/whitelist", async (c) => {
-	const db = c.get("db");
-	const users = await db.user.findMany({
-		include: {
-			memberships: {
-				include: { workspace: { select: { name: true } } },
-			},
-		},
-		orderBy: { createdAt: "desc" },
-	});
+	try {
+		const db = c.get("db");
+		const workspace = await db.workspace.findFirst();
+		if (!workspace) return c.json([]);
 
-	return c.json(
-		users.map((u) => ({
-			id: u.id,
-			email: u.email,
-			name: u.name,
-			workspaceName: u.memberships[0]?.workspace?.name || null,
-			createdAt: u.createdAt,
-		})),
-	);
+		const users = await db.user.findMany({
+			where: {
+				memberships: {
+					some: { workspaceId: workspace.id },
+				},
+			},
+			include: {
+				memberships: {
+					where: { workspaceId: workspace.id },
+					include: { workspace: { select: { name: true } } },
+				},
+			},
+			orderBy: { createdAt: "desc" },
+		});
+
+		return c.json(
+			users.map((u) => ({
+				id: u.id,
+				email: u.email,
+				name: u.name,
+				workspaceName: u.memberships[0]?.workspace?.name || null,
+				createdAt: u.createdAt,
+			})),
+		);
+	} catch (e: any) {
+		console.error("[admin] whitelist list error:", e);
+		return c.json({ error: "Failed to list users" }, 500);
+	}
 });
 
 route.post("/admin/whitelist", async (c) => {
@@ -150,16 +165,17 @@ route.post("/admin/whitelist", async (c) => {
 			},
 		});
 
+		const label = parsed.role.charAt(0).toUpperCase() + parsed.role.slice(1);
 		const membership = await db.membership.create({
 			data: {
 				workspaceId: workspace.id,
 				userId: user.id,
-				position: "Admin",
-				accessLabel: "Admin",
+				position: label,
+				accessLabel: label,
 			},
 		});
 
-		const perms = getPermissionsForRole("admin");
+		const perms = getPermissionsForRole(parsed.role);
 		await Promise.all(
 			perms.map((perm) =>
 				db.permissionGrant.create({
@@ -168,7 +184,7 @@ route.post("/admin/whitelist", async (c) => {
 			),
 		);
 
-		return c.json({ id: user.id, email: user.email, name: user.name }, 201);
+		return c.json({ id: user.id, email: user.email, name: user.name, role: parsed.role }, 201);
 	} catch (e: any) {
 		if (e instanceof z.ZodError)
 			return c.json({ error: "Validation error", details: e.errors }, 400);

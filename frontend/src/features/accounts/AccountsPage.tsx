@@ -7,6 +7,8 @@ import {
 	ProgressBar,
 	Button,
 	TextInput,
+	Select,
+	SelectItem,
 	InlineNotification,
 } from "@carbon/react";
 import { Add, TrashCan } from "@carbon/icons-react";
@@ -53,6 +55,7 @@ export function AccountsPage() {
 	const [whitelist, setWhitelist] = useState<any[]>([]);
 	const [wlModalOpen, setWlModalOpen] = useState(false);
 	const [wlEmail, setWlEmail] = useState("");
+	const [wlRole, setWlRole] = useState("admin");
 	const [wlError, setWlError] = useState<string>();
 	const [wlSaving, setWlSaving] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<any>();
@@ -71,10 +74,11 @@ export function AccountsPage() {
 			await fetchJson("/admin/whitelist", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email: wlEmail }),
+				body: JSON.stringify({ email: wlEmail, role: wlRole }),
 			});
 			setWlModalOpen(false);
 			setWlEmail("");
+			setWlRole("admin");
 			const updated = await fetchJson<any[]>("/admin/whitelist");
 			setWhitelist(updated);
 		} catch (err: any) {
@@ -632,6 +636,7 @@ export function AccountsPage() {
 					onClose={() => {
 						setWlModalOpen(false);
 						setWlEmail("");
+						setWlRole("admin");
 						setWlError(undefined);
 					}}
 				>
@@ -645,6 +650,16 @@ export function AccountsPage() {
 								value={wlEmail}
 								onChange={(e) => setWlEmail(e.target.value)}
 							/>
+							<Select
+								id="wl-role"
+								labelText="Access level"
+								value={wlRole}
+								onChange={(e) => setWlRole(e.target.value)}
+							>
+								<SelectItem value="admin" text="Admin" />
+								<SelectItem value="officer" text="Officer" />
+								<SelectItem value="member" text="Member" />
+							</Select>
 							{wlError ? (
 								<InlineNotification
 									kind="error"
@@ -666,6 +681,7 @@ export function AccountsPage() {
 									onClick={() => {
 										setWlModalOpen(false);
 										setWlEmail("");
+										setWlRole("admin");
 										setWlError(undefined);
 									}}
 								>
