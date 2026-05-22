@@ -7,6 +7,9 @@ vi.hoisted(() => {
 import { createMiddleware } from "hono/factory";
 
 const mockDb = {
+    workspace: {
+        findFirst: vi.fn().mockResolvedValue({ id: "test-ws-id", name: "Test Workspace" }),
+    },
     taskItem: {
         findMany: vi.fn().mockResolvedValue([]),
         count: vi.fn().mockResolvedValue(0),
