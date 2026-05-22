@@ -295,6 +295,11 @@ export function FinancePage() {
             <EmptyState
                 title="No transactions"
                 description="Transactions will appear here once recorded."
+                action={
+                    <Button type="button" renderIcon={Add} onClick={openCreateModal}>
+                        Add Transaction
+                    </Button>
+                }
             />
         );
 

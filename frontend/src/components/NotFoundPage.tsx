@@ -35,7 +35,9 @@ export function NotFoundPage() {
                 The page you are looking for does not exist or has been moved.
             </p>
             <Link to="/" style={{ marginTop: "1.5rem" }}>
-                <Button kind="tertiary">Go Home</Button>
+                <Button type="button" kind="tertiary">
+                    Go Home
+                </Button>
             </Link>
         </div>
     );

@@ -1081,7 +1081,17 @@ export function TasksPage() {
     if (error || !data)
         return <ErrorState message={error ?? "Tasks are unavailable"} onRetry={refetch} />;
     if (data.length === 0)
-        return <EmptyState title="No tasks" description="Tasks will appear here once created." />;
+        return (
+            <EmptyState
+                title="No tasks"
+                description="Tasks will appear here once created."
+                action={
+                    <Button type="button" renderIcon={Add} onClick={openCreateModal}>
+                        Create Task
+                    </Button>
+                }
+            />
+        );
 
     return (
         <div style={{ position: "relative", minHeight: "calc(100vh - 4rem)" }}>

@@ -87,7 +87,7 @@ export function DataTable({
         });
     }, [filtered, sortKey, sortDir]);
 
-    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+    const _totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
     const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
 
     const maxRender = virtualize ? 100 : paged.length;
@@ -130,8 +130,8 @@ export function DataTable({
         setSelected(new Set());
     }
 
-    const start = (page - 1) * pageSize + 1;
-    const end = Math.min(page * pageSize, sorted.length);
+    const _start = (page - 1) * pageSize + 1;
+    const _end = Math.min(page * pageSize, sorted.length);
 
     const displayData = rendered;
 
@@ -237,11 +237,8 @@ export function DataTable({
             ) : null}
 
             <DataTablePagination
-                start={start}
-                end={end}
                 total={sorted.length}
                 page={page}
-                totalPages={totalPages}
                 pageSize={pageSize}
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}

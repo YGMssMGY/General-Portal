@@ -201,7 +201,15 @@ export function MembersPage() {
         return <ErrorState message={error ?? "Members are unavailable"} onRetry={refetch} />;
     if (data.length === 0)
         return (
-            <EmptyState title="No members" description="Members will appear here once invited." />
+            <EmptyState
+                title="No members"
+                description="Members will appear here once invited."
+                action={
+                    <Button type="button" renderIcon={Add} onClick={() => setIsModalOpen(true)}>
+                        Add Member
+                    </Button>
+                }
+            />
         );
 
     return (

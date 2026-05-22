@@ -1,11 +1,8 @@
 import { Pagination } from "@carbon/react";
 
 interface DataTablePaginationProps {
-    start: number;
-    end: number;
     total: number;
     page: number;
-    totalPages: number;
     pageSize: number;
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
