@@ -56,7 +56,14 @@ const mockDb = {
     taskItem: m(),
     proposal: m(),
     eventItem: m(),
-    membership: m(),
+    membership: {
+        findFirst: vi.fn().mockResolvedValue({
+            id: "mem-id",
+            userId: "admin-id",
+            workspaceId: "test-ws-id",
+            accessLabel: "admin",
+        }),
+    },
     user: m(),
 };
 const mockWorkspace = createMiddleware(async (c, next) => {
