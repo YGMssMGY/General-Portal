@@ -21,7 +21,22 @@ const updateSchema = z.object({
     location: z.string().optional(),
     agenda: z.string().optional(),
     minutes: z.string().optional(),
-    actionItems: z.string().optional(),
+    actionItems: z
+        .string()
+        .optional()
+        .refine(
+            (val) =>
+                !val ||
+                (() => {
+                    try {
+                        JSON.parse(val);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })(),
+            { message: "actionItems must be valid JSON" },
+        ),
     status: z.string().optional(),
 });
 

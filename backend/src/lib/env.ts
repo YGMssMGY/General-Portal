@@ -34,6 +34,7 @@ export const env = {
     SENTRY_DSN: process.env["SENTRY_DSN"] || "",
     RATE_LIMIT_MAX: parseInt(process.env["RATE_LIMIT_MAX"] || "100", 10),
     UPLOADS_DIR: process.env["UPLOADS_DIR"] || "./uploads",
+    DATABASE_POOL_SIZE: process.env["DATABASE_POOL_SIZE"] || "10",
 };
 
 export const IS_PRODUCTION = isProduction;

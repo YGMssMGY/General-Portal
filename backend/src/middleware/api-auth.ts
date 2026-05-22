@@ -10,5 +10,8 @@ export const requireApiKey = createMiddleware(async (c, next) => {
     if (key !== env.API_KEY) {
         return c.json({ error: "Unauthorized: invalid API key" }, 401);
     }
+    const db = c.get("db");
+    const workspace = await db.workspace.findFirst();
+    if (workspace) c.set("workspaceId", workspace.id);
     await next();
 });

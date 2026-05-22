@@ -62,8 +62,12 @@ export function resourceRoute(config: ResourceConfig) {
         return c.req.query("includeDeleted") === "true";
     }
 
-    function buildWhere(c: Context, workspaceId: string) {
-        const where: Record<string, unknown> = { workspaceId };
+    function wid(c: Context): string {
+        return c.get("workspaceId") || getAuthUser(c).workspaceId;
+    }
+
+    function buildWhere(c: Context) {
+        const where: Record<string, unknown> = { workspaceId: wid(c) };
         if (softDelete && !includeDeleted(c)) where["deletedAt"] = null;
 
         const search = c.req.query("search");
@@ -94,8 +98,7 @@ export function resourceRoute(config: ResourceConfig) {
 
     route.get("/", async (c) => {
         try {
-            const user = getUser(c);
-            const where = buildWhere(c, user.workspaceId);
+            const where = buildWhere(c);
             const include = buildInclude(c);
             const { page, limit, skip } = parsePagination(c);
 
@@ -118,10 +121,9 @@ export function resourceRoute(config: ResourceConfig) {
 
     route.get("/:id", async (c) => {
         try {
-            const user = getUser(c);
             const where: Record<string, unknown> = {
                 id: c.req.param("id"),
-                workspaceId: user.workspaceId,
+                workspaceId: wid(c),
             };
             if (softDelete && !includeDeleted(c)) where["deletedAt"] = null;
 
@@ -144,12 +146,12 @@ export function resourceRoute(config: ResourceConfig) {
             const sanitized = sanitize(body);
             const parsed = createSchema.parse(sanitized);
 
-            const data = { ...parsed, workspaceId: user.workspaceId };
+            const data = { ...parsed, workspaceId: wid(c) };
             const d = resolveDelegate(c);
             const item = await d.create({ data });
 
             if (enableAuditLog) {
-                await writeAuditLog(d, user.workspaceId, {
+                await writeAuditLog(d, wid(c), {
                     actorId: user.id,
                     actorName: user.name,
                     action: `create.${resourceName.toLowerCase()}`,
@@ -158,7 +160,7 @@ export function resourceRoute(config: ResourceConfig) {
                     resourceTitle: item.title || undefined,
                     ipAddress:
                         c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || undefined,
-                }).catch(() => {});
+                }).catch((err) => console.warn("[audit] write failed:", err));
             }
 
             return c.json(successResponse(item), 201);
@@ -180,7 +182,7 @@ export function resourceRoute(config: ResourceConfig) {
             const d = resolveDelegate(c);
 
             const existing = await d.findFirst({
-                where: { id, workspaceId: user.workspaceId },
+                where: { id, workspaceId: wid(c) },
             });
             if (!existing) return c.json(errorResponse(`${resourceName} not found`), 404);
 
@@ -190,7 +192,7 @@ export function resourceRoute(config: ResourceConfig) {
             });
 
             if (enableAuditLog) {
-                await writeAuditLog(d, user.workspaceId, {
+                await writeAuditLog(d, wid(c), {
                     actorId: user.id,
                     actorName: user.name,
                     action: `update.${resourceName.toLowerCase()}`,
@@ -199,7 +201,7 @@ export function resourceRoute(config: ResourceConfig) {
                     resourceTitle: item.title || existing.title || undefined,
                     ipAddress:
                         c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || undefined,
-                }).catch(() => {});
+                }).catch((err) => console.warn("[audit] write failed:", err));
             }
 
             return c.json(successResponse(item));
@@ -218,7 +220,7 @@ export function resourceRoute(config: ResourceConfig) {
             const d = resolveDelegate(c);
 
             const existing = await d.findFirst({
-                where: { id, workspaceId: user.workspaceId },
+                where: { id, workspaceId: wid(c) },
             });
             if (!existing) return c.json(errorResponse(`${resourceName} not found`), 404);
 
@@ -232,7 +234,7 @@ export function resourceRoute(config: ResourceConfig) {
             }
 
             if (enableAuditLog) {
-                await writeAuditLog(d, user.workspaceId, {
+                await writeAuditLog(d, wid(c), {
                     actorId: user.id,
                     actorName: user.name,
                     action: softDelete
@@ -243,7 +245,7 @@ export function resourceRoute(config: ResourceConfig) {
                     resourceTitle: existing.title || undefined,
                     ipAddress:
                         c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || undefined,
-                }).catch(() => {});
+                }).catch((err) => console.warn("[audit] write failed:", err));
             }
 
             return c.body(null, 204);
@@ -260,7 +262,7 @@ export function resourceRoute(config: ResourceConfig) {
                 const d = resolveDelegate(c);
 
                 const existing = await d.findFirst({
-                    where: { id, workspaceId: user.workspaceId },
+                    where: { id, workspaceId: wid(c) },
                 });
                 if (!existing) return c.json(errorResponse(`${resourceName} not found`), 404);
 
@@ -274,7 +276,7 @@ export function resourceRoute(config: ResourceConfig) {
                 });
 
                 if (enableAuditLog) {
-                    await writeAuditLog(d, user.workspaceId, {
+                    await writeAuditLog(d, wid(c), {
                         actorId: user.id,
                         actorName: user.name,
                         action: `restore.${resourceName.toLowerCase()}`,
@@ -285,7 +287,7 @@ export function resourceRoute(config: ResourceConfig) {
                             c.req.header("x-forwarded-for") ||
                             c.req.header("x-real-ip") ||
                             undefined,
-                    }).catch(() => {});
+                    }).catch((err) => console.warn("[audit] write failed:", err));
                 }
 
                 return c.json(successResponse(restored));

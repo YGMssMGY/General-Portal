@@ -26,6 +26,9 @@ route.post("/events", async (c) => {
     const db = c.get("db");
     const wid = c.get("workspaceId");
     const body = await c.req.json();
+    if (body.startsAt && body.endsAt && new Date(body.endsAt) <= new Date(body.startsAt)) {
+        return c.json({ error: "endsAt must be after startsAt" }, 400);
+    }
     const data: any = {
         workspaceId: wid,
         title: body.title,
@@ -70,13 +73,16 @@ route.patch("/events/:id", async (c) => {
     const wid = c.get("workspaceId");
     const id = c.req.param("id");
     const body = await c.req.json();
-    const { owners: _, ...fields } = body;
+    if (body.startsAt && body.endsAt && new Date(body.endsAt) <= new Date(body.startsAt)) {
+        return c.json({ error: "endsAt must be after startsAt" }, 400);
+    }
+    const { owners, ownerNames, ownerIds: _ownerIds, ...fields } = body;
     const data: any = { ...fields };
     if (fields.startsAt) data.startsAt = new Date(fields.startsAt);
     if (fields.endsAt) data.endsAt = new Date(fields.endsAt);
 
     // Handle owner updates: delete existing and recreate
-    const ownerLabels = body.owners || body.ownerNames;
+    const ownerLabels = owners || ownerNames;
     if (ownerLabels) {
         await db.eventOwner.deleteMany({ where: { eventId: id } });
         await db.eventOwner.createMany({
