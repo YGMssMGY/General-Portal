@@ -53,6 +53,11 @@ const VolunteersPage = lazy(() =>
 const AccountsPage = lazy(() =>
     import("../features/accounts/AccountsPage").then((m) => ({ default: m.AccountsPage })),
 );
+const ShowcaseManagement = lazy(() =>
+    import("../features/public/ShowcaseManagement").then((m) => ({
+        default: m.ShowcaseManagement,
+    })),
+);
 const LoginPage = lazy(() => import("./LoginPage").then((m) => ({ default: m.LoginPage })));
 
 function Lazy({ children, name }: { children: React.ReactNode; name?: string }) {
@@ -176,6 +181,14 @@ export function AppRoutes() {
                         element={
                             <Lazy name="Accounts">
                                 <AccountsPage />
+                            </Lazy>
+                        }
+                    />
+                    <Route
+                        path="showcase"
+                        element={
+                            <Lazy name="Showcase">
+                                <ShowcaseManagement />
                             </Lazy>
                         }
                     />

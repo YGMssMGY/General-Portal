@@ -76,6 +76,9 @@ route.patch("/events/:id", async (c) => {
     if (body.startsAt && body.endsAt && new Date(body.endsAt) <= new Date(body.startsAt)) {
         return c.json({ error: "endsAt must be after startsAt" }, 400);
     }
+    const existing = await db.eventItem.findFirst({ where: { id, workspaceId: wid } });
+    if (!existing) return c.json({ error: "Event not found" }, 404);
+
     const { owners, ownerNames, ownerIds: _ownerIds, ...fields } = body;
     const data: any = { ...fields };
     if (fields.startsAt) data.startsAt = new Date(fields.startsAt);
@@ -104,9 +107,10 @@ route.patch("/events/:id", async (c) => {
 route.delete("/events/:id", async (c) => {
     const db = c.get("db");
     const wid = c.get("workspaceId");
-    await db.eventItem.delete({
-        where: { id: c.req.param("id"), workspaceId: wid },
-    });
+    const id = c.req.param("id");
+    const existing = await db.eventItem.findFirst({ where: { id, workspaceId: wid } });
+    if (!existing) return c.json({ error: "Event not found" }, 404);
+    await db.eventItem.delete({ where: { id } });
     return c.body(null, 204);
 });
 

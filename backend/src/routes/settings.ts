@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { writeFile, readFile } from "fs/promises";
-
-const UPLOADS_DIR = process.cwd() + "/uploads";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = resolve(__dirname, "../../uploads");
 
 const route = new Hono();
 

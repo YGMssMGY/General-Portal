@@ -102,8 +102,23 @@ export function resourceRoute(config: ResourceConfig) {
             const include = buildInclude(c);
             const { page, limit, skip } = parsePagination(c);
 
-            const orderBy = c.req.query("sort")
-                ? { [c.req.query("sort")!]: c.req.query("order") || "asc" }
+            const ALLOWED_SORT_FIELDS = new Set([
+                "createdAt",
+                "updatedAt",
+                "title",
+                "status",
+                "priority",
+                "dueDate",
+                "startAt",
+                "endsAt",
+                "name",
+            ]);
+            const sortField = c.req.query("sort") || "";
+            const orderBy = ALLOWED_SORT_FIELDS.has(sortField)
+                ? {
+                      [sortField]:
+                          c.req.query("order") === "asc" ? ("asc" as const) : ("desc" as const),
+                  }
                 : { createdAt: "desc" as const };
 
             const d = resolveDelegate(c);

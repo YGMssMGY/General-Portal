@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { writeFile, readFile } from "fs/promises";
+import { writeFile, readFile, unlink } from "fs/promises";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = resolve(__dirname, "..", "..", "uploads");
@@ -110,6 +110,9 @@ route.get("/files/:id/download", async (c) => {
     if (!record || !record.storageKey) return c.json({ error: "Not found" }, 404);
 
     const filePath = resolve(UPLOADS_DIR, record.storageKey);
+    if (!filePath.startsWith(resolve(UPLOADS_DIR))) {
+        return c.json({ error: "Invalid file path" }, 400);
+    }
     let content: Buffer;
     try {
         content = await readFile(filePath);
@@ -129,6 +132,16 @@ route.delete("/files/:id", async (c) => {
         where: { id: c.req.param("id"), workspaceId: wid },
     });
     if (!record) return c.json({ error: "Not found" }, 404);
+    if (record.storageKey) {
+        const filePath = resolve(UPLOADS_DIR, record.storageKey);
+        if (filePath.startsWith(resolve(UPLOADS_DIR))) {
+            try {
+                await unlink(filePath);
+            } catch {
+                /* file already gone */
+            }
+        }
+    }
     await db.workspaceFile.delete({ where: { id: record.id } });
     return c.body(null, 204);
 });
