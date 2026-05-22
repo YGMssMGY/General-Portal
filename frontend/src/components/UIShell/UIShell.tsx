@@ -124,6 +124,13 @@ function getNavConfig(portal: string): NavGroup[] {
                     featureFlag: "showActivity",
                 },
                 {
+                    label: "Public Page",
+                    to: `/${p}/showcase`,
+                    icon: Launch,
+                    minRole: "admin",
+                    featureFlag: "showSettings",
+                },
+                {
                     label: "Settings",
                     to: `/${p}/settings`,
                     icon: Settings,

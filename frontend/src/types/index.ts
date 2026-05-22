@@ -322,3 +322,21 @@ export interface TermSummary {
     budgetSpent: number;
     volunteerHours: number;
 }
+
+export interface PublicEvent {
+    id: string;
+    title: string;
+    eventDate?: string;
+    description?: string;
+    category?: string;
+    workspaceId: string;
+}
+
+export interface Photo {
+    id: string;
+    title: string;
+    photoDate?: string;
+    description?: string;
+    imageUrl?: string;
+    workspaceId: string;
+}

@@ -14,7 +14,9 @@ import type {
     Message,
     MessageThread,
     ModuleSettings,
+    Photo,
     Proposal,
+    PublicEvent,
     SearchResult,
     Task,
     TermArchive,
@@ -210,4 +212,29 @@ export const workspaceApi = {
     endTerm: () => fetchJson<TermArchive>("/archive/end-term", { method: "POST" }),
     getArchives: () => fetchJson<TermArchive[]>("/archive"),
     getArchive: (id: string) => fetchJson<TermArchive>(`/archive/${id}`),
+
+    // Public Event Showcase
+    getPublicEvents: () => fetchPage<PublicEvent>("/events/public"),
+    createPublicEvent: (data: {
+        title: string;
+        eventDate?: string;
+        description?: string;
+        category?: string;
+    }) => fetchJson<PublicEvent>("/events/public", { method: "POST", ...jsonBody(data) }),
+    updatePublicEvent: (id: string, data: Partial<PublicEvent>) =>
+        fetchJson<PublicEvent>(`/events/public/${id}`, { method: "PATCH", ...jsonBody(data) }),
+    deletePublicEvent: (id: string) =>
+        fetchJson<void>(`/events/public/${id}`, { method: "DELETE" }),
+
+    // Photo Showcase
+    getPhotos: () => fetchPage<Photo>("/photos"),
+    createPhoto: (data: {
+        title: string;
+        photoDate?: string;
+        description?: string;
+        imageUrl?: string;
+    }) => fetchJson<Photo>("/photos", { method: "POST", ...jsonBody(data) }),
+    updatePhoto: (id: string, data: Partial<Photo>) =>
+        fetchJson<Photo>(`/photos/${id}`, { method: "PATCH", ...jsonBody(data) }),
+    deletePhoto: (id: string) => fetchJson<void>(`/photos/${id}`, { method: "DELETE" }),
 };

@@ -63,15 +63,15 @@ route.post("/archive/end-term", async (c) => {
     await Promise.all([
         db.taskItem.updateMany({
             where: { id: { in: tasks.map((t: any) => t.id) } },
-            data: { status: "archived" as any },
+            data: { status: "done" },
         }),
         db.proposal.updateMany({
             where: { id: { in: proposals.map((p: any) => p.id) } },
-            data: { status: "archived" as any },
+            data: { status: "rejected" },
         }),
         db.eventItem.updateMany({
             where: { id: { in: events.map((e: any) => e.id) } },
-            data: { status: "archived" as any },
+            data: { status: "completed" },
         }),
     ]);
 

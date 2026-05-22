@@ -3,7 +3,6 @@ import type { AuthConfig } from "@auth/core";
 import type { Context } from "hono";
 import Microsoft from "@auth/core/providers/microsoft-entra-id";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { sign } from "hono/jwt";
 import { env } from "./env.js";
 
 export const authConfig = initAuthConfig(getAuthConfig);
@@ -12,7 +11,7 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
     let db: any = c.get("db");
     if (!db) {
         const { getDb } = await import("./db.js");
-        db = getDb("developers");
+        db = await getDb("developers");
     }
 
     return {
@@ -62,18 +61,14 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
                         if (membership) {
                             (token as any).workspaceId = membership.workspaceId;
                             (token as any).workspaceName = membership.workspace.name;
-                            (token as any).role = membership.accessLabel?.toLowerCase() || "admin";
+                            (token as any).role = membership.accessLabel?.toLowerCase() || "member";
                         }
                     } catch {
                         /* DB not available */
                     }
                 }
-                if (!(token as any).workspaceId) {
-                    (token as any).workspaceId = "ws-default";
-                    (token as any).workspaceName = "General Portal";
-                }
-                (token as any).role = (token as any).role || "admin";
-                (token as any).permissions = ["*"];
+                (token as any).role = (token as any).role || "member";
+                (token as any).permissions = (token as any).role === "admin" ? ["*"] : [];
                 return token;
             },
             async session({ session, token }) {
@@ -86,8 +81,6 @@ async function getAuthConfig(c: Context): Promise<AuthConfig> {
                     (session.user as any).role = (token as any).role;
                     (session.user as any).permissions = (token as any).permissions || [];
                 }
-                const rawToken = await sign(token as any, env.AUTH_SECRET, "HS256");
-                (session as any).token = rawToken;
                 return session;
             },
         },
