@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OrgFlow Workspace - Search</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#f5faf8",
+                        "primary-fixed": "#89f5e7",
+                        "surface-container-low": "#f0f5f2",
+                        "outline-variant": "#bcc9c6",
+                        "primary-container": "#008378",
+                        "secondary-container": "#645efb",
+                        "on-secondary-fixed": "#0f0069",
+                        "primary": "#00685f",
+                        "surface-dim": "#d6dbd9",
+                        "on-tertiary-fixed-variant": "#773215",
+                        "on-secondary-container": "#fffbff",
+                        "surface-container": "#eaefed",
+                        "on-primary-fixed-variant": "#005049",
+                        "on-background": "#171d1c",
+                        "inverse-on-surface": "#edf2f0",
+                        "surface": "#f5faf8",
+                        "tertiary-container": "#b05e3d",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#dee4e1",
+                        "inverse-primary": "#6bd8cb",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#ffb59a",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#e4e9e7",
+                        "inverse-surface": "#2c3130",
+                        "on-tertiary-container": "#fffbff",
+                        "surface-container-highest": "#dee4e1",
+                        "surface-tint": "#006a61",
+                        "on-secondary-fixed-variant": "#3323cc",
+                        "on-surface": "#171d1c",
+                        "tertiary": "#924628",
+                        "on-tertiary-fixed": "#370e00",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#00201d",
+                        "secondary-fixed": "#e2dfff",
+                        "secondary-fixed-dim": "#c3c0ff",
+                        "on-error": "#ffffff",
+                        "outline": "#6d7a77",
+                        "surface-bright": "#f5faf8",
+                        "tertiary-fixed": "#ffdbce",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#4b41e1",
+                        "on-surface-variant": "#3d4947",
+                        "primary-fixed-dim": "#6bd8cb",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#f4fffc"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-width": "280px",
+                        "card-padding": "20px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "container-margin": "24px",
+                        "topbar-height": "64px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-xl": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md antialiased h-screen overflow-hidden flex">
+<!-- SideNavBar -->
+<nav class="bg-white dark:bg-slate-900 font-['Plus_Jakarta_Sans'] text-sm font-medium fixed left-0 top-0 h-full w-[280px] border-r border-slate-200 dark:border-slate-800 flex flex-col w-[280px] h-screen fixed left-0 top-0 z-40 hidden md:flex">
+<div class="p-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-bold">O</div>
+<div>
+<h1 class="text-xl font-bold text-slate-900 dark:text-slate-50 leading-tight">OrgFlow Workspace</h1>
+<p class="text-xs text-slate-500">Switch Workspace</p>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+                Proposals
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+                Tasks
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="event">event</span>
+                Events
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+                Volunteers
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Finance
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+                Messages
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="folder">folder</span>
+                Files
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+                Members
+            </a>
+<a class="flex items-center bg-teal-50/5 dark:bg-teal-900/10 text-teal-600 dark:text-teal-400 border-l-[3px] border-teal-600 dark:border-teal-500 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="search" data-weight="fill" style="font-variation-settings: 'FILL' 1;">search</span>
+                Search
+            </a>
+<a class="flex items-center text-slate-500 dark:text-slate-400 py-3 px-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 active:opacity-80 transition-opacity gap-3" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col md:ml-[280px] h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-slate-900 font-['Plus_Jakarta_Sans'] text-base fixed top-0 right-0 left-[280px] border-b border-slate-200 dark:border-slate-800 h-16 flex items-center justify-between px-6 w-full z-30 hidden md:flex w-[calc(100%-280px)]">
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface border border-outline-variant rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-[240px]" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors active:scale-95 transition-transform duration-150">Create</button>
+<img alt="User Profile Avatar with Role Indicator" class="w-8 h-8 rounded-full border border-slate-200" data-alt="A small circular avatar placeholder image for a user profile, featuring a solid teal background with the white letter U in the center. The image is simple, flat, and modern, fitting perfectly within a corporate dashboard user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3auKKoqrn3fUE9d0liuwg4HGMrYLYgrCgr5t89Lbske8HyixrTS_U95EH6LRSOcqw4Ty4RuXYTyvf2ywLmSd-KDdbeqOBj4UY0o2zujMUYrIYTcULtvf9zmlWQok8yHwQcKTIBjVwhEm94DltWzuAj9mbHUqIM9zqIGEYOPxKUSNgNI5vYKzMiQUO7gG4j8SYNP-sY3jh8wyqAHu_w4XtFUhxu5RRmDLKIE693nZ3J-RVsDYSQthsknBLtx1B1xpzf281EkZco1I"/>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 overflow-y-auto bg-surface mt-0 md:mt-16 p-gutter">
+<div class="max-w-4xl mx-auto space-y-8">
+<!-- Search Hero -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-8 text-center space-y-6">
+<h2 class="font-display-xl text-on-background">Search Workspace</h2>
+<div class="max-w-2xl mx-auto relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-2xl">search</span>
+<input class="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-xl font-body-lg text-on-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm" placeholder="Search across proposals, tasks, events..." type="text" value="winter formal"/>
+</div>
+<!-- Categories -->
+<div class="flex flex-wrap justify-center gap-2">
+<button class="px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container font-label-md border border-transparent">All</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant font-label-md hover:bg-surface-variant transition-colors">Tasks</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant font-label-md hover:bg-surface-variant transition-colors">Proposals</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant font-label-md hover:bg-surface-variant transition-colors">Events</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant font-label-md hover:bg-surface-variant transition-colors">Files</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant font-label-md hover:bg-surface-variant transition-colors">Finance</button>
+</div>
+</div>
+<!-- Results Section -->
+<div class="space-y-4">
+<p class="font-label-md text-on-surface-variant">Showing results for "<span class="text-on-background font-semibold">winter formal</span>"</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Result: Proposal -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#fdf2f8] flex items-center justify-center text-[#db2777]">
+<span class="material-symbols-outlined text-sm" data-icon="description">description</span>
+</div>
+<span class="font-label-sm text-on-surface-variant uppercase tracking-wider">Proposal</span>
+</div>
+<span class="font-label-sm text-on-surface-variant bg-surface px-2 py-0.5 rounded border border-outline-variant">Draft</span>
+</div>
+<h3 class="font-headline-md text-on-background mb-1 group-hover:text-primary transition-colors">Winter Formal 2024 Budget Request</h3>
+<p class="font-body-md text-on-surface-variant line-clamp-2 mb-4">Initial draft for the annual winter formal event, including venue costs, catering estimates, and marketing materials allocation.</p>
+<div class="flex items-center gap-2">
+<img alt="Owner Avatar" class="w-6 h-6 rounded-full" data-alt="A small circular avatar placeholder image for Sarah J, featuring a random pastel background. The image is simple and fits the corporate UI style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiY7P4uPP5e9I0pQkUjcBguFo2BiHoIiDndXF7nG2EH_RKzxzKyHF8vtkSyK4k6LoN65M7NHPny96wLY8FjUUC7IrxdPvK5pzM1YWTTdmQCoKyN7YO_wmWIWP1el4cuPqooxbQyFYRWPWadhqWNAoUWT-ZVMyuEPXW2oxJyPCWF7YQfr5yXW3KUasGj-XbKqa7Ok6uHdyMxYaQEcHLjonnLlwxl-PQH5s-rE849S1WQAUb4Xh6NA3Sixyg1DmRCV1fvVoctoe0ntA"/>
+<span class="font-label-md text-on-surface-variant">Sarah Jenkins</span>
+</div>
+</div>
+<!-- Result: Event -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#eff6ff] flex items-center justify-center text-[#2563eb]">
+<span class="material-symbols-outlined text-sm" data-icon="event">event</span>
+</div>
+<span class="font-label-sm text-on-surface-variant uppercase tracking-wider">Event</span>
+</div>
+<span class="font-label-sm text-on-surface-variant bg-surface px-2 py-0.5 rounded border border-outline-variant">Dec 15</span>
+</div>
+<h3 class="font-headline-md text-on-background mb-1 group-hover:text-primary transition-colors">Annual Winter Formal Gala</h3>
+<p class="font-body-md text-on-surface-variant line-clamp-2 mb-4">Main calendar event for the Winter Formal. Registration opens Nov 1st. Expected attendance: 450 members.</p>
+<div class="flex items-center gap-2">
+<img alt="Owner Avatar" class="w-6 h-6 rounded-full" data-alt="A small circular avatar placeholder image for the Event Team, featuring a random pastel background. The image is simple and fits the corporate UI style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsFSj0yJj6fLMFc8eH403pZ3CD7C0w_X8htgzhHiWBsHcXIFAztmw90LjhUYRZcB3a03X0InQ3d2G6n12My4P4NDXidGAdOJ9kY2D6FujDJSaUcEBOd4lT8OQlEl5RvN2FZO-a7i866HwwgHn6eKA0_GbVhxo3-Vhjf3NYSFQOhaPE_gh7tqxYLgAg-2KidgWpH2MGIVKPr77cF_2aMcOUIA_30tTSu8d33cEC5jCG87v_BSFYK4AdCHl3_RJPf1GNthW3LXe4-2s"/>
+<span class="font-label-md text-on-surface-variant">Events Committee</span>
+</div>
+</div>
+<!-- Result: Task -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#ecfdf5] flex items-center justify-center text-[#059669]">
+<span class="material-symbols-outlined text-sm" data-icon="assignment">assignment</span>
+</div>
+<span class="font-label-sm text-on-surface-variant uppercase tracking-wider">Task</span>
+</div>
+<span class="font-label-sm text-white bg-error px-2 py-0.5 rounded">High Priority</span>
+</div>
+<h3 class="font-headline-md text-on-background mb-1 group-hover:text-primary transition-colors">Finalize Venue Booking - Winter Formal</h3>
+<p class="font-body-md text-on-surface-variant line-clamp-2 mb-4">Confirm dates with The Grand Hotel and submit the 20% deposit to secure the ballroom for the event.</p>
+<div class="flex items-center gap-2">
+<img alt="Owner Avatar" class="w-6 h-6 rounded-full" data-alt="A small circular avatar placeholder image for Marcus T, featuring a random pastel background. The image is simple and fits the corporate UI style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7h6E-GTyItB36ce2MdkkeeU34c839YHZOszMxO1LhhKSG8uJ0qJWTG0FKg_IeE9HPL7zrFKuh7EzAHhPPTFIneZSj6hAlQkfA6bQ_VJQuepE3Ip5E0ZAv96l2x4f_CiRg3pupkPn5EqIPErfwcx65dc9KkkaLafvBmvXBFrFS1A8hbufOa_p8vMmzZApncRyBz1sTYRK81pJRh3RgPBtU9gwIytcb4YryeDGW_TN-yhd4alg8ZazBWAt6q2ZdN7nAb8YJqOPbNUo"/>
+<span class="font-label-md text-on-surface-variant">Marcus Thorne</span>
+</div>
+</div>
+<!-- Result: File -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#fef3c7] flex items-center justify-center text-[#d97706]">
+<span class="material-symbols-outlined text-sm" data-icon="folder">folder</span>
+</div>
+<span class="font-label-sm text-on-surface-variant uppercase tracking-wider">File</span>
+</div>
+<span class="font-label-sm text-on-surface-variant bg-surface px-2 py-0.5 rounded border border-outline-variant">PDF</span>
+</div>
+<h3 class="font-headline-md text-on-background mb-1 group-hover:text-primary transition-colors">Winter_Formal_Poster_V2.pdf</h3>
+<p class="font-body-md text-on-surface-variant line-clamp-2 mb-4">Updated promotional poster design for print and social media distribution. Includes sponsor logos.</p>
+<div class="flex items-center gap-2">
+<img alt="Owner Avatar" class="w-6 h-6 rounded-full" data-alt="A small circular avatar placeholder image for Design Co, featuring a random pastel background. The image is simple and fits the corporate UI style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCW0tevFk3JiQToNZrgWHdVlPY0rhqq9Wy005s37ot1OhH36Gm4IOEqqR6GQuxzlrgLfig34jQDgP2BVs6UZyufeWeOWYrmP5JTggaE0dDmjjzE7tYOb1hMAfn4ZdfJZrezL2j1B1ujBx25bnu6O01iSGv07_QpQSyvDIekdIpaBMEAnmk53zQL90EYpZOhAhFqWB4Ho2NMGPVcaIJ3rVo3kk3kVugo84GvMWjT4tmBcoM8LaGi7RFh0qnRImBl3HQvVMbMmRExyFY"/>
+<span class="font-label-md text-on-surface-variant">Design Team</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
