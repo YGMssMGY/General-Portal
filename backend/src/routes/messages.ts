@@ -19,6 +19,7 @@ route.get("/messages/threads", async (c) => {
                     createdAt: true,
                     updatedAt: true,
                     attachments: true,
+                    body: true,
                 },
             },
         },

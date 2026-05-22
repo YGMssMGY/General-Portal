@@ -92,9 +92,12 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 export async function fetchPage<T>(path: string, init?: RequestInit): Promise<T[]> {
-    const data = await fetchJson<T[] | { content: T[] }>(path, init);
-    if (Array.isArray(data)) return data;
-    return data.content;
+    const data = await fetchJson<any>(path, init);
+    if (Array.isArray(data)) return data as T[];
+    if ("members" in data) return data.members as T[];
+    if ("items" in data) return data.items as T[];
+    if ("content" in data) return data.content as T[];
+    return [];
 }
 
 export function jsonBody<TBody extends object>(body: TBody): RequestInit {

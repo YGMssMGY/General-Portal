@@ -11,8 +11,9 @@ const FALLBACK_URLS: Record<string, string> = {
 };
 
 function addConnectionLimit(url: string): string {
+    const poolSize = parseInt(env.DATABASE_POOL_SIZE || "10", 10);
     const separator = url.includes("?") ? "&" : "?";
-    return `${url}${separator}connection_limit=10`;
+    return `${url}${separator}connection_limit=${poolSize}`;
 }
 
 function getDbUrl(portal: string): string {

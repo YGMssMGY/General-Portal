@@ -11,14 +11,11 @@ const route = new Hono();
 route.get("/settings", async (c) => {
     const wid = c.get("workspaceId");
     const db = c.get("db");
-    let settings = await db.workspaceSettings.findUnique({
+    const settings = await db.workspaceSettings.upsert({
         where: { workspaceId: wid },
+        update: {},
+        create: { workspaceId: wid },
     });
-    if (!settings) {
-        settings = await db.workspaceSettings.create({
-            data: { workspaceId: wid },
-        });
-    }
     return c.json(settings);
 });
 

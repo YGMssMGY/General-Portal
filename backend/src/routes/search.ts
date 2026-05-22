@@ -2,8 +2,20 @@ import { Hono } from "hono";
 
 const route = new Hono();
 
+const VALID_SEARCH_FIELDS = new Set([
+    "title",
+    "project",
+    "assigneeName",
+    "submittedBy",
+    "summary",
+    "name",
+    "fileType",
+    "notes",
+]);
+
 function tsvectorFields(fields: string[]): string {
-    return fields.map((f) => `coalesce("${f}", '')`).join(" || ' ' || ");
+    const sanitized = fields.filter((f) => VALID_SEARCH_FIELDS.has(f));
+    return sanitized.map((f) => `coalesce("${f}", '')`).join(" || ' ' || ");
 }
 
 async function fullTextSearch(
@@ -51,12 +63,21 @@ route.get("/search", async (c) => {
 
     const queries: Promise<any[]>[] = [];
 
+    const VALID_TABLES = new Set([
+        "taskItem",
+        "proposal",
+        "eventItem",
+        "workspaceFile",
+        "financeTransaction",
+    ]);
+
     async function searchType(
         typeName: string,
         table: string,
         fields: string[],
         mapFn: (row: any) => any,
     ) {
+        if (!VALID_TABLES.has(table)) return [];
         const rows = await fullTextSearch(db, table, wid, query, fields, effectiveLimit, offset);
         if (rows !== null) return rows.map(mapFn);
 

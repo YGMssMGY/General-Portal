@@ -31,5 +31,17 @@ export const requireAdmin = createMiddleware(async (c, next) => {
         return c.json({ error: "Forbidden: admin role required" }, 403);
     }
     c.set("user", token ?? {});
+    const workspaceId = token?.workspaceId as string | undefined;
+    if (workspaceId) c.set("workspaceId", workspaceId);
+    const db = c.get("db");
+    const userId = token?.id as string | undefined;
+    if (db && userId && workspaceId) {
+        const membership = await db.membership.findFirst({
+            where: { userId, workspaceId },
+        });
+        if (!membership) {
+            return c.json({ error: "Forbidden: no membership" }, 403);
+        }
+    }
     await next();
 });

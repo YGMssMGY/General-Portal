@@ -3,6 +3,8 @@ import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { compress } from "hono/compress";
+import { bodyLimit } from "hono/body-limit";
+import { csrf } from "hono/csrf";
 import { authHandler } from "@hono/auth-js";
 import { serveStatic } from "@hono/node-server/serve-static";
 import cron from "node-cron";
@@ -56,8 +58,22 @@ export function createApp(opts: CreateAppOptions = {}) {
     const app = new Hono();
 
     app.use("*", cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
-    app.use("*", secureHeaders());
+    app.use(
+        "*",
+        secureHeaders({
+            contentSecurityPolicy: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:"],
+                connectSrc: ["'self'"],
+                fontSrc: ["'self'"],
+            },
+        }),
+    );
     app.use("*", compress());
+    app.use("*", bodyLimit({ maxSize: 5 * 1024 * 1024 }));
+    app.use("*", csrf({ origin: env.FRONTEND_ORIGIN }));
     app.use("*", portalMiddleware);
     app.use("/api/*", apiLimiter);
     app.use("/api/auth/*", authLimiter);
@@ -112,6 +128,7 @@ export function createApp(opts: CreateAppOptions = {}) {
     app.route("/api", meetingsRoute);
     app.route("/api", archiveRoute);
     if (env.API_KEY) app.route("/api", publicApiRoute);
+    app.use("/api/admin/*", requireWorkspace);
     app.route("/api", adminRoute);
 
     if (opts.serveFrontend) {

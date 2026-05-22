@@ -16,6 +16,7 @@ const createUserSchema = z.object({
 route.post("/admin/users", async (c) => {
     try {
         const db = c.get("db");
+        const portal = c.get("portal") || "developers";
         const body = await c.req.json();
         const parsed = createUserSchema.parse(body);
 
@@ -24,10 +25,11 @@ route.post("/admin/users", async (c) => {
         });
         if (existing) return c.json({ error: "User already exists" }, 409);
 
-        let workspace = await db.workspace.findFirst();
+        const wsName = portal === "developers" ? "Developers Club" : "Student Council";
+        let workspace = await db.workspace.findFirst({ where: { name: wsName } });
         if (!workspace) {
             workspace = await db.workspace.create({
-                data: { name: "General Portal Workspace", description: "Auto-created" },
+                data: { name: wsName, description: "Auto-created" },
             });
         }
 
@@ -77,11 +79,14 @@ route.post("/admin/users", async (c) => {
 
 route.get("/admin/users", async (c) => {
     const db = c.get("db");
+    const portal = c.get("portal") || "developers";
+    const wsName = portal === "developers" ? "Developers Club" : "Student Council";
+    const workspace = await db.workspace.findFirst({ where: { name: wsName } });
     const users = await db.user.findMany({
         include: {
             memberships: {
                 include: { permissions: { select: { permission: true } } },
-                where: { workspaceId: (await db.workspace.findFirst())?.id || "" },
+                where: workspace ? { workspaceId: workspace.id } : undefined,
             },
         },
         orderBy: { createdAt: "desc" },
@@ -157,7 +162,7 @@ route.post("/admin/whitelist", async (c) => {
         let workspace = await db.workspace.findFirst({ where: { name: wsName } });
         if (!workspace) {
             workspace = await db.workspace.create({
-                data: { name: "General Portal Workspace", description: "Auto-created" },
+                data: { name: wsName, description: "Auto-created" },
             });
         }
 
@@ -200,8 +205,17 @@ route.post("/admin/whitelist", async (c) => {
 route.delete("/admin/whitelist/:id", async (c) => {
     try {
         const db = c.get("db");
+        const wid = c.get("workspaceId");
         const id = c.req.param("id");
-        await db.user.delete({ where: { id } });
+
+        if (!wid) return c.json({ error: "Workspace context required" }, 400);
+
+        const membership = await db.membership.findFirst({
+            where: { userId: id, workspaceId: wid },
+        });
+        if (!membership) return c.json({ error: "User not found in workspace" }, 404);
+
+        await db.membership.delete({ where: { id: membership.id } });
         return c.json({ success: true });
     } catch (e: any) {
         console.error("[admin] whitelist delete error:", e);
