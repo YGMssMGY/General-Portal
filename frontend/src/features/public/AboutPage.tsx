@@ -176,7 +176,9 @@ export function AboutPage() {
                     for you.
                 </p>
                 <Link to="/admin" style={{ marginTop: "1.5rem", display: "inline-block" }}>
-                    <Button renderIcon={ArrowRight}>Access Member Portal</Button>
+                    <Button type="button" renderIcon={ArrowRight}>
+                        Access Member Portal
+                    </Button>
                 </Link>
             </section>
         </div>

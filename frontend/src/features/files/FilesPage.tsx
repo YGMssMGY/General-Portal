@@ -23,6 +23,7 @@ import {
     TrashCan,
     Upload,
     Close,
+    Add,
 } from "@carbon/icons-react";
 import { Modal } from "../../components/Modal";
 import { PageLayout } from "../../components/PageLayout/PageLayout";
@@ -195,7 +196,7 @@ export function FilesPage() {
                 title="Files"
                 description="Store, preview, and manage workspace files."
                 actions={
-                    <Button renderIcon={Upload} onClick={() => setIsUploadOpen(true)}>
+                    <Button type="button" renderIcon={Upload} onClick={() => setIsUploadOpen(true)}>
                         Upload
                     </Button>
                 }
@@ -245,6 +246,17 @@ export function FilesPage() {
                                     searchQuery || typeFilter !== "all"
                                         ? "Try adjusting your search or filter."
                                         : "Upload a file to get started."
+                                }
+                                action={
+                                    searchQuery || typeFilter !== "all" ? undefined : (
+                                        <Button
+                                            type="button"
+                                            renderIcon={Add}
+                                            onClick={() => setIsUploadOpen(true)}
+                                        >
+                                            Upload File
+                                        </Button>
+                                    )
                                 }
                             />
                         ) : (
@@ -382,6 +394,7 @@ export function FilesPage() {
                                 <Button
                                     kind="ghost"
                                     size="sm"
+                                    type="button"
                                     renderIcon={Close}
                                     hasIconOnly
                                     iconDescription="Close"
@@ -491,6 +504,7 @@ export function FilesPage() {
                                     <Stack gap={3}>
                                         <Button
                                             kind="primary"
+                                            type="button"
                                             renderIcon={Download}
                                             onClick={() => {
                                                 window.open(
@@ -503,6 +517,7 @@ export function FilesPage() {
                                         </Button>
                                         <Button
                                             kind="danger--ghost"
+                                            type="button"
                                             renderIcon={TrashCan}
                                             onClick={() => setDeleteTarget(detailFile)}
                                         >
@@ -645,6 +660,7 @@ export function FilesPage() {
                         <Button
                             kind="tertiary"
                             size="sm"
+                            type="button"
                             renderIcon={Download}
                             onClick={() =>
                                 window.open(
@@ -670,10 +686,15 @@ export function FilesPage() {
                     Delete &quot;{deleteTarget?.name}&quot;?
                 </p>
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-                    <Button kind="secondary" onClick={() => setDeleteTarget(null)}>
+                    <Button kind="secondary" type="button" onClick={() => setDeleteTarget(null)}>
                         Cancel
                     </Button>
-                    <Button kind="danger" onClick={handleDelete} disabled={isDeleting}>
+                    <Button
+                        kind="danger"
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                    >
                         {isDeleting ? "Deleting..." : "Delete"}
                     </Button>
                 </div>

@@ -199,6 +199,11 @@ export function MeetingsPage() {
                     <EmptyState
                         title="No meetings"
                         description="Upcoming meetings will appear here."
+                        action={
+                            <Button type="button" renderIcon={Add} onClick={openNewModal}>
+                                Schedule Meeting
+                            </Button>
+                        }
                     />
                 ) : (
                     <Stack gap={4}>
@@ -589,6 +594,7 @@ export function MeetingsPage() {
                                             <Button
                                                 kind="ghost"
                                                 size="sm"
+                                                type="button"
                                                 renderIcon={TrashCan}
                                                 hasIconOnly
                                                 iconDescription="Remove"
@@ -686,6 +692,7 @@ export function MeetingsPage() {
                                         <Button
                                             kind="ghost"
                                             size="sm"
+                                            type="button"
                                             renderIcon={TrashCan}
                                             hasIconOnly
                                             iconDescription="Remove"
@@ -716,7 +723,7 @@ export function MeetingsPage() {
                         >
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveMinutes} disabled={saving}>
+                        <Button type="button" onClick={handleSaveMinutes} disabled={saving}>
                             {saving ? "Saving..." : "Save Minutes"}
                         </Button>
                     </div>

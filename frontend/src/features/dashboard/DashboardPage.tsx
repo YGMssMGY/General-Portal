@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Tag, Button, ClickableTile, Tile, Grid, Column, Row, Stack } from "@carbon/react";
 import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
@@ -17,6 +17,7 @@ import {
     Chat,
     Event,
     User,
+    Add,
 } from "@carbon/icons-react";
 import type { DashboardMetric } from "../../types";
 import type { ComponentType } from "react";
@@ -122,6 +123,7 @@ function getQuickActions(portal: string) {
 export function DashboardPage() {
     const { user } = useAuth();
     const portal = useUIStore((s) => s.portal) || "developers";
+    const navigate = useNavigate();
     const { data, error, isLoading, refetch } = useDashboard();
     const greeting = ((h: number) =>
         h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening")(
@@ -141,6 +143,15 @@ export function DashboardPage() {
             <EmptyState
                 title="No dashboard data"
                 description="Dashboard data will populate as your workspace grows."
+                action={
+                    <Button
+                        type="button"
+                        renderIcon={Add}
+                        onClick={() => navigate(`/${portal}/tasks`)}
+                    >
+                        Create Task
+                    </Button>
+                }
             />
         );
 

@@ -269,6 +269,11 @@ export function VolunteersPage() {
             <EmptyState
                 title="No volunteer slots"
                 description="Volunteer slots will appear here once created."
+                action={
+                    <Button type="button" renderIcon={Add} onClick={openCreateModal}>
+                        Create Slot
+                    </Button>
+                }
             />
         );
 

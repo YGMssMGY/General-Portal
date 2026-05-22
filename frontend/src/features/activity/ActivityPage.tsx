@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Grid, Column, Row, Tile, Stack, Tag, ProgressBar } from "@carbon/react";
+import { Link, useNavigate } from "react-router-dom";
+import { Grid, Column, Row, Tile, Stack, Tag, ProgressBar, Button } from "@carbon/react";
 import {
     Task,
     Warning,
@@ -11,6 +11,7 @@ import {
     Activity as ActivityIcon,
     Document,
     Edit,
+    Add,
 } from "@carbon/icons-react";
 import { SimpleBarChart } from "@carbon/charts-react";
 import "@carbon/charts/styles.css";
@@ -54,6 +55,7 @@ function getActivityMeta(type: string) {
 
 export function ActivityPage() {
     const portal = useUIStore((s) => s.portal) || "developers";
+    const navigate = useNavigate();
     const {
         data: activity,
         error: activityError,
@@ -121,6 +123,15 @@ export function ActivityPage() {
             <EmptyState
                 title="No activity"
                 description="Activity will appear here once members start contributing."
+                action={
+                    <Button
+                        type="button"
+                        renderIcon={Add}
+                        onClick={() => navigate(`/${portal}/tasks`)}
+                    >
+                        Create Task
+                    </Button>
+                }
             />
         );
 

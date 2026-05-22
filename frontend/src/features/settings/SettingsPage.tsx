@@ -914,7 +914,12 @@ export function SettingsPage() {
                         >
                             Cancel
                         </Button>
-                        <Button kind="danger" onClick={handleEndTerm} disabled={endTermSaving}>
+                        <Button
+                            kind="danger"
+                            type="button"
+                            onClick={handleEndTerm}
+                            disabled={endTermSaving}
+                        >
                             {endTermSaving ? "Ending..." : "End Term"}
                         </Button>
                     </div>

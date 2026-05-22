@@ -126,17 +126,17 @@ export function PortalLanding() {
                             }}
                         >
                             <Link to="/events">
-                                <Button kind="ghost" size="sm">
+                                <Button type="button" kind="ghost" size="sm">
                                     Showcase Events
                                 </Button>
                             </Link>
                             <Link to="/photos">
-                                <Button kind="ghost" size="sm">
+                                <Button type="button" kind="ghost" size="sm">
                                     Photo Gallery
                                 </Button>
                             </Link>
                             <Link to="/about">
-                                <Button kind="ghost" size="sm">
+                                <Button type="button" kind="ghost" size="sm">
                                     About
                                 </Button>
                             </Link>

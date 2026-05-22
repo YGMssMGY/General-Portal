@@ -59,6 +59,7 @@ export class PageErrorBoundary extends Component<Props, State> {
                     <Button
                         kind="tertiary"
                         size="sm"
+                        type="button"
                         onClick={this.handleRetry}
                         style={{ marginTop: "1rem" }}
                     >
