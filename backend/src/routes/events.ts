@@ -122,7 +122,7 @@ route.delete("/events/:id", async (c) => {
     const id = c.req.param("id");
     const existing = await db.eventItem.findFirst({ where: { id, workspaceId: wid } });
     if (!existing) return c.json({ error: "Event not found" }, 404);
-    await db.eventItem.delete({ where: { id } });
+    await db.eventItem.delete({ where: { id, workspaceId: wid } });
     return c.body(null, 204);
 });
 

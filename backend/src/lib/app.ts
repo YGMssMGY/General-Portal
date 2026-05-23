@@ -83,7 +83,9 @@ export function createApp(opts: CreateAppOptions = {}) {
     app.route("/api", healthRoute);
     app.route("/api", authRoute);
     app.route("/api", docsRoute);
+    app.route("/api", publicRoute);
 
+    app.use("/api/me", requireWorkspace);
     app.use("/api/dashboard", requireWorkspace);
     app.use("/api/tasks", requireWorkspace);
     app.use("/api/proposals", requireWorkspace);
@@ -119,7 +121,6 @@ export function createApp(opts: CreateAppOptions = {}) {
     app.route("/api", activityRoute);
     app.route("/api", searchRoute);
     app.route("/api", settingsRoute);
-    app.route("/api", publicRoute);
     app.route("/api", notificationRoute);
     app.route("/api", auditRoute);
     app.route("/api", gamificationRoute);

@@ -130,7 +130,9 @@ route.delete("/finance/transactions/:id/attachments/:attachmentId", async (c) =>
         where: { id: attachmentId, transaction: { id, workspaceId: wid } },
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
-    await db.financeAttachment.delete({ where: { id: attachmentId } });
+    await db.financeAttachment.delete({
+        where: { id: attachmentId, transaction: { workspaceId: wid } },
+    });
     return c.body(null, 204);
 });
 
