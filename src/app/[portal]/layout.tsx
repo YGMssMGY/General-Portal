@@ -40,10 +40,8 @@ const NAV_ITEMS = [
   { label: "Meetings", path: "/meetings", icon: Video },
   { label: "Activity", path: "/activity", icon: Activity },
   { label: "Search", path: "/search", icon: Search },
-  { label: "Accounts", path: "/accounts", icon: UserCog },
   { label: "Settings", path: "/settings", icon: Settings },
   { label: "Notifications", path: "/notifications", icon: Bell },
-  { label: "Budget", path: "/budget", icon: Wallet },
 ] as const;
 
 function getPortalCookie(): string | null {

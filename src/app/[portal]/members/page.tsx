@@ -4,25 +4,18 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { useSession } from "next-auth/react";
-import { Search, X, Shield, Mail, User, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import { Search, X, Mail, User, ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
+import { RoleBadge } from "@/components/RoleBadge";
+import { usePortal } from "@/hooks/usePortal";
 
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
-
-interface Member {
+interface MemberProfile {
   id: string;
   name: string;
   email: string;
   role: string;
 }
 
-const roleConfig: Record<string, { color: string; bg: string }> = {
-  admin: { color: "var(--color-primary)", bg: "var(--color-primary-light)" },
-  officer: { color: "var(--color-success)", bg: "#e8f5e9" },
-  member: { color: "var(--color-text-secondary)", bg: "var(--color-bg-secondary)" },
-};
+const ROLES = ["admin", "officer", "member"] as const;
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -36,6 +29,12 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
 };
 
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  appearance: "none",
+  cursor: "pointer",
+};
+
 const btnBase: React.CSSProperties = {
   padding: "8px 16px",
   borderRadius: "var(--radius-sm)",
@@ -45,23 +44,62 @@ const btnBase: React.CSSProperties = {
   cursor: "pointer",
   fontFamily: "inherit",
   minHeight: "36px",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
   transition: "background-color 100ms ease",
 };
 
-const ROLES = ["admin", "officer", "member"] as const;
-
 export default function MembersPage() {
-  const portal = getPortal();
+  const portal = usePortal();
   const qc = useQueryClient();
   const { data: session } = useSession();
   const currentUserRole = (session?.user as any)?.role;
   const isAdmin = currentUserRole === "admin";
-  const [search, setSearch] = useState("");
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
-  const { data: members, isLoading } = useQuery<Member[]>({
+  // Profile edit state
+  const [editName, setEditName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+
+  // Members search & detail
+  const [search, setSearch] = useState("");
+  const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null);
+
+  // Admin create user state
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", role: "member" });
+
+  // ─── Queries ───
+
+  const { data: profile, isLoading: profileLoading } = useQuery<MemberProfile>({
+    queryKey: [portal, "me"],
+    queryFn: () => fetchJson(`/api/me`),
+  });
+
+  const { data: members, isLoading: membersLoading } = useQuery<MemberProfile[]>({
     queryKey: [portal, "members"],
     queryFn: () => fetchJson(`/api/members`),
+  });
+
+  const { data: adminUsers } = useQuery<MemberProfile[]>({
+    queryKey: [portal, "admin", "users"],
+    queryFn: () => fetchJson(`/api/admin/users`),
+    enabled: isAdmin,
+  });
+
+  // ─── Mutations ───
+
+  const updateProfile = useMutation({
+    mutationFn: (name: string) =>
+      fetchJson(`/api/me`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "me"] });
+      setEditName(false);
+    },
   });
 
   const updateRole = useMutation({
@@ -71,7 +109,9 @@ export default function MembersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [portal, "members"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "members"] });
+    },
   });
 
   const removeMember = useMutation({
@@ -79,220 +119,740 @@ export default function MembersPage() {
       fetchJson(`/api/members/${userId}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [portal, "members"] });
-      setSelectedMember(null);
+      qc.invalidateQueries({ queryKey: [portal, "admin", "users"] });
     },
   });
+
+  const createUser = useMutation({
+    mutationFn: (data: { name: string; email: string; role: string }) =>
+      fetchJson(`/api/admin/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "admin", "users"] });
+      qc.invalidateQueries({ queryKey: [portal, "members"] });
+      setShowCreateUser(false);
+      setNewUser({ name: "", email: "", role: "member" });
+    },
+  });
+
+  const changeRole = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      fetchJson(`/api/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "admin", "users"] });
+      qc.invalidateQueries({ queryKey: [portal, "members"] });
+    },
+  });
+
+  // ─── Derived state ───
 
   const filtered = useMemo(() => {
     if (!members) return [];
     if (!search.trim()) return members;
     const q = search.toLowerCase();
     return members.filter(
-      (m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+      (m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q),
     );
   }, [members, search]);
 
-  if (isLoading) {
-    return <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>;
+  // ─── Loading ───
+
+  if (profileLoading || membersLoading) {
+    return (
+      <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>
+        Loading...
+      </div>
+    );
   }
 
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-          flexWrap: "wrap",
-          gap: "12px",
-        }}
-      >
-        <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0, color: "var(--color-text)" }}>
-          Members
-        </h1>
-      </div>
+  // ─── Render ───
 
-      <div style={{ position: "relative", marginBottom: "20px", maxWidth: "400px" }}>
-        <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-secondary)", pointerEvents: "none" }} />
-        <input
-          style={{ ...inputStyle, paddingLeft: "36px" }}
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {search && (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <h1
+        style={{ fontSize: "20px", fontWeight: 700, margin: 0, color: "var(--color-text)" }}
+      >
+        Members
+      </h1>
+
+      {/* ─── Section 1: Profile Card ─── */}
+      <Section title="Profile">
+        {profile && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--color-primary)",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {profile.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                {editName ? (
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                      style={{ ...inputStyle, width: "200px" }}
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateProfile.mutate(nameInput)}
+                      disabled={!nameInput.trim() || updateProfile.isPending}
+                      style={{
+                        ...btnBase,
+                        backgroundColor: "var(--color-primary)",
+                        color: "#fff",
+                        opacity:
+                          !nameInput.trim() || updateProfile.isPending ? 0.5 : 1,
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditName(false)}
+                      style={{
+                        ...btnBase,
+                        backgroundColor: "transparent",
+                        color: "var(--color-text-secondary)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setNameInput(profile.name);
+                      setEditName(true);
+                    }}
+                  >
+                    {profile.name}{" "}
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        color: "var(--color-primary)",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Edit
+                    </span>
+                  </div>
+                )}
+                <div
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--color-text-secondary)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    marginTop: "2px",
+                  }}
+                >
+                  <Mail size={13} /> {profile.email}
+                </div>
+                <div style={{ marginTop: "4px" }}>
+                  <RoleBadge role={profile.role} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* ─── Section 2: Members Directory ─── */}
+      <Section title="Members Directory">
+        <div style={{ position: "relative", marginBottom: "16px", maxWidth: "400px" }}>
+          <Search
+            size={16}
             style={{
               position: "absolute",
-              right: "8px",
+              left: "12px",
               top: "50%",
               transform: "translateY(-50%)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
               color: "var(--color-text-secondary)",
-              padding: "4px",
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            style={{ ...inputStyle, paddingLeft: "36px" }}
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              style={{
+                position: "absolute",
+                right: "8px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-secondary)",
+                padding: "4px",
+              }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "48px 16px",
+              color: "var(--color-text-secondary)",
+              fontSize: "14px",
             }}
           >
-            <X size={16} />
-          </button>
-        )}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "48px 16px",
-            color: "var(--color-text-secondary)",
-            fontSize: "14px",
-          }}
-        >
-          <User size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-          <p style={{ margin: 0 }}>No members found.</p>
-        </div>
-      ) : (
-        <>
-          <div className="hidden md:block" style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
-                  <th style={thStyle}>Member</th>
-                  <th style={thStyle}>Email</th>
-                  <th style={thStyle}>Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((member) => (
-                  <tr
-                    key={member.id}
-                    style={{ borderBottom: "1px solid var(--color-border)", cursor: "pointer" }}
-                    onClick={() => setSelectedMember(member)}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                  >
-                    <td style={tdStyle}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <User size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+            <p style={{ margin: 0 }}>No members found.</p>
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block" style={{ overflowX: "auto" }}>
+              <table
+                style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
+                    <th style={thStyle}>Member</th>
+                    <th style={thStyle}>Email</th>
+                    <th style={thStyle}>Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((member) => (
+                    <tr
+                      key={member.id}
+                      style={{
+                        borderBottom: "1px solid var(--color-border)",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setSelectedMember(member)}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor =
+                          "var(--color-bg-secondary)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "transparent")
+                      }
+                    >
+                      <td style={tdStyle}>
                         <div
                           style={{
-                            width: "36px",
-                            height: "36px",
-                            borderRadius: "50%",
-                            backgroundColor: "var(--color-primary)",
-                            color: "#fff",
                             display: "flex",
                             alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "14px",
-                            fontWeight: 700,
-                            flexShrink: 0,
+                            gap: "10px",
                           }}
                         >
-                          {member.name.charAt(0).toUpperCase()}
+                          <div
+                            style={{
+                              width: "36px",
+                              height: "36px",
+                              borderRadius: "50%",
+                              backgroundColor: "var(--color-primary)",
+                              color: "#fff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "14px",
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span
+                            style={{ fontWeight: 500, color: "var(--color-text)" }}
+                          >
+                            {member.name}
+                          </span>
                         </div>
-                        <span style={{ fontWeight: 500, color: "var(--color-text)" }}>{member.name}</span>
+                      </td>
+                      <td style={tdStyle}>
+                        <span
+                          style={{
+                            color: "var(--color-text-secondary)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <Mail size={14} /> {member.email}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>
+                        <RoleBadge role={member.role} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div
+              className="md:hidden"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              {filtered.map((member) => (
+                <div
+                  key={member.id}
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "14px",
+                    backgroundColor: "var(--color-bg)",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSelectedMember(member)}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        backgroundColor: "var(--color-primary)",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {member.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "14px",
+                          color: "var(--color-text)",
+                        }}
+                      >
+                        {member.name}
                       </div>
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                        <Mail size={14} /> {member.email}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <RoleBadge role={member.role} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--color-text-secondary)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Mail size={12} /> {member.email}
+                      </div>
+                    </div>
+                  </div>
+                  <RoleBadge role={member.role} />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {selectedMember && (
+          <MemberDetail
+            member={selectedMember}
+            onClose={() => setSelectedMember(null)}
+          />
+        )}
+      </Section>
+
+      {/* ─── Section 3: Admin User Management ─── */}
+      {isAdmin && (
+        <Section title="Admin — User Management">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: "12px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowCreateUser(true)}
+              style={{
+                ...btnBase,
+                backgroundColor: "var(--color-primary)",
+                color: "#fff",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "var(--color-primary-hover)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "var(--color-primary)")
+              }
+            >
+              <Plus size={16} /> Add User
+            </button>
           </div>
 
-          <div className="md:hidden" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {filtered.map((member) => (
+          {showCreateUser && (
+            <div
+              style={{
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-sm)",
+                padding: "16px",
+                marginBottom: "12px",
+                backgroundColor: "var(--color-bg-secondary)",
+              }}
+            >
+              <h4
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  margin: "0 0 12px",
+                  color: "var(--color-text)",
+                }}
+              >
+                New User
+              </h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <input
+                  style={inputStyle}
+                  placeholder="Name"
+                  value={newUser.name}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, name: e.target.value })
+                  }
+                />
+                <input
+                  style={inputStyle}
+                  placeholder="Email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                />
+                <select
+                  style={selectStyle}
+                  value={newUser.role}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, role: e.target.value })
+                  }
+                >
+                  <option value="member">Member</option>
+                  <option value="officer">Officer</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => createUser.mutate(newUser)}
+                    disabled={
+                      !newUser.name || !newUser.email || createUser.isPending
+                    }
+                    style={{
+                      ...btnBase,
+                      backgroundColor: "var(--color-primary)",
+                      color: "#fff",
+                      opacity:
+                        !newUser.name || !newUser.email || createUser.isPending
+                          ? 0.5
+                          : 1,
+                    }}
+                  >
+                    {createUser.isPending ? "Creating..." : "Create"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateUser(false)}
+                    style={{
+                      ...btnBase,
+                      backgroundColor: "transparent",
+                      color: "var(--color-text-secondary)",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Desktop table */}
+          {adminUsers && adminUsers.length > 0 && (
+            <div className="hidden md:block" style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "14px",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
+                    <th style={thStyle}>Name</th>
+                    <th style={thStyle}>Email</th>
+                    <th style={thStyle}>Role</th>
+                    <th style={thStyle}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminUsers.map((u) => (
+                    <tr
+                      key={u.id}
+                      style={{ borderBottom: "1px solid var(--color-border)" }}
+                    >
+                      <td style={tdStyle}>
+                        <span style={{ fontWeight: 500, color: "var(--color-text)" }}>
+                          {u.name}
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        {u.email}
+                      </td>
+                      <td style={tdStyle}>
+                        <RoleBadge role={u.role} />
+                      </td>
+                      <td style={tdStyle}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <select
+                            style={{
+                              ...selectStyle,
+                              width: "auto",
+                              padding: "4px 8px",
+                              fontSize: "12px",
+                            }}
+                            value={u.role}
+                            onChange={(e) =>
+                              changeRole.mutate({
+                                userId: u.id,
+                                role: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="member">Member</option>
+                            <option value="officer">Officer</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Remove this user?"))
+                                removeMember.mutate(u.id);
+                            }}
+                            disabled={removeMember.isPending}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "32px",
+                              height: "32px",
+                              border: "1px solid var(--color-border)",
+                              borderRadius: "var(--radius-sm)",
+                              backgroundColor: "transparent",
+                              cursor: "pointer",
+                              color: "var(--color-destructive)",
+                              transition: "background-color 100ms ease",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor = "#fff5f5")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                "transparent")
+                            }
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Mobile cards */}
+          <div
+            className="md:hidden"
+            style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+          >
+            {(adminUsers ?? []).map((u) => (
               <div
-                key={member.id}
+                key={u.id}
                 style={{
                   border: "1px solid var(--color-border)",
                   borderRadius: "var(--radius-sm)",
-                  padding: "14px",
+                  padding: "12px",
                   backgroundColor: "var(--color-bg)",
-                  cursor: "pointer",
                 }}
-                onClick={() => setSelectedMember(member)}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <div
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: "14px",
+                    color: "var(--color-text)",
+                  }}
+                >
+                  {u.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--color-text-secondary)",
+                    marginBottom: "6px",
+                  }}
+                >
+                  {u.email}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <RoleBadge role={u.role} />
+                  <select
                     style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      backgroundColor: "var(--color-primary)",
-                      color: "#fff",
-                      display: "flex",
+                      ...selectStyle,
+                      width: "auto",
+                      padding: "4px 8px",
+                      fontSize: "12px",
+                    }}
+                    value={u.role}
+                    onChange={(e) =>
+                      changeRole.mutate({ userId: u.id, role: e.target.value })
+                    }
+                  >
+                    <option value="member">Member</option>
+                    <option value="officer">Officer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Remove this user?"))
+                        removeMember.mutate(u.id);
+                    }}
+                    disabled={removeMember.isPending}
+                    style={{
+                      display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      flexShrink: 0,
+                      width: "32px",
+                      height: "32px",
+                      border: "1px solid var(--color-destructive)",
+                      borderRadius: "var(--radius-sm)",
+                      backgroundColor: "transparent",
+                      cursor: "pointer",
+                      color: "var(--color-destructive)",
+                      marginLeft: "auto",
+                      transition: "background-color 100ms ease",
                     }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "#fff5f5")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "transparent")
+                    }
                   >
-                    {member.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--color-text)" }}>{member.name}</div>
-                    <div style={{ fontSize: "12px", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Mail size={12} /> {member.email}
-                    </div>
-                  </div>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <RoleBadge role={member.role} />
               </div>
             ))}
           </div>
-        </>
-      )}
 
-      {selectedMember && (
-        <MemberDetail member={selectedMember} onClose={() => setSelectedMember(null)} />
+          {(!adminUsers || adminUsers.length === 0) && (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "32px 16px",
+                color: "var(--color-text-secondary)",
+                fontSize: "14px",
+              }}
+            >
+              <p style={{ margin: 0 }}>No users found.</p>
+            </div>
+          )}
+        </Section>
       )}
     </div>
   );
 }
 
-function RoleBadge({ role }: { role: string }) {
-  const cfg = roleConfig[role] ?? roleConfig.member;
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "4px",
-        padding: "3px 8px",
-        borderRadius: "var(--radius-sm)",
-        fontSize: "12px",
-        fontWeight: 600,
-        color: cfg.color,
-        backgroundColor: cfg.bg,
-        textTransform: "capitalize",
-      }}
-    >
-      <Shield size={12} />
-      {role}
-    </span>
-  );
-}
+// ─── Member Detail Modal ───
 
-function MemberDetail({ member, onClose }: { member: Member; onClose: () => void }) {
-  const portal = getPortal();
+function MemberDetail({
+  member,
+  onClose,
+}: {
+  member: MemberProfile;
+  onClose: () => void;
+}) {
+  const portal = usePortal();
   const qc = useQueryClient();
   const { data: session } = useSession();
   const currentUserRole = (session?.user as any)?.role;
   const isAdmin = currentUserRole === "admin";
 
-  const { data: detail } = useQuery<Member & { membershipId?: string }>({
+  const { data: detail } = useQuery<MemberProfile>({
     queryKey: [portal, "members", member.id],
     queryFn: () => fetchJson(`/api/members/${member.id}`),
     enabled: !!member.id,
@@ -316,12 +876,13 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
       fetchJson(`/api/members/${member.id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [portal, "members"] });
+      qc.invalidateQueries({ queryKey: [portal, "admin", "users"] });
       onClose();
     },
   });
 
   const currentRole = detail?.role ?? member.role;
-  const roleIndex = ROLES.indexOf(currentRole as typeof ROLES[number]);
+  const roleIndex = ROLES.indexOf(currentRole as (typeof ROLES)[number]);
 
   return (
     <div
@@ -334,7 +895,9 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
         justifyContent: "center",
         backgroundColor: "rgba(0,0,0,0.3)",
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         style={{
@@ -346,8 +909,22 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
           border: "1px solid var(--color-border)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0, color: "var(--color-text)" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "16px",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              margin: 0,
+              color: "var(--color-text)",
+            }}
+          >
             Member Details
           </h3>
           <button
@@ -383,17 +960,40 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
               {(detail?.name ?? member.name)?.charAt(0)?.toUpperCase() ?? "?"}
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--color-text)" }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: "15px",
+                  color: "var(--color-text)",
+                }}
+              >
                 {detail?.name ?? member.name}
               </div>
-              <div style={{ fontSize: "13px", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "4px" }}>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "var(--color-text-secondary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
                 <Mail size={13} /> {detail?.email ?? member.email}
               </div>
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <div
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+                marginBottom: "6px",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
               Current Role
             </div>
             <RoleBadge role={currentRole} />
@@ -401,10 +1001,25 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
 
           {isAdmin && member.id !== (session?.user as any)?.id && (
             <div>
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "var(--color-text-secondary)",
+                  marginBottom: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
                 Admin Actions
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                }}
+              >
                 {roleIndex < ROLES.length - 1 && (
                   <button
                     type="button"
@@ -424,8 +1039,13 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
                       color: "var(--color-text)",
                       transition: "background-color 100ms ease",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-bg-secondary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--color-bg)";
+                    }}
                   >
                     <ArrowUp size={14} style={{ color: "var(--color-success)" }} />
                     Promote to {ROLES[roleIndex + 1]}
@@ -450,16 +1070,26 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
                       color: "var(--color-destructive)",
                       transition: "background-color 100ms ease",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff5f5"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#fff5f5";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--color-bg)";
+                    }}
                   >
-                    <ArrowDown size={14} style={{ color: "var(--color-destructive)" }} />
+                    <ArrowDown
+                      size={14}
+                      style={{ color: "var(--color-destructive)" }}
+                    />
                     Demote to {ROLES[roleIndex - 1]}
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => { if (confirm("Remove this member from the portal?")) removeMember.mutate(); }}
+                  onClick={() => {
+                    if (confirm("Remove this member from the portal?"))
+                      removeMember.mutate();
+                  }}
                   disabled={removeMember.isPending}
                   style={{
                     display: "flex",
@@ -475,8 +1105,12 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
                     color: "var(--color-destructive)",
                     transition: "background-color 100ms ease",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff5f5"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#fff5f5";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--color-bg)";
+                  }}
                 >
                   <Trash2 size={14} />
                   Remove from Portal
@@ -489,6 +1123,34 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
     </div>
   );
 }
+
+// ─── Section Wrapper ───
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h2
+        style={{
+          fontSize: "16px",
+          fontWeight: 700,
+          margin: "0 0 12px",
+          color: "var(--color-text)",
+        }}
+      >
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
+// ─── Shared Styles ───
 
 const thStyle: React.CSSProperties = {
   textAlign: "left",

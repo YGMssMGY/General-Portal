@@ -9,16 +9,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
 import {
   MessageSquare,
   Plus,
   Send,
   ChevronLeft,
+  ChevronDown,
+  ChevronRight,
   Mail,
-  MailOpen,
   Users,
   Trash2,
+  Trophy,
+  Star,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,11 +38,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
+import { usePortal } from "@/hooks/usePortal";
 
 interface ThreadSender {
   id: string;
@@ -74,9 +80,38 @@ interface ThreadDetail {
   messages: ThreadMessage[];
 }
 
+interface KudoSender {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
+
+interface KudoReceiver {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
+
+interface KudosEntry {
+  id: string;
+  message: string | null;
+  createdAt: string;
+  sender: KudoSender;
+  receiver: KudoReceiver;
+}
+
+interface LeaderboardEntry {
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  userImage: string | null;
+  count: number;
+}
+
 export default function MessagesPage() {
-  const portal = getPortal();
+  const portal = usePortal();
   const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -86,6 +121,11 @@ export default function MessagesPage() {
   const [newContent, setNewContent] = useState("");
   const [newRecipients, setNewRecipients] = useState<string[]>([]);
 
+  // Kudos state
+  const [showKudos, setShowKudos] = useState(false);
+  const [kudoReceiverId, setKudoReceiverId] = useState("");
+  const [kudoMessage, setKudoMessage] = useState("");
+
   const { data: memberList } = useQuery<{ id: string; name: string; email: string }[]>({
     queryKey: [portal, "members"],
     queryFn: () => fetchJson(`/api/members`),
@@ -93,7 +133,7 @@ export default function MessagesPage() {
 
   function toggleRecipient(id: string) {
     setNewRecipients((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id],
     );
   }
   const [replyContent, setReplyContent] = useState("");
@@ -116,6 +156,44 @@ export default function MessagesPage() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [threadDetail?.messages]);
+
+  // ---- Kudos queries & mutations ----
+
+  const { data: kudos, isLoading: kudosLoading } = useQuery<KudosEntry[]>({
+    queryKey: [portal, "kudos"],
+    queryFn: () => fetchJson(`/api/kudos`),
+  });
+
+  const { data: leaderboard } = useQuery<LeaderboardEntry[]>({
+    queryKey: [portal, "kudos-leaderboard"],
+    queryFn: () => fetchJson(`/api/kudos/leaderboard`),
+  });
+
+  const sendKudosMutation = useMutation({
+    mutationFn: (body: { receiverId: string; message: string }) =>
+      fetchJson(`/api/kudos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [portal, "kudos"] });
+      queryClient.invalidateQueries({ queryKey: [portal, "kudos-leaderboard"] });
+      setKudoReceiverId("");
+      setKudoMessage("");
+    },
+  });
+
+  const deleteKudosMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchJson(`/api/kudos/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [portal, "kudos"] });
+      queryClient.invalidateQueries({ queryKey: [portal, "kudos-leaderboard"] });
+    },
+  });
+
+  // ---- Message mutations ----
 
   const createMutation = useMutation({
     mutationFn: (body: { subject: string; content: string; recipientIds?: string[] }) =>
@@ -150,7 +228,8 @@ export default function MessagesPage() {
   });
 
   const deleteThread = useMutation({
-    mutationFn: (id: string) => fetchJson(`/api/messages/threads/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      fetchJson(`/api/messages/threads/${id}`, { method: "DELETE" }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: [portal, "messages"] });
       if (selectedThreadId === variables) {
@@ -160,10 +239,13 @@ export default function MessagesPage() {
     },
   });
 
+  // ---- Handlers ----
+
   function handleCreate() {
     if (newRecipients.length === 0 || !newContent.trim()) return;
     createMutation.mutate({
-      subject: newSubject.trim() || `Message to ${newRecipients.length} recipient(s)`,
+      subject:
+        newSubject.trim() || `Message to ${newRecipients.length} recipient(s)`,
       content: newContent.trim(),
       recipientIds: newRecipients,
     });
@@ -183,14 +265,50 @@ export default function MessagesPage() {
     setShowMobileThread(false);
   }
 
+  function handleSendKudos() {
+    if (!kudoReceiverId || !kudoMessage.trim()) return;
+    sendKudosMutation.mutate({
+      receiverId: kudoReceiverId,
+      message: kudoMessage.trim(),
+    });
+  }
+
   const threadList = threads ?? [];
+  const kudosList = kudos ?? [];
+  const leaderboardList = leaderboard ?? [];
+
+  // Members filtered for kudos send (exclude current user)
+  const kudoMembers =
+    memberList?.filter((m) => m.id !== currentUserId) ?? [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px", height: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {/* ---- Header ---- */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--color-text)", margin: 0 }}>Messages</h1>
-          <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: "4px 0 0" }}>
+          <h1
+            style={{
+              fontSize: "20px",
+              fontWeight: 700,
+              color: "var(--color-text)",
+              margin: 0,
+            }}
+          >
+            Messages
+          </h1>
+          <p
+            style={{
+              fontSize: "14px",
+              color: "var(--color-text-secondary)",
+              margin: "4px 0 0",
+            }}
+          >
             Internal messaging
           </p>
         </div>
@@ -200,17 +318,18 @@ export default function MessagesPage() {
         </Button>
       </div>
 
+      {/* ---- Messages Grid ---- */}
       <div
         className="lg:grid lg:grid-cols-[320px_1fr]"
         style={{
-          flex: 1,
-          gap: "0",
           border: "1px solid var(--color-border)",
           borderRadius: "5px",
           overflow: "hidden",
-          minHeight: "500px",
+          minHeight: "400px",
+          maxHeight: "50vh",
         }}
       >
+        {/* Thread List */}
         <div
           className={showMobileThread ? "hidden lg:flex" : "flex"}
           style={{
@@ -229,21 +348,58 @@ export default function MessagesPage() {
               color: "var(--color-text-secondary)",
             }}
           >
-            {threadList.length} conversation{threadList.length !== 1 ? "s" : ""}
+            {threadList.length} conversation
+            {threadList.length !== 1 ? "s" : ""}
           </div>
 
           <div style={{ flex: 1, overflowY: "auto" }}>
             {threadsLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} style={{ padding: "12px", borderBottom: "1px solid var(--color-border)" }}>
-                  <Skeleton style={{ width: "60%", height: "14px", borderRadius: "5px", marginBottom: "8px" }} />
-                  <Skeleton style={{ width: "80%", height: "12px", borderRadius: "5px" }} />
+                <div
+                  key={i}
+                  style={{
+                    padding: "12px",
+                    borderBottom: "1px solid var(--color-border)",
+                  }}
+                >
+                  <Skeleton
+                    style={{
+                      width: "60%",
+                      height: "14px",
+                      borderRadius: "5px",
+                      marginBottom: "8px",
+                    }}
+                  />
+                  <Skeleton
+                    style={{
+                      width: "80%",
+                      height: "12px",
+                      borderRadius: "5px",
+                    }}
+                  />
                 </div>
               ))
             ) : threadList.length === 0 ? (
-              <div style={{ padding: "24px", textAlign: "center" }}>
-                <Mail size={24} style={{ color: "var(--color-text-secondary)", marginBottom: "8px" }} />
-                <p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: 0 }}>
+              <div
+                style={{
+                  padding: "24px",
+                  textAlign: "center",
+                }}
+              >
+                <Mail
+                  size={24}
+                  style={{
+                    color: "var(--color-text-secondary)",
+                    marginBottom: "8px",
+                  }}
+                />
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--color-text-secondary)",
+                    margin: 0,
+                  }}
+                >
                   No messages yet
                 </p>
               </div>
@@ -272,7 +428,8 @@ export default function MessagesPage() {
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)";
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-bg-secondary)";
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -286,13 +443,23 @@ export default function MessagesPage() {
                         width: "8px",
                         height: "8px",
                         borderRadius: "5px",
-                        backgroundColor: thread.unreadCount > 0 ? "var(--color-primary)" : "transparent",
+                        backgroundColor:
+                          thread.unreadCount > 0
+                            ? "var(--color-primary)"
+                            : "transparent",
                         flexShrink: 0,
                         marginTop: "6px",
                       }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "4px",
+                        }}
+                      >
                         <span
                           style={{
                             fontSize: "13px",
@@ -305,7 +472,14 @@ export default function MessagesPage() {
                         >
                           {thread.subject}
                         </span>
-                        <span style={{ fontSize: "11px", color: "var(--color-text-secondary)", flexShrink: 0, marginLeft: "8px" }}>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--color-text-secondary)",
+                            flexShrink: 0,
+                            marginLeft: "8px",
+                          }}
+                        >
                           {format(new Date(thread.updatedAt), "MMM d")}
                         </span>
                       </div>
@@ -334,6 +508,7 @@ export default function MessagesPage() {
           </div>
         </div>
 
+        {/* Conversation View */}
         <div
           className={!showMobileThread ? "hidden lg:flex" : "flex"}
           style={{
@@ -353,30 +528,89 @@ export default function MessagesPage() {
                 padding: "24px",
               }}
             >
-              <MessageSquare size={32} style={{ color: "var(--color-text-secondary)", marginBottom: "12px" }} />
-              <p style={{ fontSize: "14px", fontWeight: 500, color: "var(--color-text)", margin: "0 0 4px" }}>
+              <MessageSquare
+                size={32}
+                style={{
+                  color: "var(--color-text-secondary)",
+                  marginBottom: "12px",
+                }}
+              />
+              <p
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  margin: "0 0 4px",
+                }}
+              >
                 Select a conversation
               </p>
-              <p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: 0 }}>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "var(--color-text-secondary)",
+                  margin: 0,
+                }}
+              >
                 Choose a thread from the left to view messages
               </p>
             </div>
           ) : detailLoading ? (
             <div style={{ padding: "20px" }}>
-              <Skeleton style={{ width: "40%", height: "18px", borderRadius: "5px", marginBottom: "20px" }} />
+              <Skeleton
+                style={{
+                  width: "40%",
+                  height: "18px",
+                  borderRadius: "5px",
+                  marginBottom: "20px",
+                }}
+              />
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
-                  <Skeleton style={{ width: "28px", height: "28px", borderRadius: "5px", flexShrink: 0 }} />
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <Skeleton
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "5px",
+                      flexShrink: 0,
+                    }}
+                  />
                   <div style={{ flex: 1 }}>
-                    <Skeleton style={{ width: "30%", height: "12px", borderRadius: "5px", marginBottom: "6px" }} />
-                    <Skeleton style={{ width: "60%", height: "14px", borderRadius: "5px" }} />
+                    <Skeleton
+                      style={{
+                        width: "30%",
+                        height: "12px",
+                        borderRadius: "5px",
+                        marginBottom: "6px",
+                      }}
+                    />
+                    <Skeleton
+                      style={{
+                        width: "60%",
+                        height: "14px",
+                        borderRadius: "5px",
+                      }}
+                    />
                   </div>
                 </div>
               ))}
             </div>
           ) : !threadDetail ? (
             <div style={{ textAlign: "center", padding: "48px 24px" }}>
-              <p style={{ fontSize: "14px", color: "var(--color-destructive)", margin: 0 }}>
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "var(--color-destructive)",
+                  margin: 0,
+                }}
+              >
                 Failed to load conversation.
               </p>
             </div>
@@ -423,8 +657,25 @@ export default function MessagesPage() {
                 </h2>
                 {isAdmin && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm("Delete this conversation?")) deleteThread.mutate(threadDetail.id); }}
-                    style={{ display:"flex", alignItems:"center", gap:"6px", padding:"6px 10px", border:"1px solid var(--color-destructive)", borderRadius:"5px", background:"var(--color-bg)", cursor:"pointer", fontSize:"13px", fontFamily:"inherit", color:"var(--color-destructive)", flexShrink:0 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm("Delete this conversation?"))
+                        deleteThread.mutate(threadDetail.id);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 10px",
+                      border: "1px solid var(--color-destructive)",
+                      borderRadius: "5px",
+                      background: "var(--color-bg)",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      color: "var(--color-destructive)",
+                      flexShrink: 0,
+                    }}
                   >
                     <Trash2 size={14} /> Delete
                   </button>
@@ -459,11 +710,29 @@ export default function MessagesPage() {
                       {msg.sender?.name?.charAt(0)?.toUpperCase() ?? "?"}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--color-text)" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            color: "var(--color-text)",
+                          }}
+                        >
                           {msg.sender?.name ?? "Unknown"}
                         </span>
-                        <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--color-text-secondary)",
+                          }}
+                        >
                           {format(new Date(msg.createdAt), "MMM d, h:mm a")}
                         </span>
                       </div>
@@ -516,6 +785,392 @@ export default function MessagesPage() {
         </div>
       </div>
 
+      {/* ================================================================ */}
+      {/*  KUDOS SECTION                                                  */}
+      {/* ================================================================ */}
+      <Card>
+        <button
+          type="button"
+          onClick={() => setShowKudos(!showKudos)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            width: "100%",
+            padding: "14px 16px",
+            border: "none",
+            borderRadius: "5px",
+            background: "transparent",
+            cursor: "pointer",
+            fontSize: "15px",
+            fontWeight: 600,
+            fontFamily: "inherit",
+            color: "var(--color-text)",
+            textAlign: "left",
+          }}
+        >
+          <Trophy size={20} style={{ color: "var(--color-primary)" }} />
+          <span style={{ flex: 1 }}>Kudos</span>
+          {showKudos ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+        </button>
+
+        {showKudos && (
+          <div
+            style={{
+              borderTop: "1px solid var(--color-border)",
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px",
+            }}
+          >
+            {/* ---- Send Kudos ---- */}
+            <div>
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "var(--color-text)",
+                  margin: "0 0 12px",
+                }}
+              >
+                Send Kudos
+              </h3>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                <Select
+                  value={kudoReceiverId}
+                  onValueChange={setKudoReceiverId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a team member..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kudoMembers.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "8px 12px",
+                          fontSize: "13px",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        No other members
+                      </div>
+                    ) : (
+                      kudoMembers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            <Users
+                              size={14}
+                              style={{
+                                color: "var(--color-text-secondary)",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span>{m.name || m.email}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Textarea
+                  placeholder="What do you appreciate about this person?"
+                  value={kudoMessage}
+                  onChange={(e) => setKudoMessage(e.target.value)}
+                  rows={3}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <Button
+                    onClick={handleSendKudos}
+                    disabled={
+                      !kudoReceiverId ||
+                      !kudoMessage.trim() ||
+                      sendKudosMutation.isPending
+                    }
+                  >
+                    <Star size={16} />
+                    <span>
+                      {sendKudosMutation.isPending ? "Sending..." : "Send Kudos"}
+                    </span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* ---- Received Kudos ---- */}
+            <div>
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "var(--color-text)",
+                  margin: "0 0 12px",
+                }}
+              >
+                Received Kudos
+              </h3>
+
+              {kudosLoading ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                  }}
+                >
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton
+                      key={i}
+                      style={{
+                        width: "100%",
+                        height: "60px",
+                        borderRadius: "5px",
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : kudosList.length === 0 ? (
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--color-text-secondary)",
+                    margin: 0,
+                  }}
+                >
+                  No kudos have been sent yet.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  {kudosList.map((k) => (
+                    <div
+                      key={k.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "12px",
+                        padding: "12px",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "5px",
+                        backgroundColor: "var(--color-bg)",
+                      }}
+                    >
+                      <Star
+                        size={18}
+                        style={{
+                          color: "var(--color-primary)",
+                          flexShrink: 0,
+                          marginTop: "2px",
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              color: "var(--color-text)",
+                            }}
+                          >
+                            {k.sender?.name ?? "Unknown"}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--color-text-secondary)",
+                            }}
+                          >
+                            &rarr; {k.receiver?.name ?? "Unknown"}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--color-text-secondary)",
+                              marginLeft: "auto",
+                            }}
+                          >
+                            {format(new Date(k.createdAt), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                        {k.message && (
+                          <p
+                            style={{
+                              fontSize: "13px",
+                              color: "var(--color-text)",
+                              margin: 0,
+                              whiteSpace: "pre-wrap",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {k.message}
+                          </p>
+                        )}
+                      </div>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Delete this kudos?"))
+                              deleteKudosMutation.mutate(k.id);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "32px",
+                            height: "32px",
+                            border: "1px solid var(--color-destructive)",
+                            borderRadius: "5px",
+                            backgroundColor: "transparent",
+                            cursor: "pointer",
+                            color: "var(--color-destructive)",
+                            flexShrink: 0,
+                          }}
+                          title="Delete kudos"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ---- Leaderboard ---- */}
+            <div>
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "var(--color-text)",
+                  margin: "0 0 12px",
+                }}
+              >
+                Leaderboard
+              </h3>
+
+              {leaderboardList.length === 0 ? (
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--color-text-secondary)",
+                    margin: 0,
+                  }}
+                >
+                  No kudos data yet.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  {leaderboardList.map((entry, idx) => (
+                    <div
+                      key={entry.userId}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "8px 12px",
+                        borderRadius: "5px",
+                        backgroundColor:
+                          idx === 0
+                            ? "var(--color-primary-light)"
+                            : "transparent",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "24px",
+                          fontSize: "14px",
+                          fontWeight: 700,
+                          color:
+                            idx === 0
+                              ? "var(--color-primary)"
+                              : "var(--color-text-secondary)",
+                          textAlign: "center",
+                        }}
+                      >
+                        {idx === 0 ? (
+                          <Trophy
+                            size={18}
+                            style={{
+                              color: "var(--color-primary)",
+                              display: "inline",
+                            }}
+                          />
+                        ) : (
+                          `#${idx + 1}`
+                        )}
+                      </span>
+                      <span
+                        style={{
+                          flex: 1,
+                          fontSize: "13px",
+                          fontWeight: 500,
+                          color: "var(--color-text)",
+                        }}
+                      >
+                        {entry.userName}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "var(--color-primary)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Star size={14} />
+                        {entry.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* ---- New Message Dialog ---- */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
@@ -526,7 +1181,15 @@ export default function MessagesPage() {
           </DialogHeader>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 To <span style={{ color: "var(--color-destructive)" }}>*</span>
               </label>
               <div
@@ -539,7 +1202,13 @@ export default function MessagesPage() {
                 }}
               >
                 {!memberList || memberList.length === 0 ? (
-                  <div style={{ padding: "8px", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+                  <div
+                    style={{
+                      padding: "8px",
+                      fontSize: "13px",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
                     No members available
                   </div>
                 ) : (
@@ -558,7 +1227,9 @@ export default function MessagesPage() {
                           padding: "8px 10px",
                           border: "none",
                           borderRadius: "5px",
-                          backgroundColor: selected ? "var(--color-primary-light)" : "transparent",
+                          backgroundColor: selected
+                            ? "var(--color-primary-light)"
+                            : "transparent",
                           cursor: "pointer",
                           fontSize: "13px",
                           fontFamily: "inherit",
@@ -571,8 +1242,12 @@ export default function MessagesPage() {
                             width: "16px",
                             height: "16px",
                             borderRadius: "5px",
-                            border: selected ? "none" : "2px solid var(--color-border)",
-                            backgroundColor: selected ? "var(--color-primary)" : "transparent",
+                            border: selected
+                              ? "none"
+                              : "2px solid var(--color-border)",
+                            backgroundColor: selected
+                              ? "var(--color-primary)"
+                              : "transparent",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -580,12 +1255,29 @@ export default function MessagesPage() {
                           }}
                         >
                           {selected && (
-                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                              <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 10 10"
+                              fill="none"
+                            >
+                              <path
+                                d="M2 5L4 7L8 3"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
                             </svg>
                           )}
                         </div>
-                        <Users size={14} style={{ color: "var(--color-text-secondary)", flexShrink: 0 }} />
+                        <Users
+                          size={14}
+                          style={{
+                            color: "var(--color-text-secondary)",
+                            flexShrink: 0,
+                          }}
+                        />
                         <span style={{ flex: 1 }}>{m.name || m.email}</span>
                       </button>
                     );
@@ -594,7 +1286,15 @@ export default function MessagesPage() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: "6px" }}>
+              <label
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
                 Subject (optional)
               </label>
               <Input
@@ -604,8 +1304,17 @@ export default function MessagesPage() {
               />
             </div>
             <div>
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: "6px" }}>
-                Message <span style={{ color: "var(--color-destructive)" }}>*</span>
+              <label
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "var(--color-text)",
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                Message{" "}
+                <span style={{ color: "var(--color-destructive)" }}>*</span>
               </label>
               <Textarea
                 placeholder="Write your message..."
@@ -621,7 +1330,11 @@ export default function MessagesPage() {
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={newRecipients.length === 0 || !newContent.trim() || createMutation.isPending}
+              disabled={
+                newRecipients.length === 0 ||
+                !newContent.trim() ||
+                createMutation.isPending
+              }
             >
               {createMutation.isPending ? "Sending..." : "Send Message"}
             </Button>
