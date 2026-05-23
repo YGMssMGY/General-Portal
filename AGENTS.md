@@ -9,7 +9,7 @@ General Portal is a multi-tenant web application built for school clubs/organiza
 - **Developers Club** (`developers`)
 - **Student Council** (`stuco`)
 
-Each portal is isolated in its own PostgreSQL database. Users sign in via Microsoft Entra ID (school Microsoft accounts) and must be a member of the workspace to access it.
+Each portal is isolated in its own PostgreSQL database. Users sign in via DevConnect OAuth and must be a member of the workspace to access it.
 
 The app provides modules for: proposals, tasks, events, messages, finance, volunteers, members, files, meetings, activity feed, notifications, budget, kudos, and audit logs.
 
@@ -20,7 +20,7 @@ The app provides modules for: proposals, tasks, events, messages, finance, volun
 - **Language**: TypeScript 5.8.3 (strict mode enabled)
 - **Styling**: Tailwind CSS 4.1.5 with PostCSS, `@theme` CSS variables
 - **Database**: PostgreSQL + Prisma 6.6.0 (`@prisma/client`)
-- **Auth**: NextAuth v5 (`next-auth@5.0.0-beta.25`) with Microsoft Entra ID OAuth, JWT strategy
+- **Auth**: NextAuth v5 (`next-auth@5.0.0-beta.25`) with DevConnect custom OAuth, JWT strategy
 - **State / Data Fetching**: TanStack React Query v5
 - **UI Components**: Radix UI primitives + shadcn/ui (installed in `src/components/ui`)
 - **Icons**: lucide-react
@@ -127,7 +127,7 @@ The app is multi-tenant via **portal cookie** (`portal=developers|stuco`), not v
 
 ## Authentication & Authorization
 
-- **Provider**: Microsoft Entra ID (OAuth 2.0).
+- **Provider**: DevConnect (custom OAuth 2.0).
 - **Session**: JWT strategy.
 - **Sign-in guard**: `signIn` callback checks that the user's email exists in a `Membership` record for the current portal cookie. If not, sign-in is denied (`AccessDenied`).
 - **Role permissions**: Defined in `src/lib/permissions.ts`. Roles are `admin`, `officer`, `member`.
