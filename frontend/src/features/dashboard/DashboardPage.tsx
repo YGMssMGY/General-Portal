@@ -8,6 +8,9 @@ import { useAuth } from "../../context/AuthContext";
 import { useDashboard } from "../../hooks/useWorkspaceResources";
 import { useUIStore } from "../../stores/useUIStore";
 import { formatDate } from "../../utils/format";
+import { workspaceApi } from "../../api/workspaceApi";
+import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     ArrowRight,
     Task,
@@ -130,6 +133,7 @@ export function DashboardPage() {
         new Date().getHours(),
     );
 
+    const queryClient = useQueryClient();
     const [attentionExpanded, setAttentionExpanded] = useState(true);
     const [tasksExpanded, setTasksExpanded] = useState(true);
     const [eventsExpanded, setEventsExpanded] = useState(true);
@@ -275,79 +279,105 @@ export function DashboardPage() {
                             </div>
                             {attentionExpanded && data.attention.length > 0 && (
                                 <div>
-                                    {data.attention.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            style={{
-                                                display: "flex",
-                                                flexWrap: "wrap",
-                                                alignItems: "center",
-                                                justifyContent: "space-between",
-                                                gap: "0.5rem",
-                                                padding: "0.625rem",
-                                                borderLeft: `4px solid ${
-                                                    item.tone === "danger"
-                                                        ? "var(--cds-support-error)"
-                                                        : item.tone === "tertiary"
-                                                          ? "var(--cds-support-warning)"
-                                                          : "var(--cds-support-info)"
-                                                }`,
-                                                borderTop: "1px solid var(--cds-border-subtle)",
-                                                borderRight: "1px solid var(--cds-border-subtle)",
-                                                borderBottom: "1px solid var(--cds-border-subtle)",
-                                                marginTop: "0.75rem",
-                                            }}
-                                        >
+                                    {data.attention.map((item: any) => {
+                                        const isOverdue =
+                                            item.dueDate &&
+                                            new Date(item.dueDate) < new Date() &&
+                                            item.status !== "done";
+                                        const isHighPriority = item.priority === "high";
+                                        const tone = isOverdue
+                                            ? "danger"
+                                            : isHighPriority
+                                              ? "warning"
+                                              : "info";
+                                        const label = isOverdue
+                                            ? "Overdue"
+                                            : isHighPriority
+                                              ? "High Priority"
+                                              : "In Progress";
+                                        const owner = item.assigneeName || "Unassigned";
+                                        const dueLabel = item.dueDate
+                                            ? `Due ${formatDate(item.dueDate)}`
+                                            : "No due date";
+                                        return (
                                             <div
+                                                key={item.id}
                                                 style={{
                                                     display: "flex",
+                                                    flexWrap: "wrap",
                                                     alignItems: "center",
-                                                    gap: "1rem",
+                                                    justifyContent: "space-between",
+                                                    gap: "0.5rem",
+                                                    padding: "0.625rem",
+                                                    borderLeft: `4px solid ${
+                                                        tone === "danger"
+                                                            ? "var(--cds-support-error)"
+                                                            : tone === "warning"
+                                                              ? "var(--cds-support-warning)"
+                                                              : "var(--cds-support-info)"
+                                                    }`,
+                                                    borderTop: "1px solid var(--cds-border-subtle)",
+                                                    borderRight:
+                                                        "1px solid var(--cds-border-subtle)",
+                                                    borderBottom:
+                                                        "1px solid var(--cds-border-subtle)",
+                                                    marginTop: "0.75rem",
                                                 }}
                                             >
-                                                <Tag
-                                                    type={
-                                                        item.tone === "danger"
-                                                            ? "red"
-                                                            : item.tone === "tertiary"
-                                                              ? "warm-gray"
-                                                              : "blue"
-                                                    }
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "1rem",
+                                                    }}
                                                 >
-                                                    {item.label}
-                                                </Tag>
-                                                <div>
-                                                    <p
-                                                        className="cds--type-body-02"
-                                                        style={{ fontWeight: 500, margin: 0 }}
+                                                    <Tag
+                                                        type={
+                                                            tone === "danger"
+                                                                ? "red"
+                                                                : tone === "warning"
+                                                                  ? "warm-gray"
+                                                                  : "blue"
+                                                        }
                                                     >
-                                                        {item.title}
-                                                    </p>
-                                                    <p
-                                                        className="cds--type-body-01"
-                                                        style={{
-                                                            margin: 0,
-                                                            color: "var(--cds-text-secondary)",
-                                                        }}
-                                                    >
-                                                        Owner: {item.owner}
-                                                    </p>
+                                                        {label}
+                                                    </Tag>
+                                                    <div>
+                                                        <p
+                                                            className="cds--type-body-02"
+                                                            style={{
+                                                                fontWeight: 500,
+                                                                margin: 0,
+                                                            }}
+                                                        >
+                                                            {item.title}
+                                                        </p>
+                                                        <p
+                                                            className="cds--type-body-01"
+                                                            style={{
+                                                                margin: 0,
+                                                                color: "var(--cds-text-secondary)",
+                                                            }}
+                                                        >
+                                                            Owner: {owner}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "0.5rem",
+                                                        color: "var(--cds-text-secondary)",
+                                                    }}
+                                                    className="cds--type-body-01"
+                                                >
+                                                    {dueLabel}
+                                                    <ArrowRight size={16} aria-hidden="true" />
                                                 </div>
                                             </div>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "0.5rem",
-                                                    color: "var(--cds-text-secondary)",
-                                                }}
-                                                className="cds--type-body-01"
-                                            >
-                                                {item.dueLabel}
-                                                <ArrowRight size={16} aria-hidden="true" />
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </Stack>
@@ -433,6 +463,26 @@ export function DashboardPage() {
                                                             className="cds--checkbox"
                                                             style={{ margin: 0 }}
                                                             aria-label={`Complete task: ${task.title}`}
+                                                            onChange={async () => {
+                                                                try {
+                                                                    await workspaceApi.updateTask(
+                                                                        task.id,
+                                                                        { status: "done" },
+                                                                    );
+                                                                    toast.success(
+                                                                        "Task completed!",
+                                                                    );
+                                                                    queryClient.invalidateQueries({
+                                                                        queryKey: ["dashboard"],
+                                                                    });
+                                                                } catch (err) {
+                                                                    toast.error(
+                                                                        err instanceof Error
+                                                                            ? err.message
+                                                                            : "Could not complete task",
+                                                                    );
+                                                                }
+                                                            }}
                                                         />
                                                     </div>
                                                     <div>

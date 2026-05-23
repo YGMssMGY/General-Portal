@@ -41,6 +41,7 @@ const mockDb = {
 const mockWorkspace = createMiddleware(async (c, next) => {
     c.set("workspaceId", "test-ws-id");
     c.set("db", mockDb as any);
+    c.set("user", { id: "test-user-id", name: "Tester", email: "test@test.com", role: "member" });
     await next();
 });
 

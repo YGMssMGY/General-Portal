@@ -834,7 +834,10 @@ export function TasksPage() {
         workspaceApi
             .getMembers()
             .then(setMembers)
-            .catch(() => {});
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            });
     }, []);
 
     const memberOptions = useMemo(
@@ -1287,7 +1290,6 @@ export function TasksPage() {
                                     }
                                 >
                                     <SelectItem value="low" text="Low" />
-                                    <SelectItem value="medium" text="Medium" />
                                     <SelectItem value="medium" text="Medium" />
                                     <SelectItem value="high" text="High" />
                                 </Select>

@@ -31,7 +31,9 @@ route.patch("/settings", async (c) => {
     if (body.allowMemberInvites !== undefined) data.allowMemberInvites = body.allowMemberInvites;
     if (body.fiscalYearStart !== undefined) data.fiscalYearStart = body.fiscalYearStart;
     if (body.organizationType !== undefined) data.organizationType = body.organizationType;
+    if (body.orgType !== undefined) data.organizationType = body.orgType;
     if (body.primaryContactEmail !== undefined) data.primaryContactEmail = body.primaryContactEmail;
+    if (body.primaryContact !== undefined) data.primaryContactEmail = body.primaryContact;
     if (body.teamsWebhookUrl !== undefined) data.teamsWebhookUrl = body.teamsWebhookUrl;
     if (body.webhookUrl !== undefined) data.webhookUrl = body.webhookUrl;
 

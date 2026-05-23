@@ -243,7 +243,10 @@ export function SettingsPage() {
         workspaceApi
             .getWorkspaceLogo()
             .then((res) => setLogoPreview(res.url))
-            .catch(() => {});
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            });
     }, []);
 
     // Fetch archives
@@ -253,7 +256,10 @@ export function SettingsPage() {
         workspaceApi
             .getArchives()
             .then(setArchives)
-            .catch(() => {})
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            })
             .finally(() => setArchiveLoading(false));
     }, [user?.role]);
 

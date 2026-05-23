@@ -101,7 +101,10 @@ export function MessagesPage() {
         workspaceApi
             .getCurrentUser()
             .then(setCurrentUser)
-            .catch(() => {});
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            });
     }, []);
 
     const filtered = useMemo(() => {
@@ -298,7 +301,14 @@ export function MessagesPage() {
                                     type="button"
                                     onClick={() => {
                                         setSelectedId(thread.id);
-                                        workspaceApi.markThreadRead(thread.id).catch(() => {});
+                                        workspaceApi.markThreadRead(thread.id).catch((err) => {
+                                            console.warn("[feature] operation failed:", err);
+                                            toast.error(
+                                                err instanceof Error
+                                                    ? err.message
+                                                    : "Operation failed",
+                                            );
+                                        });
                                     }}
                                     style={{
                                         width: "100%",

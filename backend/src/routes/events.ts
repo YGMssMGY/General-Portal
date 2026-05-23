@@ -80,9 +80,21 @@ route.patch("/events/:id", async (c) => {
     if (!existing) return c.json({ error: "Event not found" }, 404);
 
     const { owners, ownerNames, ownerIds: _ownerIds, ...fields } = body;
-    const data: any = { ...fields };
-    if (fields.startsAt) data.startsAt = new Date(fields.startsAt);
-    if (fields.endsAt) data.endsAt = new Date(fields.endsAt);
+    const ALLOWED_FIELDS = new Set([
+        "title",
+        "status",
+        "startsAt",
+        "endsAt",
+        "progress",
+        "budgetUsed",
+        "budgetTotal",
+    ]);
+    const data: any = {};
+    for (const key of Object.keys(fields)) {
+        if (ALLOWED_FIELDS.has(key)) data[key] = (fields as any)[key];
+    }
+    if (data.startsAt) data.startsAt = new Date(data.startsAt);
+    if (data.endsAt) data.endsAt = new Date(data.endsAt);
 
     // Handle owner updates: delete existing and recreate
     const ownerLabels = owners || ownerNames;

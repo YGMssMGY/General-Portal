@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button, Tile } from "@carbon/react";
 import { Group, Launch, ArrowRight } from "@carbon/icons-react";
+import { useUIStore } from "../../stores/useUIStore";
 
 const leadership = [
     { role: "Admin", desc: "Full system access — manages workspace configuration and security." },
@@ -16,6 +17,7 @@ const leadership = [
 ];
 
 export function AboutPage() {
+    const portal = useUIStore((s) => s.portal);
     return (
         <div style={{ margin: "0 auto", maxWidth: "80rem", padding: "1.5rem 1rem" }}>
             <h1 style={{ fontSize: "2rem", fontWeight: 600, color: "var(--cds-text-primary)" }}>
@@ -175,7 +177,10 @@ export function AboutPage() {
                     learn to code, organize events, or develop leadership skills, there's a place
                     for you.
                 </p>
-                <Link to="/admin" style={{ marginTop: "1.5rem", display: "inline-block" }}>
+                <Link
+                    to={portal ? `/${portal}/dashboard` : "/login"}
+                    style={{ marginTop: "1.5rem", display: "inline-block" }}
+                >
                     <Button type="button" renderIcon={ArrowRight}>
                         Access Member Portal
                     </Button>
