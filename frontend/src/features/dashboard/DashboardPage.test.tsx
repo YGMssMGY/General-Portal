@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
 
 const { mockUseAuth, mockUseDashboard } = vi.hoisted(() => ({
     mockUseAuth: vi.fn(),
@@ -19,9 +22,11 @@ import { DashboardPage } from "./DashboardPage";
 
 function renderPage() {
     return render(
-        <MemoryRouter>
-            <DashboardPage />
-        </MemoryRouter>,
+        <QueryClientProvider client={queryClient}>
+            <MemoryRouter>
+                <DashboardPage />
+            </MemoryRouter>
+        </QueryClientProvider>,
     );
 }
 
