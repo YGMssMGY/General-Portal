@@ -22,7 +22,7 @@ interface Meeting {
   location: string;
   status: "scheduled" | "ongoing" | "completed" | "cancelled";
   rsvpCount: number;
-  userRsvp: RsvpStatus;
+  myRsvp: RsvpStatus | null;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -307,7 +307,7 @@ export default function MeetingsPage() {
                     <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "13px", color: "var(--color-text-secondary)" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                         <Clock size={14} />
-                        {new Date(meeting.startTime).toLocaleString()} – {new Date(meeting.endTime).toLocaleTimeString()}
+                        {new Date(meeting.startTime).toLocaleString()}{meeting.endTime ? ` – ${new Date(meeting.endTime).toLocaleTimeString()}` : ""}
                       </span>
                       {meeting.location && (
                         <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -322,7 +322,7 @@ export default function MeetingsPage() {
                 </div>
                 <div style={{ marginTop: "12px", display: "flex", gap: "6px" }}>
                   {rsvpOptions.map((opt) => {
-                    const isSelected = meeting.userRsvp === opt.value;
+                    const isSelected = meeting.myRsvp === opt.value;
                     return (
                       <button
                         key={opt.value}

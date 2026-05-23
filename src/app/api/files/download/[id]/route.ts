@@ -22,10 +22,11 @@ export async function GET(
 
     const buffer = await readFile(join(UPLOADS_DIR, file.storagePath));
 
+    const encodedName = encodeURIComponent(file.fileName);
     return new Response(buffer, {
       headers: {
         "Content-Type": file.mimeType,
-        "Content-Disposition": `attachment; filename="${file.fileName}"`,
+        "Content-Disposition": `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`,
         "Content-Length": String(file.fileSize),
       },
     });

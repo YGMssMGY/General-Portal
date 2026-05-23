@@ -286,7 +286,7 @@ export default function AccountsPage() {
                   No members found.
                 </div>
               ) : (
-                members.map((m) => (
+                members.filter((m) => m.id !== profile?.id).map((m) => (
                   <div
                     key={m.id}
                     onClick={() => setKudosMember(kudosMember === m.id ? "" : m.id)}

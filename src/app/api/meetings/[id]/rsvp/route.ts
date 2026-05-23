@@ -18,8 +18,15 @@ export async function POST(
     const body = await request.json();
     const { status } = body;
 
+    if (status === null) {
+      await db.meetingRsvp.deleteMany({
+        where: { meetingId: id, userId: session.user.id },
+      });
+      return success({ removed: true });
+    }
+
     if (!["accepted", "declined", "maybe"].includes(status)) {
-      return error("Status must be accepted, declined, or maybe", 400);
+      return error("Status must be accepted, declined, maybe, or null to remove", 400);
     }
 
     const rsvp = await db.meetingRsvp.upsert({
