@@ -2,23 +2,25 @@ import { useEffect, useState, useCallback } from "react";
 import { fetchJson } from "../api/httpClient";
 import type { NotificationItem } from "../types";
 
-export function useNotifications() {
+export function useNotifications(enabled = true) {
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
     const fetchNotifications = useCallback(async () => {
+        if (!enabled) return;
         try {
             const data = await fetchJson<NotificationItem[]>("/notifications");
             setNotifications(data);
         } catch {
             /* ignore */
         }
-    }, []);
+    }, [enabled]);
 
     useEffect(() => {
+        if (!enabled) return;
         fetchNotifications();
         const poll = setInterval(fetchNotifications, 30_000);
         return () => clearInterval(poll);
-    }, [fetchNotifications]);
+    }, [enabled, fetchNotifications]);
 
     const markRead = useCallback(async (id: string) => {
         await fetchJson(`/notifications/${id}/read`, { method: "PATCH" });
