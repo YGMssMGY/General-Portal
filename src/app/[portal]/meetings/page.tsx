@@ -4,12 +4,8 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import { Plus, MapPin, Clock, Users, Calendar, Trash2 } from "lucide-react";
-
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
+import { Plus, MapPin, Clock, Users, Calendar, Trash2, Eye, EyeOff } from "lucide-react";
+import { usePortal } from "@/hooks/usePortal";
 
 type RsvpStatus = "accepted" | "maybe" | "declined" | null;
 
@@ -65,7 +61,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function MeetingsPage() {
-  const portal = getPortal();
+  const portal = usePortal();
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const qc = useQueryClient();
@@ -77,6 +73,20 @@ export default function MeetingsPage() {
     endTime: "",
     location: "",
   });
+  const [showRsvps, setShowRsvps] = useState<Record<string, boolean>>({});
+  const [rsvpList, setRsvpList] = useState<Record<string, { id: string; status: string; user: { id: string; name: string | null; email: string } }[]>>({});
+
+  async function toggleRsvps(meetingId: string) {
+    if (rsvpList[meetingId]) {
+      setShowRsvps((p) => ({ ...p, [meetingId]: !p[meetingId] }));
+      return;
+    }
+    try {
+      const data = await fetchJson<{ id: string; status: string; user: { id: string; name: string | null; email: string } }[]>(`/api/meetings/${meetingId}/rsvps`);
+      setRsvpList((p) => ({ ...p, [meetingId]: data }));
+      setShowRsvps((p) => ({ ...p, [meetingId]: true }));
+    } catch {}
+  }
 
   const { data: meetings, isLoading } = useQuery<Meeting[]>({
     queryKey: [portal, "meetings"],
@@ -358,6 +368,40 @@ export default function MeetingsPage() {
                     </button>
                   )}
                 </div>
+
+                {isAdmin && (
+                  <div style={{ marginTop: "12px" }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleRsvps(meeting.id); }}
+                      style={{ ...btnBase, padding:"6px 12px", fontSize:"12px", backgroundColor:"transparent", color:"var(--color-primary)", border:"1px solid var(--color-border)", display:"inline-flex", alignItems:"center", gap:"6px" }}
+                    >
+                      {showRsvps[meeting.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {showRsvps[meeting.id] ? "Hide RSVPs" : `View RSVPs (${meeting.rsvpCount})`}
+                    </button>
+
+                    {showRsvps[meeting.id] && rsvpList[meeting.id] && (
+                      <div style={{ marginTop:"8px", border:"1px solid var(--color-border)", borderRadius:"5px", padding:"8px", backgroundColor:"var(--color-bg-secondary)" }}>
+                        {rsvpList[meeting.id].length === 0 ? (
+                          <p style={{ margin:0, fontSize:"12px", color:"var(--color-text-secondary)" }}>No RSVPs yet.</p>
+                        ) : (
+                          rsvpList[meeting.id].map((r) => (
+                            <div key={r.id} style={{ display:"flex", alignItems:"center", gap:"8px", padding:"6px 0", borderBottom:"1px solid var(--color-border)", fontSize:"13px" }}>
+                              <span style={{ fontWeight:500, color:"var(--color-text)", flex:1 }}>{r.user.name || r.user.email}</span>
+                              <span style={{
+                                padding:"2px 6px", borderRadius:"5px", fontSize:"11px", fontWeight:600,
+                                color: r.status === "accepted" ? "var(--color-success)" : r.status === "maybe" ? "var(--color-warning)" : "var(--color-destructive)",
+                                backgroundColor: r.status === "accepted" ? "#e8f5e9" : r.status === "maybe" ? "#fff8e1" : "#fff5f5",
+                              }}>
+                                {r.status}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
