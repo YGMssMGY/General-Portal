@@ -23,7 +23,7 @@ export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps
   }
 
   function handleMicrosoftSignIn() {
-    signIn("microsoft-entra-id", { callbackUrl });
+    signIn("devconnect", { callbackUrl });
   }
 
   return (

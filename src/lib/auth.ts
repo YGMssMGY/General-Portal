@@ -1,5 +1,4 @@
 import NextAuth from "next-auth"
-import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 import { cookies } from "next/headers"
 import { getDbForPortal } from "@/lib/db"
 import { ROLE_PERMISSIONS } from "@/lib/permissions"
@@ -16,6 +15,70 @@ declare module "next-auth" {
   }
 }
 
+function DevConnect(config: { clientId: string; clientSecret: string }) {
+  const issuer = process.env.DEVCONNECT_ISSUER!
+  return {
+    id: "devconnect",
+    name: "DevConnect",
+    type: "oauth" as const,
+    checks: ["pkce", "state"],
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+    authorization: {
+      url: `${issuer}/api/oauth2/authorize`,
+      params: { scope: "openid profile email" },
+    },
+    token: {
+      url: `${issuer}/api/oauth2/token`,
+      async request(context: any) {
+        const url = new URL(`${issuer}/api/oauth2/token`)
+
+        // This server expects token params (code, client_id, client_secret, code_verifier, etc.)
+        // appended as query parameters instead of sent in the POST body.
+        const bodyParams = new URLSearchParams(context.params)
+        bodyParams.forEach((value, key) => {
+          url.searchParams.set(key, value)
+        })
+
+        if (context.checks?.code_verifier) {
+          url.searchParams.set("code_verifier", context.checks.code_verifier)
+        }
+        if (!url.searchParams.has("client_id")) {
+          url.searchParams.set("client_id", context.provider.clientId)
+        }
+        if (!url.searchParams.has("client_secret") && context.provider.clientSecret) {
+          url.searchParams.set("client_secret", context.provider.clientSecret)
+        }
+
+        console.log(url.toString)
+
+        const response = await fetch(url.toString(), {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`Token endpoint error: ${response.status} ${text}`)
+        }
+
+        return await response.json()
+      },
+    },
+    userinfo: `${issuer}/api/oauth2/userinfo`,
+    profile(profile: any) {
+      return {
+        id: profile.sub ?? profile.id,
+        name: profile.name,
+        email: profile.email,
+        image: profile.picture,
+      }
+    },
+  }
+}
+
 export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   pages: {
@@ -25,10 +88,9 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
   providers: [
-    MicrosoftEntraID({
-      clientId: process.env.MICROSOFT_CLIENT_ID!,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/v2.0`,
+    DevConnect({
+      clientId: process.env.DEVCONNECT_CLIENT_ID!,
+      clientSecret: process.env.DEVCONNECT_CLIENT_SECRET!,
     }),
   ],
   callbacks: {
