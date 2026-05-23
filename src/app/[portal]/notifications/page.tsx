@@ -37,7 +37,7 @@ export default function NotificationsPage() {
   const portal = getPortal();
   const qc = useQueryClient();
 
-  const { data: notifications, isLoading } = useQuery<Notification[]>({
+  const { data: notifications, isLoading } = useQuery<{ notifications: Notification[]; pagination: { total: number } }>({
     queryKey: [portal, "notifications"],
     queryFn: () => fetchJson(`/api/notifications`),
     refetchInterval: 30_000,
@@ -63,7 +63,7 @@ export default function NotificationsPage() {
     return <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>;
   }
 
-  const list = notifications ?? [];
+  const list = notifications?.notifications ?? [];
   const unreadCount = list.filter((n) => !n.read).length;
 
   return (

@@ -113,6 +113,11 @@ export default function AccountsPage() {
     queryFn: () => fetchJson(`/api/kudos/leaderboard`),
   });
 
+  const { data: members } = useQuery<{ id: string; name: string; email: string }[]>({
+    queryKey: [portal, "members"],
+    queryFn: () => fetchJson(`/api/members`),
+  });
+
   const { data: adminUsers } = useQuery<AdminUser[]>({
     queryKey: [portal, "admin", "users"],
     queryFn: () => fetchJson(`/api/admin/users`),
@@ -262,12 +267,43 @@ export default function AccountsPage() {
             <Send size={16} /> Send Kudos
           </h4>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <input
-              style={inputStyle}
-              placeholder="Receiver member ID or select..."
-              value={kudosMember}
-              onChange={(e) => setKudosMember(e.target.value)}
-            />
+            <div
+              style={{
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-sm)",
+                maxHeight: "160px",
+                overflowY: "auto",
+                backgroundColor: "var(--color-bg)",
+              }}
+            >
+              {!members ? (
+                <div style={{ padding: "8px 12px", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+                  Loading members...
+                </div>
+              ) : members.length === 0 ? (
+                <div style={{ padding: "8px 12px", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+                  No members found.
+                </div>
+              ) : (
+                members.map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => setKudosMember(kudosMember === m.id ? "" : m.id)}
+                    style={{
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      backgroundColor: kudosMember === m.id ? "var(--color-primary-light)" : "transparent",
+                      borderBottom: "1px solid var(--color-border)",
+                      transition: "background-color 100ms ease",
+                    }}
+                  >
+                    <div style={{ fontWeight: 500, color: "var(--color-text)" }}>{m.name}</div>
+                    <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>{m.email}</div>
+                  </div>
+                ))
+              )}
+            </div>
             <textarea
               style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }}
               placeholder="Write a message..."

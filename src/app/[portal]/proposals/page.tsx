@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { FileText, Plus, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock } from "lucide-react";
+import { FileText, Plus, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Trash2 } from "lucide-react";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -48,6 +49,8 @@ const statusConfig: Record<string, { label: string; variant: "warning" | "succes
 
 export default function ProposalsPage() {
   const portal = getPortal();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -85,6 +88,13 @@ export default function ProposalsPage() {
   const rejectMutation = useMutation({
     mutationFn: (id: string) =>
       fetchJson(`/api/proposals/${id}/reject`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
+    },
+  });
+
+  const deleteProposal = useMutation({
+    mutationFn: (id: string) => fetchJson(`/api/proposals/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
     },
@@ -238,6 +248,14 @@ export default function ProposalsPage() {
                     >
                       Reject
                     </Button>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this proposal?")) deleteProposal.mutate(proposal.id); }}
+                        style={{ display:"flex", alignItems:"center", gap:"6px", padding:"8px 12px", border:"1px solid var(--color-destructive)", borderRadius:"5px", background:"var(--color-bg)", cursor:"pointer", fontSize:"13px", fontFamily:"inherit", color:"var(--color-destructive)" }}
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

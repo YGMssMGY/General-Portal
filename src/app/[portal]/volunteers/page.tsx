@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import { Plus, UserCheck, UserX, Clock, Users, Trophy } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Plus, UserCheck, UserX, Clock, Users, Trophy, Eye, EyeOff } from "lucide-react";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -118,6 +119,30 @@ export default function VolunteersPage() {
       qc.invalidateQueries({ queryKey: [portal, "volunteers", "stats"] });
     },
   });
+
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
+
+  const [showSignups, setShowSignups] = useState<Record<string, boolean>>({});
+  const [signupData, setSignupData] = useState<Record<string, { id: string; name: string; email: string; signedUpAt: string }[]>>({});
+  const [loadingSignups, setLoadingSignups] = useState<Record<string, boolean>>({});
+
+  const fetchSignups = async (slotId: string) => {
+    if (signupData[slotId]) {
+      setShowSignups((prev) => ({ ...prev, [slotId]: !prev[slotId] }));
+      return;
+    }
+    setLoadingSignups((prev) => ({ ...prev, [slotId]: true }));
+    setShowSignups((prev) => ({ ...prev, [slotId]: true }));
+    try {
+      const data = await fetchJson<{ id: string; name: string; email: string; signedUpAt: string }[]>(`/api/volunteers/signups?slotId=${slotId}`);
+      setSignupData((prev) => ({ ...prev, [slotId]: data }));
+    } catch {
+      // ignore
+    } finally {
+      setLoadingSignups((prev) => ({ ...prev, [slotId]: false }));
+    }
+  };
 
   if (slotsLoading || statsLoading) {
     return <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>;
@@ -359,44 +384,103 @@ export default function VolunteersPage() {
                     </span>
                   </div>
                 </div>
-                <div style={{ marginTop: "12px" }}>
-                  {slot.userSignedUp ? (
+                <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {slot.userSignedUp ? (
+                      <button
+                        type="button"
+                        onClick={() => cancelMutation.mutate(slot.id)}
+                        disabled={cancelMutation.isPending}
+                        style={{
+                          ...btnBase,
+                          backgroundColor: "transparent",
+                          color: "var(--color-destructive)",
+                          border: "1px solid var(--color-destructive)",
+                          opacity: cancelMutation.isPending ? 0.5 : 1,
+                        }}
+                      >
+                        <UserX size={15} /> Cancel
+                      </button>
+                    ) : !full ? (
+                      <button
+                        type="button"
+                        onClick={() => signupMutation.mutate(slot.id)}
+                        disabled={signupMutation.isPending}
+                        style={{
+                          ...btnBase,
+                          backgroundColor: "var(--color-primary)",
+                          color: "#fff",
+                          opacity: signupMutation.isPending ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!signupMutation.isPending) e.currentTarget.style.backgroundColor = "var(--color-primary-hover)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--color-primary)";
+                        }}
+                      >
+                        <UserCheck size={15} /> Sign Up
+                      </button>
+                    ) : null}
+                  </div>
+                  {isAdmin && (
                     <button
                       type="button"
-                      onClick={() => cancelMutation.mutate(slot.id)}
-                      disabled={cancelMutation.isPending}
+                      onClick={() => fetchSignups(slot.id)}
                       style={{
                         ...btnBase,
                         backgroundColor: "transparent",
-                        color: "var(--color-destructive)",
-                        border: "1px solid var(--color-destructive)",
-                        opacity: cancelMutation.isPending ? 0.5 : 1,
+                        color: "var(--color-primary)",
+                        border: "1px solid var(--color-border)",
                       }}
                     >
-                      <UserX size={15} /> Cancel
+                      {loadingSignups[slot.id] ? (
+                        "Loading..."
+                      ) : showSignups[slot.id] ? (
+                        <><EyeOff size={15} /> Hide Signups</>
+                      ) : (
+                        <><Eye size={15} /> View Signups ({slot.signedUp})</>
+                      )}
                     </button>
-                  ) : !full ? (
-                    <button
-                      type="button"
-                      onClick={() => signupMutation.mutate(slot.id)}
-                      disabled={signupMutation.isPending}
-                      style={{
-                        ...btnBase,
-                        backgroundColor: "var(--color-primary)",
-                        color: "#fff",
-                        opacity: signupMutation.isPending ? 0.5 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!signupMutation.isPending) e.currentTarget.style.backgroundColor = "var(--color-primary-hover)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "var(--color-primary)";
-                      }}
-                    >
-                      <UserCheck size={15} /> Sign Up
-                    </button>
-                  ) : null}
+                  )}
                 </div>
+                {isAdmin && showSignups[slot.id] && signupData[slot.id] && (
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      padding: "10px 12px",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-sm)",
+                      backgroundColor: "var(--color-bg-secondary)",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: "6px", color: "var(--color-text)", fontSize: "13px" }}>
+                      Signed Up Members
+                    </div>
+                    {signupData[slot.id].length === 0 ? (
+                      <div style={{ color: "var(--color-text-secondary)", fontSize: "12px" }}>No signups yet.</div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {signupData[slot.id].map((su) => (
+                          <div
+                            key={su.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "4px 0",
+                              borderBottom: "1px solid var(--color-border)",
+                            }}
+                          >
+                            <span style={{ fontWeight: 500, color: "var(--color-text)" }}>{su.name}</span>
+                            <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>{su.email}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
