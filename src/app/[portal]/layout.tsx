@@ -115,7 +115,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100dvh", backgroundColor: "var(--color-bg)" }}>
+    <div style={{ display: "flex", height: "100dvh", overflow: "hidden", backgroundColor: "var(--color-bg)" }}>
       <aside
         className="hidden md:flex"
         style={{
@@ -124,6 +124,9 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
           flexDirection: "column",
           borderRight: "1px solid var(--color-border)",
           backgroundColor: "var(--color-bg)",
+          height: "100dvh",
+          position: "sticky",
+          top: 0,
           overflow: "hidden",
         }}
       >
