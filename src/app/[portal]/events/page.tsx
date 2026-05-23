@@ -34,7 +34,7 @@ function getPortal(): string {
   return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
 }
 
-interface EventItem {
+interface EventData {
   id: string;
   title: string;
   description: string | null;
@@ -43,13 +43,8 @@ interface EventItem {
   location: string | null;
   isPublic: boolean;
   status: "draft" | "published" | "cancelled";
-  createdBy: { id: string; name: string | null; image: string | null };
+  createdBy: { id: string; name: string | null; email: string; image: string | null };
   createdAt: string;
-}
-
-interface EventsResponse {
-  events: EventItem[];
-  total: number;
 }
 
 const eventStatusConfig: Record<string, { label: string; variant: "outline" | "default" | "destructive" }> = {
@@ -71,9 +66,9 @@ export default function EventsPage() {
   const [newLocation, setNewLocation] = useState("");
   const [newIsPublic, setNewIsPublic] = useState(false);
 
-  const { data, isLoading, isError } = useQuery<EventsResponse>({
+  const { data, isLoading, isError } = useQuery<EventData[]>({
     queryKey: [portal, "events"],
-    queryFn: () => fetchJson<EventsResponse>(`/api/events`),
+    queryFn: () => fetchJson<EventData[]>(`/api/events`),
   });
 
   const createMutation = useMutation({
@@ -85,7 +80,7 @@ export default function EventsPage() {
       location: string;
       isPublic: boolean;
     }) =>
-      fetchJson<EventItem>(`/api/events`, {
+      fetchJson<EventData>(`/api/events`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -140,7 +135,7 @@ export default function EventsPage() {
     );
   }
 
-  const events = data.events ?? [];
+  const events = data ?? [];
 
   function handleCreate() {
     if (!newTitle.trim() || !newStartDate) return;

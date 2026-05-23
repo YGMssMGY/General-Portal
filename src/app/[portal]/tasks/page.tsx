@@ -113,9 +113,9 @@ export default function TasksPage() {
   const [newDueDate, setNewDueDate] = useState("");
   const [commentText, setCommentText] = useState("");
 
-  const { data, isLoading, isError } = useQuery<TasksResponse>({
+  const { data, isLoading, isError } = useQuery<Task[]>({
     queryKey: [portal, "tasks"],
-    queryFn: () => fetchJson<TasksResponse>(`/api/tasks`),
+    queryFn: () => fetchJson<Task[]>(`/api/tasks`),
   });
 
   const createMutation = useMutation({
@@ -160,7 +160,7 @@ export default function TasksPage() {
     },
   });
 
-  const tasks = data?.tasks ?? [];
+  const tasks = data ?? [];
   const filteredTasks =
     statusFilter === "all"
       ? tasks
