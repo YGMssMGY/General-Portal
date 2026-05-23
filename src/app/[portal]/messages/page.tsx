@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   Mail,
   MailOpen,
+  Users,
 } from "lucide-react";
 import {
   Dialog,
@@ -79,6 +80,18 @@ export default function MessagesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newSubject, setNewSubject] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [newRecipients, setNewRecipients] = useState<string[]>([]);
+
+  const { data: memberList } = useQuery<{ id: string; name: string; email: string }[]>({
+    queryKey: [portal, "members"],
+    queryFn: () => fetchJson(`/api/members`),
+  });
+
+  function toggleRecipient(id: string) {
+    setNewRecipients((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+    );
+  }
   const [replyContent, setReplyContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +114,7 @@ export default function MessagesPage() {
   }, [threadDetail?.messages]);
 
   const createMutation = useMutation({
-    mutationFn: (body: { subject: string; content: string }) =>
+    mutationFn: (body: { subject: string; content: string; recipientIds?: string[] }) =>
       fetchJson<ThreadDetail>(`/api/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,6 +125,7 @@ export default function MessagesPage() {
       setShowCreate(false);
       setNewSubject("");
       setNewContent("");
+      setNewRecipients([]);
       setSelectedThreadId(newThread.id);
       setShowMobileThread(true);
     },
@@ -132,8 +146,12 @@ export default function MessagesPage() {
   });
 
   function handleCreate() {
-    if (!newSubject.trim() || !newContent.trim()) return;
-    createMutation.mutate({ subject: newSubject.trim(), content: newContent.trim() });
+    if (newRecipients.length === 0 || !newContent.trim()) return;
+    createMutation.mutate({
+      subject: newSubject.trim() || `Message to ${newRecipients.length} recipient(s)`,
+      content: newContent.trim(),
+      recipientIds: newRecipients,
+    });
   }
 
   function handleReply() {
@@ -485,7 +503,75 @@ export default function MessagesPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div>
               <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: "6px" }}>
-                Subject
+                To <span style={{ color: "var(--color-destructive)" }}>*</span>
+              </label>
+              <div
+                style={{
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "5px",
+                  maxHeight: "160px",
+                  overflowY: "auto",
+                  padding: "4px",
+                }}
+              >
+                {!memberList || memberList.length === 0 ? (
+                  <div style={{ padding: "8px", fontSize: "13px", color: "var(--color-text-secondary)" }}>
+                    No members available
+                  </div>
+                ) : (
+                  memberList.map((m) => {
+                    const selected = newRecipients.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleRecipient(m.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          width: "100%",
+                          padding: "8px 10px",
+                          border: "none",
+                          borderRadius: "5px",
+                          backgroundColor: selected ? "var(--color-primary-light)" : "transparent",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          fontFamily: "inherit",
+                          color: "var(--color-text)",
+                          textAlign: "left",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            borderRadius: "5px",
+                            border: selected ? "none" : "2px solid var(--color-border)",
+                            backgroundColor: selected ? "var(--color-primary)" : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {selected && (
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <Users size={14} style={{ color: "var(--color-text-secondary)", flexShrink: 0 }} />
+                        <span style={{ flex: 1 }}>{m.name || m.email}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: "6px" }}>
+                Subject (optional)
               </label>
               <Input
                 placeholder="Enter message subject"
@@ -495,7 +581,7 @@ export default function MessagesPage() {
             </div>
             <div>
               <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: "6px" }}>
-                Message
+                Message <span style={{ color: "var(--color-destructive)" }}>*</span>
               </label>
               <Textarea
                 placeholder="Write your message..."
@@ -511,7 +597,7 @@ export default function MessagesPage() {
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!newSubject.trim() || !newContent.trim() || createMutation.isPending}
+              disabled={newRecipients.length === 0 || !newContent.trim() || createMutation.isPending}
             >
               {createMutation.isPending ? "Sending..." : "Send Message"}
             </Button>

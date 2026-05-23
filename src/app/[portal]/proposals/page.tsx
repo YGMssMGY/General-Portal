@@ -74,6 +74,22 @@ export default function ProposalsPage() {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchJson(`/api/proposals/${id}/approve`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchJson(`/api/proposals/${id}/reject`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
+    },
+  });
+
   if (isLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -203,9 +219,10 @@ export default function ProposalsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={proposal.status !== "pending"}
+                      disabled={proposal.status !== "pending" || approveMutation.isPending}
                       onClick={(e) => {
                         e.stopPropagation();
+                        approveMutation.mutate(proposal.id);
                       }}
                     >
                       Approve
@@ -213,9 +230,10 @@ export default function ProposalsPage() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      disabled={proposal.status !== "pending"}
+                      disabled={proposal.status !== "pending" || rejectMutation.isPending}
                       onClick={(e) => {
                         e.stopPropagation();
+                        rejectMutation.mutate(proposal.id);
                       }}
                     >
                       Reject
