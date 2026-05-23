@@ -66,7 +66,7 @@ interface TransactionsResponse {
 
 function formatCurrency(amount: number): string {
   const abs = Math.abs(amount);
-  return `$${abs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `¥${abs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const categories = [
@@ -319,7 +319,7 @@ export default function FinancePage() {
                       {format(new Date(tx.date), "MMM d, yyyy")}
                     </span>
                     <span style={{ color: "var(--color-text)", fontWeight: 500 }}>
-                      {tx.description ?? "No description"}
+                      {tx.description || "No description"}
                     </span>
                     <span style={{ color: "var(--color-text-secondary)" }}>
                       {tx.category ?? "-"}
@@ -358,7 +358,7 @@ export default function FinancePage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-text)", margin: "0 0 4px" }}>
-                          {tx.description ?? "No description"}
+                          {tx.description || "No description"}
                         </p>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>

@@ -76,15 +76,16 @@ export async function POST(request: Request) {
     if (!workspace) return error("Workspace not found", 404);
 
     const body = await request.json();
-    const { subject, content } = body;
-    if (!subject?.trim() || !content?.trim()) {
-      return error("Subject and content are required", 400);
+    const { subject, content, recipientIds } = body;
+    const finalSubject = subject?.trim() || "New conversation";
+    if (!content?.trim()) {
+      return error("Content is required", 400);
     }
 
     const thread = await db.messageThread.create({
       data: {
         workspaceId: workspace.id,
-        subject: subject.trim(),
+        subject: finalSubject,
         messages: {
           create: {
             senderId: session.user.id,
@@ -101,6 +102,22 @@ export async function POST(request: Request) {
       },
     });
 
+    if (recipientIds && Array.isArray(recipientIds) && recipientIds.length > 0) {
+      const messageId = thread.messages[0]?.id;
+      if (messageId) {
+        await db.messageRead.createMany({
+          data: recipientIds
+            .filter((rid: string) => rid !== session.user.id)
+            .map((rid: string) => ({
+              messageId,
+              userId: rid,
+              readAt: new Date(),
+            })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     await db.activityFeed.create({
       data: {
         workspaceId: workspace.id,
@@ -108,7 +125,7 @@ export async function POST(request: Request) {
         action: "created",
         entityType: "message_thread",
         entityId: thread.id,
-        metadata: { subject: thread.subject },
+        metadata: { subject: finalSubject },
       },
     });
 

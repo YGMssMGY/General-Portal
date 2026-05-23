@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import { Search, X, Shield, Mail, User } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Search, X, Shield, Mail, User, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -47,14 +48,39 @@ const btnBase: React.CSSProperties = {
   transition: "background-color 100ms ease",
 };
 
+const ROLES = ["admin", "officer", "member"] as const;
+
 export default function MembersPage() {
   const portal = getPortal();
+  const qc = useQueryClient();
+  const { data: session } = useSession();
+  const currentUserRole = (session?.user as any)?.role;
+  const isAdmin = currentUserRole === "admin";
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const { data: members, isLoading } = useQuery<Member[]>({
     queryKey: [portal, "members"],
     queryFn: () => fetchJson(`/api/members`),
+  });
+
+  const updateRole = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      fetchJson(`/api/members/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [portal, "members"] }),
+  });
+
+  const removeMember = useMutation({
+    mutationFn: (userId: string) =>
+      fetchJson(`/api/members/${userId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "members"] });
+      setSelectedMember(null);
+    },
   });
 
   const filtered = useMemo(() => {
@@ -69,8 +95,6 @@ export default function MembersPage() {
   if (isLoading) {
     return <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>;
   }
-
-  const isAdmin = (role: string) => role === "admin";
 
   return (
     <div>
@@ -263,12 +287,41 @@ function RoleBadge({ role }: { role: string }) {
 
 function MemberDetail({ member, onClose }: { member: Member; onClose: () => void }) {
   const portal = getPortal();
+  const qc = useQueryClient();
+  const { data: session } = useSession();
+  const currentUserRole = (session?.user as any)?.role;
+  const isAdmin = currentUserRole === "admin";
 
-  const { data: detail } = useQuery<Member>({
+  const { data: detail } = useQuery<Member & { membershipId?: string }>({
     queryKey: [portal, "members", member.id],
     queryFn: () => fetchJson(`/api/members/${member.id}`),
     enabled: !!member.id,
   });
+
+  const updateRole = useMutation({
+    mutationFn: (role: string) =>
+      fetchJson(`/api/members/${member.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "members"] });
+      qc.invalidateQueries({ queryKey: [portal, "members", member.id] });
+    },
+  });
+
+  const removeMember = useMutation({
+    mutationFn: () =>
+      fetchJson(`/api/members/${member.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [portal, "members"] });
+      onClose();
+    },
+  });
+
+  const currentRole = detail?.role ?? member.role;
+  const roleIndex = ROLES.indexOf(currentRole as typeof ROLES[number]);
 
   return (
     <div
@@ -311,7 +364,7 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
             <X size={18} />
           </button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div
               style={{
@@ -327,7 +380,7 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
                 fontWeight: 700,
               }}
             >
-              {(detail?.name ?? member.name).charAt(0).toUpperCase()}
+              {(detail?.name ?? member.name)?.charAt(0)?.toUpperCase() ?? "?"}
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--color-text)" }}>
@@ -338,13 +391,98 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
               </div>
             </div>
           </div>
+
           <div>
-            <RoleBadge role={detail?.role ?? member.role} />
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Current Role
+            </div>
+            <RoleBadge role={currentRole} />
           </div>
-          {detail?.role === "admin" && (
-            <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: 0 }}>
-              This user has administrative privileges.
-            </p>
+
+          {isAdmin && member.id !== (session?.user as any)?.id && (
+            <div>
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Admin Actions
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {roleIndex < ROLES.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => updateRole.mutate(ROLES[roleIndex + 1])}
+                    disabled={updateRole.isPending}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-sm)",
+                      backgroundColor: "var(--color-bg)",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      color: "var(--color-text)",
+                      transition: "background-color 100ms ease",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
+                  >
+                    <ArrowUp size={14} style={{ color: "var(--color-success)" }} />
+                    Promote to {ROLES[roleIndex + 1]}
+                  </button>
+                )}
+                {roleIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => updateRole.mutate(ROLES[roleIndex - 1])}
+                    disabled={updateRole.isPending}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-sm)",
+                      backgroundColor: "var(--color-bg)",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      color: "var(--color-text)",
+                      transition: "background-color 100ms ease",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
+                  >
+                    <ArrowDown size={14} style={{ color: "var(--color-warning)" }} />
+                    Demote to {ROLES[roleIndex - 1]}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { if (confirm("Remove this member from the portal?")) removeMember.mutate(); }}
+                  disabled={removeMember.isPending}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px 12px",
+                    border: "1px solid var(--color-destructive)",
+                    borderRadius: "var(--radius-sm)",
+                    backgroundColor: "var(--color-bg)",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontFamily: "inherit",
+                    color: "var(--color-destructive)",
+                    transition: "background-color 100ms ease",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff5f5"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
+                >
+                  <Trash2 size={14} />
+                  Remove from Portal
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
