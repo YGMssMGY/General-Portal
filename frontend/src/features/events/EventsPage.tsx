@@ -865,7 +865,7 @@ export function EventsPage() {
                             </Column>
                             <Column lg={8} md={8} sm={4}>
                                 <TextInput
-                                    id="evt-owners"
+                                    id="evt-owners-2"
                                     labelText="Coordinators (comma-separated)"
                                     value={form.owners}
                                     onChange={(e) =>

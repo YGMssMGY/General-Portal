@@ -37,7 +37,10 @@ export function AccountsPage() {
             workspaceApi
                 .getAdminUsers()
                 .then(setAllUsers)
-                .catch(() => {});
+                .catch((err) => {
+                    console.warn("[feature] operation failed:", err);
+                    toast.error(err instanceof Error ? err.message : "Operation failed");
+                });
         }
     }, [user?.role]);
 
@@ -49,7 +52,10 @@ export function AccountsPage() {
         workspaceApi
             .getKudos()
             .then(setKudos)
-            .catch(() => {});
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            });
     }, []);
 
     const [whitelist, setWhitelist] = useState<any[]>([]);
@@ -63,7 +69,10 @@ export function AccountsPage() {
     useEffect(() => {
         fetchJson<any[]>("/admin/whitelist")
             .then(setWhitelist)
-            .catch(() => {});
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            });
     }, []);
 
     async function handleAddWhitelist(e: FormEvent) {

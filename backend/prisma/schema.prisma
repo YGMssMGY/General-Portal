@@ -265,7 +265,8 @@ model Proposal {
   submittedBy     String
   submittedById   String?
   submittedByUser User?        @relation("ProposalSubmitter", fields: [submittedById], references: [id])
-  submittedAt     DateTime
+      submittedAt     DateTime
+    summary         String?
 
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String

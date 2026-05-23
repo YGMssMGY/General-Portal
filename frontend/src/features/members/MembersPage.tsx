@@ -62,7 +62,10 @@ export function MembersPage() {
         workspaceApi
             .getRoles()
             .then(setRoles)
-            .catch(() => {});
+            .catch((err) => {
+                console.warn("[feature] operation failed:", err);
+                toast.error(err instanceof Error ? err.message : "Operation failed");
+            });
     }, [data]);
 
     const columns: ColumnDef<Member>[] = useMemo(

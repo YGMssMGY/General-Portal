@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { getAuthUser } from "../lib/get-auth-user.js";
 
 const route = new Hono();
 
@@ -32,7 +33,7 @@ route.post("/messages/threads", async (c) => {
     const wid = c.get("workspaceId");
     const body = await c.req.json();
     const db = c.get("db");
-    const userName = c.get("user")?.name as string | undefined;
+    const userName = getAuthUser(c).name;
     try {
         const item = await db.messageThread.create({
             data: {
@@ -71,7 +72,7 @@ route.post("/messages/threads/:id/reply", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json();
     const db = c.get("db");
-    const userName = (c.get("user") as any)?.name as string | undefined;
+    const userName = getAuthUser(c).name;
     if (!body?.body) return c.json({ error: "Body is required" }, 400);
     try {
         const thread = await db.messageThread.findUnique({
