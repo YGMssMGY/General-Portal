@@ -43,20 +43,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { receiverId, message } = body;
 
-    if (!receiverId) return error("receiverId is required", 400);
+    const rId = typeof receiverId === "string" ? receiverId.trim() : "";
+    if (!rId) return error("receiverId is required", 400);
+    if (rId === session.user.id) return error("You cannot send kudos to yourself", 400);
 
-    if (receiverId === session.user.id) {
-      return error("You cannot send kudos to yourself", 400);
-    }
-
-    const receiver = await db.user.findUnique({ where: { id: receiverId } });
+    const receiver = await db.user.findUnique({ where: { id: rId } });
     if (!receiver) return error("Receiver not found", 404);
 
     const kudo = await db.kudos.create({
       data: {
         workspaceId: workspace.id,
         senderId: session.user.id,
-        receiverId,
+        receiverId: rId,
         message: message ?? null,
       },
       include: {
