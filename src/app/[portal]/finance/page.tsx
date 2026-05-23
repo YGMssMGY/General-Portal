@@ -246,6 +246,27 @@ export default function FinancePage() {
   const isLoading = summaryLoading || txLoading;
   const isBudgetLoading = budgetOverviewLoading || allocLoading;
 
+  // Purchase request state and mutations
+  const [showCreatePr, setShowCreatePr] = useState(false);
+  const [prForm, setPrForm] = useState({ title: "", itemName: "", cost: "", quantity: 1, justification: "" });
+  const [prExpanded, setPrExpanded] = useState<string | null>(null);
+  const [prReview, setPrReview] = useState<{ id: string; status: string; comment: string } | null>(null);
+
+  const { data: prData, isLoading: prLoading } = useQuery<Record<string, unknown>[]>({
+    queryKey: [portal, "purchase-requests"],
+    queryFn: () => fetchJson("/api/purchase-requests"),
+  });
+
+  const createPr = useMutation({
+    mutationFn: (body: Record<string, unknown>) => fetchJson("/api/purchase-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] }); setShowCreatePr(false); setPrForm({ title: "", itemName: "", cost: "", quantity: 1, justification: "" }); },
+  });
+
+  const reviewPr = useMutation({
+    mutationFn: ({ id, status, reviewComment }: { id: string; status: string; reviewComment?: string }) => fetchJson(`/api/purchase-requests/${id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reviewComment }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] }); setPrReview(null); },
+  });
+
   // --- Loading state ---
   if (isLoading) {
     return (
@@ -338,27 +359,6 @@ export default function FinancePage() {
       description: spendDescription.trim(),
     });
   }
-
-  // Purchase request state and mutations
-  const [showCreatePr, setShowCreatePr] = useState(false);
-  const [prForm, setPrForm] = useState({ title: "", itemName: "", cost: "", quantity: 1, justification: "" });
-  const [prExpanded, setPrExpanded] = useState<string | null>(null);
-  const [prReview, setPrReview] = useState<{ id: string; status: string; comment: string } | null>(null);
-
-  const { data: prData, isLoading: prLoading } = useQuery<Record<string, unknown>[]>({
-    queryKey: [portal, "purchase-requests"],
-    queryFn: () => fetchJson("/api/purchase-requests"),
-  });
-
-  const createPr = useMutation({
-    mutationFn: (body: Record<string, unknown>) => fetchJson("/api/purchase-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] }); setShowCreatePr(false); setPrForm({ title: "", itemName: "", cost: "", quantity: 1, justification: "" }); },
-  });
-
-  const reviewPr = useMutation({
-    mutationFn: ({ id, status, reviewComment }: { id: string; status: string; reviewComment?: string }) => fetchJson(`/api/purchase-requests/${id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reviewComment }) }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] }); setPrReview(null); },
-  });
 
   const prStatusStyles: Record<string, { color: string; bg: string }> = {
     submitted: { color: "var(--color-primary)", bg: "var(--color-primary-light)" },
