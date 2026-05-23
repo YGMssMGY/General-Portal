@@ -18,8 +18,11 @@ export const requireWorkspace = createMiddleware(async (c, next) => {
     if (!workspaceId) {
         return c.json({ error: "Unauthorized" }, 401);
     }
+    if (!token?.id) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
     c.set("workspaceId", workspaceId);
-    c.set("user", token ?? {});
+    c.set("user", token);
     await next();
 });
 
@@ -30,12 +33,15 @@ export const requireAdmin = createMiddleware(async (c, next) => {
     if (!role || role !== "admin") {
         return c.json({ error: "Forbidden: admin role required" }, 403);
     }
-    c.set("user", token ?? {});
+    if (!token?.id) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+    c.set("user", token);
     const workspaceId = token?.workspaceId as string | undefined;
     if (workspaceId) c.set("workspaceId", workspaceId);
     const db = c.get("db");
-    const userId = token?.id as string | undefined;
-    if (db && userId && workspaceId) {
+    const userId = token.id as string;
+    if (db && workspaceId) {
         const membership = await db.membership.findFirst({
             where: { userId, workspaceId },
         });

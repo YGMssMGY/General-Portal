@@ -1,4 +1,5 @@
 import { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 
 export interface AuthUser {
     id: string;
@@ -12,7 +13,7 @@ export interface AuthUser {
 export function getAuthUser(c: Context): AuthUser {
     const user = c.get("user") as Record<string, unknown> | undefined;
     if (!user || !user.id) {
-        throw new Error("Authentication required");
+        throw new HTTPException(401, { message: "Authentication required" });
     }
 
     return {
@@ -27,12 +28,16 @@ export function getAuthUser(c: Context): AuthUser {
 
 export function requireRole(user: AuthUser, ...roles: string[]): void {
     if (!roles.includes(user.role)) {
-        throw new Error(`Access denied. Required role: ${roles.join(" or ")}`);
+        throw new HTTPException(403, {
+            message: `Access denied. Required role: ${roles.join(" or ")}`,
+        });
     }
 }
 
 export function requirePermission(user: AuthUser, permission: string): void {
     if (!user.permissions.includes("*") && !user.permissions.includes(permission)) {
-        throw new Error(`Access denied. Required permission: ${permission}`);
+        throw new HTTPException(403, {
+            message: `Access denied. Required permission: ${permission}`,
+        });
     }
 }

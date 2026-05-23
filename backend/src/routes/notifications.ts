@@ -45,7 +45,7 @@ route.patch("/notifications/:id/read", async (c) => {
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     await db.notification.update({
-        where: { id },
+        where: { id, userId, workspaceId },
         data: { isRead: true },
     });
 

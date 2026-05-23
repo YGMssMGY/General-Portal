@@ -23,7 +23,7 @@ export const env = {
         process.env["DATABASE_URL_DEVELOPERS"] || "postgresql://localhost:5432/general_portal_dev",
     DATABASE_URL_STUCO:
         process.env["DATABASE_URL_STUCO"] || "postgresql://localhost:5432/general_portal_stuco",
-    AUTH_SECRET: requireEnv("AUTH_SECRET") || "dev-secret-change-in-production-abc123",
+    AUTH_SECRET: requireEnv("AUTH_SECRET"),
     AUTH_URL: process.env["AUTH_URL"] || "http://localhost:3000",
     MICROSOFT_TENANT_ID: process.env["MICROSOFT_TENANT_ID"] || "common",
     MICROSOFT_CLIENT_ID: process.env["MICROSOFT_CLIENT_ID"] || "",

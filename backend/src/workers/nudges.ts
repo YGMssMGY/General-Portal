@@ -116,7 +116,7 @@ async function nudgeProposalsPending(db: PrismaClient, workspaceId: string) {
         where: {
             workspaceId,
             status: { notIn: ["approved", "rejected"] },
-            createdAt: { lt: twoDaysAgo },
+            submittedAt: { lt: twoDaysAgo },
         },
     });
 

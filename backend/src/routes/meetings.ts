@@ -92,7 +92,7 @@ route.patch("/meetings/:id", async (c) => {
     const data: any = { ...parsed };
     if (parsed.startsAt) data.startsAt = new Date(parsed.startsAt);
     if (parsed.endsAt) data.endsAt = new Date(parsed.endsAt);
-    const item = await db.meeting.update({ where: { id }, data });
+    const item = await db.meeting.update({ where: { id, workspaceId: wid }, data });
     return c.json(item);
 });
 

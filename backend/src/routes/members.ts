@@ -140,7 +140,7 @@ route.patch("/roles/:id", async (c) => {
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
     const grant = await db.permissionGrant.update({
-        where: { id },
+        where: { id, membership: { workspaceId: wid } },
         data: { permission: parsed.permission },
     });
     return c.json(grant);

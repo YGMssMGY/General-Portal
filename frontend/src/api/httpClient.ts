@@ -97,6 +97,7 @@ export async function fetchPage<T>(path: string, init?: RequestInit): Promise<T[
     if ("members" in data) return data.members as T[];
     if ("items" in data) return data.items as T[];
     if ("content" in data) return data.content as T[];
+    console.warn("[fetchPage] Unrecognized response shape at", path, Object.keys(data));
     return [];
 }
 

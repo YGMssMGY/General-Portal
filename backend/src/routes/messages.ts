@@ -33,8 +33,8 @@ route.post("/messages/threads", async (c) => {
     const wid = c.get("workspaceId");
     const body = await c.req.json();
     const db = c.get("db");
-    const userName = getAuthUser(c).name;
     try {
+        const userName = getAuthUser(c).name;
         const item = await db.messageThread.create({
             data: {
                 workspaceId: wid,
@@ -72,9 +72,9 @@ route.post("/messages/threads/:id/reply", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json();
     const db = c.get("db");
-    const userName = getAuthUser(c).name;
     if (!body?.body) return c.json({ error: "Body is required" }, 400);
     try {
+        const userName = getAuthUser(c).name;
         const thread = await db.messageThread.findUnique({
             where: { id, workspaceId: wid },
         });
@@ -107,7 +107,7 @@ route.patch("/messages/threads/:id/read", async (c) => {
         where: { id, workspaceId: wid },
     });
     if (!thread) return c.json({ error: "Thread not found" }, 404);
-    await db.messageThread.update({ where: { id }, data: { unreadCount: 0 } });
+    await db.messageThread.update({ where: { id, workspaceId: wid }, data: { unreadCount: 0 } });
     return c.body(null, 204);
 });
 
@@ -120,7 +120,7 @@ route.delete("/messages/threads/:id", async (c) => {
     });
     if (!thread) return c.json({ error: "Thread not found" }, 404);
     await db.messageThread.update({
-        where: { id },
+        where: { id, workspaceId: wid },
         data: { status: "archived" },
     });
     return c.body(null, 204);

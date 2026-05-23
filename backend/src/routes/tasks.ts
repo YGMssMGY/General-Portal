@@ -158,7 +158,7 @@ route.patch("/tasks/subtasks/:id", async (c) => {
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
     const item = await db.taskSubtask.update({
-        where: { id },
+        where: { id, task: { workspaceId: wid } },
         data: parsed,
     });
     return c.json(item);
@@ -172,7 +172,7 @@ route.delete("/tasks/subtasks/:id", async (c) => {
         where: { id, task: { workspaceId: wid } },
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
-    await db.taskSubtask.delete({ where: { id } });
+    await db.taskSubtask.delete({ where: { id, task: { workspaceId: wid } } });
     return c.body(null, 204);
 });
 
@@ -239,7 +239,9 @@ route.delete("/tasks/:id/attachments/:attachmentId", async (c) => {
         where: { id: attachmentId, task: { id, workspaceId: wid } },
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
-    await db.taskAttachment.delete({ where: { id: attachmentId } });
+    await db.taskAttachment.delete({
+        where: { id: attachmentId, task: { workspaceId: wid } },
+    });
     return c.body(null, 204);
 });
 

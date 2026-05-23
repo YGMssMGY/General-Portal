@@ -204,7 +204,7 @@ route.post("/proposals/:id/approve", async (c) => {
     };
     if (nextStep === "approved") updateData.status = "approved";
 
-    await db.proposal.update({ where: { id }, data: updateData });
+    await db.proposal.update({ where: { id, workspaceId: wid }, data: updateData });
 
     await writeAuditLog(db, wid, {
         actorId: userId,
@@ -298,7 +298,7 @@ route.post("/proposals/:id/reject", async (c) => {
     });
 
     await db.proposal.update({
-        where: { id },
+        where: { id, workspaceId: wid },
         data: { status: "rejected", approvalHistory: JSON.stringify(history) },
     });
 

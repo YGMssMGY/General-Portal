@@ -104,7 +104,7 @@ route.post("/volunteers/slots/:slotId/signups", async (c) => {
     });
     // Increment filled count on slot
     await db.volunteerSlot.update({
-        where: { id: slotId },
+        where: { id: slotId, workspaceId: wid },
         data: { filled: { increment: 1 } },
     });
     return c.json(item, 201);
@@ -121,7 +121,7 @@ route.patch("/volunteers/signups/:id", async (c) => {
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
     const item = await db.volunteerSignup.update({
-        where: { id },
+        where: { id, slot: { workspaceId: wid } },
         data: parsed,
     });
     return c.json(item);
