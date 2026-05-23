@@ -76,9 +76,16 @@ model User {
   volunteerSignups  VolunteerSignup[]
   createdEvents     EventItem[]      @relation("EventCreator")
   uploadedAttachments Attachment[]
-  budgetDecisions   BudgetTransaction[] @relation("BudgetDecider")
-  auditLogs         AuditLog[]
-  activityEntries   ActivityFeed[]
+  approvedEvents      EventItem[]          @relation("EventApprover")
+  createdTemplates    ProposalTemplate[]
+  uploadedLinks       LinkItem[]
+  purchaseSubmissions PurchaseRequest[]    @relation("PurchaseSubmitter")
+  purchaseReviews     PurchaseRequest[]    @relation("PurchaseReviewer")
+  cooperationSubmissions CooperationRequest[] @relation("CooperationSubmitter")
+  cooperationReviews  CooperationRequest[] @relation("CooperationReviewer")
+  budgetDecisions     BudgetTransaction[]  @relation("BudgetDecider")
+  auditLogs           AuditLog[]
+  activityEntries     ActivityFeed[]
 
   @@map("users")
 }
@@ -147,6 +154,12 @@ model Workspace {
   activityEntries   ActivityFeed[]
   kudos             Kudos[]
   attachments       Attachment[]
+  linkItems         LinkItem[]
+  proposalTemplates ProposalTemplate[]
+  historicalMembers HistoricalMember[]
+  purchaseRequests  PurchaseRequest[]
+  cooperationRequests CooperationRequest[]
+  annualPlans       AnnualEventPlan[]
 
   @@map("workspaces")
 }
@@ -229,21 +242,29 @@ model TaskComment {
 }
 
 model EventItem {
-  id          String       @id @default(uuid())
-  workspaceId String
-  title       String
-  description String?      @db.Text
-  startDate   DateTime
-  endDate     DateTime?
-  location    String?
-  isPublic    Boolean      @default(false)
-  status      EventStatus  @default(draft)
-  createdById String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id              String         @id @default(uuid())
+  workspaceId     String
+  title           String
+  description     String?        @db.Text
+  startDate       DateTime
+  endDate         DateTime?
+  location        String?
+  isPublic        Boolean        @default(false)
+  status          EventStatus    @default(draft)
+  approvalStatus  ApprovalStatus @default(pending)
+  approvedById    String?
+  approvedAt      DateTime?
+  reviewComment   String?        @db.Text
+  teamsMessageId  String?
+  createdById     String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User @relation("EventCreator", fields: [createdById], references: [id])
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User            @relation("EventCreator", fields: [createdById], references: [id])
+  approvedBy  User?           @relation("EventApprover", fields: [approvedById], references: [id])
+  annualPlan  AnnualEventPlan? @relation("AnnualPlan", fields: [annualPlanId], references: [id])
+  annualPlanId String?
 
   @@map("events")
 }
@@ -482,4 +503,131 @@ model ActivityFeed {
   user      User?     @relation(fields: [userId], references: [id])
 
   @@map("activity_feed")
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PurchaseRequestStatus {
+  draft
+  submitted
+  under_review
+  approved
+  rejected
+  fulfilled
+}
+
+model LinkItem {
+  id           String   @id @default(uuid())
+  workspaceId  String
+  title        String
+  url          String   @db.Text
+  description  String?  @db.Text
+  category     String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  uploadedBy User?     @relation(fields: [uploadedById], references: [id])
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("link_items")
+}
+
+model ProposalTemplate {
+  id          String   @id @default(uuid())
+  workspaceId String
+  title       String
+  description String   @db.Text
+  category    String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@map("proposal_templates")
+}
+
+model HistoricalMember {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  name         String
+  role         String
+  councilType  String    @default("student_council")
+  academicYear String
+  startDate    DateTime?
+  endDate      DateTime?
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("historical_members")
+}
+
+model PurchaseRequest {
+  id              String                @id @default(uuid())
+  workspaceId     String
+  title           String
+  itemName        String
+  cost            Decimal               @db.Decimal(12, 2)
+  justification   String                @db.Text
+  quantity        Int                   @default(1)
+  status          PurchaseRequestStatus @default(draft)
+  submittedById   String
+  reviewedById    String?
+  reviewComment   String?               @db.Text
+  receiptUrl      String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  submittedBy User     @relation("PurchaseSubmitter", fields: [submittedById], references: [id])
+  reviewedBy  User?    @relation("PurchaseReviewer", fields: [reviewedById], references: [id])
+
+  @@map("purchase_requests")
+}
+
+model CooperationRequest {
+  id              String    @id @default(uuid())
+  workspaceId     String
+  clubName        String
+  contactName     String
+  contactEmail    String
+  eventTitle      String
+  description     String    @db.Text
+  proposedDate    DateTime?
+  resourcesNeeded String?   @db.Text
+  status          String    @default("pending")
+  submittedById   String
+  reviewedById    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  submittedBy User      @relation("CooperationSubmitter", fields: [submittedById], references: [id])
+  reviewedBy  User?     @relation("CooperationReviewer", fields: [reviewedById], references: [id])
+
+  @@map("cooperation_requests")
+}
+
+model AnnualEventPlan {
+  id           String       @id @default(uuid())
+  workspaceId  String
+  name         String
+  academicYear String
+  description  String?      @db.Text
+  isActive     Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  events    EventItem[] @relation("AnnualPlan")
+
+  @@map("annual_event_plans")
 }

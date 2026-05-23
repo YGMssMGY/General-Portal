@@ -17,13 +17,14 @@ import {
   Video,
   Activity,
   Search,
-  UserCog,
   Settings,
   Bell,
-  Wallet,
   Menu,
   LogOut,
   X,
+  Link,
+  ShoppingCart,
+  Handshake,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -41,6 +42,9 @@ const NAV_ITEMS = [
   { label: "Activity", path: "/activity", icon: Activity },
   { label: "Search", path: "/search", icon: Search },
   { label: "Settings", path: "/settings", icon: Settings },
+  { label: "Links", path: "/links", icon: Link },
+  { label: "Purchase Requests", path: "/purchase-requests", icon: ShoppingCart },
+  { label: "Cooperation", path: "/cooperation", icon: Handshake },
   { label: "Notifications", path: "/notifications", icon: Bell },
 ] as const;
 

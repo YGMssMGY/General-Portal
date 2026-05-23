@@ -4,7 +4,13 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { useSession } from "next-auth/react";
-import { Search, X, Mail, User, ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Search, X, Mail, User, ArrowUp, ArrowDown, Trash2, Plus, Clock } from "lucide-react";
 import { RoleBadge } from "@/components/RoleBadge";
 import { usePortal } from "@/hooks/usePortal";
 
@@ -22,7 +28,7 @@ const inputStyle: React.CSSProperties = {
   padding: "10px 12px",
   fontSize: "14px",
   border: "1px solid var(--color-border)",
-  borderRadius: "var(--radius-sm)",
+  borderRadius: "5px",
   backgroundColor: "var(--color-bg)",
   color: "var(--color-text)",
   fontFamily: "inherit",
@@ -37,7 +43,7 @@ const selectStyle: React.CSSProperties = {
 
 const btnBase: React.CSSProperties = {
   padding: "8px 16px",
-  borderRadius: "var(--radius-sm)",
+  borderRadius: "5px",
   border: "none",
   fontSize: "13px",
   fontWeight: 600,
@@ -56,6 +62,8 @@ export default function MembersPage() {
   const { data: session } = useSession();
   const currentUserRole = (session?.user as any)?.role;
   const isAdmin = currentUserRole === "admin";
+
+  const [activeTab, setActiveTab] = useState("directory");
 
   // Profile edit state
   const [editName, setEditName] = useState(false);
@@ -85,6 +93,12 @@ export default function MembersPage() {
     queryKey: [portal, "admin", "users"],
     queryFn: () => fetchJson(`/api/admin/users`),
     enabled: isAdmin,
+  });
+
+  const { data: historicalMembers } = useQuery<MemberProfile[]>({
+    queryKey: [portal, "members", "historical"],
+    queryFn: () => fetchJson(`/api/members/historical`),
+    enabled: activeTab === "history",
   });
 
   // ─── Mutations ───
@@ -286,344 +300,370 @@ export default function MembersPage() {
         )}
       </Section>
 
-      {/* ─── Section 2: Members Directory ─── */}
-      <Section title="Members Directory">
-        <div style={{ position: "relative", marginBottom: "16px", maxWidth: "400px" }}>
-          <Search
-            size={16}
-            style={{
-              position: "absolute",
-              left: "12px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "var(--color-text-secondary)",
-              pointerEvents: "none",
-            }}
-          />
-          <input
-            style={{ ...inputStyle, paddingLeft: "36px" }}
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              style={{
-                position: "absolute",
-                right: "8px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "var(--color-text-secondary)",
-                padding: "4px",
-              }}
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+      {/* ─── Section 2: Tabs for Members ─── */}
+      <Section title="">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="directory">Directory</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-        {filtered.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "48px 16px",
-              color: "var(--color-text-secondary)",
-              fontSize: "14px",
-            }}
-          >
-            <User size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-            <p style={{ margin: 0 }}>No members found.</p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden md:block" style={{ overflowX: "auto" }}>
-              <table
-                style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}
+          <TabsContent value="directory">
+            <div style={{ position: "relative", marginBottom: "16px", maxWidth: "400px" }}>
+              <Search
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--color-text-secondary)",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                style={{ ...inputStyle, paddingLeft: "36px" }}
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  style={{
+                    position: "absolute",
+                    right: "8px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-text-secondary)",
+                    padding: "4px",
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "48px 16px",
+                  color: "var(--color-text-secondary)",
+                  fontSize: "14px",
+                }}
               >
-                <thead>
-                  <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
-                    <th style={thStyle}>Member</th>
-                    <th style={thStyle}>Email</th>
-                    <th style={thStyle}>Role</th>
-                  </tr>
-                </thead>
-                <tbody>
+                <User size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                <p style={{ margin: 0 }}>No members found.</p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden md:block" style={{ overflowX: "auto" }}>
+                  <table
+                    style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}
+                  >
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid var(--color-border)" }}>
+                        <th style={thStyle}>Member</th>
+                        <th style={thStyle}>Email</th>
+                        <th style={thStyle}>Role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((member) => (
+                        <tr
+                          key={member.id}
+                          style={{
+                            borderBottom: "1px solid var(--color-border)",
+                            cursor: "pointer",
+                          }}
+                          onClick={() => setSelectedMember(member)}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor =
+                              "var(--color-bg-secondary)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = "transparent")
+                          }
+                        >
+                          <td style={tdStyle}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "36px",
+                                  height: "36px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "var(--color-primary)",
+                                  color: "#fff",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "14px",
+                                  fontWeight: 700,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {member.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span
+                                style={{ fontWeight: 500, color: "var(--color-text)" }}
+                              >
+                                {member.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={tdStyle}>
+                            <span
+                              style={{
+                                color: "var(--color-text-secondary)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              <Mail size={14} /> {member.email}
+                            </span>
+                          </td>
+                          <td style={tdStyle}>
+                            <RoleBadge role={member.role} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div
+                  className="md:hidden"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                  }}
+                >
                   {filtered.map((member) => (
-                    <tr
+                    <div
                       key={member.id}
                       style={{
-                        borderBottom: "1px solid var(--color-border)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "5px",
+                        padding: "14px",
+                        backgroundColor: "var(--color-bg)",
                         cursor: "pointer",
                       }}
                       onClick={() => setSelectedMember(member)}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor =
-                          "var(--color-bg-secondary)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "transparent")
-                      }
                     >
-                      <td style={tdStyle}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "50%",
-                              backgroundColor: "var(--color-primary)",
-                              color: "#fff",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "14px",
-                              fontWeight: 700,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {member.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span
-                            style={{ fontWeight: 500, color: "var(--color-text)" }}
-                          >
-                            {member.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={tdStyle}>
-                        <span
-                          style={{
-                            color: "var(--color-text-secondary)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                          }}
-                        >
-                          <Mail size={14} /> {member.email}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>
-                        <RoleBadge role={member.role} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile cards */}
-            <div
-              className="md:hidden"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-              }}
-            >
-              {filtered.map((member) => (
-                <div
-                  key={member.id}
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-sm)",
-                    padding: "14px",
-                    backgroundColor: "var(--color-bg)",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setSelectedMember(member)}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "50%",
-                        backgroundColor: "var(--color-primary)",
-                        color: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "14px",
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
                       <div
                         style={{
-                          fontWeight: 600,
-                          fontSize: "14px",
-                          color: "var(--color-text)",
-                        }}
-                      >
-                        {member.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--color-text-secondary)",
                           display: "flex",
                           alignItems: "center",
-                          gap: "4px",
+                          gap: "10px",
+                          marginBottom: "8px",
                         }}
                       >
-                        <Mail size={12} /> {member.email}
+                        <div
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            backgroundColor: "var(--color-primary)",
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "14px",
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              fontSize: "14px",
+                              color: "var(--color-text)",
+                            }}
+                          >
+                            {member.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--color-text-secondary)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <Mail size={12} /> {member.email}
+                          </div>
+                        </div>
                       </div>
+                      <RoleBadge role={member.role} />
                     </div>
-                  </div>
-                  <RoleBadge role={member.role} />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </>
-        )}
+              </>
+            )}
 
-        {selectedMember && (
-          <MemberDetail
-            member={selectedMember}
-            onClose={() => setSelectedMember(null)}
-          />
-        )}
-      </Section>
+            {selectedMember && (
+              <MemberDetail
+                member={selectedMember}
+                onClose={() => setSelectedMember(null)}
+              />
+            )}
 
-      {/* ─── Section 3: Admin User Management ─── */}
-      {isAdmin && (
-        <Section title="Admin — User Management">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginBottom: "12px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setShowCreateUser(true)}
-              style={{
-                ...btnBase,
-                backgroundColor: "var(--color-primary)",
-                color: "#fff",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = "var(--color-primary-hover)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "var(--color-primary)")
-              }
-            >
-              <Plus size={16} /> Add User
-            </button>
-          </div>
-
-          {showCreateUser && (
-            <div
-              style={{
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                padding: "16px",
-                marginBottom: "12px",
-                backgroundColor: "var(--color-bg-secondary)",
-              }}
-            >
-              <h4
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  margin: "0 0 12px",
-                  color: "var(--color-text)",
-                }}
-              >
-                New User
-              </h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <input
-                  style={inputStyle}
-                  placeholder="Name"
-                  value={newUser.name}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, name: e.target.value })
-                  }
-                />
-                <input
-                  style={inputStyle}
-                  placeholder="Email"
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, email: e.target.value })
-                  }
-                />
-                <select
-                  style={selectStyle}
-                  value={newUser.role}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, role: e.target.value })
-                  }
+            {/* ─── Admin User Management ─── */}
+            {isAdmin && (
+              <div style={{ marginTop: "24px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginBottom: "12px",
+                  }}
                 >
-                  <option value="member">Member</option>
-                  <option value="officer">Officer</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     type="button"
-                    onClick={() => createUser.mutate(newUser)}
-                    disabled={
-                      !newUser.name || !newUser.email || createUser.isPending
-                    }
+                    onClick={() => setShowCreateUser(true)}
                     style={{
                       ...btnBase,
                       backgroundColor: "var(--color-primary)",
                       color: "#fff",
-                      opacity:
-                        !newUser.name || !newUser.email || createUser.isPending
-                          ? 0.5
-                          : 1,
                     }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "var(--color-primary-hover)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "var(--color-primary)")
+                    }
                   >
-                    {createUser.isPending ? "Creating..." : "Create"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateUser(false)}
-                    style={{
-                      ...btnBase,
-                      backgroundColor: "transparent",
-                      color: "var(--color-text-secondary)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  >
-                    Cancel
+                    <Plus size={16} /> Add User
                   </button>
                 </div>
+
+                {showCreateUser && (
+                  <div
+                    style={{
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "5px",
+                      padding: "16px",
+                      marginBottom: "12px",
+                      backgroundColor: "var(--color-bg-secondary)",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        margin: "0 0 12px",
+                        color: "var(--color-text)",
+                      }}
+                    >
+                      New User
+                    </h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <input
+                        style={inputStyle}
+                        placeholder="Name"
+                        value={newUser.name}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, name: e.target.value })
+                        }
+                      />
+                      <input
+                        style={inputStyle}
+                        placeholder="Email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, email: e.target.value })
+                        }
+                      />
+                      <select
+                        style={selectStyle}
+                        value={newUser.role}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, role: e.target.value })
+                        }
+                      >
+                        <option value="member">Member</option>
+                        <option value="officer">Officer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => createUser.mutate(newUser)}
+                          disabled={
+                            !newUser.name || !newUser.email || createUser.isPending
+                          }
+                          style={{
+                            ...btnBase,
+                            backgroundColor: "var(--color-primary)",
+                            color: "#fff",
+                            opacity:
+                              !newUser.name || !newUser.email || createUser.isPending
+                                ? 0.5
+                                : 1,
+                          }}
+                        >
+                          {createUser.isPending ? "Creating..." : "Create"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCreateUser(false)}
+                          style={{
+                            ...btnBase,
+                            backgroundColor: "transparent",
+                            color: "var(--color-text-secondary)",
+                            border: "1px solid var(--color-border)",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            <div
+              style={{
+                textAlign: "center",
+                padding: "48px 16px",
+                color: "var(--color-text-secondary)",
+                fontSize: "14px",
+              }}
+            >
+              <Clock size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-text)", margin: "0 0 4px" }}>
+                Historical Members Archive
+              </p>
+              <p style={{ margin: "0 0 16px" }}>
+                Historical members archive coming soon.
+              </p>
             </div>
-          )}
-
-
-        </Section>
-      )}
+          </TabsContent>
+        </Tabs>
+      </Section>
     </div>
   );
 }
@@ -693,7 +733,7 @@ function MemberDetail({
       <div
         style={{
           backgroundColor: "var(--color-bg)",
-          borderRadius: "var(--radius-sm)",
+          borderRadius: "5px",
           padding: "24px",
           width: "90%",
           maxWidth: "420px",
@@ -822,7 +862,7 @@ function MemberDetail({
                       gap: "8px",
                       padding: "8px 12px",
                       border: "1px solid var(--color-border)",
-                      borderRadius: "var(--radius-sm)",
+                      borderRadius: "5px",
                       backgroundColor: "var(--color-bg)",
                       cursor: "pointer",
                       fontSize: "13px",
@@ -853,7 +893,7 @@ function MemberDetail({
                       gap: "8px",
                       padding: "8px 12px",
                       border: "1px solid var(--color-destructive)",
-                      borderRadius: "var(--radius-sm)",
+                      borderRadius: "5px",
                       backgroundColor: "var(--color-bg)",
                       cursor: "pointer",
                       fontSize: "13px",
@@ -888,7 +928,7 @@ function MemberDetail({
                     gap: "8px",
                     padding: "8px 12px",
                     border: "1px solid var(--color-destructive)",
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "5px",
                     backgroundColor: "var(--color-bg)",
                     cursor: "pointer",
                     fontSize: "13px",
@@ -926,16 +966,18 @@ function Section({
 }) {
   return (
     <div>
-      <h2
-        style={{
-          fontSize: "16px",
-          fontWeight: 700,
-          margin: "0 0 12px",
-          color: "var(--color-text)",
-        }}
-      >
-        {title}
-      </h2>
+      {title && (
+        <h2
+          style={{
+            fontSize: "16px",
+            fontWeight: 700,
+            margin: "0 0 12px",
+            color: "var(--color-text)",
+          }}
+        >
+          {title}
+        </h2>
+      )}
       {children}
     </div>
   );
