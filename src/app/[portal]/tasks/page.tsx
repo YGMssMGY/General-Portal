@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,7 @@ import {
   Send,
   AlertCircle,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 
 function getPortal(): string {
@@ -103,6 +105,8 @@ function getPriorityLabel(priority: number): string {
 
 export default function TasksPage() {
   const portal = getPortal();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -145,6 +149,11 @@ export default function TasksPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [portal, "tasks"] });
     },
+  });
+
+  const deleteTask = useMutation({
+    mutationFn: (id: string) => fetchJson(`/api/tasks/${id}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [portal, "tasks"] }),
   });
 
   const commentMutation = useMutation({
@@ -428,6 +437,17 @@ export default function TasksPage() {
                           </Button>
                         </div>
                       </div>
+
+                      {isAdmin && (
+                        <div style={{ marginTop: "16px" }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if (confirm("Delete this task?")) deleteTask.mutate(task.id); }}
+                            style={{ display:"flex", alignItems:"center", gap:"6px", padding:"8px 12px", border:"1px solid var(--color-destructive)", borderRadius:"5px", background:"var(--color-bg)", cursor:"pointer", fontSize:"13px", fontFamily:"inherit", color:"var(--color-destructive)" }}
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </Card>

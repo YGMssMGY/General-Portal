@@ -22,12 +22,12 @@ function getPortal(): string {
 
 interface FileItem {
   id: string;
-  name: string;
-  size: number;
+  fileName: string;
+  fileSize: number;
   mimeType: string;
+  storagePath: string;
   createdAt: string;
-  uploadedBy: string;
-  url: string;
+  uploadedBy: { id: string; name: string | null } | null;
 }
 
 const btnBase: React.CSSProperties = {
@@ -276,17 +276,17 @@ export default function FilesPage() {
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
-                        title={f.name}
+                        title={f.fileName}
                       >
-                        {f.name}
+                        {f.fileName}
                       </p>
                       <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                        {formatSize(f.size)} &middot; {(f as any).uploadedBy?.name ?? "Unknown"}
+                        {formatSize(f.fileSize)} &middot; {f.uploadedBy?.name ?? "Unknown"}
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: "6px", marginTop: "auto" }}>
                       <a
-                        href={f.url}
+                        href={`/api/files/download/${f.id}`}
                         download
                         style={{
                           ...btnBase,

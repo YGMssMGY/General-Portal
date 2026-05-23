@@ -230,7 +230,6 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
               onClick={() => setSidebarOpen(true)}
               aria-label="Open navigation menu"
               style={{
-                display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 width: "40px",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import {
   Mail,
   MailOpen,
   Users,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -74,6 +76,8 @@ interface ThreadDetail {
 
 export default function MessagesPage() {
   const portal = getPortal();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [showMobileThread, setShowMobileThread] = useState(false);
@@ -142,6 +146,17 @@ export default function MessagesPage() {
       queryClient.invalidateQueries({ queryKey: [portal, "messages", selectedThreadId] });
       queryClient.invalidateQueries({ queryKey: [portal, "messages"] });
       setReplyContent("");
+    },
+  });
+
+  const deleteThread = useMutation({
+    mutationFn: (id: string) => fetchJson(`/api/messages/threads/${id}`, { method: "DELETE" }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: [portal, "messages"] });
+      if (selectedThreadId === variables) {
+        setSelectedThreadId(null);
+        setShowMobileThread(false);
+      }
     },
   });
 
@@ -401,10 +416,19 @@ export default function MessagesPage() {
                     fontWeight: 600,
                     color: "var(--color-text)",
                     margin: 0,
+                    flex: 1,
                   }}
                 >
                   {threadDetail.subject}
                 </h2>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (confirm("Delete this conversation?")) deleteThread.mutate(threadDetail.id); }}
+                    style={{ display:"flex", alignItems:"center", gap:"6px", padding:"6px 10px", border:"1px solid var(--color-destructive)", borderRadius:"5px", background:"var(--color-bg)", cursor:"pointer", fontSize:"13px", fontFamily:"inherit", color:"var(--color-destructive)", flexShrink:0 }}
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                )}
               </div>
 
               <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>

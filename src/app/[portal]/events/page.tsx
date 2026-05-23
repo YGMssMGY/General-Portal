@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,7 @@ import {
   MapPin,
   List,
   Grid3X3,
+  Trash2,
 } from "lucide-react";
 
 function getPortal(): string {
@@ -55,6 +57,8 @@ const eventStatusConfig: Record<string, { label: string; variant: "outline" | "d
 
 export default function EventsPage() {
   const portal = getPortal();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -95,6 +99,11 @@ export default function EventsPage() {
       setNewLocation("");
       setNewIsPublic(false);
     },
+  });
+
+  const deleteEvent = useMutation({
+    mutationFn: (id: string) => fetchJson(`/api/events/${id}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [portal, "events"] }),
   });
 
   if (isLoading) {
@@ -319,6 +328,16 @@ export default function EventsPage() {
                       </div>
                     )}
                   </div>
+                  {isAdmin && (
+                    <div style={{ marginTop: "16px" }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this event?")) deleteEvent.mutate(event.id); }}
+                        style={{ display:"flex", alignItems:"center", gap:"6px", padding:"8px 12px", border:"1px solid var(--color-destructive)", borderRadius:"5px", background:"var(--color-bg)", cursor:"pointer", fontSize:"13px", fontFamily:"inherit", color:"var(--color-destructive)" }}
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import { Plus, MapPin, Clock, Users, Calendar } from "lucide-react";
+import { Plus, MapPin, Clock, Users, Calendar, Trash2 } from "lucide-react";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -65,6 +66,8 @@ const statusColors: Record<string, string> = {
 
 export default function MeetingsPage() {
   const portal = getPortal();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -104,6 +107,11 @@ export default function MeetingsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [portal, "meetings"] });
     },
+  });
+
+  const deleteMeeting = useMutation({
+    mutationFn: (id: string) => fetchJson(`/api/meetings/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [portal, "meetings"] }),
   });
 
   if (isLoading) {
@@ -340,6 +348,15 @@ export default function MeetingsPage() {
                       </button>
                     );
                   })}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); if (confirm("Delete this meeting?")) deleteMeeting.mutate(meeting.id); }}
+                      style={{ ...btnBase, padding:"6px 12px", fontSize:"12px", backgroundColor:"transparent", color:"var(--color-destructive)", border:"1px solid var(--color-destructive)", marginLeft:"auto" }}
+                    >
+                      <Trash2 size={14} style={{ marginRight:"4px" }} /> Delete
+                    </button>
+                  )}
                 </div>
               </div>
             );
