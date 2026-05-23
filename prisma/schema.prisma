@@ -1,0 +1,485 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_DEVELOPERS")
+}
+
+enum Role {
+  admin
+  officer
+  member
+}
+
+enum ProposalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+enum EventStatus {
+  draft
+  published
+  cancelled
+}
+
+enum MeetingStatus {
+  scheduled
+  ongoing
+  completed
+  cancelled
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum BudgetStatus {
+  active
+  spent
+  reconciled
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  memberships     Membership[]
+  createdTasks      TaskItem[]       @relation("TaskCreator")
+  assignedTasks     TaskItem[]       @relation("TaskAssignee")
+  taskComments      TaskComment[]
+  messages          Message[]
+  createdProposals  Proposal[]
+  transactionRecords Transaction[]
+  messageReads      MessageRead[]
+  meetingRsvps      MeetingRsvp[]
+  notifications     Notification[]
+  sentKudos         Kudos[]          @relation("KudosSender")
+  receivedKudos     Kudos[]          @relation("KudosReceiver")
+  volunteerSignups  VolunteerSignup[]
+  createdEvents     EventItem[]      @relation("EventCreator")
+  uploadedAttachments Attachment[]
+  budgetDecisions   BudgetTransaction[] @relation("BudgetDecider")
+  auditLogs         AuditLog[]
+  activityEntries   ActivityFeed[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships       Membership[]
+  proposals         Proposal[]
+  tasks             TaskItem[]
+  events            EventItem[]
+  messageThreads    MessageThread[]
+  transactions      Transaction[]
+  volunteerSlots    VolunteerSlot[]
+  meetings          Meeting[]
+  notifications     Notification[]
+  budgetAllocations BudgetAllocation[]
+  auditLogs         AuditLog[]
+  activityEntries   ActivityFeed[]
+  kudos             Kudos[]
+  attachments       Attachment[]
+
+  @@map("workspaces")
+}
+
+model Membership {
+  id         String   @id @default(uuid())
+  userId     String
+  workspaceId String
+  role       Role     @default(member)
+  createdAt  DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("memberships")
+}
+
+model Proposal {
+  id          String         @id @default(uuid())
+  workspaceId String
+  title       String
+  description String         @db.Text
+  status      ProposalStatus @default(pending)
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User     @relation(fields: [createdById], references: [id])
+
+  @@map("proposals")
+}
+
+model TaskItem {
+  id           String     @id @default(uuid())
+  workspaceId  String
+  title        String
+  description  String?    @db.Text
+  status       TaskStatus @default(todo)
+  priority     Int        @default(0)
+  dueDate      DateTime?
+  createdById  String
+  assigneeId   String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation("TaskCreator", fields: [createdById], references: [id])
+  assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  subtasks    SubTask[]
+  comments TaskComment[]
+
+  @@map("tasks")
+}
+
+model SubTask {
+  id        String     @id @default(uuid())
+  taskId    String
+  title     String
+  done      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  task TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("sub_tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  task TaskItem @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id])
+
+  @@map("task_comments")
+}
+
+model EventItem {
+  id          String       @id @default(uuid())
+  workspaceId String
+  title       String
+  description String?      @db.Text
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  isPublic    Boolean      @default(false)
+  status      EventStatus  @default(draft)
+  createdById String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User @relation("EventCreator", fields: [createdById], references: [id])
+
+  @@map("events")
+}
+
+model MessageThread {
+  id          String   @id @default(uuid())
+  workspaceId String
+  subject     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@map("message_threads")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  threadId   String
+  senderId   String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender    User          @relation(fields: [senderId], references: [id])
+  readBy MessageRead[]
+
+  @@map("messages")
+}
+
+model MessageRead {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+  @@map("message_reads")
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  workspaceId String
+  amount      Decimal         @db.Decimal(12, 2)
+  type        TransactionType
+  category    String?
+  description String?         @db.Text
+  date        DateTime        @default(now())
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@map("transactions")
+}
+
+model VolunteerSlot {
+  id          String   @id @default(uuid())
+  workspaceId String
+  title       String
+  description String?  @db.Text
+  startTime   DateTime
+  endTime     DateTime
+  capacity    Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  signups   VolunteerSignup[]
+
+  @@map("volunteer_slots")
+}
+
+model VolunteerSignup {
+  id        String   @id @default(uuid())
+  slotId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  slot VolunteerSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id])
+
+  @@unique([slotId, userId])
+  @@map("volunteer_signups")
+}
+
+model Meeting {
+  id          String         @id @default(uuid())
+  workspaceId String
+  title       String
+  description String?        @db.Text
+  startTime   DateTime
+  endTime     DateTime?
+  location    String?
+  status      MeetingStatus  @default(scheduled)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rsvps     MeetingRsvp[]
+
+  @@map("meetings")
+}
+
+model MeetingRsvp {
+  id        String   @id @default(uuid())
+  meetingId String
+  userId    String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([meetingId, userId])
+  @@map("meeting_rsvps")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  workspaceId String
+  userId      String
+  title       String
+  body        String?  @db.Text
+  type        String   @default("info")
+  read        Boolean  @default(false)
+  link        String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  workspaceId String
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json     @default("{}")
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model Kudos {
+  id          String   @id @default(uuid())
+  workspaceId String
+  senderId    String
+  receiverId  String
+  message     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sender    User      @relation("KudosSender", fields: [senderId], references: [id])
+  receiver  User      @relation("KudosReceiver", fields: [receiverId], references: [id])
+
+  @@map("kudos")
+}
+
+model BudgetAllocation {
+  id          String       @id @default(uuid())
+  workspaceId String
+  category    String
+  amount      Decimal      @db.Decimal(12, 2)
+  spent       Decimal      @default(0) @db.Decimal(12, 2)
+  fiscalYear  Int
+  status      BudgetStatus @default(active)
+  description String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions BudgetTransaction[]
+
+  @@map("budget_allocations")
+}
+
+model BudgetTransaction {
+  id               String          @id @default(uuid())
+  allocationId     String
+  amount           Decimal         @db.Decimal(12, 2)
+  type             TransactionType
+  description      String?         @db.Text
+  decidedById      String?
+  receiptUrl       String?
+  createdAt        DateTime        @default(now())
+
+  allocation BudgetAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  decidedBy  User?            @relation("BudgetDecider", fields: [decidedById], references: [id])
+
+  @@map("budget_transactions")
+}
+
+model Attachment {
+  id          String   @id @default(uuid())
+  workspaceId String
+  entityType  String
+  entityId    String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  storagePath String
+  uploadedById String?
+  createdAt   DateTime @default(now())
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
+
+model ActivityFeed {
+  id          String   @id @default(uuid())
+  workspaceId String
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@map("activity_feed")
+}
