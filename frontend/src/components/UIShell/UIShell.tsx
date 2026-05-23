@@ -159,7 +159,7 @@ export function UIShell() {
     const [notifOpen, setNotifOpen] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
     const notifBtnRef = useRef<HTMLButtonElement>(null);
-    const { unreadCount, notifications, markRead, markAllRead } = useNotifications();
+    const { unreadCount, notifications, markRead, markAllRead } = useNotifications(!!sessionUser);
     const portal = useUIStore((s) => s.portal) || "developers";
     const setPortal = useUIStore((s) => s.setPortal);
     const config = useMemo(() => getClientConfig(portal ?? undefined), [portal]);

@@ -55,6 +55,9 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+                }
                 const details = await parseError(response);
                 if (attempt < maxRetries && isRetryable(response.status)) {
                     await delay(1000 * (attempt + 1));
