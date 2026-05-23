@@ -148,6 +148,23 @@ export default function HomePage() {
             );
           })}
         </div>
+
+        <a
+          href="/showcase"
+          style={{
+            display: "block",
+            textAlign: "center",
+            marginTop: "32px",
+            fontSize: "14px",
+            color: "var(--color-primary)",
+            fontWeight: 500,
+            textDecoration: "none",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
+        >
+          View public showcase &rarr;
+        </a>
       </div>
     </div>
   );
