@@ -29,8 +29,9 @@ interface UserProfile {
 
 interface Kudos {
   id: string;
-  fromName: string;
-  message: string;
+  sender: { id: string; name: string | null; image: string | null };
+  receiver: { id: string; name: string | null; image: string | null };
+  message: string | null;
   createdAt: string;
 }
 
@@ -348,7 +349,7 @@ export default function AccountsPage() {
                   <Star size={16} color="var(--color-warning)" style={{ flexShrink: 0, marginTop: "2px" }} />
                   <div>
                     <p style={{ margin: 0, fontSize: "13px", color: "var(--color-text)" }}>
-                      <strong>{k.fromName}</strong>: {k.message}
+                      <strong>{k.sender?.name ?? "Someone"}</strong>: {k.message ?? ""}
                     </p>
                     <p style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--color-text-secondary)" }}>
                       {new Date(k.createdAt).toLocaleDateString()}

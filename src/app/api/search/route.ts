@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const q = (searchParams.get("q") || "").trim();
     if (!q) return success({ results: [], total: 0 });
 
-    const [tasks, events, proposals, members] = await Promise.all([
+    const [tasks, events, proposals, members, meetings] = await Promise.all([
       db.taskItem.findMany({
         where: {
           workspaceId: workspace.id,
@@ -66,6 +66,17 @@ export async function GET(request: NextRequest) {
         take: 5,
         select: { id: true, name: true, email: true },
       }),
+      db.meeting.findMany({
+        where: {
+          workspaceId: workspace.id,
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { description: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 5,
+        select: { id: true, title: true, description: true },
+      }),
     ]);
 
     const results = [
@@ -73,6 +84,7 @@ export async function GET(request: NextRequest) {
       ...events.map((e) => ({ id: e.id, title: e.title, snippet: e.description || "", type: "events" as const, url: `/${portal}/events` })),
       ...proposals.map((p) => ({ id: p.id, title: p.title, snippet: p.description || "", type: "proposals" as const, url: `/${portal}/proposals` })),
       ...members.map((m) => ({ id: m.id, title: m.name || m.email, snippet: m.email, type: "members" as const, url: `/${portal}/members` })),
+      ...meetings.map((m) => ({ id: m.id, title: m.title, snippet: m.description || "", type: "meetings" as const, url: `/${portal}/meetings` })),
     ];
 
     return success({ results, total: results.length });
