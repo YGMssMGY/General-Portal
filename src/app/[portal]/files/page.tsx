@@ -281,7 +281,7 @@ export default function FilesPage() {
                         {f.name}
                       </p>
                       <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                        {formatSize(f.size)} &middot; {f.uploadedBy}
+                        {formatSize(f.size)} &middot; {(f as any).uploadedBy?.name ?? "Unknown"}
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: "6px", marginTop: "auto" }}>

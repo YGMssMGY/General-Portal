@@ -441,19 +441,19 @@ function MemberDetail({ member, onClose }: { member: Member; onClose: () => void
                       alignItems: "center",
                       gap: "8px",
                       padding: "8px 12px",
-                      border: "1px solid var(--color-border)",
+                      border: "1px solid var(--color-destructive)",
                       borderRadius: "var(--radius-sm)",
                       backgroundColor: "var(--color-bg)",
                       cursor: "pointer",
                       fontSize: "13px",
                       fontFamily: "inherit",
-                      color: "var(--color-text)",
+                      color: "var(--color-destructive)",
                       transition: "background-color 100ms ease",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)"; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff5f5"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg)"; }}
                   >
-                    <ArrowDown size={14} style={{ color: "var(--color-warning)" }} />
+                    <ArrowDown size={14} style={{ color: "var(--color-destructive)" }} />
                     Demote to {ROLES[roleIndex - 1]}
                   </button>
                 )}

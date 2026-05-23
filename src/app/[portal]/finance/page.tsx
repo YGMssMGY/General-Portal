@@ -97,9 +97,9 @@ export default function FinancePage() {
     queryFn: () => fetchJson<FinanceSummary>(`/api/finance/summary`),
   });
 
-  const { data: transactionsData, isLoading: txLoading, isError } = useQuery<TransactionsResponse>({
+  const { data: transactionsData, isLoading: txLoading, isError } = useQuery<Transaction[]>({
     queryKey: [portal, "finance", "transactions"],
-    queryFn: () => fetchJson<TransactionsResponse>(`/api/finance/transactions`),
+    queryFn: () => fetchJson<Transaction[]>(`/api/finance/transactions`),
   });
 
   const createMutation = useMutation({
@@ -173,7 +173,7 @@ export default function FinancePage() {
     );
   }
 
-  const transactions = transactionsData?.transactions ?? [];
+  const transactions = transactionsData ?? [];
   const filteredTx =
     typeFilter === "all"
       ? transactions
