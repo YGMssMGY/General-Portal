@@ -247,7 +247,7 @@ export default function MeetingsPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {meetingList.map((meeting) => {
-            const isPast = new Date(meeting.endTime) < now;
+            const isPast = new Date(meeting.endTime || meeting.startTime) < now;
             const rsvpOptions: { label: string; value: RsvpStatus; color: string; activeColor: string }[] = [
               { label: "Accept", value: "accepted", color: "var(--color-text-secondary)", activeColor: "var(--color-success)" },
               { label: "Maybe", value: "maybe", color: "var(--color-text-secondary)", activeColor: "var(--color-warning)" },
