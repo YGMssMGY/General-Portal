@@ -43,7 +43,6 @@ const NAV_ITEMS = [
   { label: "Search", path: "/search", icon: Search },
   { label: "Settings", path: "/settings", icon: Settings },
   { label: "Links", path: "/links", icon: Link },
-  { label: "Purchase Requests", path: "/purchase-requests", icon: ShoppingCart },
   { label: "Cooperation", path: "/cooperation", icon: Handshake },
   { label: "Notifications", path: "/notifications", icon: Bell },
 ] as const;

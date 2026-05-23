@@ -39,6 +39,7 @@ import {
   CheckCircle,
   RotateCcw,
   Receipt,
+  ShoppingCart,
 } from "lucide-react";
 
 interface FinanceSummary {
@@ -338,17 +339,48 @@ export default function FinancePage() {
     });
   }
 
+  // Purchase request state and mutations
+  const [showCreatePr, setShowCreatePr] = useState(false);
+  const [prForm, setPrForm] = useState({ title: "", itemName: "", cost: "", quantity: 1, justification: "" });
+  const [prExpanded, setPrExpanded] = useState<string | null>(null);
+  const [prReview, setPrReview] = useState<{ id: string; status: string; comment: string } | null>(null);
+
+  const { data: prData, isLoading: prLoading } = useQuery<Record<string, unknown>[]>({
+    queryKey: [portal, "purchase-requests"],
+    queryFn: () => fetchJson("/api/purchase-requests"),
+  });
+
+  const createPr = useMutation({
+    mutationFn: (body: Record<string, unknown>) => fetchJson("/api/purchase-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] }); setShowCreatePr(false); setPrForm({ title: "", itemName: "", cost: "", quantity: 1, justification: "" }); },
+  });
+
+  const reviewPr = useMutation({
+    mutationFn: ({ id, status, reviewComment }: { id: string; status: string; reviewComment?: string }) => fetchJson(`/api/purchase-requests/${id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reviewComment }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] }); setPrReview(null); },
+  });
+
+  const prStatusStyles: Record<string, { color: string; bg: string }> = {
+    submitted: { color: "var(--color-primary)", bg: "var(--color-primary-light)" },
+    under_review: { color: "var(--color-warning)", bg: "#fff8e1" },
+    approved: { color: "var(--color-success)", bg: "#e8f5e9" },
+    rejected: { color: "var(--color-destructive)", bg: "#fff5f5" },
+    fulfilled: { color: "var(--color-text-secondary)", bg: "var(--color-bg-secondary)" },
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 12px", fontSize: "14px", border: "1px solid var(--color-border)", borderRadius: "5px",
+    backgroundColor: "var(--color-bg)", color: "var(--color-text)", fontFamily: "inherit", outline: "none",
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* ===== SECTION 1: FINANCE OVERVIEW ===== */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-          <div>
-            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--color-text)", margin: 0 }}>Finance</h1>
-            <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: "4px 0 0" }}>
-              Track income and expenses
-            </p>
-          </div>
+          <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: 0 }}>
+            Track income and expenses
+          </p>
           <Button onClick={() => setShowCreateTx(true)}>
             <Plus size={16} />
             <span>Add Transaction</span>
@@ -1066,6 +1098,80 @@ export default function FinancePage() {
           </DialogContent>
         )}
       </Dialog>
+
+      {/* ===== SECTION 3: PURCHASE REQUESTS ===== */}
+      <div>
+        <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--color-text)", margin: 0 }}>Purchase Requests</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: 0 }}>
+            Submit and manage purchase requests
+          </p>
+          <Button onClick={() => setShowCreatePr(true)}><Plus size={16} /><span>New Request</span></Button>
+        </div>
+
+        {showCreatePr && (
+          <div style={{ border: "1px solid var(--color-border)", borderRadius: "5px", padding: "16px", marginBottom: "16px", backgroundColor: "var(--color-bg-secondary)" }}>
+            <h4 style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 12px", color: "var(--color-text)" }}>New Purchase Request</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <input style={inputStyle} placeholder="Request title" value={prForm.title} onChange={(e) => setPrForm({ ...prForm, title: e.target.value })} />
+              <input style={inputStyle} placeholder="Item name" value={prForm.itemName} onChange={(e) => setPrForm({ ...prForm, itemName: e.target.value })} />
+              <div style={{ display: "flex", gap: "10px" }}>
+                <input style={{ ...inputStyle, flex: 1 }} type="number" step="0.01" placeholder="Cost" value={prForm.cost} onChange={(e) => setPrForm({ ...prForm, cost: e.target.value })} />
+                <input style={{ ...inputStyle, width: "100px" }} type="number" min="1" placeholder="Qty" value={prForm.quantity} onChange={(e) => setPrForm({ ...prForm, quantity: Math.max(1, parseInt(e.target.value) || 1) })} />
+              </div>
+              <textarea style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }} placeholder="Justification" value={prForm.justification} onChange={(e) => setPrForm({ ...prForm, justification: e.target.value })} />
+              <div style={{ display: "flex", gap: "8px" }}>
+                <Button onClick={() => createPr.mutate({ title: prForm.title, itemName: prForm.itemName, cost: parseFloat(prForm.cost) || 0, quantity: prForm.quantity, justification: prForm.justification })} disabled={!prForm.title || !prForm.itemName || !prForm.cost || parseFloat(prForm.cost) <= 0 || createPr.isPending}>{createPr.isPending ? "Submitting..." : "Submit"}</Button>
+                <Button variant="outline" onClick={() => setShowCreatePr(false)}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {prLoading ? (
+          <p style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>Loading...</p>
+        ) : !prData || prData.length === 0 ? (
+          <Card><CardContent style={{ padding: "40px 20px", textAlign: "center" }}><ShoppingCart size={32} style={{ color: "var(--color-text-secondary)", marginBottom: "12px" }} /><p style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-text)", margin: "0 0 4px" }}>No purchase requests</p><p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: 0 }}>Submit your first purchase request.</p></CardContent></Card>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {prData.map((pr: Record<string, unknown>) => {
+              const ps = prStatusStyles[(pr.status as string) ?? "submitted"] ?? prStatusStyles.submitted;
+              const isExpanded = prExpanded === pr.id;
+              return (
+                <Card key={pr.id as string}>
+                  <div onClick={() => setPrExpanded(isExpanded ? null : pr.id as string)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px", cursor: "pointer", borderBottom: isExpanded ? "1px solid var(--color-border)" : "none" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-text)" }}>{pr.title as string}</span>
+                        <span style={{ padding: "2px 8px", borderRadius: "5px", fontSize: "11px", fontWeight: 600, color: ps.color, backgroundColor: ps.bg, textTransform: "capitalize" }}>{pr.status as string}</span>
+                      </div>
+                      <p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: 0 }}>{pr.itemName as string} &middot; ¥{Number(pr.cost || 0).toFixed(2)} x {String(pr.quantity || "1")}</p>
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div style={{ padding: "16px" }}>
+                      <p style={{ fontSize: "13px", color: "var(--color-text)", margin: "0 0 12px", whiteSpace: "pre-wrap" }}>{(pr.justification as string) || "No justification provided."}</p>
+                      {(pr.reviewComment as string) && <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: "0 0 8px", fontStyle: "italic" }}>Review: {pr.reviewComment as string}</p>}
+                      {isAdmin && (pr.status as string) === "submitted" && (
+                        <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                          <div style={{ flex: 1 }}>
+                            <input style={{ ...inputStyle, fontSize: "12px", padding: "6px 10px" }} placeholder="Review comment (optional)" value={prReview?.id === pr.id ? (prReview?.comment ?? "") : ""} onChange={(e) => setPrReview({ id: pr.id as string, status: (prReview?.status as string) || "", comment: e.target.value })} />
+                          </div>
+                          <button type="button" onClick={() => reviewPr.mutate({ id: pr.id as string, status: "approved", reviewComment: prReview?.id === pr.id ? (prReview?.comment ?? "") : "" })} style={{ padding: "8px 14px", border: "none", borderRadius: "5px", background: "var(--color-success)", color: "#fff", cursor: "pointer", fontSize: "12px", fontWeight: 600, fontFamily: "inherit" }}>Approve</button>
+                          <button type="button" onClick={() => reviewPr.mutate({ id: pr.id as string, status: "rejected", reviewComment: prReview?.id === pr.id ? (prReview?.comment ?? "") : "" })} style={{ padding: "8px 14px", border: "none", borderRadius: "5px", background: "var(--color-destructive)", color: "#fff", cursor: "pointer", fontSize: "12px", fontWeight: 600, fontFamily: "inherit" }}>Reject</button>
+                        </div>
+                      )}
+                      <p style={{ fontSize: "11px", color: "var(--color-text-secondary)", marginTop: "12px" }}>
+                        Submitted by {(pr.submittedBy as Record<string, unknown>)?.name as string ?? "Unknown"} &middot; {new Date(pr.createdAt as string).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
