@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Plus, MapPin, Clock, Users, Calendar, Trash2, Eye, EyeOff } from "lucide-react";
 import { usePortal } from "@/hooks/usePortal";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 type RsvpStatus = "accepted" | "maybe" | "declined" | null;
 
@@ -62,6 +63,7 @@ const statusColors: Record<string, string> = {
 
 export default function MeetingsPage() {
   const portal = usePortal();
+  usePageTitle("Meetings | General Portal");
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const qc = useQueryClient();

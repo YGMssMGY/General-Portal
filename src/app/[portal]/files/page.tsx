@@ -22,6 +22,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FileItem {
   id: string;
@@ -79,6 +80,7 @@ function formatDate(iso: string): string {
 
 export default function FilesPage() {
   const portal = usePortal();
+  usePageTitle("Files & Links | General Portal");
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState("files");

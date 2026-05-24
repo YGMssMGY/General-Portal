@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { format } from "date-fns";
@@ -194,6 +195,7 @@ const galleryItem: React.CSSProperties = {
 };
 
 export default function ShowcasePage() {
+  usePageTitle("Showcase | General Portal");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
   const { data, isLoading, isError } = useQuery<ShowcaseResponse>({

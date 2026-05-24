@@ -22,6 +22,7 @@ import {
   Megaphone,
   Star,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface ShowcaseItem {
   id: string;
@@ -42,6 +43,7 @@ const TAB_CONFIG = [
 
 export default function ShowcaseAdminPage() {
   const portal = usePortal();
+  usePageTitle("Showcase Admin | General Portal");
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
   const isOfficer = role === "admin" || role === "officer";

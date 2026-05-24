@@ -39,6 +39,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { usePortal } from "@/hooks/usePortal";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface ThreadSender {
   id: string;
@@ -110,6 +111,7 @@ interface LeaderboardEntry {
 
 export default function MessagesPage() {
   const portal = usePortal();
+  usePageTitle("Messages | General Portal");
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
   const isAdmin = (session?.user as any)?.role === "admin";

@@ -15,6 +15,12 @@ export function FaviconSwitcher() {
 
   useEffect(() => {
     function update() {
+      const path = window.location.pathname;
+      // Landing page and showcase always get the generic favicon
+      if (path === "/" || path === "/showcase") {
+        setHref(`data:image/svg+xml,${encodeURIComponent(DEFAULT_SVG)}`);
+        return;
+      }
       const portal = getPortalFromCookie();
       if (portal === "developers") {
         setHref("/developers.png");

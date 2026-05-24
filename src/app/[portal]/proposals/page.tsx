@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { FileText, Plus, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Trash2, File } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Proposal {
   id: string;
@@ -60,6 +61,7 @@ const statusConfig: Record<string, { label: string; variant: "secondary" | "defa
 
 export default function ProposalsPage() {
   const portal = usePortal();
+  usePageTitle("Proposals | General Portal");
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

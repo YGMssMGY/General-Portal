@@ -41,6 +41,7 @@ import {
   Receipt,
   ShoppingCart,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FinanceSummary {
   totalIncome: number;
@@ -120,6 +121,7 @@ const statusConfig: Record<string, { label: string; color: string; bg: string }>
 
 export default function FinancePage() {
   const portal = usePortal();
+  usePageTitle("Finance | General Portal");
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";

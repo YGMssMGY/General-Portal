@@ -13,6 +13,7 @@ import {
 import { Search, X, Mail, User, ArrowUp, ArrowDown, Trash2, Plus, Clock } from "lucide-react";
 import { RoleBadge } from "@/components/RoleBadge";
 import { usePortal } from "@/hooks/usePortal";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface MemberProfile {
   id: string;
@@ -58,6 +59,7 @@ const btnBase: React.CSSProperties = {
 
 export default function MembersPage() {
   const portal = usePortal();
+  usePageTitle("Members | General Portal");
   const qc = useQueryClient();
   const { data: session } = useSession();
   const currentUserRole = (session?.user as any)?.role;

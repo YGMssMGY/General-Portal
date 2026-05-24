@@ -39,6 +39,7 @@ import {
   ChevronRight,
   Trash2,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -105,6 +106,7 @@ function getPriorityLabel(priority: number): string {
 
 export default function TasksPage() {
   const portal = getPortal();
+  usePageTitle("Tasks | General Portal");
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
