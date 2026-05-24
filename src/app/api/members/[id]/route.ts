@@ -60,7 +60,7 @@ export async function PUT(
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const callerRole = (session.user as any).role;
+    const callerRole = session.user.role;
     if (!hasPermission(callerRole, "manage_users")) {
       return error("Only admins can change member roles", 403);
     }
@@ -117,7 +117,7 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const callerRole = (session.user as any).role;
+    const callerRole = session.user.role;
     if (!hasPermission(callerRole, "manage_users")) {
       return error("Only admins can remove members", 403);
     }

@@ -24,7 +24,7 @@ export async function GET(
     const db = getDbFromCookie(request);
     const { id } = await params;
 
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const workspace = await db.workspace.findUnique({
       where: { slug: portal },
       select: { id: true },
@@ -57,7 +57,7 @@ export async function POST(
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const { id } = await params;
 
     const workspace = await db.workspace.findUnique({

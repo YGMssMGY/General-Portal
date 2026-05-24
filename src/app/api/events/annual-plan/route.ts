@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
 
     const workspace = await db.workspace.findUnique({
       where: { slug: portal },
@@ -38,11 +38,11 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const role = (session.user as any).role;
+    const role = session.user.role;
     if (role !== "admin") return error("Forbidden: admin only", 403);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
 
     const workspace = await db.workspace.findUnique({
       where: { slug: portal },

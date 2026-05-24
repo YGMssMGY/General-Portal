@@ -83,7 +83,7 @@ export default function EventsPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Events | ${portalName}`);
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
+  const isAdmin = session.user.role === "admin";
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -228,10 +228,10 @@ export default function EventsPage() {
   const dayLabel = (dateStr: string) => format(new Date(dateStr), "d");
   const timeLabel = (dateStr: string) => format(new Date(dateStr), "h:mm a");
 
-  const calendarItems: CalendarItem[] = (calendarData?.events ?? []).map((e: any) => ({
+  const calendarItems: CalendarItem[] = (calendarData?.events ?? []).map((e: CalendarItem) => ({
     id: e.id,
     title: e.title,
-    date: e.date ?? e.startDate,
+    date: e.date,
     type: "event" as const,
     portal,
     entityId: e.id,

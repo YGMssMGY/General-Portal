@@ -11,7 +11,6 @@ export async function GET() {
     for (const slug of portals) {
       try {
         const db = getDbForPortal(slug);
-
         const workspace = await db.workspace.findUnique({
           where: { slug },
           select: { id: true },
@@ -91,8 +90,8 @@ export async function GET() {
     }
 
     allEvents.sort(
-      (a: any, b: any) =>
-        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+      (a: Record<string, unknown>, b: Record<string, unknown>) =>
+        new Date(b.startDate as string).getTime() - new Date(a.startDate as string).getTime(),
     );
 
     return success({

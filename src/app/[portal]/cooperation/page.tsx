@@ -56,7 +56,7 @@ export default function CooperationPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Cooperation | ${portalName}`);
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
+  const isAdmin = session.user.role === "admin";
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState(isAdmin ? "manage" : "submit");

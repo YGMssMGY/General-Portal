@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     if (!portal) return error("No portal selected", 400);
 
     const db = getDbFromCookie(request);

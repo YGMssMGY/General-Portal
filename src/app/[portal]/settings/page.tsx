@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Save, Settings as SettingsIcon, Shield } from "lucide-react";
@@ -50,9 +50,6 @@ export default function SettingsPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Settings | ${portalName}`);
   const qc = useQueryClient();
-  const [toggles, setToggles] = useState<Record<string, boolean>>({});
-  const [loaded, setLoaded] = useState(false);
-
   const { data: workspace, isLoading } = useQuery<Workspace>({
     queryKey: [portal, "settings"],
     queryFn: () => fetchJson(`/api/settings`),
@@ -63,12 +60,12 @@ export default function SettingsPage() {
     queryFn: () => fetchJson(`/api/me`),
   });
 
-  useEffect(() => {
-    if (workspace && !loaded) {
-      setToggles(workspace.settings || {});
-      setLoaded(true);
-    }
-  }, [workspace, loaded]);
+  // User overrides applied on top of workspace settings
+  const [userToggles, setUserToggles] = useState<Record<string, boolean> | null>(null);
+  const toggles = useMemo(() => {
+    const base = workspace?.settings ?? {};
+    return userToggles ? { ...base, ...userToggles } : base;
+  }, [workspace?.settings, userToggles]);
 
   const updateMutation = useMutation({
     mutationFn: (settings: Record<string, boolean>) =>
@@ -191,9 +188,9 @@ export default function SettingsPage() {
                       type="checkbox"
                       checked={toggles[mod.key] !== false}
                       onChange={() =>
-                        setToggles((prev) => ({
-                          ...prev,
-                          [mod.key]: prev[mod.key] === false ? true : false,
+                        setUserToggles((prev) => ({
+                          ...(prev ?? {}),
+                          [mod.key]: toggles[mod.key] !== false ? false : true,
                         }))
                       }
                       style={{ opacity: 0, position: "absolute", width: "100%", height: "100%", cursor: "pointer", margin: 0 }}

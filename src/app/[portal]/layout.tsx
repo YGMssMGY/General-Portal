@@ -59,15 +59,10 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   const urlPortal = params?.portal as string;
   const portal = getPortalCookie();
   const isPortalValid = portal === "developers" || portal === "stuco";
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!isPortalValid) {
@@ -76,10 +71,10 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
   }, [isPortalValid, router]);
 
   useEffect(() => {
-    if (mounted && status === "unauthenticated") {
+    if (status === "unauthenticated") {
       router.replace("/login");
     }
-  }, [mounted, status, router]);
+  }, [status, router]);
 
   useEffect(() => {
     if (urlPortal && portal && urlPortal !== portal) {
@@ -97,7 +92,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
     setSidebarOpen(false);
   }, []);
 
-  if (!mounted || status === "loading" || !isPortalValid) {
+  if (status === "loading" || !isPortalValid) {
     return (
       <div
         style={{
@@ -187,7 +182,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
               </a>
             );
           })}
-          {(session?.user as any)?.role !== "member" && (
+          {session.user.role !== "member" && (
             <a
               href={`/${portal}/showcase-admin`}
               onClick={(e) => { e.preventDefault(); router.push(`/${portal}/showcase-admin`); }}

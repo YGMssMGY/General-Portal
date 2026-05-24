@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
 
     const workspace = await db.workspace.findUnique({
       where: { slug: portal },
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
 
     const workspace = await db.workspace.findUnique({
       where: { slug: portal },

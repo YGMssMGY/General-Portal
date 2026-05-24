@@ -9,7 +9,7 @@ export async function PUT(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
 
     if (!hasPermission(session.user.role, "manage_showcase")) {
       return error("Forbidden", 403);
