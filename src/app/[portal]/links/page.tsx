@@ -19,6 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link2, Plus, ExternalLink, Trash2 } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { LinkPreview } from "@/components/LinkPreview";
 
 interface LinkData {
   id: string;
@@ -373,6 +374,7 @@ export default function LinksPage() {
                               {link.description}
                             </p>
                           )}
+                          <LinkPreview url={link.url} />
                           <p
                             style={{
                               fontSize: "11px",
