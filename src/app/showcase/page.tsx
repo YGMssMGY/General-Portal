@@ -40,8 +40,8 @@ interface ShowcaseItem {
 
 interface ShowcaseResponse {
   events: ShowcaseEvent[];
-  galleries: unknown[];
-  showcaseItems: ShowcaseItem[];
+  galleries: ShowcaseItem[];
+  announcements: ShowcaseItem[];
 }
 
 type FilterKey = "all" | "developers" | "stuco";
@@ -204,33 +204,16 @@ export default function ShowcasePage() {
   });
 
   const events = data?.events ?? [];
-  const showcaseItems = data?.showcaseItems ?? [];
-  const hasShowcaseItems = showcaseItems.length > 0;
+  const announcements = data?.announcements ?? [];
+  const galleryImages = data?.galleries ?? [];
+  const hasShowcaseItems = announcements.length > 0 || galleryImages.length > 0 || (data?.events?.length ?? 0) > 0;
 
-  const announcements = hasShowcaseItems
-    ? showcaseItems.filter(
-        (i) => i.type === "announcement" && i.isActive
-      )
-    : [];
-
-  const featuredEvents = hasShowcaseItems
-    ? showcaseItems.filter(
-        (i) => i.type === "event_feature" && i.isActive
-      )
-    : [];
-
-  const galleryImages = hasShowcaseItems
-    ? showcaseItems.filter(
-        (i) => i.type === "gallery_image" && i.isActive
-      )
-    : [];
+  const featuredEvents = events.slice(0, 5);
 
   const filteredEvents =
     activeFilter === "all"
       ? events
       : events.filter((e) => e.portal === activeFilter);
-
-  const galleries = data?.galleries ?? [];
 
   return (
     <div style={container}>
@@ -384,9 +367,9 @@ export default function ShowcasePage() {
                       {item.description}
                     </p>
                   )}
-                  {item.linkUrl && (
+                  {(item as any).linkUrl && (
                     <a
-                      href={item.linkUrl}
+                      href={(item as any).linkUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
