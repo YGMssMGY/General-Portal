@@ -13,7 +13,7 @@ export async function GET(
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const { id } = await params;
 
     const workspace = await db.workspace.findUnique({
@@ -49,7 +49,7 @@ export async function PUT(
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const { id } = await params;
 
     const workspace = await db.workspace.findUnique({
@@ -109,7 +109,7 @@ export async function DELETE(
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const { id } = await params;
 
     const workspace = await db.workspace.findUnique({

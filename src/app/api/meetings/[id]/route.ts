@@ -48,7 +48,7 @@ export async function PUT(
   try {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
-    const role = (session.user as any).role;
+    const role = session.user.role;
     if (!hasPermission(role, "manage_meetings")) return error("Forbidden", 403);
 
     const db = getDbFromCookie(request);
@@ -86,7 +86,7 @@ export async function DELETE(
   try {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
-    const role = (session.user as any).role;
+    const role = session.user.role;
     if (!hasPermission(role, "manage_meetings")) return error("Forbidden", 403);
 
     const db = getDbFromCookie(request);

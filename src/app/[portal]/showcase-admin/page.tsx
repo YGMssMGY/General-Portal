@@ -46,7 +46,7 @@ export default function ShowcaseAdminPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Showcase Admin | ${portalName}`);
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role;
+  const role = session.user.role;
   const isOfficer = role === "admin" || role === "officer";
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("event_feature");

@@ -8,7 +8,7 @@ export async function GET() {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const db = getDbForPortal(portal);
 
     const workspace = await db.workspace.findUnique({
@@ -32,7 +32,7 @@ export async function PUT(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const db = getDbForPortal(portal);
 
     const workspace = await db.workspace.findUnique({

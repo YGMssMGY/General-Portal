@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Code2, GraduationCap } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -22,13 +23,17 @@ const portals = [
   },
 ] as const;
 
+function setPortalCookie(id: string) {
+  document.cookie = `portal=${id}; path=/; SameSite=Lax`;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [hovered, setHovered] = useState<string | null>(null);
   usePageTitle("General Portal");
 
   function handleSelect(id: string) {
-    document.cookie = `portal=${id}; path=/; SameSite=Lax`;
+    setPortalCookie(id);
     router.push(`/${id}/dashboard`);
   }
 
@@ -151,7 +156,7 @@ export default function HomePage() {
           })}
         </div>
 
-        <a
+        <Link
           href="/showcase"
           style={{
             display: "block",
@@ -162,11 +167,11 @@ export default function HomePage() {
             fontWeight: 500,
             textDecoration: "none",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.textDecoration = "underline"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.textDecoration = "none"; }}
         >
           View public showcase &rarr;
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
-    const role = (session.user as any).role;
+    const portal = session.user.portal;
+    const role = session.user.role;
 
     if (!hasPermission(role, "manage_users")) {
       return error("Forbidden: insufficient permissions", 403);
@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
-    const role = (session.user as any).role;
+    const portal = session.user.portal;
+    const role = session.user.role;
 
     if (!hasPermission(role, "manage_users")) {
       return error("Forbidden: insufficient permissions", 403);

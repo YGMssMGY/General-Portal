@@ -16,8 +16,8 @@ export async function POST(
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
-    const role = (session.user as any).role;
+    const portal = session.user.portal;
+    const role = session.user.role;
     const { id } = await params;
 
     if (role !== "admin") return error("Forbidden: admin only", 403);

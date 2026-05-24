@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
@@ -221,28 +222,28 @@ export default function ShowcasePage() {
         <h1 style={heroTitle}>Club Activities</h1>
         <p style={heroSubtitle}>Discover what our clubs are doing</p>
         <div style={portalLinks}>
-          <a href="/login?portal=developers" style={portalLink}
+          <Link href="/login?portal=developers" style={portalLink}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)";
+              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-bg-secondary)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-bg)";
+              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-bg)";
             }}
           >
             <Code2 size={16} />
             Sign in to Developers Club
-          </a>
-          <a href="/login?portal=stuco" style={portalLink}
+          </Link>
+          <Link href="/login?portal=stuco" style={portalLink}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)";
+              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-bg-secondary)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--color-bg)";
+              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-bg)";
             }}
           >
             <GraduationCap size={16} />
             Sign in to Student Council
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -367,9 +368,9 @@ export default function ShowcasePage() {
                       {item.description}
                     </p>
                   )}
-                  {(item as any).linkUrl && (
+                  {item.linkUrl && (
                     <a
-                      href={(item as any).linkUrl}
+                      href={item.linkUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{

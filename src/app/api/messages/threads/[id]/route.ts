@@ -61,7 +61,7 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const role = (session.user as any).role;
+    const role = session.user.role;
     if (role !== "admin") {
       return error("Only admins can delete conversations", 403);
     }

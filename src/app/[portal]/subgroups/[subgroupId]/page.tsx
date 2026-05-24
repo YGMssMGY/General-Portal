@@ -94,7 +94,7 @@ export default function SubgroupWorkspacePage() {
   const router = useRouter();
   const subgroupId = params?.subgroupId as string;
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role;
+  const role = session.user.role;
   const isOfficer = role === "admin" || role === "officer";
   const currentUserId = session?.user?.id;
   const queryClient = useQueryClient();

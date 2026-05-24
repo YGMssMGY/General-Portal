@@ -154,7 +154,7 @@ export default function SearchPage() {
       {!isLoading && results.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           <p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: 0 }}>
-            {data?.total ?? results.length} result{(data?.total ?? results.length) !== 1 ? "s" : ""} for "{debounced}"
+            {data?.total ?? results.length} result{(data?.total ?? results.length) !== 1 ? "s" : ""} for &quot;{debounced}&quot;
           </p>
           {Object.entries(grouped).map(([type, items]) => {
             const cfg = typeConfig[type] ?? typeConfig.tasks;

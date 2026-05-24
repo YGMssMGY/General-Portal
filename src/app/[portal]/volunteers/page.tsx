@@ -120,7 +120,7 @@ export default function VolunteersPage() {
   });
 
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "admin";
+  const isAdmin = session.user.role === "admin";
 
   const [showSignups, setShowSignups] = useState<Record<string, boolean>>({});
   const [signupData, setSignupData] = useState<Record<string, { id: string; name: string; email: string; signedUpAt: string }[]>>({});

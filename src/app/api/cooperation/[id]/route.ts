@@ -12,7 +12,7 @@ export async function GET(
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const { id } = await params;
 
     const workspace = await db.workspace.findUnique({
@@ -48,11 +48,11 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
 
-    const role = (session.user as any).role;
+    const role = session.user.role;
     if (role !== "admin") return error("Forbidden: admin only", 403);
 
     const db = getDbFromCookie(request);
-    const portal = (session.user as any).portal;
+    const portal = session.user.portal;
     const { id } = await params;
 
     const workspace = await db.workspace.findUnique({
