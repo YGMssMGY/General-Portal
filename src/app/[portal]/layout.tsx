@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useSession, signOut } from "next-auth/react";
 import { SessionProvider } from "@/components/SessionProvider";
+import { fetchJson } from "@/lib/api-client";
 import {
   LayoutDashboard,
   FileText,
   ClipboardList,
+  CalendarDays,
   Calendar,
   MessageSquare,
   DollarSign,
@@ -32,6 +35,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Proposals", path: "/proposals", icon: FileText },
   { label: "Tasks", path: "/tasks", icon: ClipboardList },
+  { label: "Calendar", path: "/calendar", icon: CalendarDays },
   { label: "Events", path: "/events", icon: Calendar },
   { label: "Messages", path: "/messages", icon: MessageSquare },
   { label: "Finance", path: "/finance", icon: DollarSign },
@@ -45,6 +49,224 @@ const NAV_ITEMS = [
   { label: "Cooperation", path: "/cooperation", icon: Handshake },
   { label: "Notifications", path: "/notifications", icon: Bell },
 ] as const;
+
+interface SearchResultItem {
+  id: string;
+  title: string;
+  type: string;
+  portal: string;
+  url: string;
+}
+
+interface SearchResponse {
+  items: SearchResultItem[];
+}
+
+function SearchDropdown({ portal, router }: { portal: string; router: ReturnType<typeof useRouter> }) {
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const { data, isLoading } = useQuery<SearchResponse>({
+    queryKey: [portal, "search-preview", debouncedQuery],
+    queryFn: () => fetchJson<SearchResponse>(`/api/search?q=${encodeURIComponent(debouncedQuery)}`),
+    enabled: debouncedQuery.trim().length > 0,
+  });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const results = data?.items ?? [];
+  const showDropdown = open && query.trim().length > 0;
+
+  function handleSelect(url: string) {
+    setOpen(false);
+    setQuery("");
+    setDebouncedQuery("");
+    router.push(url);
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        flex: 1,
+        maxWidth: "400px",
+        margin: "0 16px",
+        position: "relative",
+      }}
+      className="hidden sm:flex"
+    >
+      <Search
+        size={16}
+        style={{
+          position: "absolute",
+          left: "12px",
+          top: "50%",
+          transform: "translateY(-50%)",
+          color: "var(--color-text-secondary)",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+      <input
+        ref={inputRef}
+        placeholder="Search..."
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (e.target.value.trim()) setOpen(true);
+        }}
+        onFocus={() => {
+          if (query.trim()) setOpen(true);
+        }}
+        style={{
+          width: "100%",
+          padding: "8px 12px 8px 36px",
+          fontSize: "13px",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-sm)",
+          backgroundColor: "var(--color-bg-secondary)",
+          color: "var(--color-text)",
+          fontFamily: "inherit",
+          outline: "none",
+          minHeight: "36px",
+        }}
+      />
+
+      {showDropdown && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            backgroundColor: "var(--color-bg)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "5px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            zIndex: 100,
+            maxHeight: "320px",
+            overflowY: "auto",
+          }}
+        >
+          {isLoading && (
+            <div
+              style={{
+                padding: "12px 16px",
+                fontSize: "13px",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Searching...
+            </div>
+          )}
+
+          {!isLoading && results.length === 0 && debouncedQuery.trim() && (
+            <div
+              style={{
+                padding: "12px 16px",
+                fontSize: "13px",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              No results found
+            </div>
+          )}
+
+          {!isLoading && results.length > 0 && (
+            <>
+              {results.slice(0, 5).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleSelect(item.url || `/${portal}/search?q=${encodeURIComponent(query)}`)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    padding: "10px 16px",
+                    border: "none",
+                    borderBottom: "1px solid var(--color-border)",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    fontSize: "13px",
+                    color: "var(--color-text)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {item.title}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      padding: "2px 6px",
+                      borderRadius: "3px",
+                      backgroundColor: "var(--color-bg-secondary)",
+                      color: "var(--color-text-secondary)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {item.type}
+                  </span>
+                  {item.portal && item.portal !== portal && (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                        backgroundColor: "var(--color-primary-light)",
+                        color: "var(--color-primary)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {item.portal}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function getPortalCookie(): string | null {
   if (typeof document === "undefined") return null;
@@ -247,55 +469,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
             </span>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              flex: 1,
-              maxWidth: "400px",
-              margin: "0 16px",
-            }}
-            className="hidden sm:flex"
-          >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const q = (form.elements.namedItem("q") as HTMLInputElement).value.trim();
-                if (q) router.push(`/${portal}/search?q=${encodeURIComponent(q)}`);
-              }}
-              style={{ width: "100%", position: "relative" }}
-            >
-              <Search
-                size={16}
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--color-text-secondary)",
-                  pointerEvents: "none",
-                }}
-              />
-              <input
-                name="q"
-                placeholder="Search..."
-                style={{
-                  width: "100%",
-                  padding: "8px 12px 8px 36px",
-                  fontSize: "13px",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "var(--radius-sm)",
-                  backgroundColor: "var(--color-bg-secondary)",
-                  color: "var(--color-text)",
-                  fontFamily: "inherit",
-                  outline: "none",
-                  minHeight: "36px",
-                }}
-              />
-            </form>
-          </div>
+          <SearchDropdown portal={portal} router={router} />
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {session?.user?.name && (

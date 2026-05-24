@@ -33,12 +33,12 @@ export async function GET(request: NextRequest) {
       id: string;
       title: string;
       date: string;
-      type: "event" | "deadline" | "meeting";
+      type: "event" | "deadline" | "meeting" | "volunteer";
       portal: string;
       entityId: string;
     }> = [];
 
-    const [events, tasks, meetings] = await Promise.all([
+    const [events, tasks, meetings, volunteerSlots] = await Promise.all([
       db.eventItem.findMany({
         where: {
           workspaceId: workspace.id,
@@ -56,6 +56,13 @@ export async function GET(request: NextRequest) {
         select: { id: true, title: true, dueDate: true },
       }),
       db.meeting.findMany({
+        where: {
+          workspaceId: workspace.id,
+          startTime: { gte: startDate, lte: endDate },
+        },
+        select: { id: true, title: true, startTime: true },
+      }),
+      db.volunteerSlot.findMany({
         where: {
           workspaceId: workspace.id,
           startTime: { gte: startDate, lte: endDate },
@@ -94,6 +101,17 @@ export async function GET(request: NextRequest) {
         type: "meeting",
         portal,
         entityId: meeting.id,
+      });
+    }
+
+    for (const slot of volunteerSlots) {
+      items.push({
+        id: slot.id,
+        title: `[Volunteer] ${slot.title}`,
+        date: slot.startTime.toISOString(),
+        type: "volunteer",
+        portal,
+        entityId: slot.id,
       });
     }
 
