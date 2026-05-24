@@ -47,12 +47,12 @@ type FilterKey = "all" | "developers" | "stuco";
 
 const portalFilters: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "developers", label: "Developers Club" },
+  { key: "developers", label: "Developers' Club" },
   { key: "stuco", label: "Student Council" },
 ];
 
 const portalLabel: Record<string, string> = {
-  developers: "Developers Club",
+  developers: "Developers' Club",
   stuco: "Student Council",
 };
 

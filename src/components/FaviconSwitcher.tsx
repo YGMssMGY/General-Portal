@@ -8,8 +8,6 @@ function getPortalFromCookie(): string | null {
   return match ? match[1] : null;
 }
 
-const DEV_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="5" fill="#0f62fe"/><text x="16" y="22" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="18" fill="white">D</text></svg>`;
-const STUCO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="5" fill="#f1c21b"/><text x="16" y="22" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="18" fill="white">S</text></svg>`;
 const DEFAULT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="5" fill="#161616"/><text x="16" y="22" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="18" fill="white">G</text></svg>`;
 
 export function FaviconSwitcher() {
@@ -18,8 +16,13 @@ export function FaviconSwitcher() {
   useEffect(() => {
     function update() {
       const portal = getPortalFromCookie();
-      const svg = portal === "developers" ? DEV_SVG : portal === "stuco" ? STUCO_SVG : DEFAULT_SVG;
-      setHref(`data:image/svg+xml,${encodeURIComponent(svg)}`);
+      if (portal === "developers") {
+        setHref("/developers.png");
+      } else if (portal === "stuco") {
+        setHref("/stuco.png");
+      } else {
+        setHref(`data:image/svg+xml,${encodeURIComponent(DEFAULT_SVG)}`);
+      }
     }
 
     update();

@@ -87,7 +87,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
     }
   }, [urlPortal, portal]);
 
-  const portalName = portal === "developers" ? "Developers Club" : "Student Council";
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
 
   const handleSignOut = useCallback(() => {
     signOut({ callbackUrl: "/" });
@@ -130,34 +130,10 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
           overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            padding: "20px 16px",
-            borderBottom: "1px solid var(--color-border)",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "var(--color-text)",
-              margin: 0,
-              letterSpacing: "0.01em",
-            }}
-          >
+        <div style={{ padding: "12px 16px 4px" }}>
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--color-text-secondary)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {portalName}
-          </h2>
-          {session?.user?.email && (
-            <p
-              style={{
-                fontSize: "12px",
-                color: "var(--color-text-secondary)",
-                margin: "4px 0 0",
-              }}
-            >
-              {session.user.email}
-            </p>
-          )}
+          </p>
         </div>
 
         <nav

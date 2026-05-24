@@ -12,7 +12,7 @@ interface LoginFormProps {
 export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
 
-  const portalName = portal === "developers" ? "Developers Club" : "Student Council";
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
 
   let errorMsg = "";
   if (typeof error === "string") {

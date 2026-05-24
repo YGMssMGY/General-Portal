@@ -7,7 +7,7 @@ import { Code2, GraduationCap } from "lucide-react";
 const portals = [
   {
     id: "developers",
-    name: "Developers Club",
+    name: "Developers' Club",
     description:
       "Build software, contribute to open source, and grow your engineering skills through hands-on projects and workshops.",
     icon: Code2,
