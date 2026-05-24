@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -16,15 +16,16 @@ import {
   File,
   Video,
   Activity,
-  Search,
   Settings,
   Bell,
   Menu,
   LogOut,
   X,
-  Link,
   ShoppingCart,
   Handshake,
+  UsersRound,
+  Search,
+  Eye,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -37,12 +38,11 @@ const NAV_ITEMS = [
   { label: "Finance", path: "/finance", icon: DollarSign },
   { label: "Volunteers", path: "/volunteers", icon: Users },
   { label: "Members", path: "/members", icon: UserCheck },
-  { label: "Files", path: "/files", icon: File },
+  { label: "Files & Links", path: "/files", icon: File },
   { label: "Meetings", path: "/meetings", icon: Video },
   { label: "Activity", path: "/activity", icon: Activity },
-  { label: "Search", path: "/search", icon: Search },
+  { label: "Subgroups", path: "/subgroups", icon: UsersRound },
   { label: "Settings", path: "/settings", icon: Settings },
-  { label: "Links", path: "/links", icon: Link },
   { label: "Cooperation", path: "/cooperation", icon: Handshake },
   { label: "Notifications", path: "/notifications", icon: Bell },
 ] as const;
@@ -211,6 +211,24 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
               </a>
             );
           })}
+          {(session?.user as any)?.role !== "member" && (
+            <a
+              href={`/${portal}/showcase-admin`}
+              onClick={(e) => { e.preventDefault(); router.push(`/${portal}/showcase-admin`); }}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
+                borderRadius: "var(--radius-sm)", fontSize: "14px", fontWeight: 400,
+                color: pathname === `/${portal}/showcase-admin` ? "var(--color-primary)" : "var(--color-text)",
+                backgroundColor: pathname === `/${portal}/showcase-admin` ? "var(--color-primary-light)" : "transparent",
+                textDecoration: "none", marginBottom: "2px", minHeight: "40px",
+              }}
+              onMouseEnter={(e) => { if (pathname !== `/${portal}/showcase-admin`) e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)"; }}
+              onMouseLeave={(e) => { if (pathname !== `/${portal}/showcase-admin`) e.currentTarget.style.backgroundColor = "transparent"; }}
+            >
+              <Eye size={18} style={{ flexShrink: 0 }} />
+              <span>Showcase</span>
+            </a>
+          )}
         </nav>
       </aside>
 
@@ -257,6 +275,56 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
             >
               {portalName}
             </span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              flex: 1,
+              maxWidth: "400px",
+              margin: "0 16px",
+            }}
+            className="hidden sm:flex"
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const q = (form.elements.namedItem("q") as HTMLInputElement).value.trim();
+                if (q) router.push(`/${portal}/search?q=${encodeURIComponent(q)}`);
+              }}
+              style={{ width: "100%", position: "relative" }}
+            >
+              <Search
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--color-text-secondary)",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                name="q"
+                placeholder="Search..."
+                style={{
+                  width: "100%",
+                  padding: "8px 12px 8px 36px",
+                  fontSize: "13px",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
+                  backgroundColor: "var(--color-bg-secondary)",
+                  color: "var(--color-text)",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  minHeight: "36px",
+                }}
+              />
+            </form>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

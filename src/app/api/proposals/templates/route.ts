@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) return error("Unauthorized", 401);
 
     const role = (session.user as any).role;
-    if (role !== "admin" && !hasPermission(role, "manage_proposals")) {
+    if (role !== "admin" && !hasPermission(role, "approve_proposal")) {
       return error("Forbidden: insufficient permissions", 403);
     }
 
