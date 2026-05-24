@@ -23,6 +23,7 @@ export async function GET(request: Request) {
         workspaceId: workspace.id,
         date: { gte: twelveMonthsAgo },
       },
+      take: 5000,
     });
 
     const monthMap = new Map<string, { income: number; expense: number }>();

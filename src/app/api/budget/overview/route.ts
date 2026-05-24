@@ -16,12 +16,13 @@ export async function GET() {
     });
     if (!workspace) return error("Workspace not found", 404);
 
-    const allocations = await db.budgetAllocation.findMany({
+    const agg = await db.budgetAllocation.aggregate({
+      _sum: { amount: true, spent: true },
       where: { workspaceId: workspace.id },
     });
 
-    const totalAllocated = allocations.reduce((sum, a) => sum + Number(a.amount), 0);
-    const totalSpent = allocations.reduce((sum, a) => sum + Number(a.spent), 0);
+    const totalAllocated = Number(agg._sum.amount ?? 0);
+    const totalSpent = Number(agg._sum.spent ?? 0);
 
     return success({
       totalAllocated,

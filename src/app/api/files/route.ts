@@ -26,10 +26,17 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get("entityType") || "file";
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+    const skip = (page - 1) * limit;
+
+    const where = { workspaceId: workspace.id, entityType };
 
     const files = await db.attachment.findMany({
-      where: { workspaceId: workspace.id, entityType },
+      where,
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
       include: {
         uploadedBy: { select: { id: true, name: true } },
       },

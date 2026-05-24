@@ -15,6 +15,12 @@ const PORTAL_DATABASES: Record<string, string | undefined> = {
   stuco: process.env.DATABASE_URL_STUCO,
 };
 
+function buildUrl(base: string | undefined): string | undefined {
+  if (!base) return undefined;
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}connection_limit=5&pool_timeout=10`;
+}
+
 export function getDbForPortal(portal: string): PrismaClient {
   const cached = clientCache.get(portal);
   if (cached) return cached;
@@ -26,7 +32,15 @@ export function getDbForPortal(portal: string): PrismaClient {
     );
   }
 
-  const client = new PrismaClient({ datasourceUrl: url });
+  const client = new PrismaClient({
+    datasourceUrl: buildUrl(url),
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  });
+
+  client.$connect().catch((e) => {
+    console.error(`Failed to connect to database for portal "${portal}":`, e);
+  });
+
   clientCache.set(portal, client);
   return client;
 }

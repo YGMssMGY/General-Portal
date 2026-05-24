@@ -53,6 +53,7 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
       const db = getDbForPortal(portal)
       const membership = await db.membership.findFirst({
         where: { user: { email: user.email } },
+        select: { id: true },
       })
 
       return !!membership
@@ -71,19 +72,20 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
         const db = getDbForPortal(portal)
         const dbUser = await db.user.findUnique({
           where: { email: token.email },
-          include: {
+          select: {
+            id: true,
             memberships: {
-              include: { workspace: { select: { slug: true } } },
+              where: { workspace: { slug: portal } },
+              select: { role: true },
             },
           },
         })
 
         if (dbUser) {
           token.userDbId = dbUser.id
-          const membership = dbUser.memberships.find((m) => m.workspace.slug === portal)
-          if (membership) {
-            token.role = membership.role
-            token.permissions = ROLE_PERMISSIONS[membership.role as keyof typeof ROLE_PERMISSIONS] ?? []
+          if (dbUser.memberships.length > 0) {
+            token.role = dbUser.memberships[0].role
+            token.permissions = ROLE_PERMISSIONS[dbUser.memberships[0].role as keyof typeof ROLE_PERMISSIONS] ?? []
           }
         }
       }

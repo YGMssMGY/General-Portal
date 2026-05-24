@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+    const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { workspaceId: workspace.id };
     if (status && typeof status === "string" && status.trim()) {
@@ -28,6 +31,8 @@ export async function GET(request: NextRequest) {
     const requests = await db.cooperationRequest.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
       include: {
         submittedBy: { select: { id: true, name: true, email: true, image: true } },
         reviewedBy: { select: { id: true, name: true, image: true } },
