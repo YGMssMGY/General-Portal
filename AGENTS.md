@@ -205,7 +205,7 @@ Invalidation pattern: `queryClient.invalidateQueries({ queryKey: [portal, "featu
 
 - Uploaded files are stored on the local filesystem under `UPLOADS_DIR` (default `./uploads`).
 - Sub-directory per portal: `./uploads/developers/`, `./uploads/stuco/`.
-- Max file size: 10 MB.
+- Max file size: 500 MB.
 - Allowed MIME type prefixes are whitelisted (images, PDF, text, Word, Excel).
 - File metadata is stored in the `Attachment` table.
 

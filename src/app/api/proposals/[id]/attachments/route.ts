@@ -6,7 +6,7 @@ import { getDbFromCookie } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || join(process.cwd(), "uploads");
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
 const ALLOWED_MIME_PATTERNS = [/^image\//, /^application\/pdf$/, /^text\//];
 
 function isAllowedMime(mime: string): boolean {
@@ -75,7 +75,7 @@ export async function POST(
     const file = formData.get("file") as File | null;
 
     if (!file) return error("No file provided", 400);
-    if (file.size > MAX_FILE_SIZE) return error("File exceeds 10 MB limit", 400);
+    if (file.size > MAX_FILE_SIZE) return error("File exceeds 500 MB limit", 400);
     if (!isAllowedMime(file.type)) {
       return error("File type not allowed. Accepted: images, PDF, text files", 400);
     }
