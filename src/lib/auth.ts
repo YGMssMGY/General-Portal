@@ -16,6 +16,8 @@ declare module "next-auth" {
   }
 }
 
+const tenant = process.env.MICROSOFT_TENANT_ID || "common"
+
 export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   pages: {
@@ -23,12 +25,21 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60,
+  },
+  jwt: {
+    maxAge: 24 * 60 * 60,
   },
   providers: [
     MicrosoftEntraID({
       clientId: process.env.MICROSOFT_CLIENT_ID!,
       clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/v2.0`,
+      issuer: `https://login.microsoftonline.com/${tenant}/v2.0`,
+      authorization: {
+        url: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`,
+        params: { scope: "openid profile email" },
+      },
+      token: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
     }),
   ],
   callbacks: {
@@ -47,15 +58,19 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
       return !!membership
     },
     async jwt({ token, account, user }) {
-      const cookieStore = await cookies()
-      const portal = cookieStore.get("portal")?.value || "developers"
+      if (account && user) {
+        const cookieStore = await cookies()
+        const portal = cookieStore.get("portal")?.value || "developers"
+        token.portal = portal
+      }
 
-      const email = account ? (user?.email || token.email) : (token.email || null)
+      if (!token.userDbId && token.email) {
+        const cookieStore = await cookies()
+        const portal = cookieStore.get("portal")?.value || "developers"
 
-      if (email && (!token.userDbId || account)) {
         const db = getDbForPortal(portal)
         const dbUser = await db.user.findUnique({
-          where: { email },
+          where: { email: token.email },
           include: {
             memberships: {
               include: { workspace: { select: { slug: true } } },
@@ -67,37 +82,10 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
           token.userDbId = dbUser.id
           const membership = dbUser.memberships.find((m) => m.workspace.slug === portal)
           if (membership) {
-            token.portal = portal
             token.role = membership.role
             token.permissions = ROLE_PERMISSIONS[membership.role as keyof typeof ROLE_PERMISSIONS] ?? []
           }
-        } else {
-          try {
-            const otherPortal = portal === "developers" ? "stuco" : "developers"
-            const otherDb = getDbForPortal(otherPortal)
-            const otherUser = await otherDb.user.findUnique({
-              where: { email },
-              include: {
-                memberships: {
-                  include: { workspace: { select: { slug: true } } },
-                },
-              },
-            })
-            if (otherUser) {
-              token.userDbId = otherUser.id
-              const membership = otherUser.memberships.find((m) => m.workspace.slug === otherPortal)
-              if (membership) {
-                token.portal = otherPortal
-                token.role = membership.role
-                token.permissions = ROLE_PERMISSIONS[membership.role as keyof typeof ROLE_PERMISSIONS] ?? []
-              }
-            }
-          } catch {}
         }
-      }
-
-      if (!token.portal) {
-        token.portal = portal
       }
 
       return token

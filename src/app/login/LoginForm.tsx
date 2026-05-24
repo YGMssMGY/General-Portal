@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 
 interface LoginFormProps {
@@ -9,6 +10,8 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps) {
+  const [loading, setLoading] = useState(false);
+
   const portalName = portal === "developers" ? "Developers Club" : "Student Council";
 
   let errorMsg = "";
@@ -22,7 +25,8 @@ export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps
     }
   }
 
-  function handleMicrosoftSignIn() {
+  function handleSignIn() {
+    setLoading(true);
     signIn("microsoft-entra-id", { callbackUrl });
   }
 
@@ -92,7 +96,8 @@ export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps
 
         <button
           type="button"
-          onClick={handleMicrosoftSignIn}
+          onClick={handleSignIn}
+          disabled={loading}
           style={{
             display: "flex",
             alignItems: "center",
@@ -100,18 +105,19 @@ export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps
             gap: "10px",
             width: "100%",
             padding: "12px 24px",
-            backgroundColor: "var(--color-primary)",
+            backgroundColor: loading ? "var(--color-primary-hover)" : "var(--color-primary)",
             color: "#ffffff",
             border: "none",
             borderRadius: "var(--radius-sm)",
             fontSize: "14px",
             fontWeight: 600,
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
             fontFamily: "inherit",
+            opacity: loading ? 0.7 : 1,
             transition: "background-color 150ms ease",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-primary-hover)";
+            if (!loading) e.currentTarget.style.backgroundColor = "var(--color-primary-hover)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "var(--color-primary)";
@@ -123,7 +129,7 @@ export default function LoginForm({ portal, callbackUrl, error }: LoginFormProps
             <rect x="1" y="12" width="9" height="9" fill="#00A4EF" />
             <rect x="12" y="12" width="9" height="9" fill="#FFB900" />
           </svg>
-          Sign in with Microsoft
+          {loading ? "Redirecting to Microsoft..." : "Sign in with Microsoft"}
         </button>
       </div>
     </div>
