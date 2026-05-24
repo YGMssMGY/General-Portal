@@ -35,7 +35,8 @@ const CATEGORIES = ["Google Drive", "Teams", "Other"] as const;
 
 export default function LinksPage() {
   const portal = usePortal();
-  usePageTitle("Links | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Links | ${portalName}`);
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

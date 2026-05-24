@@ -80,7 +80,8 @@ function formatDate(iso: string): string {
 
 export default function FilesPage() {
   const portal = usePortal();
-  usePageTitle("Files & Links | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Files & Links | ${portalName}`);
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState("files");

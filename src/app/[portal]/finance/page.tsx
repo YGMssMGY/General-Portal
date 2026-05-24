@@ -121,7 +121,8 @@ const statusConfig: Record<string, { label: string; color: string; bg: string }>
 
 export default function FinancePage() {
   const portal = usePortal();
-  usePageTitle("Finance | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Finance | ${portalName}`);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";

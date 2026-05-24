@@ -16,12 +16,8 @@ import {
   Activity,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
-
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
 
 interface DashboardData {
   tasks: Record<string, number>;
@@ -73,8 +69,9 @@ function getEntityLabel(entityType: string): string {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const portal = getPortal();
-  usePageTitle("Dashboard | General Portal");
+  const portal = usePortal();
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Dashboard | ${portalName}`);
 
   const { data, isLoading, isError } = useQuery<DashboardData>({
     queryKey: [portal, "dashboard"],

@@ -39,12 +39,8 @@ import {
   ChevronRight,
   Trash2,
 } from "lucide-react";
+import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
-
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
 
 interface SubTask {
   id: string;
@@ -105,8 +101,9 @@ function getPriorityLabel(priority: number): string {
 }
 
 export default function TasksPage() {
-  const portal = getPortal();
-  usePageTitle("Tasks | General Portal");
+  const portal = usePortal();
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Tasks | ${portalName}`);
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

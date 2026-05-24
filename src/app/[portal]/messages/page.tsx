@@ -111,7 +111,8 @@ interface LeaderboardEntry {
 
 export default function MessagesPage() {
   const portal = usePortal();
-  usePageTitle("Messages | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Messages | ${portalName}`);
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
   const isAdmin = (session?.user as any)?.role === "admin";

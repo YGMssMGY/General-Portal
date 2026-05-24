@@ -13,12 +13,8 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
-
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
 
 interface ActivityItem {
   id: string;
@@ -78,8 +74,9 @@ const btnBase: React.CSSProperties = {
 };
 
 export default function ActivityPage() {
-  const portal = getPortal();
-  usePageTitle("Activity | General Portal");
+  const portal = usePortal();
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Activity | ${portalName}`);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;

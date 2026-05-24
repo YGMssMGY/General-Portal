@@ -80,7 +80,8 @@ const approvalStatusConfig: Record<string, { label: string; variant: "secondary"
 
 export default function EventsPage() {
   const portal = usePortal();
-  usePageTitle("Events | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Events | ${portalName}`);
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

@@ -4,12 +4,8 @@ import { useState, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Search as SearchIcon, FileText, Calendar, ClipboardList, User, File, ExternalLink, Video } from "lucide-react";
+import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
-
-function getPortal(): string {
-  if (typeof window === "undefined") return "developers";
-  return document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1] ?? "developers";
-}
 
 interface SearchResult {
   id: string;
@@ -48,8 +44,9 @@ const btnBase: React.CSSProperties = {
 };
 
 export default function SearchPage() {
-  const portal = getPortal();
-  usePageTitle("Search | General Portal");
+  const portal = usePortal();
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Search | ${portalName}`);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

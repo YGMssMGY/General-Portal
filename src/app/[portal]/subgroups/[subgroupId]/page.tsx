@@ -148,7 +148,8 @@ export default function SubgroupWorkspacePage() {
   });
 
   const color = subgroup?.color ?? "var(--color-primary)";
-  usePageTitle(`${subgroup?.name ?? "Subgroup"} | General Portal`);
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`${subgroup?.name ?? "Subgroup"} | ${portalName}`);
 
   // Task mutations
   const createTask = useMutation({
