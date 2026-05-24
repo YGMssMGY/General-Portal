@@ -5,8 +5,7 @@ import { success, error } from "@/lib/api-response";
 import { hasPermission } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 
-export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return PUT(request, { params });
 }
 

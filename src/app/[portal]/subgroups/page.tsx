@@ -46,7 +46,7 @@ export default function SubgroupsHubPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Subgroups | ${portalName}`);
   const { data: session } = useSession();
-  const role = session.user.role;
+  const role = session?.user?.role;
   const isOfficer = role === "admin" || role === "officer";
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);

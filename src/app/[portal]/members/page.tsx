@@ -63,7 +63,7 @@ export default function MembersPage() {
   usePageTitle(`Members | ${portalName}`);
   const qc = useQueryClient();
   const { data: session } = useSession();
-  const currentUserRole = session.user.role;
+  const currentUserRole = session?.user?.role;
   const isAdmin = currentUserRole === "admin";
 
   const [activeTab, setActiveTab] = useState("directory");
@@ -641,7 +641,7 @@ function MemberDetail({
   const portal = usePortal();
   const qc = useQueryClient();
   const { data: session } = useSession();
-  const currentUserRole = session.user.role;
+  const currentUserRole = session?.user?.role;
   const isAdmin = currentUserRole === "admin";
 
   const { data: detail } = useQuery<MemberProfile>({
@@ -791,7 +791,7 @@ function MemberDetail({
             <RoleBadge role={currentRole} />
           </div>
 
-          {isAdmin && member.id !== session.user.id && (
+          {isAdmin && member.id !== session?.user?.id && (
             <div>
               <div
                 style={{
