@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import {
@@ -9,7 +9,6 @@ import {
   Edit3,
   Trash2,
   UserPlus,
-  FileText,
   CheckCircle,
   AlertCircle,
 } from "lucide-react";

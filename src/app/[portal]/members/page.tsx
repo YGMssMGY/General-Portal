@@ -92,17 +92,7 @@ export default function MembersPage() {
     queryFn: () => fetchJson(`/api/members`),
   });
 
-  const { data: adminUsers } = useQuery<MemberProfile[]>({
-    queryKey: [portal, "admin", "users"],
-    queryFn: () => fetchJson(`/api/admin/users`),
-    enabled: isAdmin,
-  });
 
-  const { data: historicalMembers } = useQuery<MemberProfile[]>({
-    queryKey: [portal, "members", "historical"],
-    queryFn: () => fetchJson(`/api/members/historical`),
-    enabled: activeTab === "history",
-  });
 
   // ─── Mutations ───
 
@@ -119,26 +109,7 @@ export default function MembersPage() {
     },
   });
 
-  const updateRole = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      fetchJson(`/api/members/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [portal, "members"] });
-    },
-  });
 
-  const removeMember = useMutation({
-    mutationFn: (userId: string) =>
-      fetchJson(`/api/members/${userId}`, { method: "DELETE" }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [portal, "members"] });
-      qc.invalidateQueries({ queryKey: [portal, "admin", "users"] });
-    },
-  });
 
   const createUser = useMutation({
     mutationFn: (data: { name: string; email: string; role: string }) =>
@@ -152,19 +123,6 @@ export default function MembersPage() {
       qc.invalidateQueries({ queryKey: [portal, "members"] });
       setShowCreateUser(false);
       setNewUser({ name: "", email: "", role: "member" });
-    },
-  });
-
-  const changeRole = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      fetchJson(`/api/admin/users/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: [portal, "admin", "users"] });
-      qc.invalidateQueries({ queryKey: [portal, "members"] });
     },
   });
 

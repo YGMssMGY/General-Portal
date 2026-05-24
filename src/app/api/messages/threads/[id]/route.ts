@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getDbFromCookie } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
-import { hasPermission } from "@/lib/permissions";
 
 export async function GET(
   request: Request,

@@ -21,7 +21,6 @@ import {
   Plus,
   ExternalLink,
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FileItem {
