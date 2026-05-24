@@ -115,7 +115,7 @@ export default function MessagesPage() {
   usePageTitle(`Messages | ${portalName}`);
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = session?.user?.role === "admin";
   const queryClient = useQueryClient();
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [showMobileThread, setShowMobileThread] = useState(false);

@@ -37,7 +37,7 @@ export default function LinksPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Links | ${portalName}`);
   const { data: session } = useSession();
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = session?.user?.role === "admin";
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");

@@ -125,7 +125,7 @@ export default function FinancePage() {
   usePageTitle(`Finance | ${portalName}`);
   const queryClient = useQueryClient();
   const { data: session } = useSession();
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = session?.user?.role === "admin";
 
   // Transaction state
   const [typeFilter, setTypeFilter] = useState("all");

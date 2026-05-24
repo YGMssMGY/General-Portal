@@ -83,7 +83,7 @@ export default function EventsPage() {
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
   usePageTitle(`Events | ${portalName}`);
   const { data: session } = useSession();
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = session?.user?.role === "admin";
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);

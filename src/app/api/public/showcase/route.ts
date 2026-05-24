@@ -4,7 +4,7 @@ import { getDbForPortal } from "@/lib/db";
 export async function GET() {
   try {
     const portals = ["developers", "stuco"] as const;
-    const allEvents: unknown[] = [];
+    const allEvents: Record<string, unknown>[] = [];
     const allGalleries: unknown[] = [];
     const allAnnouncements: unknown[] = [];
 
@@ -91,7 +91,7 @@ export async function GET() {
 
     allEvents.sort(
       (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        new Date(b.startDate as string).getTime() - new Date(a.startDate as string).getTime(),
+        new Date(String(b.startDate)).getTime() - new Date(String(a.startDate)).getTime(),
     );
 
     return success({

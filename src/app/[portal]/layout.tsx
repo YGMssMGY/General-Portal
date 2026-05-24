@@ -181,7 +181,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
               </a>
             );
           })}
-          {session.user.role !== "member" && (
+          {session?.user?.role !== "member" && (
             <a
               href={`/${portal}/showcase-admin`}
               onClick={(e) => { e.preventDefault(); router.push(`/${portal}/showcase-admin`); }}
