@@ -29,20 +29,6 @@ const typeConfig: Record<string, { icon: typeof FileText; color: string; bg: str
   meetings: { icon: Video, color: "var(--color-success)", bg: "#e8f5e9" },
 };
 
-const btnBase: React.CSSProperties = {
-  padding: "6px 12px",
-  borderRadius: "var(--radius-sm)",
-  border: "1px solid var(--color-border)",
-  fontSize: "12px",
-  fontWeight: 500,
-  cursor: "pointer",
-  fontFamily: "inherit",
-  backgroundColor: "transparent",
-  color: "var(--color-text-secondary)",
-  transition: "background-color 100ms ease",
-  minHeight: "32px",
-};
-
 export default function SearchPage() {
   const portal = usePortal();
   const portalName = portal === "developers" ? "Developers' Club" : "Student Council";

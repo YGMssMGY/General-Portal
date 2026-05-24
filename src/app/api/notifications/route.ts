@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { error } from "@/lib/api-response";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {

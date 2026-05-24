@@ -36,7 +36,6 @@ import {
   MessageSquare,
   Send,
   AlertCircle,
-  ChevronRight,
   Trash2,
 } from "lucide-react";
 import { usePortal } from "@/hooks/usePortal";
@@ -68,11 +67,6 @@ interface Task {
   comments: TaskComment[];
   createdAt: string;
   updatedAt: string;
-}
-
-interface TasksResponse {
-  tasks: Task[];
-  total: number;
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {

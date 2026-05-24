@@ -24,7 +24,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Handshake, CheckCircle, XCircle, Clock, Search } from "lucide-react";
+import { Handshake, CheckCircle, XCircle } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { format } from "date-fns";
 

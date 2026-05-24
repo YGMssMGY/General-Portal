@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import { Bell, CheckCheck, ExternalLink, Circle } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink } from "lucide-react";
 import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -21,7 +21,6 @@ import {
   Menu,
   LogOut,
   X,
-  ShoppingCart,
   Handshake,
   UsersRound,
   Search,
@@ -312,6 +311,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
             )}
 
             {session?.user?.image && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={session.user.image}
                 alt={session.user.name ?? "User avatar"}

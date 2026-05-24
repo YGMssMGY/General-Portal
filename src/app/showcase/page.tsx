@@ -606,6 +606,7 @@ export default function ShowcasePage() {
                 }}
               >
                 {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={item.imageUrl}
                     alt={item.title}
@@ -622,6 +623,7 @@ export default function ShowcasePage() {
                 ) : (
                   <Image
                     size={32}
+                    alt=""
                     style={{ color: "var(--color-text-secondary)", marginBottom: "8px" }}
                   />
                 )}
@@ -653,7 +655,7 @@ export default function ShowcasePage() {
           <div style={grid}>
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={galleryItem}>
-                <Image size={24} style={{ color: "var(--color-text-secondary)" }} />
+                <Image size={24} alt="" style={{ color: "var(--color-text-secondary)" }} />
                 <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
                   Gallery {i + 1}
                 </span>
