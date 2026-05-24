@@ -27,6 +27,8 @@ import {
 import { Handshake, CheckCircle, XCircle } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { format } from "date-fns";
+import { LinkPreview } from "@/components/LinkPreview";
+import { extractUrls } from "@/lib/extract-urls";
 
 interface CooperationRequest {
   id: string;
@@ -490,6 +492,9 @@ export default function CooperationPage() {
                               {req.description}
                             </p>
                           )}
+                          {req.description && extractUrls(req.description).map((url) => (
+                            <LinkPreview key={url} url={url} />
+                          ))}
                           <div
                             style={{
                               display: "flex",
