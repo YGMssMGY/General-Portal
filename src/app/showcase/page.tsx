@@ -610,8 +610,10 @@ export default function ShowcasePage() {
                     alt={item.title}
                     style={{
                       width: "100%",
-                      height: "120px",
-                      objectFit: "cover",
+                      height: "auto",
+                      aspectRatio: "16 / 9",
+                      objectFit: "contain",
+                      backgroundColor: "var(--color-bg-secondary)",
                       borderRadius: "5px",
                       marginBottom: "8px",
                     }}
