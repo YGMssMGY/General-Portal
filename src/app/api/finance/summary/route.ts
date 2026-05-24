@@ -13,41 +13,41 @@ export async function GET(request: Request) {
     });
     if (!workspace) return error("Workspace not found", 404);
 
-    const transactions = await db.transaction.findMany({
-      where: { workspaceId: workspace.id },
-    });
+    const [incomeAgg, expenseAgg, categoryGroups, transactionCount] =
+      await Promise.all([
+        db.transaction.aggregate({
+          _sum: { amount: true },
+          where: { workspaceId: workspace.id, type: "income" },
+        }),
+        db.transaction.aggregate({
+          _sum: { amount: true },
+          where: { workspaceId: workspace.id, type: "expense" },
+        }),
+        db.transaction.groupBy({
+          by: ["category", "type"],
+          where: { workspaceId: workspace.id, category: { not: null } },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        db.transaction.count({
+          where: { workspaceId: workspace.id },
+        }),
+      ]);
 
-    let totalIncome = 0;
-    let totalExpense = 0;
-    const categoryMap: Record<string, { total: number; count: number }> = {};
+    const totalIncome = Number(incomeAgg._sum.amount ?? 0);
+    const totalExpense = Number(expenseAgg._sum.amount ?? 0);
 
-    for (const t of transactions) {
-      const amt = Number(t.amount);
-      if (t.type === "income") totalIncome += amt;
-      else totalExpense += amt;
-
-      if (t.category) {
-        if (!categoryMap[t.category]) {
-          categoryMap[t.category] = { total: 0, count: 0 };
-        }
-        categoryMap[t.category].total += amt;
-        categoryMap[t.category].count += 1;
-      }
-    }
-
-    const categoryBreakdown = Object.entries(categoryMap).map(
-      ([category, data]) => ({
-        category,
-        total: data.total,
-        count: data.count,
-      }),
-    );
+    const categoryBreakdown = categoryGroups.map((g) => ({
+      category: g.category,
+      total: Number(g._sum.amount ?? 0),
+      count: g._count,
+    }));
 
     return success({
       totalIncome,
       totalExpense,
       balance: totalIncome - totalExpense,
-      transactionCount: transactions.length,
+      transactionCount,
       categoryBreakdown,
     });
   } catch (e) {

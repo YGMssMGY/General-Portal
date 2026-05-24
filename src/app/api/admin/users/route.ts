@@ -24,12 +24,19 @@ export async function GET(request: NextRequest) {
     });
     if (!workspace) return error("Workspace not found", 404);
 
-    const users = await db.user.findMany({
-      where: {
-        memberships: {
-          some: { workspaceId: workspace.id },
-        },
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+    const skip = (page - 1) * limit;
+
+    const userWhere = {
+      memberships: {
+        some: { workspaceId: workspace.id },
       },
+    };
+
+    const users = await db.user.findMany({
+      where: userWhere,
       include: {
         memberships: {
           where: { workspaceId: workspace.id },
@@ -37,6 +44,8 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
 
     return success(users);

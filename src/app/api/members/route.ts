@@ -13,8 +13,15 @@ export async function GET(request: Request) {
     });
     if (!workspace) return error("Workspace not found", 404);
 
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+    const skip = (page - 1) * limit;
+
+    const where = { workspaceId: workspace.id };
+
     const memberships = await db.membership.findMany({
-      where: { workspaceId: workspace.id },
+      where,
       include: {
         user: {
           select: {
@@ -26,6 +33,8 @@ export async function GET(request: Request) {
         },
       },
       orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
+      skip,
+      take: limit,
     });
 
     const data = memberships.map((m) => ({

@@ -180,6 +180,8 @@ model Membership {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
   @@map("memberships")
 }
 
@@ -196,6 +198,8 @@ model Proposal {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy User     @relation(fields: [createdById], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, status])
   @@map("proposals")
 }
 
@@ -220,6 +224,9 @@ model TaskItem {
   subgroupId  String?
   subgroup    Subgroup? @relation(fields: [subgroupId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, assigneeId, status])
+  @@index([dueDate])
   @@map("tasks")
 }
 
@@ -273,6 +280,9 @@ model EventItem {
   annualPlan  AnnualEventPlan? @relation("AnnualPlan", fields: [annualPlanId], references: [id])
   annualPlanId String?
 
+  @@index([workspaceId])
+  @@index([workspaceId, status, startDate])
+  @@index([approvalStatus])
   @@map("events")
 }
 
@@ -288,6 +298,8 @@ model MessageThread {
   subgroupId String?
   subgroup   Subgroup? @relation(fields: [subgroupId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, updatedAt])
   @@map("message_threads")
 }
 
@@ -332,6 +344,9 @@ model Transaction {
   workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy User? @relation(fields: [createdById], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, date])
+  @@index([workspaceId, type])
   @@map("transactions")
 }
 
@@ -348,6 +363,8 @@ model VolunteerSlot {
   workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   signups   VolunteerSignup[]
 
+  @@index([workspaceId])
+  @@index([workspaceId, startTime])
   @@map("volunteer_slots")
 }
 
@@ -379,6 +396,8 @@ model Meeting {
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   rsvps     MeetingRsvp[]
 
+  @@index([workspaceId])
+  @@index([workspaceId, startTime])
   @@map("meetings")
 }
 
@@ -410,6 +429,8 @@ model Notification {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, userId, read])
   @@map("notifications")
 }
 
@@ -427,6 +448,9 @@ model AuditLog {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [userId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, entityType])
   @@map("audit_logs")
 }
 
@@ -442,6 +466,8 @@ model Kudos {
   sender    User      @relation("KudosSender", fields: [senderId], references: [id])
   receiver  User      @relation("KudosReceiver", fields: [receiverId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, receiverId])
   @@map("kudos")
 }
 
@@ -460,6 +486,8 @@ model BudgetAllocation {
   workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   transactions BudgetTransaction[]
 
+  @@index([workspaceId])
+  @@index([workspaceId, fiscalYear])
   @@map("budget_allocations")
 }
 
@@ -494,6 +522,7 @@ model Attachment {
   uploadedBy User? @relation(fields: [uploadedById], references: [id])
   workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
   @@index([entityType, entityId])
   @@map("attachments")
 }
@@ -511,6 +540,9 @@ model ActivityFeed {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [userId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, entityType])
   @@map("activity_feed")
 }
 
@@ -543,6 +575,7 @@ model LinkItem {
   uploadedBy User?     @relation(fields: [uploadedById], references: [id])
   workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
   @@map("link_items")
 }
 
@@ -559,6 +592,7 @@ model ProposalTemplate {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy User      @relation(fields: [createdById], references: [id])
 
+  @@index([workspaceId])
   @@map("proposal_templates")
 }
 
@@ -576,6 +610,7 @@ model HistoricalMember {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
   @@map("historical_members")
 }
 
@@ -599,6 +634,8 @@ model PurchaseRequest {
   submittedBy User     @relation("PurchaseSubmitter", fields: [submittedById], references: [id])
   reviewedBy  User?    @relation("PurchaseReviewer", fields: [reviewedById], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, status])
   @@map("purchase_requests")
 }
 
@@ -622,6 +659,8 @@ model CooperationRequest {
   submittedBy User      @relation("CooperationSubmitter", fields: [submittedById], references: [id])
   reviewedBy  User?     @relation("CooperationReviewer", fields: [reviewedById], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, status])
   @@map("cooperation_requests")
 }
 
@@ -638,6 +677,7 @@ model AnnualEventPlan {
   workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   events    EventItem[] @relation("AnnualPlan")
 
+  @@index([workspaceId])
   @@map("annual_event_plans")
 }
 
@@ -658,6 +698,8 @@ model ShowcaseItem {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy User      @relation(fields: [createdById], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, isActive])
   @@map("showcase_items")
 }
 
@@ -678,6 +720,7 @@ model Subgroup {
   threads   MessageThread[]
 
   @@unique([workspaceId, name])
+  @@index([workspaceId])
   @@map("subgroups")
 }
 

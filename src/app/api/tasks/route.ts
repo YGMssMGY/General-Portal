@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") as TaskStatus | null;
     const assigneeId = searchParams.get("assigneeId");
     const priority = searchParams.get("priority");
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+    const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { workspaceId: workspace.id };
     if (status && ["todo", "in_progress", "done"].includes(status)) {
@@ -34,6 +37,8 @@ export async function GET(request: NextRequest) {
     const tasks = await db.taskItem.findMany({
       where,
       orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      skip,
+      take: limit,
       include: {
         createdBy: { select: { id: true, name: true, email: true, image: true } },
         assignee: { select: { id: true, name: true, email: true, image: true } },

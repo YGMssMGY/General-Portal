@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
+    const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { workspaceId: workspace.id };
     if (category && typeof category === "string" && category.trim()) {
@@ -28,6 +31,8 @@ export async function GET(request: NextRequest) {
     const links = await db.linkItem.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
       include: {
         uploadedBy: { select: { id: true, name: true, image: true } },
       },
