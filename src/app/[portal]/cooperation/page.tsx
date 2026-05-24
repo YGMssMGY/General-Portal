@@ -25,6 +25,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Handshake, CheckCircle, XCircle, Clock, Search } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { format } from "date-fns";
 
 interface CooperationRequest {
@@ -52,6 +53,7 @@ const statusConfig: Record<
 
 export default function CooperationPage() {
   const portal = usePortal();
+  usePageTitle("Cooperation | General Portal");
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

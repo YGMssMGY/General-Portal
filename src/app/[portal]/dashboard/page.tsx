@@ -16,6 +16,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -73,6 +74,7 @@ function getEntityLabel(entityType: string): string {
 export default function DashboardPage() {
   const router = useRouter();
   const portal = getPortal();
+  usePageTitle("Dashboard | General Portal");
 
   const { data, isLoading, isError } = useQuery<DashboardData>({
     queryKey: [portal, "dashboard"],

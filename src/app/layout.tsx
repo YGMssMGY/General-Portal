@@ -4,7 +4,7 @@ import { FaviconSwitcher } from "@/components/FaviconSwitcher";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "General Portal",
+  title: { default: "General Portal", template: "%s | General Portal" },
   description: "Developers' Club & Student Council Portal",
 };
 

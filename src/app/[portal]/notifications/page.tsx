@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Bell, CheckCheck, ExternalLink, Circle } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -35,6 +36,7 @@ const btnBase: React.CSSProperties = {
 
 export default function NotificationsPage() {
   const portal = getPortal();
+  usePageTitle("Notifications | General Portal");
   const qc = useQueryClient();
 
   const { data: notifications, isLoading } = useQuery<{ notifications: Notification[]; pagination: { total: number } }>({

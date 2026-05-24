@@ -41,6 +41,7 @@ import {
   UserPlus,
   AlertCircle,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Subgroup {
   id: string;
@@ -147,6 +148,7 @@ export default function SubgroupWorkspacePage() {
   });
 
   const color = subgroup?.color ?? "var(--color-primary)";
+  usePageTitle(`${subgroup?.name ?? "Subgroup"} | General Portal`);
 
   // Task mutations
   const createTask = useMutation({

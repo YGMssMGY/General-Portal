@@ -36,6 +36,7 @@ import {
   XCircle,
   FileText,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface EventData {
   id: string;
@@ -79,6 +80,7 @@ const approvalStatusConfig: Record<string, { label: string; variant: "secondary"
 
 export default function EventsPage() {
   const portal = usePortal();
+  usePageTitle("Events | General Portal");
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

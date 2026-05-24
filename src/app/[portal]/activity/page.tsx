@@ -13,6 +13,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -78,6 +79,7 @@ const btnBase: React.CSSProperties = {
 
 export default function ActivityPage() {
   const portal = getPortal();
+  usePageTitle("Activity | General Portal");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const pageSize = 20;

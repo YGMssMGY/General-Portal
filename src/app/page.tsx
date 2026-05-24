@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Code2, GraduationCap } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const portals = [
   {
@@ -24,6 +25,7 @@ const portals = [
 export default function HomePage() {
   const router = useRouter();
   const [hovered, setHovered] = useState<string | null>(null);
+  usePageTitle("General Portal");
 
   function handleSelect(id: string) {
     document.cookie = `portal=${id}; path=/; SameSite=Lax`;

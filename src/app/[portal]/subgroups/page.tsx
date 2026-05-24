@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Users, Plus, LogIn, Palette } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Subgroup {
   id: string;
@@ -42,6 +43,7 @@ const PRESET_COLORS = [
 
 export default function SubgroupsHubPage() {
   const portal = usePortal();
+  usePageTitle("Subgroups | General Portal");
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
   const isOfficer = role === "admin" || role === "officer";

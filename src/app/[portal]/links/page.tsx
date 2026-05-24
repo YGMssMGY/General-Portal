@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link2, Plus, ExternalLink, Trash2 } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface LinkData {
   id: string;
@@ -34,6 +35,7 @@ const CATEGORIES = ["Google Drive", "Teams", "Other"] as const;
 
 export default function LinksPage() {
   const portal = usePortal();
+  usePageTitle("Links | General Portal");
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();
