@@ -43,7 +43,8 @@ const TAB_CONFIG = [
 
 export default function ShowcaseAdminPage() {
   const portal = usePortal();
-  usePageTitle("Showcase Admin | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Showcase Admin | ${portalName}`);
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
   const isOfficer = role === "admin" || role === "officer";

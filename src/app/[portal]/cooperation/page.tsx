@@ -53,7 +53,8 @@ const statusConfig: Record<
 
 export default function CooperationPage() {
   const portal = usePortal();
-  usePageTitle("Cooperation | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Cooperation | ${portalName}`);
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

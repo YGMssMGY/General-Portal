@@ -61,7 +61,8 @@ const statusConfig: Record<string, { label: string; variant: "secondary" | "defa
 
 export default function ProposalsPage() {
   const portal = usePortal();
-  usePageTitle("Proposals | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Proposals | ${portalName}`);
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const queryClient = useQueryClient();

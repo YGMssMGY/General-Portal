@@ -63,7 +63,8 @@ const statusColors: Record<string, string> = {
 
 export default function MeetingsPage() {
   const portal = usePortal();
-  usePageTitle("Meetings | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Meetings | ${portalName}`);
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "admin";
   const qc = useQueryClient();

@@ -59,7 +59,8 @@ const btnBase: React.CSSProperties = {
 
 export default function MembersPage() {
   const portal = usePortal();
-  usePageTitle("Members | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Members | ${portalName}`);
   const qc = useQueryClient();
   const { data: session } = useSession();
   const currentUserRole = (session?.user as any)?.role;

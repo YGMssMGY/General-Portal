@@ -43,7 +43,8 @@ const PRESET_COLORS = [
 
 export default function SubgroupsHubPage() {
   const portal = usePortal();
-  usePageTitle("Subgroups | General Portal");
+  const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+  usePageTitle(`Subgroups | ${portalName}`);
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
   const isOfficer = role === "admin" || role === "officer";
