@@ -11,8 +11,9 @@ interface LinkPreviewData {
 }
 
 export async function GET(request: NextRequest) {
+  const requestUrl = request.url;
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(requestUrl);
     const url = searchParams.get("url");
     if (!url) return error("url query param is required", 400);
 
@@ -66,12 +67,6 @@ export async function GET(request: NextRequest) {
     return success(data);
   } catch (e) {
     console.error("GET /api/link-preview", e);
-    return success({
-      url: new URL(request.url).searchParams.get("url") || "",
-      title: null,
-      description: null,
-      image: null,
-      siteName: null,
-    });
+    return success({ url: "", title: null, description: null, image: null, siteName: null });
   }
 }
