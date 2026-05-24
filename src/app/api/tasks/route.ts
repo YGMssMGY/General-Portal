@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
       include: {
         createdBy: { select: { id: true, name: true, email: true, image: true } },
         assignee: { select: { id: true, name: true, email: true, image: true } },
-        _count: {
-          select: {
-            subtasks: true,
-            comments: true,
-          },
+        subtasks: { orderBy: { createdAt: "asc" } },
+        comments: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          include: { user: { select: { id: true, name: true, image: true } } },
         },
       },
     });
