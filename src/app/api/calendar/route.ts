@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       items.push({
         id: task.id,
         title: `[Task] ${task.title}`,
-        date: task.dueDate!.toISOString(),
+          date: task.dueDate ? task.dueDate.toISOString() : new Date().toISOString(),
         type: "deadline",
         portal,
         entityId: task.id,

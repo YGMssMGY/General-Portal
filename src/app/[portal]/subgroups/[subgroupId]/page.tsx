@@ -72,12 +72,13 @@ interface MessageThread {
   subject: string;
   createdAt: string;
   updatedAt: string;
-  messages: {
+  totalMessages: number;
+  lastMessage: {
     id: string;
     content: string;
     createdAt: string;
     sender: { id: string; name: string | null };
-  }[];
+  } | null;
 }
 
 const statusConfig: Record<string, "default" | "secondary" | "outline"> = {
@@ -649,8 +650,8 @@ export default function SubgroupWorkspacePage() {
                         color: "var(--color-text-secondary)",
                       }}
                     >
-                      {thread.messages.length} message
-                      {thread.messages.length !== 1 ? "s" : ""}
+                      {thread.totalMessages ?? 0} message
+                      {(thread.totalMessages ?? 0) !== 1 ? "s" : ""}
                     </span>
                   </button>
 
@@ -664,60 +665,33 @@ export default function SubgroupWorkspacePage() {
                         backgroundColor: "var(--color-bg)",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "12px",
-                          marginBottom: "12px",
-                          maxHeight: "300px",
-                          overflowY: "auto",
-                        }}
-                      >
-                        {thread.messages.map((msg) => (
-                          <div key={msg.id}>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                marginBottom: "4px",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: "12px",
-                                  fontWeight: 600,
-                                  color: "var(--color-text)",
-                                }}
-                              >
-                                {msg.sender?.name ?? "Unknown"}
+                      {thread.lastMessage && (
+                        <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                          <div
+                            style={{
+                              width: "28px", height: "28px", borderRadius: "50%",
+                              backgroundColor: "var(--color-primary)", color: "#fff",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: "12px", fontWeight: 700, flexShrink: 0,
+                            }}
+                          >
+                            {thread.lastMessage.sender?.name?.charAt(0)?.toUpperCase() ?? "?"}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "2px" }}>
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--color-text)" }}>
+                                {thread.lastMessage.sender?.name ?? "Unknown"}
                               </span>
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "var(--color-text-secondary)",
-                                }}
-                              >
-                                {format(
-                                  new Date(msg.createdAt),
-                                  "MMM d, h:mm a"
-                                )}
+                              <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
+                                {format(new Date(thread.lastMessage.createdAt), "MMM d, h:mm a")}
                               </span>
                             </div>
-                            <p
-                              style={{
-                                fontSize: "13px",
-                                color: "var(--color-text)",
-                                margin: 0,
-                                whiteSpace: "pre-wrap",
-                              }}
-                            >
-                              {msg.content}
+                            <p style={{ margin: 0, fontSize: "13px", color: "var(--color-text)", lineHeight: 1.5 }}>
+                              {thread.lastMessage.content}
                             </p>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
 
                       <div style={{ display: "flex", gap: "8px" }}>
                         <Input

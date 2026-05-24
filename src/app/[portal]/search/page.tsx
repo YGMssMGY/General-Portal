@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import { Search as SearchIcon, FileText, Calendar, ClipboardList, User, File, ExternalLink } from "lucide-react";
+import { Search as SearchIcon, FileText, Calendar, ClipboardList, User, File, ExternalLink, Video } from "lucide-react";
 
 function getPortal(): string {
   if (typeof window === "undefined") return "developers";
@@ -14,7 +14,7 @@ interface SearchResult {
   id: string;
   title: string;
   snippet: string;
-  type: "tasks" | "events" | "proposals" | "members" | "files";
+  type: "tasks" | "events" | "proposals" | "members" | "files" | "meetings";
   url: string;
 }
 
@@ -29,6 +29,7 @@ const typeConfig: Record<string, { icon: typeof FileText; color: string; bg: str
   proposals: { icon: FileText, color: "var(--color-warning)", bg: "#fff8e1" },
   members: { icon: User, color: "var(--color-text)", bg: "var(--color-bg-secondary)" },
   files: { icon: File, color: "var(--color-text-secondary)", bg: "var(--color-bg-secondary)" },
+  meetings: { icon: Video, color: "var(--color-success)", bg: "#e8f5e9" },
 };
 
 const btnBase: React.CSSProperties = {

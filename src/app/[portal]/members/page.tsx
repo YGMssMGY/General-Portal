@@ -216,7 +216,7 @@ export default function MembersPage() {
                   flexShrink: 0,
                 }}
               >
-                {profile.name.charAt(0).toUpperCase()}
+                {(profile.name ?? "?").charAt(0).toUpperCase()}
               </div>
               <div>
                 {editName ? (

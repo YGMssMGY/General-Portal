@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getDbFromCookie } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
+import { hasPermission } from "@/lib/permissions";
 
 export async function GET(
   request: Request,
@@ -47,6 +48,9 @@ export async function PUT(
   try {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
+    const role = (session.user as any).role;
+    if (!hasPermission(role, "manage_meetings")) return error("Forbidden", 403);
+
     const db = getDbFromCookie(request);
     const { id } = await params;
 
@@ -82,6 +86,9 @@ export async function DELETE(
   try {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
+    const role = (session.user as any).role;
+    if (!hasPermission(role, "manage_meetings")) return error("Forbidden", 403);
+
     const db = getDbFromCookie(request);
     const { id } = await params;
 

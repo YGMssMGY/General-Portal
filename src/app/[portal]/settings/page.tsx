@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { Save, Settings as SettingsIcon, Shield } from "lucide-react";
@@ -64,10 +64,12 @@ export default function SettingsPage() {
     queryFn: () => fetchJson(`/api/me`),
   });
 
-  if (workspace && !loaded) {
-    setToggles(workspace.settings || {});
-    setLoaded(true);
-  }
+  useEffect(() => {
+    if (workspace && !loaded) {
+      setToggles(workspace.settings || {});
+      setLoaded(true);
+    }
+  }, [workspace, loaded]);
 
   const updateMutation = useMutation({
     mutationFn: (settings: Record<string, boolean>) =>

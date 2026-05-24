@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_FILE_SIZE) return error("File too large. Max 10MB", 400);
 
     const allowed = ALLOWED_MIMES.some((prefix) => file.type.startsWith(prefix));
-    if (!allowed && file.type !== "") return error("File type not allowed", 400);
+    if (!allowed) return error("File type not allowed", 400);
 
-    const ext = file.name.split(".").pop() || "";
+    const ext = (file.name.split(".").pop() || "").replace(/[^a-zA-Z0-9]/g, "");
     const storedName = `${randomUUID()}.${ext}`;
     const dir = join(UPLOADS_DIR, portal);
     await mkdir(dir, { recursive: true });
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       data: {
         workspaceId: workspace.id,
         entityType,
-        entityId: entityType,
+        entityId: "",
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type || "application/octet-stream",
