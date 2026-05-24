@@ -13,11 +13,12 @@ interface LinkPreviewData {
 }
 
 export function LinkPreview({ url }: { url: string }) {
-  const { data, isLoading } = useQuery<LinkPreviewData>({
+  const { data, isLoading, isError } = useQuery<LinkPreviewData>({
     queryKey: ["link-preview", url],
     queryFn: () => fetchJson(`/api/link-preview?url=${encodeURIComponent(url)}`),
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    retry: 2,
+    retryDelay: 2000,
   });
 
   if (isLoading) {
@@ -42,7 +43,7 @@ export function LinkPreview({ url }: { url: string }) {
     );
   }
 
-  if (!data?.title && !data?.description && !data?.siteName) return null;
+  if (isError || (!data?.title && !data?.description && !data?.siteName)) return null;
 
   return (
     <a

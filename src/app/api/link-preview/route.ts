@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     const res = await fetch(targetUrl.toString(), {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
       headers: { "User-Agent": "General-Portal/1.0 LinkPreview" },
     });
 
