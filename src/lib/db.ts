@@ -1,3 +1,4 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
@@ -25,19 +26,23 @@ export function getDbForPortal(portal: string): PrismaClient {
   const cached = clientCache.get(portal);
   if (cached) return cached;
 
-  const url = PORTAL_DATABASES[portal];
-  if (!url) {
+  const rawUrl = PORTAL_DATABASES[portal];
+  if (!rawUrl) {
     throw new Error(
       `Unknown portal: "${portal}". Ensure DATABASE_URL_${portal.toUpperCase()} is set in your environment.`
     );
   }
 
+  const connectionString = buildUrl(rawUrl) as string;
+
+  const adapter = new PrismaPg({ connectionString });
+
   const client = new PrismaClient({
-    datasourceUrl: buildUrl(url),
+    adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-  client.$connect().catch((e) => {
+  client.$connect().catch((e: Error) => {
     console.error(`Failed to connect to database for portal "${portal}":`, e);
   });
 
