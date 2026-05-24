@@ -6,6 +6,7 @@ export async function GET() {
     const portals = ["developers", "stuco"] as const;
     const allEvents: unknown[] = [];
     const allGalleries: unknown[] = [];
+    const allAnnouncements: unknown[] = [];
 
     for (const slug of portals) {
       try {
@@ -17,7 +18,7 @@ export async function GET() {
         });
         if (!workspace) continue;
 
-        const [events, galleries] = await Promise.all([
+        const [events, showcaseItems] = await Promise.all([
           db.eventItem.findMany({
             where: {
               workspaceId: workspace.id,
@@ -36,7 +37,22 @@ export async function GET() {
               createdAt: true,
             },
           }),
-          Promise.resolve([]),
+          db.showcaseItem.findMany({
+            where: {
+              workspaceId: workspace.id,
+              isActive: true,
+            },
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              type: true,
+              title: true,
+              description: true,
+              imageUrl: true,
+              linkUrl: true,
+              createdAt: true,
+            },
+          }),
         ]);
 
         allEvents.push(
@@ -46,7 +62,29 @@ export async function GET() {
           })),
         );
 
-        allGalleries.push(...galleries);
+        for (const item of showcaseItems) {
+          const base = {
+            ...item,
+            portal: slug,
+          };
+          if (item.type === "announcement") {
+            allAnnouncements.push(base);
+          } else if (item.type === "gallery_image") {
+            allGalleries.push(base);
+          } else {
+            // event_feature and others supplement events view
+            allEvents.push({
+              id: item.id,
+              title: item.title,
+              description: item.description,
+              startDate: item.createdAt,
+              endDate: null,
+              location: null,
+              createdAt: item.createdAt,
+              portal: slug,
+            });
+          }
+        }
       } catch {
         // skip portal if unreachable
       }
@@ -57,7 +95,11 @@ export async function GET() {
         new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
     );
 
-    return success({ events: allEvents, galleries: allGalleries });
+    return success({
+      events: allEvents,
+      galleries: allGalleries,
+      announcements: allAnnouncements,
+    });
   } catch (e) {
     console.error("GET /api/public/showcase", e);
     return error("Internal server error", 500);

@@ -83,6 +83,9 @@ model User {
   purchaseReviews     PurchaseRequest[]    @relation("PurchaseReviewer")
   cooperationSubmissions CooperationRequest[] @relation("CooperationSubmitter")
   cooperationReviews  CooperationRequest[] @relation("CooperationReviewer")
+  createdSubgroups    Subgroup[]           @relation("SubgroupCreator")
+  subgroupMemberships SubgroupMembership[]
+  createdShowcaseItems ShowcaseItem[]
   budgetDecisions     BudgetTransaction[]  @relation("BudgetDecider")
   auditLogs           AuditLog[]
   activityEntries     ActivityFeed[]
@@ -160,6 +163,8 @@ model Workspace {
   purchaseRequests  PurchaseRequest[]
   cooperationRequests CooperationRequest[]
   annualPlans       AnnualEventPlan[]
+  showcaseItems     ShowcaseItem[]
+  subgroups         Subgroup[]
 
   @@map("workspaces")
 }
@@ -211,7 +216,9 @@ model TaskItem {
   createdBy   User          @relation("TaskCreator", fields: [createdById], references: [id])
   assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
   subtasks    SubTask[]
-  comments TaskComment[]
+  comments    TaskComment[]
+  subgroupId  String?
+  subgroup    Subgroup? @relation(fields: [subgroupId], references: [id])
 
   @@map("tasks")
 }
@@ -278,6 +285,8 @@ model MessageThread {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   messages  Message[]
+  subgroupId String?
+  subgroup   Subgroup? @relation(fields: [subgroupId], references: [id])
 
   @@map("message_threads")
 }
@@ -630,4 +639,57 @@ model AnnualEventPlan {
   events    EventItem[] @relation("AnnualPlan")
 
   @@map("annual_event_plans")
+}
+
+model ShowcaseItem {
+  id          String   @id @default(uuid())
+  workspaceId String
+  type        String   // "event_feature" | "announcement" | "gallery_image"
+  title       String
+  description String?  @db.Text
+  imageUrl    String?
+  linkUrl     String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@map("showcase_items")
+}
+
+model Subgroup {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  color       String?  @default("#0f62fe")
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User                 @relation("SubgroupCreator", fields: [createdById], references: [id])
+  members   SubgroupMembership[]
+  tasks     TaskItem[]
+  threads   MessageThread[]
+
+  @@unique([workspaceId, name])
+  @@map("subgroups")
+}
+
+model SubgroupMembership {
+  id         String   @id @default(uuid())
+  subgroupId String
+  userId     String
+  joinedAt   DateTime @default(now())
+
+  subgroup Subgroup @relation(fields: [subgroupId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([subgroupId, userId])
+  @@map("subgroup_memberships")
 }

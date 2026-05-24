@@ -18,7 +18,7 @@ export async function POST(
     const role = (session.user as any).role;
     const { id } = await params;
 
-    if (!hasPermission(role, "manage_proposals")) {
+    if (!hasPermission(role, "approve_proposal")) {
       return error("Forbidden: insufficient permissions", 403);
     }
 

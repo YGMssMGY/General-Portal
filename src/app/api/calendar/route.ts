@@ -1,9 +1,22 @@
 import { NextRequest } from "next/server";
-import { getDbForPortal } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { getDbFromCookie } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return error("Unauthorized", 401);
+
+    const db = getDbFromCookie(request);
+    const portal = (session.user as any).portal;
+
+    const workspace = await db.workspace.findUnique({
+      where: { slug: portal },
+      select: { id: true },
+    });
+    if (!workspace) return error("Workspace not found", 404);
+
     const { searchParams } = new URL(request.url);
     const now = new Date();
     const month = parseInt(searchParams.get("month") ?? String(now.getMonth()), 10);
@@ -16,7 +29,6 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    const portals = ["developers", "stuco"] as const;
     const items: Array<{
       id: string;
       title: string;
@@ -26,77 +38,63 @@ export async function GET(request: NextRequest) {
       entityId: string;
     }> = [];
 
-    for (const slug of portals) {
-      try {
-        const db = getDbForPortal(slug);
+    const [events, tasks, meetings] = await Promise.all([
+      db.eventItem.findMany({
+        where: {
+          workspaceId: workspace.id,
+          status: "published",
+          startDate: { gte: startDate, lte: endDate },
+        },
+        select: { id: true, title: true, startDate: true },
+      }),
+      db.taskItem.findMany({
+        where: {
+          workspaceId: workspace.id,
+          dueDate: { gte: startDate, lte: endDate },
+          status: { not: "done" },
+        },
+        select: { id: true, title: true, dueDate: true },
+      }),
+      db.meeting.findMany({
+        where: {
+          workspaceId: workspace.id,
+          startTime: { gte: startDate, lte: endDate },
+        },
+        select: { id: true, title: true, startTime: true },
+      }),
+    ]);
 
-        const workspace = await db.workspace.findUnique({
-          where: { slug },
-          select: { id: true },
-        });
-        if (!workspace) continue;
+    for (const event of events) {
+      items.push({
+        id: event.id,
+        title: event.title,
+        date: event.startDate.toISOString(),
+        type: "event",
+        portal,
+        entityId: event.id,
+      });
+    }
 
-        const [events, tasks, meetings] = await Promise.all([
-          db.eventItem.findMany({
-            where: {
-              workspaceId: workspace.id,
-              status: "published",
-              startDate: { gte: startDate, lte: endDate },
-            },
-            select: { id: true, title: true, startDate: true },
-          }),
-          db.taskItem.findMany({
-            where: {
-              workspaceId: workspace.id,
-              dueDate: { gte: startDate, lte: endDate },
-              status: { not: "done" },
-            },
-            select: { id: true, title: true, dueDate: true },
-          }),
-          db.meeting.findMany({
-            where: {
-              workspaceId: workspace.id,
-              startTime: { gte: startDate, lte: endDate },
-            },
-            select: { id: true, title: true, startTime: true },
-          }),
-        ]);
+    for (const task of tasks) {
+      items.push({
+        id: task.id,
+        title: `[Task] ${task.title}`,
+        date: task.dueDate!.toISOString(),
+        type: "deadline",
+        portal,
+        entityId: task.id,
+      });
+    }
 
-        for (const event of events) {
-          items.push({
-            id: event.id,
-            title: event.title,
-            date: event.startDate.toISOString(),
-            type: "event",
-            portal: slug,
-            entityId: event.id,
-          });
-        }
-
-        for (const task of tasks) {
-          items.push({
-            id: task.id,
-            title: `[Task] ${task.title}`,
-            date: task.dueDate!.toISOString(),
-            type: "deadline",
-            portal: slug,
-            entityId: task.id,
-          });
-        }
-
-        for (const meeting of meetings) {
-          items.push({
-            id: meeting.id,
-            title: `[Meeting] ${meeting.title}`,
-            date: meeting.startTime.toISOString(),
-            type: "meeting",
-            portal: slug,
-            entityId: meeting.id,
-          });
-        }
-      } catch {
-        // skip portal if unreachable
-      }
+    for (const meeting of meetings) {
+      items.push({
+        id: meeting.id,
+        title: `[Meeting] ${meeting.title}`,
+        date: meeting.startTime.toISOString(),
+        type: "meeting",
+        portal,
+        entityId: meeting.id,
+      });
     }
 
     items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

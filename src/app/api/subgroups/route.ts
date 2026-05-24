@@ -3,12 +3,12 @@ import { auth } from "@/lib/auth";
 import { getDbFromCookie } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
 import { hasPermission } from "@/lib/permissions";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
-
     const db = getDbFromCookie(request);
     const portal = (session.user as any).portal;
 
@@ -18,17 +18,24 @@ export async function GET(request: NextRequest) {
     });
     if (!workspace) return error("Workspace not found", 404);
 
-    const templates = await db.proposalTemplate.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { createdAt: "desc" },
+    const isOfficer = hasPermission(session.user.role, "manage_subgroups");
+
+    const where: Record<string, unknown> = { workspaceId: workspace.id };
+    if (!isOfficer) {
+      where.members = { some: { userId: session.user.id } };
+    }
+
+    const subgroups = await db.subgroup.findMany({
+      where,
+      orderBy: { name: "asc" },
       include: {
-        createdBy: { select: { id: true, name: true, image: true } },
+        _count: { select: { members: true } },
       },
     });
 
-    return success(templates);
+    return success(subgroups);
   } catch (e) {
-    console.error("GET /api/proposals/templates", e);
+    console.error("GET /api/subgroups", e);
     return error("Internal server error", 500);
   }
 }
@@ -37,14 +44,12 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) return error("Unauthorized", 401);
-
-    const role = (session.user as any).role;
-    if (role !== "admin" && !hasPermission(role, "approve_proposal")) {
-      return error("Forbidden: insufficient permissions", 403);
-    }
-
     const db = getDbFromCookie(request);
     const portal = (session.user as any).portal;
+
+    if (!hasPermission(session.user.role, "manage_subgroups")) {
+      return error("Forbidden", 403);
+    }
 
     const workspace = await db.workspace.findUnique({
       where: { slug: portal },
@@ -53,28 +58,37 @@ export async function POST(request: NextRequest) {
     if (!workspace) return error("Workspace not found", 404);
 
     const body = await request.json();
-    const { title, description, category } = body;
+    const { name, description, color } = body;
 
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return error("Title is required", 400);
-    }
-    if (!description || typeof description !== "string" || !description.trim()) {
-      return error("Description is required", 400);
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return error("Name is required", 400);
     }
 
-    const template = await db.proposalTemplate.create({
+    const subgroup = await db.subgroup.create({
       data: {
         workspaceId: workspace.id,
-        title: title.trim(),
-        description: description.trim(),
-        category: category?.trim() ?? null,
+        name: name.trim(),
+        description: description?.trim() ?? null,
+        color: color ?? "#0f62fe",
         createdById: session.user.id,
       },
     });
 
-    return success(template, 201);
+    await writeAuditLog(
+      {
+        workspaceId: workspace.id,
+        userId: session.user.id,
+        action: "create",
+        entityType: "subgroup",
+        entityId: subgroup.id,
+        metadata: { name: subgroup.name },
+      },
+      db,
+    );
+
+    return success(subgroup, 201);
   } catch (e) {
-    console.error("POST /api/proposals/templates", e);
+    console.error("POST /api/subgroups", e);
     return error("Internal server error", 500);
   }
 }

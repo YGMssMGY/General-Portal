@@ -4,7 +4,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
 import { format } from "date-fns";
-import { Calendar, MapPin, Code2, GraduationCap, Image } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Code2,
+  GraduationCap,
+  Image,
+  Megaphone,
+  Star,
+  ExternalLink,
+} from "lucide-react";
 
 interface ShowcaseEvent {
   id: string;
@@ -16,9 +25,22 @@ interface ShowcaseEvent {
   portal: "developers" | "stuco";
 }
 
+interface ShowcaseItem {
+  id: string;
+  type: "event_feature" | "announcement" | "gallery_image";
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  linkUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 interface ShowcaseResponse {
   events: ShowcaseEvent[];
   galleries: unknown[];
+  showcaseItems: ShowcaseItem[];
 }
 
 type FilterKey = "all" | "developers" | "stuco";
@@ -180,6 +202,26 @@ export default function ShowcasePage() {
   });
 
   const events = data?.events ?? [];
+  const showcaseItems = data?.showcaseItems ?? [];
+  const hasShowcaseItems = showcaseItems.length > 0;
+
+  const announcements = hasShowcaseItems
+    ? showcaseItems.filter(
+        (i) => i.type === "announcement" && i.isActive
+      )
+    : [];
+
+  const featuredEvents = hasShowcaseItems
+    ? showcaseItems.filter(
+        (i) => i.type === "event_feature" && i.isActive
+      )
+    : [];
+
+  const galleryImages = hasShowcaseItems
+    ? showcaseItems.filter(
+        (i) => i.type === "gallery_image" && i.isActive
+      )
+    : [];
 
   const filteredEvents =
     activeFilter === "all"
@@ -187,16 +229,6 @@ export default function ShowcasePage() {
       : events.filter((e) => e.portal === activeFilter);
 
   const galleries = data?.galleries ?? [];
-
-  function formatDate(dateStr: string): string {
-    const d = new Date(dateStr);
-    return format(d, "MMM d");
-  }
-
-  function formatDateFull(dateStr: string): string {
-    const d = new Date(dateStr);
-    return format(d, "MMM d, yyyy");
-  }
 
   return (
     <div style={container}>
@@ -229,6 +261,153 @@ export default function ShowcasePage() {
         </div>
       </div>
 
+      {/* Announcements section */}
+      {hasShowcaseItems && announcements.length > 0 && (
+        <div style={{ marginBottom: "48px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+            <Megaphone size={18} style={{ color: "var(--color-primary)" }} />
+            <h2 style={sectionTitle}>Announcements</h2>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {announcements.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  padding: "16px 20px",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "5px",
+                  backgroundColor: "var(--color-bg)",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    margin: "0 0 4px",
+                  }}
+                >
+                  {item.title}
+                </h3>
+                {item.description && (
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--color-text-secondary)",
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {item.description}
+                  </p>
+                )}
+                {item.linkUrl && (
+                  <a
+                    href={item.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "13px",
+                      color: "var(--color-primary)",
+                      marginTop: "8px",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Learn more <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Featured events section */}
+      {hasShowcaseItems && featuredEvents.length > 0 && (
+        <div style={{ marginBottom: "48px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+            <Star size={18} style={{ color: "var(--color-primary)" }} />
+            <h2 style={sectionTitle}>Featured Events</h2>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {featuredEvents.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  ...eventCard,
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "5px",
+                    backgroundColor: "var(--color-primary-light)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    color: "var(--color-primary)",
+                  }}
+                >
+                  <Star size={22} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      margin: "0 0 4px",
+                    }}
+                  >
+                    {item.title}
+                  </h3>
+                  {item.description && (
+                    <p
+                      style={{
+                        fontSize: "13px",
+                        color: "var(--color-text-secondary)",
+                        margin: 0,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {item.description}
+                    </p>
+                  )}
+                  {item.linkUrl && (
+                    <a
+                      href={item.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "13px",
+                        color: "var(--color-primary)",
+                        marginTop: "8px",
+                        textDecoration: "none",
+                      }}
+                    >
+                      View details <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Events list */}
       <div style={{ marginBottom: "48px" }}>
         <div style={tabsRow}>
           {portalFilters.map((f) => {
@@ -287,7 +466,7 @@ export default function ShowcasePage() {
           </div>
         )}
 
-        {!isLoading && !isError && filteredEvents.length === 0 && (
+        {!isLoading && !isError && filteredEvents.length === 0 && !hasShowcaseItems && (
           <div
             style={{
               textAlign: "center",
@@ -385,7 +564,7 @@ export default function ShowcasePage() {
                         color: "var(--color-text-secondary)",
                       }}
                     >
-                      {formatDateFull(event.startDate)}
+                      {format(event.startDate, "MMM d, yyyy")}
                     </span>
                     {event.location && (
                       <span
@@ -425,23 +604,66 @@ export default function ShowcasePage() {
         )}
       </div>
 
+      {/* Gallery section */}
       <div>
-        <h2 style={sectionTitle}>Galleries</h2>
+        <h2 style={sectionTitle}>Gallery</h2>
         <p style={sectionSubtitle}>Photos and media from our events</p>
-        {galleries.length === 0 ? (
+        {hasShowcaseItems && galleryImages.length > 0 ? (
           <div style={grid}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={galleryItem}>
-                <Image size={24} style={{ color: "var(--color-text-secondary)" }} />
-                <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                  Gallery {i + 1}
+            {galleryImages.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  ...galleryItem,
+                  backgroundColor: "var(--color-bg)",
+                  padding: "16px",
+                }}
+              >
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    style={{
+                      width: "100%",
+                      height: "120px",
+                      objectFit: "cover",
+                      borderRadius: "5px",
+                      marginBottom: "8px",
+                    }}
+                  />
+                ) : (
+                  <Image
+                    size={32}
+                    style={{ color: "var(--color-text-secondary)", marginBottom: "8px" }}
+                  />
+                )}
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    color: "var(--color-text)",
+                    textAlign: "center",
+                  }}
+                >
+                  {item.title}
                 </span>
+                {item.description && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--color-text-secondary)",
+                      textAlign: "center",
+                    }}
+                  >
+                    {item.description}
+                  </span>
+                )}
               </div>
             ))}
           </div>
         ) : (
           <div style={grid}>
-            {galleries.map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={galleryItem}>
                 <Image size={24} style={{ color: "var(--color-text-secondary)" }} />
                 <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
