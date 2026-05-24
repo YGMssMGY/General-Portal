@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
@@ -56,6 +56,8 @@ export default function ShowcaseAdminPage() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formLinkUrl, setFormLinkUrl] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: items, isLoading } = useQuery<ShowcaseItem[]>({
     queryKey: [portal, "showcase"],
@@ -128,6 +130,28 @@ export default function ShowcaseAdminPage() {
       imageUrl: formImageUrl.trim() || undefined,
       linkUrl: formLinkUrl.trim() || undefined,
     });
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/files?entityType=showcase`, {
+        method: "POST",
+        body: form,
+      });
+      const json = await res.json();
+      const fileId = json.data?.id;
+      if (fileId) setFormImageUrl(`/api/files/download/${fileId}`);
+    } catch {
+      // ignore upload errors
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function handleDragStart(id: string) {
@@ -251,11 +275,40 @@ export default function ShowcaseAdminPage() {
                   onChange={(e) => setFormDescription(e.target.value)}
                   rows={2}
                 />
-                <Input
-                  placeholder="Image URL (optional)"
-                  value={formImageUrl}
-                  onChange={(e) => setFormImageUrl(e.target.value)}
-                />
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <Input
+                    placeholder="Image URL (optional)"
+                    value={formImageUrl}
+                    onChange={(e) => setFormImageUrl(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleImageUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    style={{
+                      padding: "10px 14px",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "5px",
+                      backgroundColor: "var(--color-bg)",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontFamily: "inherit",
+                      color: "var(--color-text)",
+                      whiteSpace: "nowrap",
+                      opacity: uploading ? 0.5 : 1,
+                    }}
+                  >
+                    {uploading ? "Uploading..." : "Upload Image"}
+                  </button>
+                </div>
                 <Input
                   placeholder="Link URL (optional)"
                   value={formLinkUrl}

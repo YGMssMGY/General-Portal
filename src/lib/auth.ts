@@ -65,13 +65,15 @@ export const { handlers: { GET, POST }, auth, signIn, signOut } = NextAuth({
         token.portal = portal
       }
 
-      if (!token.userDbId && token.email) {
+      const email = account && user?.email ? user.email : token.email
+
+      if (!token.userDbId && email) {
         const cookieStore = await cookies()
         const portal = cookieStore.get("portal")?.value || "developers"
 
         const db = getDbForPortal(portal)
         const dbUser = await db.user.findUnique({
-          where: { email: token.email },
+          where: { email },
           select: {
             id: true,
             memberships: {
