@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "General Portal",
-  description: "Developers Club & Student Council Portal",
+  description: "Developers' Club & Student Council Portal",
 };
 
 export default function RootLayout({
