@@ -42,7 +42,7 @@ export function LinkPreview({ url }: { url: string }) {
     );
   }
 
-  if (!data?.title && !data?.description) return null;
+  if (!data?.title && !data?.description && !data?.siteName) return null;
 
   return (
     <a

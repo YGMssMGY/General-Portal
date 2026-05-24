@@ -22,6 +22,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { LinkPreview } from "@/components/LinkPreview";
 
 interface FileItem {
   id: string;
@@ -571,6 +572,7 @@ export default function FilesPage() {
                           {linkItem.description}
                         </p>
                       )}
+                      <LinkPreview url={linkItem.url} />
                     </div>
                     <button
                       type="button"

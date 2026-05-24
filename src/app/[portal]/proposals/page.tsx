@@ -28,6 +28,8 @@ import {
 import { format } from "date-fns";
 import { FileText, Plus, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Trash2, File } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { LinkPreview } from "@/components/LinkPreview";
+import { extractUrls } from "@/lib/extract-urls";
 
 interface Proposal {
   id: string;
@@ -297,6 +299,9 @@ export default function ProposalsPage() {
                       <p style={{ fontSize: "14px", color: "var(--color-text)", margin: "0 0 16px", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
                         {proposal.description}
                       </p>
+                      {extractUrls(proposal.description).map((url) => (
+                        <LinkPreview key={url} url={url} />
+                      ))}
                       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                         <Button
                           variant="outline"

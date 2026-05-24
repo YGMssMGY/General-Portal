@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/dialog";
 import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { LinkPreview } from "@/components/LinkPreview";
+import { extractUrls } from "@/lib/extract-urls";
 
 interface ThreadSender {
   id: string;
@@ -750,6 +752,9 @@ export default function MessagesPage() {
                       >
                         {msg.content}
                       </p>
+                      {extractUrls(msg.content).map((url) => (
+                        <LinkPreview key={url} url={url} />
+                      ))}
                     </div>
                   </div>
                 ))}

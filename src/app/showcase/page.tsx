@@ -11,11 +11,12 @@ import {
   MapPin,
   Code2,
   GraduationCap,
-  Image,
-  Megaphone,
   Star,
+  Megaphone,
+  Image,
   ExternalLink,
 } from "lucide-react";
+import { LinkPreview } from "@/components/LinkPreview";
 
 interface ShowcaseEvent {
   id: string;
@@ -288,25 +289,26 @@ export default function ShowcasePage() {
                     {item.description}
                   </p>
                 )}
-                {item.linkUrl && (
-                  <a
-                    href={item.linkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "13px",
-                      color: "var(--color-primary)",
-                      marginTop: "8px",
-                      textDecoration: "none",
-                    }}
-                  >
-                    Learn more <ExternalLink size={12} />
-                  </a>
-                )}
-              </div>
+                  {item.linkUrl && (
+                    <a
+                      href={item.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "13px",
+                        color: "var(--color-primary)",
+                        marginTop: "8px",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Learn more <ExternalLink size={12} />
+                    </a>
+                  )}
+                  {item.linkUrl && <LinkPreview url={item.linkUrl} />}
+                </div>
             ))}
           </div>
         </div>
