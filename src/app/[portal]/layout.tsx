@@ -59,7 +59,8 @@ interface SearchResultItem {
 }
 
 interface SearchResponse {
-  items: SearchResultItem[];
+  results: SearchResultItem[];
+  total: number;
 }
 
 function SearchDropdown({ portal, router }: { portal: string; router: ReturnType<typeof useRouter> }) {
@@ -93,7 +94,7 @@ function SearchDropdown({ portal, router }: { portal: string; router: ReturnType
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const results = data?.items ?? [];
+  const results = data?.results ?? [];
   const showDropdown = open && query.trim().length > 0;
 
   function handleSelect(url: string) {

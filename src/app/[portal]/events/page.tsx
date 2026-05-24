@@ -21,7 +21,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import CalendarView, { type CalendarItem } from "@/components/calendar-view";
 import { format } from "date-fns";
 import {
   Calendar,
@@ -29,8 +28,6 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
-  List,
-  Grid3X3,
   Trash2,
   CheckCircle,
   XCircle,
@@ -58,12 +55,9 @@ interface AnnualPlan {
   id: string;
   name: string;
   description: string | null;
-  startDate: string;
-  endDate: string;
-}
-
-interface CalendarResponse {
-  events: CalendarItem[];
+  academicYear: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 const eventStatusConfig: Record<string, { label: string; variant: "outline" | "default" | "destructive" }> = {
@@ -87,7 +81,7 @@ export default function EventsPage() {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newStartDate, setNewStartDate] = useState("");
@@ -95,22 +89,19 @@ export default function EventsPage() {
   const [newLocation, setNewLocation] = useState("");
   const [newIsPublic, setNewIsPublic] = useState(false);
   const [activeTab, setActiveTab] = useState("events");
+  const [showCreatePlan, setShowCreatePlan] = useState(false);
+  const [planName, setPlanName] = useState("");
+  const [planYear, setPlanYear] = useState("");
+  const [planDescription, setPlanDescription] = useState("");
 
   const { data, isLoading, isError } = useQuery<EventData[]>({
     queryKey: [portal, "events"],
     queryFn: () => fetchJson<EventData[]>(`/api/events`),
   });
 
-  const { data: calendarData } = useQuery<CalendarResponse>({
-    queryKey: [portal, "calendar"],
-    queryFn: () => fetchJson<CalendarResponse>(`/api/calendar`),
-    enabled: activeTab === "events",
-  });
-
   const { data: annualPlans } = useQuery<AnnualPlan[]>({
     queryKey: [portal, "annual-plans"],
     queryFn: () => fetchJson<AnnualPlan[]>(`/api/events/annual-plan`),
-    enabled: activeTab === "events",
   });
 
   const createMutation = useMutation({
@@ -144,9 +135,33 @@ export default function EventsPage() {
     mutationFn: (id: string) => fetchJson(`/api/events/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [portal, "events"] });
-      queryClient.invalidateQueries({ queryKey: [portal, "calendar"] });
     },
   });
+
+  const createPlanMutation = useMutation({
+    mutationFn: (body: { name: string; academicYear: string; description?: string }) =>
+      fetchJson(`/api/events/annual-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [portal, "annual-plans"] });
+      setShowCreatePlan(false);
+      setPlanName("");
+      setPlanYear("");
+      setPlanDescription("");
+    },
+  });
+
+  function handleCreatePlan() {
+    if (!planName.trim() || !planYear.trim()) return;
+    createPlanMutation.mutate({
+      name: planName.trim(),
+      academicYear: planYear.trim(),
+      description: planDescription.trim() || undefined,
+    });
+  }
 
   const approveEvent = useMutation({
     mutationFn: (id: string) =>
@@ -216,26 +231,9 @@ export default function EventsPage() {
     });
   }
 
-  function handleCalendarItemClick(item: CalendarItem) {
-    if (item.type === "event") {
-      setExpandedId(item.entityId);
-      setActiveTab("events");
-      setViewMode("list");
-    }
-  }
-
   const monthLabel = (dateStr: string) => format(new Date(dateStr), "MMM");
   const dayLabel = (dateStr: string) => format(new Date(dateStr), "d");
   const timeLabel = (dateStr: string) => format(new Date(dateStr), "h:mm a");
-
-  const calendarItems: CalendarItem[] = (calendarData?.events ?? []).map((e: CalendarItem) => ({
-    id: e.id,
-    title: e.title,
-    date: e.date,
-    type: "event" as const,
-    portal,
-    entityId: e.id,
-  }));
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -247,63 +245,15 @@ export default function EventsPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          {activeTab === "events" && (
-            <>
-              <div
-                style={{
-                  display: "flex",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "5px",
-                  overflow: "hidden",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    border: "none",
-                    backgroundColor: viewMode === "list" ? "var(--color-bg-secondary)" : "transparent",
-                    color: viewMode === "list" ? "var(--color-primary)" : "var(--color-text-secondary)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <List size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("calendar")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "36px",
-                    height: "36px",
-                    border: "none",
-                    backgroundColor: viewMode === "calendar" ? "var(--color-bg-secondary)" : "transparent",
-                    color: viewMode === "calendar" ? "var(--color-primary)" : "var(--color-text-secondary)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Grid3X3 size={16} />
-                </button>
-              </div>
-              <Button onClick={() => setShowCreate(true)}>
-                <Plus size={16} />
-                <span>New Event</span>
-              </Button>
-            </>
-          )}
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus size={16} />
+            <span>New Event</span>
+          </Button>
         </div>
       </div>
 
       <TabsList>
         <TabsTrigger value="events">Events</TabsTrigger>
-        <TabsTrigger value="calendar">Calendar</TabsTrigger>
         <TabsTrigger value="plans">Annual Plan</TabsTrigger>
       </TabsList>
 
@@ -320,7 +270,7 @@ export default function EventsPage() {
               </p>
             </CardContent>
           </Card>
-        ) : viewMode === "list" ? (
+        ) : (
           events.map((event) => {
             const isExpanded = expandedId === event.id;
             const config = eventStatusConfig[event.status] ?? eventStatusConfig.draft;
@@ -464,44 +414,6 @@ export default function EventsPage() {
               </Card>
             );
           })
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {events.map((event) => {
-              const config = eventStatusConfig[event.status] ?? eventStatusConfig.draft;
-              return (
-                <Card key={event.id}>
-                  <div
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid var(--color-border)",
-                      textAlign: "center",
-                    }}
-                  >
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-primary)", textTransform: "uppercase" }}>
-                      {monthLabel(event.startDate)}
-                    </span>
-                    <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text)", margin: "4px 0" }}>
-                      {dayLabel(event.startDate)}
-                    </p>
-                  </div>
-                  <div style={{ padding: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px", flexWrap: "wrap" }}>
-                      <h3 style={{ fontSize: "13px", fontWeight: 600, color: "var(--color-text)", margin: 0 }}>
-                        {event.title}
-                      </h3>
-                      <Badge variant={config.variant} style={{ fontSize: "10px" }}>
-                        {config.label}
-                      </Badge>
-                    </div>
-                    <p style={{ fontSize: "12px", color: "var(--color-text-secondary)", margin: 0 }}>
-                      {timeLabel(event.startDate)}
-                      {event.location && ` \u2022 ${event.location}`}
-                    </p>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
         )}
 
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -595,18 +507,35 @@ export default function EventsPage() {
         </Dialog>
       </TabsContent>
 
-      <TabsContent value="calendar">
-        <CalendarView
-          items={calendarItems}
-          onItemClick={handleCalendarItemClick}
-        />
-      </TabsContent>
-
       <TabsContent value="plans">
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: 0 }}>
-            Annual plans organize events by school year or semester.
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={{ fontSize: "14px", color: "var(--color-text-secondary)", margin: 0 }}>
+              Annual plans organize events by school year or semester.
+            </p>
+            <Button size="sm" onClick={() => setShowCreatePlan(!showCreatePlan)}>
+              <Plus size={14} />
+              <span>{showCreatePlan ? "Cancel" : "New Plan"}</span>
+            </Button>
+          </div>
+
+          {showCreatePlan && (
+            <Card>
+              <CardContent style={{ padding: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <Input placeholder="Plan name (e.g. 2025-2026)" value={planName} onChange={(e) => setPlanName(e.target.value)} />
+                  <Input placeholder="Academic year (e.g. 2025-2026)" value={planYear} onChange={(e) => setPlanYear(e.target.value)} />
+                  <Textarea placeholder="Description (optional)" value={planDescription} onChange={(e) => setPlanDescription(e.target.value)} rows={2} />
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Button size="sm" onClick={handleCreatePlan} disabled={!planName.trim() || !planYear.trim() || createPlanMutation.isPending}>
+                      {createPlanMutation.isPending ? "Creating..." : "Create Plan"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {!annualPlans ? (
             <Card>
               <CardContent style={{ padding: "20px" }}>
@@ -622,7 +551,7 @@ export default function EventsPage() {
                   No annual plans yet
                 </p>
                 <p style={{ fontSize: "13px", color: "var(--color-text-secondary)", margin: 0 }}>
-                  Annual plans will appear here once created.
+                  Create a plan to organize events by academic year.
                 </p>
               </CardContent>
             </Card>
@@ -639,14 +568,8 @@ export default function EventsPage() {
                     </p>
                   )}
                   <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                    <span>
-                      <strong style={{ color: "var(--color-text)" }}>Start: </strong>
-                      {format(new Date(plan.startDate), "MMM d, yyyy")}
-                    </span>
-                    <span>
-                      <strong style={{ color: "var(--color-text)" }}>End: </strong>
-                      {format(new Date(plan.endDate), "MMM d, yyyy")}
-                    </span>
+                    <span><strong style={{ color: "var(--color-text)" }}>Year: </strong>{plan.academicYear}</span>
+                    <span><strong style={{ color: "var(--color-text)" }}>Status: </strong>{plan.isActive ? "Active" : "Inactive"}</span>
                   </div>
                 </CardContent>
               </Card>
