@@ -81,14 +81,16 @@ export function LinkPreview({ url }: { url: string }) {
         >
           <img
             src={data.image}
-            alt=""
+            alt={data.title ?? "Link preview"}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-              (e.currentTarget.nextSibling as HTMLElement)?.style.removeProperty("display");
+              const el = e.currentTarget;
+              el.style.display = "none";
+              const fallback = el.parentElement?.querySelector(".preview-fallback") as HTMLElement | null;
+              if (fallback) fallback.style.display = "flex";
             }}
           />
-          <ImageOff size={16} style={{ display: "none", color: "var(--color-text-secondary)" }} />
+          <ImageOff size={16} className="preview-fallback" style={{ display: "none", color: "var(--color-text-secondary)" }} />
         </div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -130,7 +132,7 @@ export function LinkPreview({ url }: { url: string }) {
             marginTop: "2px",
           }}
         >
-          {data.siteName || new URL(url).hostname}
+          {data.siteName || (() => { try { return new URL(url).hostname; } catch { return url; } })()}
         </span>
       </div>
     </a>
