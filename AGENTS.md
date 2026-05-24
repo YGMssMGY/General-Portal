@@ -1,114 +1,239 @@
-# AGENTS.md — General Portal
+# General Portal — Agent Guide
 
-## Quick start
+> This file is for AI coding agents. Read it before modifying code.
 
-```powershell
-# Prerequisites: PostgreSQL 16+ with two databases
-#   createdb general_portal_dev
-#   createdb general_portal_stuco
+## Project Overview
 
-# Everything from root (npm workspaces)
-cp .env.example .env    # then edit credentials
-npm install                   # hoists deps for frontend/ + backend/
-npm run dev                   # kills ports 3000,30001 → migrations + seed → Hono (:30001) + Vite (:3000)
-npm run stop                  # kills ports 3000,30001
-npm run build                 # tsc (backend) + tsc -b && vite build (frontend)
-npm run test -w backend       # 101 vitest tests (22 files)
-npm run test -w frontend      # 87 vitest tests (21 files)
-npm run format                # prettier --write
-npm run lint                  # eslint backend + frontend
-```
+General Portal is a multi-tenant web application built for school clubs/organizations. It currently serves two workspaces (portals):
 
-## Architecture
+- **Developers Club** (`developers`)
+- **Student Council** (`stuco`)
 
-```
-root package.json  (workspaces: ["frontend", "backend"])
-├── frontend/   Vite + React 18 + Carbon Design System  → port 3000
-├── backend/    Hono + Prisma + @hono/auth-js           → port 30001
-└── node_modules/  (hoisted)
+Each portal is isolated in its own PostgreSQL database. Users sign in via Microsoft Entra ID (school Microsoft accounts) and must be a member of the workspace to access it.
 
-Vite proxy: /api/* → localhost:30001
-```
+The app provides modules for: proposals, tasks, events, messages, finance, volunteers, members, files, meetings, activity feed, notifications, budget, kudos, and audit logs.
 
-- **No Java, no Spring Boot, no Docker.** Two PostgreSQL databases: `general_portal_dev` (developers) and `general_portal_stuco` (stuco). Portal selection via cookie → `portalMiddleware` attaches the correct `PrismaClient` per request.
-- **Auth:** `@hono/auth-js` with JWT strategy. Microsoft OAuth2 in production. Credentials provider active in development for local testing.
-- **Database persists across dev restarts.** `dev-setup.mjs` runs pending migrations on existing DB; does NOT delete it.
-- **Multi-client:** `VITE_CLIENT_NAME=developers|stuco` controls brand, feature flags, favicon, and which PostgreSQL database is used.
-- **State management:** TanStack Query for server state (portal-scoped query keys), Zustand for UI/client state.
+## Technology Stack
 
-## Key files
+- **Framework**: Next.js 15.3.1 (App Router, React Server Components by default)
+- **React**: 19.1.0
+- **Language**: TypeScript 5.8.3 (strict mode enabled)
+- **Styling**: Tailwind CSS 4.1.5 with PostCSS, `@theme` CSS variables
+- **Database**: PostgreSQL + Prisma 6.6.0 (`@prisma/client`)
+- **Auth**: NextAuth v5 (`next-auth@5.0.0-beta.25`) with Microsoft Entra ID OAuth, JWT strategy
+- **State / Data Fetching**: TanStack React Query v5
+- **UI Components**: Radix UI primitives + shadcn/ui (installed in `src/components/ui`)
+- **Icons**: lucide-react
+- **Dates**: date-fns
+- **Validation**: zod
+- **Cron**: node-cron (hourly nudge notifications)
+- **Image Optimization**: sharp
 
-| Path | Role |
-| --- | --- |
-| `backend/src/lib/app.ts` | App factory: creates Hono app with middleware, routes, WebSocket, cron |
-| `backend/src/index.ts` | Dev entry — starts app on `BACKEND_PORT` (30001) |
-| `backend/src/prod.ts` | Production entry — same + serves frontend `dist/` + SPA fallback on :3000 |
-| `backend/src/lib/env.ts` | Typed env access (reads from `process.env`, no dotenv) |
-| `backend/src/lib/db.ts` | Dual PrismaClient factory — cached in `globalThis` Map per portal |
-| `backend/src/lib/portal-middleware.ts` | Reads `portal` cookie → sets `c.get("portal")` + `c.get("db")` |
-| `backend/src/lib/auth-config.ts` | Auth.js providers + callbacks (Microsoft OAuth2 + dev credentials) |
-| `backend/src/lib/route-factory.ts` | `resourceRoute()` — generic CRUD factory with Zod, audit log, soft delete |
-| `backend/src/lib/api-response.ts` | Standard response shapes: `{ success, data, meta }` / `{ success, error }` |
-| `backend/src/lib/permissions.ts` | Role-based permission matrix (admin/president/officer/member) |
-| `backend/src/lib/audit.ts` | Tamper-evident audit log for financial + approval actions |
-| `backend/src/lib/websocket.ts` | WebSocket setup + presence tracking |
-| `backend/src/routes/*.ts` | 22 route modules + admin.ts (admin-only user creation) |
-| `backend/prisma/schema.prisma` | PostgreSQL schema (19 models + Account/Session/VerificationToken) |
-| `backend/scripts/dev-setup.mjs` | Dev DB setup — runs migrations, seeds both databases |
-| `backend/scripts/manage-accounts.mjs` | CLI tool: `create-admin`, `create-user`, `list`, `delete` |
-| `frontend/src/config/clientConfig.ts` | Multi-client branding config |
-| `frontend/src/hooks/useClientTheme.ts` | Sets favicon, title, CSS vars |
-| `frontend/src/api/httpClient.ts` | `fetchJson()` with retry (2x on 5xx/network err) |
-
-## Critical gotchas
-
-1. **`DATABASE_URL_DEVELOPERS` / `DATABASE_URL_STUCO` must be set before PrismaClient is created.** `.env` is loaded in `env.ts` before any route imports.
-2. **`env-url-basepath-redundant` warning** — safe to ignore. Caused by explicit `basePath: "/api/auth"` plus `AUTH_URL` env var.
-3. **Module execution order matters.** The `DATABASE_URL_*` env vars must be set before any PrismaClient is instantiated.
-4. **Dual PrismaClient instances.** `getDb(portal)` returns a cached client keyed by portal name. Never create `new PrismaClient()` directly — always use `getDb()` or `getDbFromContext(c)`.
-5. **`portalMiddleware` runs on every request.** It reads the `portal` cookie. Defaults to `"developers"` if missing or invalid.
-6. **Credentials sign-in requires JWT strategy.** `session: { strategy: "database" }` crashes with `UnsupportedStrategy`.
-7. **Custom passwords stored in DB.** Admin-created users get their own password. Usernames don't require `@` — "jeff" works.
-8. **No safe DB proxy.** `db` is just `prisma` directly. Errors throw and must be caught explicitly.
-9. **PrismaClient uses globalThis Map.** Survives `tsx watch` hot-reloads without creating duplicate connections.
-10. **Production mode:** Set `NODE_ENV=production` to serve frontend from the backend on :3000. Only Microsoft OAuth2 is available; dev credentials are disabled.
-
-## Portal cookie flow
+## Project Structure
 
 ```
-Browser → cookie "portal=developers|stuco"
-  → portalMiddleware reads cookie
-    → getDb(portal) returns cached PrismaClient
-      → db attached to request context as c.get("db")
-        → route handlers use getDbFromContext(c)
+src/
+  app/
+    layout.tsx          # Root layout (fonts, Providers, FaviconSwitcher)
+    page.tsx            # Landing page to choose portal
+    login/page.tsx      # Microsoft sign-in page
+    showcase/page.tsx   # Public showcase page
+    [portal]/           # Portal-scoped pages (dashboard, tasks, events, etc.)
+      layout.tsx        # Shared portal layout: sidebar, header, auth guards
+      dashboard/page.tsx
+      tasks/page.tsx
+      ... (one folder per module)
+    api/                # REST API routes (App Router route handlers)
+      auth/[...nextauth]/route.ts
+      tasks/route.ts
+      tasks/[id]/route.ts
+      ... (mirror the feature set)
+  components/
+    ui/                 # shadcn/ui components (button, card, dialog, etc.)
+    QueryClientProvider.tsx
+    SessionProvider.tsx
+    FaviconSwitcher.tsx
+  lib/
+    auth.ts             # NextAuth configuration (MicrosoftEntraID provider)
+    db.ts               # Prisma client factory per portal; global cache
+    permissions.ts      # Role-based permission definitions
+    portal-middleware.ts # Portal cookie / URL helpers
+    api-client.ts       # `fetchJson` helper with retries, timeout, auth redirect
+    api-response.ts     # `success()` / `error()` response wrappers
+    audit.ts            # `writeAuditLog` helper
+    cron.ts             # Hourly cron job for pending-task & upcoming-event nudges
+    notifications.ts    # `createNotification` helper
+    utils.ts            # `cn()` Tailwind class merge utility
+prisma/
+  schema.prisma         # Full Prisma schema (users, workspaces, tasks, events, ...)
+  seed.ts               # Seeds developers & stuco workspaces with demo data
 ```
 
-## UI conventions
+## Build, Dev, and Database Commands
 
-- Use Carbon components (`Grid`, `Row`, `Column`, `Stack`, `Tile`, `DataTable`, `Modal`, `InlineNotification`) — not inline `style={{}}`.
-- All admin pages use `PageHeader` for title + actions.
-- Multi-client feature flags in `clientConfig.ts` control sidebar nav visibility.
-- Time-aware greeting in DashboardPage (`Good morning/afternoon/evening`).
-- Logout button in UIShell header global bar.
-- Page transition animations via framer-motion (`PageTransition` component).
-- Toast notifications via react-hot-toast on CRUD operations.
+All commands are run via the package manager (Bun is used in this project; `package-lock.json` also exists).
 
-## Testing
+```bash
+# Development (Turbopack)
+bun run dev
 
-```powershell
-npm run test -w backend    # 101 tests (22 files)
-npm run test -w frontend   # 87 tests (21 files)
+# Production build
+bun run build
+
+# Start production server
+bun run start
+
+# Lint
+bun run lint
+
+# Type check (no emit)
+bun run typecheck
+
+# Database
+bun run db:generate   # Generate Prisma client
+bun run db:push       # Push schema to database
+bun run db:seed       # Run seed script (tsx prisma/seed.ts)
+bun run db:studio     # Open Prisma Studio
 ```
 
-- Backend tests use Hono's `app.request()` (no real DB needed for unit tests).
-- Frontend tests use vitest + jsdom + @testing-library/react.
-- No E2E tests (no Playwright config).
+## Environment Variables
 
-## Verification gates (after every change)
+See `.env.example` for the full set:
 
-1. `npm run build -w backend` — 0 TS errors
-2. `npm run build -w frontend` — 0 TS errors
-3. `npm run lint` — 0 errors
-4. `npm run test -w backend` — all pass
-5. `npm run test -w frontend` — all pass
-6. Quick smoke: `npm run dev`, hit `/api/health` → 200
+```env
+PORT=3000
+DATABASE_URL_DEVELOPERS=postgresql://...
+DATABASE_URL_STUCO=postgresql://...
+AUTH_SECRET=<generated>
+AUTH_URL=http://localhost:3000
+MICROSOFT_TENANT_ID=common
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+NODE_ENV=development
+FRONTEND_ORIGIN=http://localhost:3000
+API_KEY=
+RATE_LIMIT_MAX=100
+UPLOADS_DIR=./uploads
+```
+
+## Multi-Tenant Architecture
+
+The app is multi-tenant via **portal cookie** (`portal=developers|stuco`), not via subdomain or path-only isolation.
+
+- `src/lib/db.ts` exports `getDbForPortal(portal)` which returns a cached `PrismaClient` connected to the correct database URL (`DATABASE_URL_DEVELOPERS` or `DATABASE_URL_STUCO`).
+- API routes read the portal from the request cookie header via `getDbFromCookie(request)`.
+- Client components read the portal from `document.cookie` using a small `getPortal()` helper duplicated in several pages.
+- The `[portal]` dynamic segment in URLs is validated; if the cookie is missing or invalid, the user is redirected.
+
+## Authentication & Authorization
+
+- **Provider**: Microsoft Entra ID (OAuth 2.0).
+- **Session**: JWT strategy.
+- **Sign-in guard**: `signIn` callback checks that the user's email exists in a `Membership` record for the current portal cookie. If not, sign-in is denied (`AccessDenied`).
+- **Role permissions**: Defined in `src/lib/permissions.ts`. Roles are `admin`, `officer`, `member`.
+  - `admin`: all permissions
+  - `officer`: all except `manage_users`, `manage_settings`, `view_audit`
+  - `member`: limited set (can create proposals, tasks, events, messages, volunteer, view activity, files, members, send kudos, manage notifications)
+- Session is extended with `id`, `portal`, `role`, and `permissions`.
+
+## API Patterns
+
+### Route Handlers
+All API routes are standard Next.js App Router route handlers (`export async function GET(...)`, etc.).
+
+Common pattern in every route:
+1. Call `await auth()` to get the session; return 401 if missing.
+2. Call `getDbFromCookie(request)` to get the correct Prisma client.
+3. Resolve the workspace from `session.user.portal` (slug) → `workspace.id`.
+4. Perform Prisma query.
+5. Return `success(data)` or `error(message, status)`.
+
+### Response Shape
+All JSON responses are wrapped:
+
+```ts
+// success
+{ success: true, data: T }
+
+// error
+{ success: false, error: string }
+```
+
+Use `src/lib/api-response.ts` (`success` / `error`) in route handlers.
+
+### Client Fetching
+Use `fetchJson<T>(url, options?)` from `src/lib/api-client.ts`. It handles:
+- 15-second timeout
+- 2 retries with exponential backoff for 429 / 5xx
+- Automatic redirect to `/login` on 401
+- Unwrapping the `{ success: true, data }` envelope
+
+### React Query
+Client pages use `@tanstack/react-query` with this default config (see `QueryClientProvider.tsx`):
+- `staleTime: 30_000`
+- `retry: 2`
+- `refetchOnWindowFocus: false`
+
+Invalidation pattern: `queryClient.invalidateQueries({ queryKey: [portal, "feature"] })`.
+
+## Styling Conventions
+
+- **Tailwind CSS v4** is used via `@import "tailwindcss"` in `src/app/globals.css`.
+- CSS custom properties (variables) are the primary theming mechanism. They are defined in `@theme` and `:root` blocks in `globals.css`.
+- **Most UI in this codebase uses inline `style` props**, not Tailwind utility classes. Tailwind is used sparingly (mostly for grid layouts like `grid grid-cols-2 lg:grid-cols-4 gap-4`).
+- Color tokens:
+  - `var(--color-primary)` — IBM-style blue `#0f62fe`
+  - `var(--color-text)` — near-black in light mode, near-white in dark mode
+  - `var(--color-border)` — `#e0e0e0`
+  - `var(--color-bg)` / `var(--color-bg-secondary)`
+  - `var(--color-destructive)` — red
+  - `var(--color-success)` — green
+  - `var(--color-warning)` — yellow
+- Dark mode support exists via `prefers-color-scheme: dark` in `globals.css`.
+- Font: Noto Sans loaded from Google Fonts.
+- Border radius is consistently `5px` (`var(--radius-sm)` through `var(--radius-3xl)` all equal `5px`).
+
+## Database & Prisma
+
+- Provider: `postgresql`
+- Single `schema.prisma` file.
+- The default datasource URL is `DATABASE_URL_DEVELOPERS`; runtime code switches DBs via `datasourceUrl` on the PrismaClient instance.
+- Key models: `User`, `Workspace`, `Membership`, `TaskItem`, `SubTask`, `TaskComment`, `EventItem`, `Proposal`, `MessageThread`, `Message`, `Transaction`, `VolunteerSlot`, `VolunteerSignup`, `Meeting`, `MeetingRsvp`, `Notification`, `AuditLog`, `Kudos`, `BudgetAllocation`, `BudgetTransaction`, `Attachment`, `ActivityFeed`.
+- Enums: `Role`, `ProposalStatus`, `TaskStatus`, `EventStatus`, `MeetingStatus`, `TransactionType`, `BudgetStatus`.
+
+## File Uploads
+
+- Uploaded files are stored on the local filesystem under `UPLOADS_DIR` (default `./uploads`).
+- Sub-directory per portal: `./uploads/developers/`, `./uploads/stuco/`.
+- Max file size: 500 MB.
+- Allowed MIME type prefixes are whitelisted (images, PDF, text, Word, Excel).
+- File metadata is stored in the `Attachment` table.
+
+## Background Jobs
+
+`instrumentation.ts` registers a cron job on the Node.js runtime only:
+- Runs every hour (`0 * * * *`).
+- For each portal, counts pending tasks per user and upcoming events within 24h.
+- Creates `Notification` records of type `"nudge"`.
+
+## Security Considerations
+
+- **Auth is required** for all API routes and all portal pages. The login page and public showcase are the only unauthenticated routes.
+- **Membership gate**: You cannot sign in unless your email has a `Membership` row in the target portal.
+- **Role checks** happen via `session.user.permissions`; some UI features are gated with `isAdmin` checks on the client, but API routes should also validate permissions server-side before mutating data.
+- **File uploads**: size and MIME type restrictions are enforced.
+- **No rate-limiting middleware** is currently implemented in the codebase, although `RATE_LIMIT_MAX` exists in `.env.example`.
+- **No tests** are present in this project.
+- **No ESLint config file** is present (despite the `lint` script).
+
+## Development Guidelines
+
+1. **Keep the API response envelope**. Always use `success(data)` / `error(msg, status)` in new route handlers.
+2. **Use `getDbFromCookie(request)`** in API routes; do not instantiate `PrismaClient` directly.
+3. **Read portal from cookie on client**. Copy the `getPortal()` pattern from existing pages if you create new portal pages.
+4. **Invalidate queries with the portal key**. Use `queryClient.invalidateQueries({ queryKey: [portal, "feature"] })` after mutations.
+5. **Follow the inline-style convention**. New UI should use `style={{ ... }}` with CSS custom properties (e.g., `color: "var(--color-text)"`). Use Tailwind utilities only for responsive grids and layout helpers.
+6. **Add audit logging** for destructive or important mutations: call `writeAuditLog(..., db)`.
+7. **Add activity feed entries** for user-visible creations (tasks, events, proposals, etc.).
+8. **Extend Prisma schema carefully**. After changing `schema.prisma`, run `bun run db:generate` and `bun run db:push`.
+9. **Seed script** (`prisma/seed.ts`) is idempotent (uses `upsert`). It is safe to re-run.
