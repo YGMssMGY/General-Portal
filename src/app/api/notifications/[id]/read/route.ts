@@ -1,31 +1,28 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, eq } from "drizzle-orm";
+import { notifications } from "@/db/schema";
+import { ApiError, handleRouteError, ok, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const { id } = await params;
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "members" });
+        const { id } = await params;
+        const nid = requireUuid(id);
 
-    const notification = await db.notification.findUnique({ where: { id } });
-    if (!notification) return error("Notification not found", 404);
-    if (notification.userId !== session.user.id) {
-      return error("You can only mark your own notifications as read", 403);
+        const existing = await t.db.query.notifications.findFirst({
+            where: and(
+                eq(notifications.id, nid),
+                eq(notifications.workspaceId, t.workspaceId),
+                eq(notifications.userId, t.userId),
+            ),
+            columns: { id: true },
+        });
+        if (!existing) throw new ApiError("Notification not found", 404);
+
+        await t.db.update(notifications).set({ read: true }).where(eq(notifications.id, nid));
+        return ok({ read: true });
+    } catch (e) {
+        return handleRouteError("POST /api/notifications/[id]/read", e);
     }
-
-    await db.notification.update({
-      where: { id },
-      data: { read: true },
-    });
-
-    return success({ read: true });
-  } catch (e) {
-    console.error("POST /api/notifications/[id]/read", e);
-    return error("Internal server error", 500);
-  }
 }

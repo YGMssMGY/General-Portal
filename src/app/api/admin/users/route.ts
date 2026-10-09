@@ -1,138 +1,169 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { hasPermission } from "@/lib/permissions";
+import type { NextRequest } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { memberships, roles, users } from "@/db/schema";
+import {
+    ApiError,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+    requireUuid,
+} from "@/lib/api";
 import { writeAuditLog } from "@/lib/audit";
+import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { permission: "manage_users", module: "members" });
+        const { limit, cursor } = parsePagination(new URL(request.url).searchParams);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const role = session.user.role;
+        const conds = [eq(memberships.workspaceId, t.workspaceId)];
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length >= 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: memberships.createdAt, value: at }],
+                        memberships.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    if (!hasPermission(role, "manage_users")) {
-      return error("Forbidden: insufficient permissions", 403);
+        const rows = await t.db.query.memberships.findMany({
+            where: and(...conds),
+            orderBy: [desc(memberships.createdAt), desc(memberships.id)],
+            limit: limit + 1,
+            with: {
+                role: true,
+                user: { columns: { id: true, name: true, email: true, image: true } },
+            },
+        });
+
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
+
+        const items = rows.map((m) => ({
+            id: m.user.id,
+            name: m.user.name,
+            email: m.user.email,
+            image: m.user.image,
+            role: m.role?.name ?? "member",
+            membershipId: m.id,
+            joinedAt: m.createdAt,
+        }));
+
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/admin/users", e);
     }
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
-
-    const userWhere = {
-      memberships: {
-        some: { workspaceId: workspace.id },
-      },
-    };
-
-    const users = await db.user.findMany({
-      where: userWhere,
-      include: {
-        memberships: {
-          where: { workspaceId: workspace.id },
-          select: { role: true, createdAt: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-    });
-
-    return success(users);
-  } catch (e) {
-    console.error("GET /api/admin/users", e);
-    return error("Internal server error", 500);
-  }
 }
 
+const upsertUserSchema = z.object({
+    email: z.email(),
+    name: z.string().trim().max(200).nullish(),
+    role: z.string().trim().max(100).nullish(),
+    roleId: z.string().nullish(),
+});
+type UpsertUserInput = z.infer<typeof upsertUserSchema>;
+
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { permission: "manage_users", module: "members" });
+        const body = await parseBody<UpsertUserInput>(upsertUserSchema as never, request);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const role = session.user.role;
+        const email = body.email.trim().toLowerCase();
+        if (!email) throw new ApiError("Email is required", 400);
 
-    if (!hasPermission(role, "manage_users")) {
-      return error("Forbidden: insufficient permissions", 403);
+        let roleRow;
+        const roleId = body.roleId?.trim() || null;
+        if (roleId) {
+            requireUuid(roleId, "roleId");
+            roleRow = await t.db.query.roles.findFirst({
+                where: and(eq(roles.id, roleId), eq(roles.workspaceId, t.workspaceId)),
+            });
+            if (!roleRow) throw new ApiError("Role not found in this workspace", 400);
+        } else {
+            const roleName = body.role?.trim() || "member";
+            roleRow = await t.db.query.roles.findFirst({
+                where: and(eq(roles.workspaceId, t.workspaceId), eq(roles.name, roleName)),
+            });
+            if (!roleRow) throw new ApiError(`Role "${roleName}" not found in this workspace`, 400);
+        }
+
+        let userRow = await t.db.query.users.findFirst({ where: eq(users.email, email) });
+        if (!userRow) {
+            const inserted = await t.db
+                .insert(users)
+                .values({ email, name: body.name?.trim() || null })
+                .returning();
+            userRow = inserted[0];
+            if (!userRow) throw new ApiError("Failed to create user", 500);
+        } else if (body.name?.trim()) {
+            await t.db
+                .update(users)
+                .set({ name: body.name.trim(), updatedAt: new Date() })
+                .where(eq(users.id, userRow.id));
+        }
+
+        const existing = await t.db.query.memberships.findFirst({
+            where: and(
+                eq(memberships.workspaceId, t.workspaceId),
+                eq(memberships.userId, userRow.id),
+            ),
+        });
+        if (existing) {
+            await t.db
+                .update(memberships)
+                .set({ roleId: roleRow.id })
+                .where(eq(memberships.id, existing.id));
+        } else {
+            await t.db
+                .insert(memberships)
+                .values({ workspaceId: t.workspaceId, userId: userRow.id, roleId: roleRow.id });
+        }
+
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create_user",
+                entityType: "user",
+                entityId: userRow.id,
+                metadata: { email, role: roleRow.name },
+            },
+            t.db,
+        );
+
+        return ok(
+            {
+                user: {
+                    id: userRow.id,
+                    name: body.name?.trim() || userRow.name,
+                    email: userRow.email,
+                    image: userRow.image,
+                },
+                role: roleRow.name,
+            },
+            201,
+        );
+    } catch (e) {
+        return handleRouteError("POST /api/admin/users", e);
     }
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const body = await request.json();
-    const { email, name, role: memberRole } = body;
-
-    if (!email || typeof email !== "string" || !email.trim()) {
-      return error("Email is required", 400);
-    }
-    if (!memberRole || !["admin", "officer", "member"].includes(memberRole)) {
-      return error("Valid role (admin, officer, member) is required", 400);
-    }
-
-    const user = await db.user.upsert({
-      where: { email: email.trim().toLowerCase() },
-      update: { name: name?.trim() ?? null },
-      create: {
-        email: email.trim().toLowerCase(),
-        name: name?.trim() ?? null,
-      },
-    });
-
-    await db.membership.upsert({
-      where: {
-        userId_workspaceId: {
-          userId: user.id,
-          workspaceId: workspace.id,
-        },
-      },
-      update: { role: memberRole },
-      create: {
-        userId: user.id,
-        workspaceId: workspace.id,
-        role: memberRole,
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create_user",
-        entityType: "user",
-        entityId: user.id,
-        metadata: { email: user.email, role: memberRole },
-      },
-      db,
-    );
-
-    const result = await db.user.findUnique({
-      where: { id: user.id },
-      include: {
-        memberships: {
-          where: { workspaceId: workspace.id },
-          select: { role: true, createdAt: true },
-        },
-      },
-    });
-
-    return success(result, 201);
-  } catch (e) {
-    console.error("POST /api/admin/users", e);
-    return error("Internal server error", 500);
-  }
 }

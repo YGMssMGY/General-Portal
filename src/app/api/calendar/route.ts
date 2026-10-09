@@ -1,125 +1,82 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, eq, gte, isNull, lte } from "drizzle-orm";
+import { events, meetings, tasks, volunteerSlots } from "@/db/schema";
+import { ApiError, handleRouteError, ok } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, {});
+        const { searchParams } = new URL(request.url);
+        const now = new Date();
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        let start = new Date(now.getFullYear(), now.getMonth(), 1);
+        let end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const startParam = searchParams.get("start");
+        const endParam = searchParams.get("end");
+        if (startParam) {
+            start = new Date(startParam);
+            if (Number.isNaN(start.getTime())) throw new ApiError("Invalid start date", 400);
+        }
+        if (endParam) {
+            end = new Date(endParam);
+            if (Number.isNaN(end.getTime())) throw new ApiError("Invalid end date", 400);
+        }
+        if (start > end) throw new ApiError("Invalid date range", 400);
 
-    const { searchParams } = new URL(request.url);
-    const now = new Date();
-    const month = parseInt(searchParams.get("month") ?? String(now.getMonth()), 10);
-    const year = parseInt(searchParams.get("year") ?? String(now.getFullYear()), 10);
+        const [eventRows, taskRows, meetingRows, slotRows] = await Promise.all([
+            t.db.query.events.findMany({
+                where: and(
+                    eq(events.workspaceId, t.workspaceId),
+                    isNull(events.deletedAt),
+                    gte(events.startDate, start),
+                    lte(events.startDate, end),
+                ),
+                columns: {
+                    id: true,
+                    title: true,
+                    startDate: true,
+                    endDate: true,
+                    location: true,
+                    status: true,
+                },
+                limit: 500,
+            }),
+            t.db.query.tasks.findMany({
+                where: and(
+                    eq(tasks.workspaceId, t.workspaceId),
+                    isNull(tasks.deletedAt),
+                    gte(tasks.dueDate, start),
+                    lte(tasks.dueDate, end),
+                ),
+                columns: { id: true, title: true, dueDate: true, status: true, priority: true },
+                limit: 500,
+            }),
+            t.db.query.meetings.findMany({
+                where: and(
+                    eq(meetings.workspaceId, t.workspaceId),
+                    isNull(meetings.deletedAt),
+                    gte(meetings.startTime, start),
+                    lte(meetings.startTime, end),
+                ),
+                columns: { id: true, title: true, startTime: true, endTime: true, location: true },
+                limit: 500,
+            }),
+            t.db.query.volunteerSlots.findMany({
+                where: and(
+                    eq(volunteerSlots.workspaceId, t.workspaceId),
+                    isNull(volunteerSlots.deletedAt),
+                    gte(volunteerSlots.startTime, start),
+                    lte(volunteerSlots.startTime, end),
+                ),
+                columns: { id: true, title: true, startTime: true, endTime: true },
+                limit: 500,
+            }),
+        ]);
 
-    if (month < 0 || month > 11 || isNaN(month) || isNaN(year)) {
-      return error("Invalid month or year", 400);
+        return ok({ events: eventRows, tasks: taskRows, meetings: meetingRows, slots: slotRows });
+    } catch (e) {
+        return handleRouteError("GET /api/calendar", e);
     }
-
-    const startDate = new Date(year, month, 1);
-    const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
-
-    const items: Array<{
-      id: string;
-      title: string;
-      date: string;
-      type: "event" | "deadline" | "meeting" | "volunteer";
-      portal: string;
-      entityId: string;
-    }> = [];
-
-    const [events, tasks, meetings, volunteerSlots] = await Promise.all([
-      db.eventItem.findMany({
-        where: {
-          workspaceId: workspace.id,
-          status: "published",
-          startDate: { gte: startDate, lte: endDate },
-        },
-        select: { id: true, title: true, startDate: true },
-      }),
-      db.taskItem.findMany({
-        where: {
-          workspaceId: workspace.id,
-          dueDate: { gte: startDate, lte: endDate },
-          status: { not: "done" },
-        },
-        select: { id: true, title: true, dueDate: true },
-      }),
-      db.meeting.findMany({
-        where: {
-          workspaceId: workspace.id,
-          startTime: { gte: startDate, lte: endDate },
-        },
-        select: { id: true, title: true, startTime: true },
-      }),
-      db.volunteerSlot.findMany({
-        where: {
-          workspaceId: workspace.id,
-          startTime: { gte: startDate, lte: endDate },
-        },
-        select: { id: true, title: true, startTime: true },
-      }),
-    ]);
-
-    for (const event of events) {
-      items.push({
-        id: event.id,
-        title: event.title,
-        date: event.startDate.toISOString(),
-        type: "event",
-        portal,
-        entityId: event.id,
-      });
-    }
-
-    for (const task of tasks) {
-      items.push({
-        id: task.id,
-        title: `[Task] ${task.title}`,
-          date: task.dueDate ? task.dueDate.toISOString() : new Date().toISOString(),
-        type: "deadline",
-        portal,
-        entityId: task.id,
-      });
-    }
-
-    for (const meeting of meetings) {
-      items.push({
-        id: meeting.id,
-        title: `[Meeting] ${meeting.title}`,
-        date: meeting.startTime.toISOString(),
-        type: "meeting",
-        portal,
-        entityId: meeting.id,
-      });
-    }
-
-    for (const slot of volunteerSlots) {
-      items.push({
-        id: slot.id,
-        title: `[Volunteer] ${slot.title}`,
-        date: slot.startTime.toISOString(),
-        type: "volunteer",
-        portal,
-        entityId: slot.id,
-      });
-    }
-
-    items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    return success({ items, month, year });
-  } catch (e) {
-    console.error("GET /api/calendar", e);
-    return error("Internal server error", 500);
-  }
 }
