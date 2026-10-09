@@ -131,17 +131,19 @@ The app is multi-tenant via **portal cookie** (`portal=developers|stuco`), not v
 - **Session**: JWT strategy.
 - **Sign-in guard**: `signIn` callback checks that the user's email exists in a `Membership` record for the current portal cookie. If not, sign-in is denied (`AccessDenied`).
 - **Role permissions**: Defined in `src/lib/permissions.ts`. Roles are `admin`, `officer`, `member`.
-  - `admin`: all permissions
-  - `officer`: all except `manage_users`, `manage_settings`, `view_audit`
-  - `member`: limited set (can create proposals, tasks, events, messages, volunteer, view activity, files, members, send kudos, manage notifications)
+    - `admin`: all permissions
+    - `officer`: all except `manage_users`, `manage_settings`, `view_audit`
+    - `member`: limited set (can create proposals, tasks, events, messages, volunteer, view activity, files, members, send kudos, manage notifications)
 - Session is extended with `id`, `portal`, `role`, and `permissions`.
 
 ## API Patterns
 
 ### Route Handlers
+
 All API routes are standard Next.js App Router route handlers (`export async function GET(...)`, etc.).
 
 Common pattern in every route:
+
 1. Call `await auth()` to get the session; return 401 if missing.
 2. Call `getDbFromCookie(request)` to get the correct Prisma client.
 3. Resolve the workspace from `session.user.portal` (slug) → `workspace.id`.
@@ -149,6 +151,7 @@ Common pattern in every route:
 5. Return `success(data)` or `error(message, status)`.
 
 ### Response Shape
+
 All JSON responses are wrapped:
 
 ```ts
@@ -162,14 +165,18 @@ All JSON responses are wrapped:
 Use `src/lib/api-response.ts` (`success` / `error`) in route handlers.
 
 ### Client Fetching
+
 Use `fetchJson<T>(url, options?)` from `src/lib/api-client.ts`. It handles:
+
 - 15-second timeout
 - 2 retries with exponential backoff for 429 / 5xx
 - Automatic redirect to `/login` on 401
 - Unwrapping the `{ success: true, data }` envelope
 
 ### React Query
+
 Client pages use `@tanstack/react-query` with this default config (see `QueryClientProvider.tsx`):
+
 - `staleTime: 30_000`
 - `retry: 2`
 - `refetchOnWindowFocus: false`
@@ -182,13 +189,13 @@ Invalidation pattern: `queryClient.invalidateQueries({ queryKey: [portal, "featu
 - CSS custom properties (variables) are the primary theming mechanism. They are defined in `@theme` and `:root` blocks in `globals.css`.
 - **Most UI in this codebase uses inline `style` props**, not Tailwind utility classes. Tailwind is used sparingly (mostly for grid layouts like `grid grid-cols-2 lg:grid-cols-4 gap-4`).
 - Color tokens:
-  - `var(--color-primary)` — IBM-style blue `#0f62fe`
-  - `var(--color-text)` — near-black in light mode, near-white in dark mode
-  - `var(--color-border)` — `#e0e0e0`
-  - `var(--color-bg)` / `var(--color-bg-secondary)`
-  - `var(--color-destructive)` — red
-  - `var(--color-success)` — green
-  - `var(--color-warning)` — yellow
+    - `var(--color-primary)` — IBM-style blue `#0f62fe`
+    - `var(--color-text)` — near-black in light mode, near-white in dark mode
+    - `var(--color-border)` — `#e0e0e0`
+    - `var(--color-bg)` / `var(--color-bg-secondary)`
+    - `var(--color-destructive)` — red
+    - `var(--color-success)` — green
+    - `var(--color-warning)` — yellow
 - Dark mode support exists via `prefers-color-scheme: dark` in `globals.css`.
 - Font: Noto Sans loaded from Google Fonts.
 - Border radius is consistently `5px` (`var(--radius-sm)` through `var(--radius-3xl)` all equal `5px`).
@@ -212,6 +219,7 @@ Invalidation pattern: `queryClient.invalidateQueries({ queryKey: [portal, "featu
 ## Background Jobs
 
 `instrumentation.ts` registers a cron job on the Node.js runtime only:
+
 - Runs every hour (`0 * * * *`).
 - For each portal, counts pending tasks per user and upcoming events within 24h.
 - Creates `Notification` records of type `"nudge"`.
