@@ -1,131 +1,182 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { NextRequest } from "next/server";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { volunteerSignups, volunteerSlots } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+    requireUuid,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+const createSignupSchema = z.object({ slotId: z.string() });
+type CreateSignupInput = z.infer<typeof createSignupSchema>;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+const deleteSignupSchema = z.object({ slotId: z.string(), userId: z.string().optional() });
+type DeleteSignupInput = z.infer<typeof deleteSignupSchema>;
 
-    const { searchParams } = new URL(request.url);
-    const slotId = searchParams.get("slotId");
-    if (!slotId) return error("slotId query param is required", 400);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "volunteers" });
+        const searchParams = new URL(request.url).searchParams;
+        const { limit, cursor } = parsePagination(searchParams);
+        const slotId = requireUuid(searchParams.get("slotId"), "slotId");
 
-    const slot = await db.volunteerSlot.findUnique({
-      where: { id: slotId },
-      include: {
-        signups: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true },
-            },
-          },
-        },
-      },
-    });
+        const slot = await t.db.query.volunteerSlots.findFirst({
+            where: and(
+                eq(volunteerSlots.id, slotId),
+                eq(volunteerSlots.workspaceId, t.workspaceId),
+                isNull(volunteerSlots.deletedAt),
+            ),
+            columns: { id: true },
+        });
+        if (!slot) throw new ApiError("Volunteer slot not found", 404);
 
-    if (!slot) return error("Volunteer slot not found", 404);
-    if (slot.workspaceId !== workspace.id) return error("Slot does not belong to this workspace", 403);
+        const conds = [eq(volunteerSignups.slotId, slotId)];
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length >= 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: volunteerSignups.createdAt, value: at }],
+                        volunteerSignups.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    const data = slot.signups.map((s) => ({
-      id: s.id,
-      userId: s.userId,
-      name: s.user.name,
-      email: s.user.email,
-      signedUpAt: s.createdAt,
-    }));
+        const rows = await t.db.query.volunteerSignups.findMany({
+            where: and(...conds),
+            orderBy: [desc(volunteerSignups.createdAt), desc(volunteerSignups.id)],
+            limit: limit + 1,
+            with: { user: { columns: { id: true, name: true, email: true, image: true } } },
+        });
 
-    return success(data);
-  } catch (e) {
-    console.error("GET /api/volunteers/signups", e);
-    return error("Internal server error", 500);
-  }
-}
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
 
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+        const items = rows.map((s) => ({
+            id: s.id,
+            userId: s.userId,
+            name: s.user.name,
+            email: s.user.email,
+            signedUpAt: s.createdAt,
+        }));
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const body = await request.json();
-    const { slotId } = body;
-    if (!slotId) return error("slotId is required", 400);
-
-    const slot = await db.volunteerSlot.findUnique({
-      where: { id: slotId },
-      include: { _count: { select: { signups: true } } },
-    });
-
-    if (!slot) return error("Volunteer slot not found", 404);
-    if (slot.workspaceId !== workspace.id) return error("Slot does not belong to this workspace", 403);
-
-    const existing = await db.volunteerSignup.findUnique({
-      where: { slotId_userId: { slotId, userId: session.user.id } },
-    });
-    if (existing) return error("Already signed up for this slot", 409);
-
-    if (slot._count.signups >= slot.capacity) {
-      return error("Slot is at full capacity", 400);
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/volunteers/signups", e);
     }
-
-    const signup = await db.volunteerSignup.create({
-      data: { slotId, userId: session.user.id },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "signed_up",
-        entityType: "volunteer_signup",
-        entityId: signup.id,
-        metadata: { slotId, title: slot.title },
-      },
-    });
-
-    return success(signup, 201);
-  } catch (e) {
-    console.error("POST /api/volunteers/signups", e);
-    return error("Internal server error", 500);
-  }
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function POST(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "volunteers" });
+        const body = await parseBody<CreateSignupInput>(createSignupSchema as never, request);
+        const slotId = requireUuid(body.slotId, "slotId");
 
-    const body = await request.json();
-    const { slotId } = body;
-    if (!slotId) return error("slotId is required", 400);
+        const [slot, [{ n: signedUp }]] = await Promise.all([
+            t.db.query.volunteerSlots.findFirst({
+                where: and(
+                    eq(volunteerSlots.id, slotId),
+                    eq(volunteerSlots.workspaceId, t.workspaceId),
+                    isNull(volunteerSlots.deletedAt),
+                ),
+            }),
+            t.db
+                .select({ n: count() })
+                .from(volunteerSignups)
+                .where(eq(volunteerSignups.slotId, slotId)),
+        ]);
+        if (!slot) throw new ApiError("Volunteer slot not found", 404);
+        if (signedUp >= slot.capacity) throw new ApiError("Slot is at full capacity", 409);
 
-    const signup = await db.volunteerSignup.findUnique({
-      where: { slotId_userId: { slotId, userId: session.user.id } },
-    });
+        const [created] = await t.db
+            .insert(volunteerSignups)
+            .values({ slotId, userId: t.userId })
+            .onConflictDoNothing({ target: [volunteerSignups.slotId, volunteerSignups.userId] })
+            .returning();
+        if (!created) throw new ApiError("Already signed up for this slot", 409);
 
-    if (!signup) return error("Signup not found", 404);
-    if (signup.userId !== session.user.id) return error("You can only remove your own signups", 403);
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "signed_up",
+            entityType: "volunteer_signup",
+            entityId: created.id,
+            metadata: { slotId, title: slot.title },
+            ipAddress: clientIp(request),
+        });
 
-    await db.volunteerSignup.delete({
-      where: { id: signup.id },
-    });
+        return ok(created, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/volunteers/signups", e);
+    }
+}
 
-    return success({ removed: true });
-  } catch (e) {
-    console.error("DELETE /api/volunteers/signups", e);
-    return error("Internal server error", 500);
-  }
+export async function DELETE(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "volunteers" });
+        const body = await parseBody<DeleteSignupInput>(deleteSignupSchema as never, request);
+        const slotId = requireUuid(body.slotId, "slotId");
+        const targetUserId = body.userId ?? t.userId;
+        if (targetUserId !== t.userId && !t.permissions.includes("manage_volunteer_slots")) {
+            throw new ApiError("Forbidden", 403);
+        }
+
+        const slot = await t.db.query.volunteerSlots.findFirst({
+            where: and(
+                eq(volunteerSlots.id, slotId),
+                eq(volunteerSlots.workspaceId, t.workspaceId),
+                isNull(volunteerSlots.deletedAt),
+            ),
+            columns: { id: true, title: true },
+        });
+        if (!slot) throw new ApiError("Volunteer slot not found", 404);
+
+        const existing = await t.db.query.volunteerSignups.findFirst({
+            where: and(
+                eq(volunteerSignups.slotId, slotId),
+                eq(volunteerSignups.userId, targetUserId),
+            ),
+        });
+        if (!existing) throw new ApiError("Signup not found", 404);
+
+        await Promise.all([
+            t.db.delete(volunteerSignups).where(eq(volunteerSignups.id, existing.id)),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "cancelled_signup",
+                entityType: "volunteer_signup",
+                entityId: existing.id,
+                metadata: { slotId, title: slot.title, targetUserId },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+
+        return ok({ removed: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/volunteers/signups", e);
+    }
 }

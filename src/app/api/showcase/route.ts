@@ -1,95 +1,126 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { hasPermission } from "@/lib/permissions";
-import { writeAuditLog } from "@/lib/audit";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, asc, eq, gt, isNull, or } from "drizzle-orm";
+import { showcaseItems } from "@/db/schema";
+import {
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
+        },
+    };
+}
+
+const createSchema = z.object({
+    type: z.string().trim().min(1).max(50),
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(5000).nullish(),
+    imageUrl: z.string().trim().max(2000).nullish(),
+    linkUrl: z.string().trim().max(2000).nullish(),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+    try {
+        const t = await requireTenant(request, { module: "members" });
+        const { limit, cursor } = parsePagination(request.nextUrl.searchParams);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const cVals = decodeCursorValues(cursor);
+        const cOrder = cVals && typeof cVals[0] === "number" ? cVals[0] : null;
+        const cId = cVals && typeof cVals[1] === "string" ? cVals[1] : null;
+        const cursorCond =
+            cOrder !== null && cId
+                ? or(
+                      gt(showcaseItems.sortOrder, cOrder),
+                      and(eq(showcaseItems.sortOrder, cOrder), gt(showcaseItems.id, cId)),
+                  )
+                : undefined;
 
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
+        const rows = await t.db.query.showcaseItems.findMany({
+            where: and(
+                eq(showcaseItems.workspaceId, t.workspaceId),
+                isNull(showcaseItems.deletedAt),
+                cursorCond,
+            ),
+            orderBy: [asc(showcaseItems.sortOrder), asc(showcaseItems.id)],
+            limit: limit + 1,
+            with: { createdBy: { columns: { id: true, name: true } } },
+        });
 
-    const items = await db.showcaseItem.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { sortOrder: "asc" },
-      skip,
-      take: limit,
-      include: {
-        createdBy: { select: { name: true } },
-      },
-    });
-
-    return success(items);
-  } catch (e) {
-    console.error("GET /api/showcase", e);
-    return error("Internal server error", 500);
-  }
+        const items = rows.slice(0, limit);
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last ? encodeCursorValues([last.sortOrder, last.id]) : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/showcase", e);
+    }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_showcase",
+            module: "members",
+        });
+        const data = await parseBody(body(createSchema), request);
 
-    if (!hasPermission(session.user.role, "manage_showcase")) {
-      return error("Forbidden", 403);
+        const [item] = await t.db
+            .insert(showcaseItems)
+            .values({
+                workspaceId: t.workspaceId,
+                type: data.type,
+                title: data.title,
+                description: data.description ?? null,
+                imageUrl: data.imageUrl ?? null,
+                linkUrl: data.linkUrl ?? null,
+                createdById: t.userId,
+            })
+            .returning();
+
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "created",
+            entityType: "showcase_item",
+            entityId: item.id,
+            metadata: { title: item.title, type: data.type },
+            ipAddress: clientIp(request),
+        });
+
+        return ok(item, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/showcase", e);
     }
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const body = await request.json();
-    const { type, title, description, imageUrl, linkUrl } = body;
-
-    if (!type || typeof type !== "string") return error("Type is required", 400);
-    if (!title || typeof title !== "string" || !title.trim()) return error("Title is required", 400);
-
-    const item = await db.showcaseItem.create({
-      data: {
-        workspaceId: workspace.id,
-        type,
-        title: title.trim(),
-        description: description?.trim() ?? null,
-        imageUrl: imageUrl ?? null,
-        linkUrl: linkUrl ?? null,
-        createdById: session.user.id,
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create",
-        entityType: "showcase_item",
-        entityId: item.id,
-        metadata: { title: item.title, type },
-      },
-      db,
-    );
-
-    return success(item, 201);
-  } catch (e) {
-    console.error("POST /api/showcase", e);
-    return error("Internal server error", 500);
-  }
 }

@@ -1,79 +1,88 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { purchaseRequests } from "@/db/schema";
+import { ApiError, handleRouteError, ok, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { writeAuditLog } from "@/lib/audit";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+const withCost = <T extends { costCents: number }>(r: T) => ({ ...r, cost: r.costCents / 100 });
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "finance" });
+        const { id } = await params;
+        const requestId = requireUuid(id);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const row = await t.db.query.purchaseRequests.findFirst({
+            where: and(
+                eq(purchaseRequests.id, requestId),
+                eq(purchaseRequests.workspaceId, t.workspaceId),
+                isNull(purchaseRequests.deletedAt),
+            ),
+            with: {
+                submittedBy: { columns: { id: true, name: true, email: true, image: true } },
+                reviewedBy: { columns: { id: true, name: true, image: true } },
+            },
+        });
+        if (!row) throw new ApiError("Purchase request not found", 404);
 
-    const purchaseRequest = await db.purchaseRequest.findUnique({
-      where: { id },
-      include: {
-        submittedBy: { select: { id: true, name: true, email: true, image: true } },
-        reviewedBy: { select: { id: true, name: true, image: true } },
-      },
-    });
-
-    if (!purchaseRequest || purchaseRequest.workspaceId !== workspace.id) {
-      return error("Purchase request not found", 404);
+        return ok(withCost(row));
+    } catch (e) {
+        return handleRouteError("GET /api/purchase-requests/[id]", e);
     }
-
-    return success({
-      ...purchaseRequest,
-      cost: Number(purchaseRequest.cost),
-    });
-  } catch (e) {
-    console.error("GET /api/purchase-requests/[id]", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "finance" });
+        const { id } = await params;
+        const requestId = requireUuid(id);
 
-    const role = session.user.role;
-    if (role !== "admin") return error("Forbidden: admin only", 403);
+        const existing = await t.db.query.purchaseRequests.findFirst({
+            where: and(
+                eq(purchaseRequests.id, requestId),
+                eq(purchaseRequests.workspaceId, t.workspaceId),
+                isNull(purchaseRequests.deletedAt),
+            ),
+            columns: { id: true, title: true, submittedById: true },
+        });
+        if (!existing) throw new ApiError("Purchase request not found", 404);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        if (
+            existing.submittedById !== t.userId &&
+            !t.permissions.includes("manage_purchase_requests")
+        ) {
+            throw new ApiError("Only the submitter or a manager can delete this request", 403);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const permanent = request.nextUrl.searchParams.get("permanent") === "true";
+        const hard = permanent && t.roleName === "admin";
+        if (hard) {
+            await t.db.delete(purchaseRequests).where(eq(purchaseRequests.id, requestId));
+        } else {
+            await t.db
+                .update(purchaseRequests)
+                .set({ deletedAt: new Date(), updatedAt: new Date() })
+                .where(eq(purchaseRequests.id, requestId));
+        }
 
-    const purchaseRequest = await db.purchaseRequest.findUnique({ where: { id } });
-    if (!purchaseRequest || purchaseRequest.workspaceId !== workspace.id) {
-      return error("Purchase request not found", 404);
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: hard ? "delete_permanent" : "delete",
+                entityType: "purchase_request",
+                entityId: requestId,
+                metadata: { title: existing.title },
+            },
+            t.db,
+        );
+
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/purchase-requests/[id]", e);
     }
-
-    await db.purchaseRequest.delete({ where: { id } });
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/purchase-requests/[id]", e);
-    return error("Internal server error", 500);
-  }
 }

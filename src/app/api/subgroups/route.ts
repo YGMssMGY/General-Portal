@@ -1,94 +1,152 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { hasPermission } from "@/lib/permissions";
-import { writeAuditLog } from "@/lib/audit";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, asc, count, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { subgroupMemberships, subgroups } from "@/db/schema";
+import {
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
+        },
+    };
+}
+
+const createSchema = z.object({
+    name: z.string().trim().min(1).max(100),
+    description: z.string().trim().max(2000).nullish(),
+    color: z.string().trim().max(32).nullish(),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+    try {
+        const t = await requireTenant(request, { module: "members" });
+        const { limit, cursor } = parsePagination(request.nextUrl.searchParams);
+        const canManage = t.permissions.includes("manage_subgroups");
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const mine = await t.db.query.subgroupMemberships.findMany({
+            where: eq(subgroupMemberships.userId, t.userId),
+            columns: { subgroupId: true },
+        });
+        const myIds = mine.map((m) => m.subgroupId);
+        const mySet = new Set(myIds);
+        if (!canManage && myIds.length === 0) {
+            const res = ok([]);
+            res.headers.set("X-Next-Cursor", "");
+            return res;
+        }
 
-    const isOfficer = hasPermission(session.user.role, "manage_subgroups");
+        const cVals = decodeCursorValues(cursor);
+        const cName = cVals && typeof cVals[0] === "string" ? cVals[0] : null;
+        const cId = cVals && typeof cVals[1] === "string" ? cVals[1] : null;
+        const cursorCond =
+            cName !== null && cId
+                ? or(
+                      gt(subgroups.name, cName),
+                      and(eq(subgroups.name, cName), gt(subgroups.id, cId)),
+                  )
+                : undefined;
 
-    const where: Record<string, unknown> = { workspaceId: workspace.id };
-    if (!isOfficer) {
-      where.members = { some: { userId: session.user.id } };
+        const rows = await t.db.query.subgroups.findMany({
+            where: and(
+                eq(subgroups.workspaceId, t.workspaceId),
+                isNull(subgroups.deletedAt),
+                canManage ? undefined : inArray(subgroups.id, myIds),
+                cursorCond,
+            ),
+            orderBy: [asc(subgroups.name), asc(subgroups.id)],
+            limit: limit + 1,
+        });
+
+        const page = rows.slice(0, limit);
+        const pageIds = page.map((r) => r.id);
+        const counts: Record<string, number> = {};
+        if (pageIds.length > 0) {
+            const countRows = await t.db
+                .select({ subgroupId: subgroupMemberships.subgroupId, n: count() })
+                .from(subgroupMemberships)
+                .where(inArray(subgroupMemberships.subgroupId, pageIds))
+                .groupBy(subgroupMemberships.subgroupId);
+            for (const r of countRows) counts[r.subgroupId] = r.n;
+        }
+
+        const items = page.map((r) => ({
+            ...r,
+            _count: { members: counts[r.id] ?? 0 },
+            isMember: mySet.has(r.id),
+        }));
+
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last ? encodeCursorValues([last.name, last.id]) : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/subgroups", e);
     }
-
-    const subgroups = await db.subgroup.findMany({
-      where,
-      orderBy: { name: "asc" },
-      include: {
-        _count: { select: { members: true } },
-      },
-    });
-
-    return success(subgroups);
-  } catch (e) {
-    console.error("GET /api/subgroups", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_subgroups",
+            module: "members",
+        });
+        const data = await parseBody(body(createSchema), request);
 
-    if (!hasPermission(session.user.role, "manage_subgroups")) {
-      return error("Forbidden", 403);
+        const [subgroup] = await t.db
+            .insert(subgroups)
+            .values({
+                workspaceId: t.workspaceId,
+                name: data.name,
+                description: data.description ?? null,
+                color: data.color ?? "#0f62fe",
+                createdById: t.userId,
+            })
+            .returning();
+
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "created",
+            entityType: "subgroup",
+            entityId: subgroup.id,
+            metadata: { name: subgroup.name },
+            ipAddress: clientIp(request),
+        });
+
+        return ok({ ...subgroup, _count: { members: 0 }, isMember: false }, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/subgroups", e);
     }
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const body = await request.json();
-    const { name, description, color } = body;
-
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return error("Name is required", 400);
-    }
-
-    const subgroup = await db.subgroup.create({
-      data: {
-        workspaceId: workspace.id,
-        name: name.trim(),
-        description: description?.trim() ?? null,
-        color: color ?? "#0f62fe",
-        createdById: session.user.id,
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create",
-        entityType: "subgroup",
-        entityId: subgroup.id,
-        metadata: { name: subgroup.name },
-      },
-      db,
-    );
-
-    return success(subgroup, 201);
-  } catch (e) {
-    console.error("POST /api/subgroups", e);
-    return error("Internal server error", 500);
-  }
 }

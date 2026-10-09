@@ -1,95 +1,98 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
-import type { PurchaseRequestStatus } from "@prisma/client";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, eq, isNull } from "drizzle-orm";
+import { purchaseRequests } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
 
-const VALID_REVIEW_STATUSES: PurchaseRequestStatus[] = ["approved", "rejected"];
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const role = session.user.role;
-    const { id } = await params;
-
-    if (role !== "admin") return error("Forbidden: admin only", 403);
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const purchaseRequest = await db.purchaseRequest.findUnique({ where: { id } });
-    if (!purchaseRequest || purchaseRequest.workspaceId !== workspace.id) {
-      return error("Purchase request not found", 404);
-    }
-
-    if (!["submitted", "under_review"].includes(purchaseRequest.status)) {
-      return error("Purchase request must be in submitted or under_review status to review", 400);
-    }
-
-    const body = await request.json();
-    const { status, reviewComment } = body;
-
-    if (!status || !VALID_REVIEW_STATUSES.includes(status)) {
-      return error("Valid status is required (approved or rejected)", 400);
-    }
-
-    const updated = await db.purchaseRequest.update({
-      where: { id },
-      data: {
-        status,
-        reviewedById: session.user.id,
-        reviewComment: reviewComment?.trim() ?? null,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: status === "approved" ? "approved" : "rejected",
-        entityType: "purchase_request",
-        entityId: id,
-        metadata: {
-          title: purchaseRequest.title,
-          itemName: purchaseRequest.itemName,
-          reviewComment: reviewComment?.trim() ?? null,
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
         },
-      },
-    });
+    };
+}
 
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: `purchase_request_${status}`,
-        entityType: "purchase_request",
-        entityId: id,
-        metadata: {
-          title: purchaseRequest.title,
-          previousStatus: purchaseRequest.status,
-          reviewComment: reviewComment?.trim() ?? null,
-        },
-      },
-      db,
-    );
+const reviewSchema = z.object({
+    status: z.enum(["approved", "rejected"]),
+    reviewComment: z.string().trim().max(2000).nullish(),
+});
 
-    return success({
-      ...updated,
-      cost: Number(updated.cost),
-    });
-  } catch (e) {
-    console.error("POST /api/purchase-requests/[id]/review", e);
-    return error("Internal server error", 500);
-  }
+const withCost = <T extends { costCents: number }>(r: T) => ({ ...r, cost: r.costCents / 100 });
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_purchase_requests",
+            module: "finance",
+        });
+        const { id } = await params;
+        const requestId = requireUuid(id);
+        const data = await parseBody(body(reviewSchema), request);
+
+        const existing = await t.db.query.purchaseRequests.findFirst({
+            where: and(
+                eq(purchaseRequests.id, requestId),
+                eq(purchaseRequests.workspaceId, t.workspaceId),
+                isNull(purchaseRequests.deletedAt),
+            ),
+        });
+        if (!existing) throw new ApiError("Purchase request not found", 404);
+        if (!["submitted", "under_review"].includes(existing.status)) {
+            throw new ApiError(
+                "Purchase request must be in submitted or under_review status to review",
+                400,
+            );
+        }
+
+        const [updated] = await t.db
+            .update(purchaseRequests)
+            .set({
+                status: data.status,
+                reviewedById: t.userId,
+                reviewComment: data.reviewComment ?? null,
+                updatedAt: new Date(),
+            })
+            .where(eq(purchaseRequests.id, requestId))
+            .returning();
+
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: data.status === "approved" ? "approved" : "rejected",
+            entityType: "purchase_request",
+            entityId: requestId,
+            metadata: {
+                title: existing.title,
+                itemName: existing.itemName,
+                previousStatus: existing.status,
+                reviewComment: data.reviewComment ?? null,
+            },
+            ipAddress: clientIp(request),
+        });
+
+        return ok(withCost(updated));
+    } catch (e) {
+        return handleRouteError("POST /api/purchase-requests/[id]/review", e);
+    }
 }

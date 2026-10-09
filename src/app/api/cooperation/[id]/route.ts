@@ -1,76 +1,166 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, eq, isNull } from "drizzle-orm";
+import { cooperationRequests } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+import { writeAuditLog } from "@/lib/audit";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
+        },
+    };
+}
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+const COOPERATION_STATUSES = ["pending", "under_review", "approved", "rejected"] as const;
+const statusSchema = z.object({ status: z.enum(COOPERATION_STATUSES) });
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+const withAliases = <
+    T extends { contactEmail: string; submittedBy: { id: string; name: string | null } | null },
+>(
+    r: T,
+) => ({
+    ...r,
+    email: r.contactEmail,
+    createdBy: r.submittedBy ? { id: r.submittedBy.id, name: r.submittedBy.name } : null,
+});
 
-    const cooperationRequest = await db.cooperationRequest.findUnique({
-      where: { id },
-      include: {
-        submittedBy: { select: { id: true, name: true, email: true, image: true } },
-        reviewedBy: { select: { id: true, name: true, image: true } },
-      },
-    });
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "partnerships" });
+        const { id } = await params;
+        const requestId = requireUuid(id);
 
-    if (!cooperationRequest || cooperationRequest.workspaceId !== workspace.id) {
-      return error("Cooperation request not found", 404);
+        const row = await t.db.query.cooperationRequests.findFirst({
+            where: and(
+                eq(cooperationRequests.id, requestId),
+                eq(cooperationRequests.workspaceId, t.workspaceId),
+                isNull(cooperationRequests.deletedAt),
+            ),
+            with: {
+                submittedBy: { columns: { id: true, name: true, email: true, image: true } },
+                reviewedBy: { columns: { id: true, name: true, image: true } },
+            },
+        });
+        if (!row) throw new ApiError("Cooperation request not found", 404);
+
+        return ok(withAliases(row));
+    } catch (e) {
+        return handleRouteError("GET /api/cooperation/[id]", e);
     }
+}
 
-    return success(cooperationRequest);
-  } catch (e) {
-    console.error("GET /api/cooperation/[id]", e);
-    return error("Internal server error", 500);
-  }
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_partnerships",
+            module: "partnerships",
+        });
+        const { id } = await params;
+        const requestId = requireUuid(id);
+        const data = await parseBody(body(statusSchema), request);
+
+        const existing = await t.db.query.cooperationRequests.findFirst({
+            where: and(
+                eq(cooperationRequests.id, requestId),
+                eq(cooperationRequests.workspaceId, t.workspaceId),
+                isNull(cooperationRequests.deletedAt),
+            ),
+        });
+        if (!existing) throw new ApiError("Cooperation request not found", 404);
+
+        const [updated] = await t.db
+            .update(cooperationRequests)
+            .set({ status: data.status, reviewedById: t.userId, updatedAt: new Date() })
+            .where(eq(cooperationRequests.id, requestId))
+            .returning();
+
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "reviewed",
+            entityType: "cooperation_request",
+            entityId: requestId,
+            metadata: { status: data.status, previousStatus: existing.status },
+            ipAddress: clientIp(request),
+        });
+
+        return ok(withAliases({ ...updated, submittedBy: null, reviewedBy: null }));
+    } catch (e) {
+        return handleRouteError("PUT /api/cooperation/[id]", e);
+    }
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "partnerships" });
+        const { id } = await params;
+        const requestId = requireUuid(id);
 
-    const role = session.user.role;
-    if (role !== "admin") return error("Forbidden: admin only", 403);
+        const existing = await t.db.query.cooperationRequests.findFirst({
+            where: and(
+                eq(cooperationRequests.id, requestId),
+                eq(cooperationRequests.workspaceId, t.workspaceId),
+                isNull(cooperationRequests.deletedAt),
+            ),
+            columns: { id: true, clubName: true, submittedById: true },
+        });
+        if (!existing) throw new ApiError("Cooperation request not found", 404);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        if (existing.submittedById !== t.userId && !t.permissions.includes("manage_partnerships")) {
+            throw new ApiError("Only the submitter or a manager can delete this request", 403);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const permanent = request.nextUrl.searchParams.get("permanent") === "true";
+        const hard = permanent && t.roleName === "admin";
+        if (hard) {
+            await t.db.delete(cooperationRequests).where(eq(cooperationRequests.id, requestId));
+        } else {
+            await t.db
+                .update(cooperationRequests)
+                .set({ deletedAt: new Date(), updatedAt: new Date() })
+                .where(eq(cooperationRequests.id, requestId));
+        }
 
-    const cooperationRequest = await db.cooperationRequest.findUnique({ where: { id } });
-    if (!cooperationRequest || cooperationRequest.workspaceId !== workspace.id) {
-      return error("Cooperation request not found", 404);
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: hard ? "delete_permanent" : "delete",
+                entityType: "cooperation_request",
+                entityId: requestId,
+                metadata: { clubName: existing.clubName },
+            },
+            t.db,
+        );
+
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/cooperation/[id]", e);
     }
-
-    await db.cooperationRequest.delete({ where: { id } });
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/cooperation/[id]", e);
-    return error("Internal server error", 500);
-  }
 }

@@ -1,47 +1,32 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { NextRequest } from "next/server";
+import { count, desc, eq } from "drizzle-orm";
+import { kudos, users } from "@/db/schema";
+import { handleRouteError, ok } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "members" });
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db
+            .select({
+                userId: kudos.receiverId,
+                userName: users.name,
+                userEmail: users.email,
+                userImage: users.image,
+                count: count(kudos.id),
+            })
+            .from(kudos)
+            .innerJoin(users, eq(kudos.receiverId, users.id))
+            .where(eq(kudos.workspaceId, t.workspaceId))
+            .groupBy(kudos.receiverId, users.name, users.email, users.image)
+            .orderBy(desc(count(kudos.id)))
+            .limit(10);
 
-    const grouped = await db.kudos.groupBy({
-      by: ["receiverId"],
-      where: { workspaceId: workspace.id },
-      _count: true,
-      orderBy: { _count: { receiverId: "desc" } },
-      take: 20,
-    });
-
-    const userIds = grouped.map((g) => g.receiverId);
-    const users = userIds.length > 0
-      ? await db.user.findMany({
-          where: { id: { in: userIds } },
-          select: { id: true, name: true, email: true, image: true },
-        })
-      : [];
-
-    const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
-
-    const leaderboard = grouped.map((g) => ({
-      userId: g.receiverId,
-      userName: userMap[g.receiverId]?.name ?? "Unknown",
-      userEmail: userMap[g.receiverId]?.email ?? null,
-      userImage: userMap[g.receiverId]?.image ?? null,
-      count: g._count,
-    }));
-
-    return success(leaderboard);
-  } catch (e) {
-    console.error("GET /api/kudos/leaderboard", e);
-    return error("Internal server error", 500);
-  }
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/kudos/leaderboard", e);
+    }
 }

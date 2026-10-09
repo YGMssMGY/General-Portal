@@ -1,87 +1,84 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, eq, isNull } from "drizzle-orm";
+import { cooperationRequests } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
 
-const VALID_REVIEW_STATUSES = ["approved", "rejected"];
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const role = session.user.role;
-    const { id } = await params;
-
-    if (role !== "admin") return error("Forbidden: admin only", 403);
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const cooperationRequest = await db.cooperationRequest.findUnique({ where: { id } });
-    if (!cooperationRequest || cooperationRequest.workspaceId !== workspace.id) {
-      return error("Cooperation request not found", 404);
-    }
-
-    const body = await request.json();
-    const { status, reviewComment } = body;
-
-    if (!status || !VALID_REVIEW_STATUSES.includes(status)) {
-      return error("Valid status is required (approved or rejected)", 400);
-    }
-
-    const updated = await db.cooperationRequest.update({
-      where: { id },
-      data: {
-        status,
-        reviewedById: session.user.id,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: status === "approved" ? "approved" : "rejected",
-        entityType: "cooperation_request",
-        entityId: id,
-        metadata: {
-          clubName: cooperationRequest.clubName,
-          eventTitle: cooperationRequest.eventTitle,
-          reviewComment: reviewComment?.trim() ?? null,
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
         },
-      },
-    });
+    };
+}
 
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: `cooperation_request_${status}`,
-        entityType: "cooperation_request",
-        entityId: id,
-        metadata: {
-          clubName: cooperationRequest.clubName,
-          eventTitle: cooperationRequest.eventTitle,
-          previousStatus: cooperationRequest.status,
-          reviewComment: reviewComment?.trim() ?? null,
-        },
-      },
-      db,
-    );
+const reviewSchema = z.object({
+    status: z.enum(["pending", "under_review", "approved", "rejected"]),
+    reviewComment: z.string().trim().max(2000).nullish(),
+});
 
-    return success(updated);
-  } catch (e) {
-    console.error("POST /api/cooperation/[id]/review", e);
-    return error("Internal server error", 500);
-  }
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_partnerships",
+            module: "partnerships",
+        });
+        const { id } = await params;
+        const requestId = requireUuid(id);
+        const data = await parseBody(body(reviewSchema), request);
+
+        const existing = await t.db.query.cooperationRequests.findFirst({
+            where: and(
+                eq(cooperationRequests.id, requestId),
+                eq(cooperationRequests.workspaceId, t.workspaceId),
+                isNull(cooperationRequests.deletedAt),
+            ),
+        });
+        if (!existing) throw new ApiError("Cooperation request not found", 404);
+
+        const [updated] = await t.db
+            .update(cooperationRequests)
+            .set({ status: data.status, reviewedById: t.userId, updatedAt: new Date() })
+            .where(eq(cooperationRequests.id, requestId))
+            .returning();
+
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "reviewed",
+            entityType: "cooperation_request",
+            entityId: requestId,
+            metadata: {
+                status: data.status,
+                previousStatus: existing.status,
+                reviewComment: data.reviewComment ?? null,
+            },
+            ipAddress: clientIp(request),
+        });
+
+        return ok(updated);
+    } catch (e) {
+        return handleRouteError("POST /api/cooperation/[id]/review", e);
+    }
 }
