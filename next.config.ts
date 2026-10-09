@@ -1,14 +1,16 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "600mb",
+    poweredByHeader: false,
+    reactCompiler: true,
+    experimental: {
+        serverActions: {
+            bodySizeLimit: "12mb",
+        },
     },
-  },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);
