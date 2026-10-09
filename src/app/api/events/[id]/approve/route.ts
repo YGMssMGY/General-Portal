@@ -1,77 +1,85 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import type { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { events } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+type BodySchema<T> = {
+    safeParse: (v: unknown) =>
+        | { success: true; data: T }
+        | {
+              success: false;
+              error: { issues: Array<{ path: (string | number)[]; message: string }> };
+          };
+};
 
-    const role = session.user.role;
-    if (role !== "admin") return error("Forbidden: admin only", 403);
+async function parse<T>(schema: z.ZodType<T>, request: NextRequest): Promise<T> {
+    return parseBody(schema as unknown as BodySchema<T>, request);
+}
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+const reviewSchema = z.object({ reviewComment: z.string().max(2000).optional() });
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_all_events",
+            module: "events",
+        });
+        const id = requireUuid((await params).id);
+        const event = await t.db.query.events.findFirst({
+            where: and(
+                eq(events.id, id),
+                eq(events.workspaceId, t.workspaceId),
+                isNull(events.deletedAt),
+            ),
+        });
+        if (!event) throw new ApiError("Event not found", 404);
+        if (event.approvalStatus !== "pending")
+            throw new ApiError("Only pending events can be approved", 400);
 
-    const event = await db.eventItem.findUnique({ where: { id } });
-    if (!event || event.workspaceId !== workspace.id) {
-      return error("Event not found", 404);
+        let reviewComment: string | undefined;
+        try {
+            reviewComment = (await parse(reviewSchema, request)).reviewComment;
+        } catch (e) {
+            if (e instanceof ApiError && e.message === "Invalid JSON body")
+                reviewComment = undefined;
+            else throw e;
+        }
+
+        const [updated] = await Promise.all([
+            t.db
+                .update(events)
+                .set({
+                    approvalStatus: "approved",
+                    approvedById: t.userId,
+                    approvedAt: new Date(),
+                    reviewComment: reviewComment ?? null,
+                    updatedAt: new Date(),
+                })
+                .where(
+                    and(
+                        eq(events.id, id),
+                        eq(events.workspaceId, t.workspaceId),
+                        isNull(events.deletedAt),
+                    ),
+                )
+                .returning()
+                .then((rows) => rows[0]),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "approve",
+                entityType: "event",
+                entityId: id,
+                metadata: { title: event.title, reviewComment: reviewComment ?? null },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+        if (!updated) throw new ApiError("Event not found", 404);
+        return ok(updated);
+    } catch (e) {
+        return handleRouteError("POST /api/events/[id]/approve", e);
     }
-    if (event.approvalStatus !== "pending") {
-      return error("Only pending events can be approved", 400);
-    }
-
-    const body = await request.json().catch(() => ({}));
-    const reviewComment: string | undefined = body.reviewComment;
-
-    const updated = await db.eventItem.update({
-      where: { id },
-      data: {
-        approvalStatus: "approved",
-        approvedById: session.user.id,
-        approvedAt: new Date(),
-        reviewComment: reviewComment ?? null,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "approved",
-        entityType: "event",
-        entityId: id,
-        metadata: { title: event.title, reviewComment: reviewComment ?? null },
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "approve",
-        entityType: "event",
-        entityId: id,
-        metadata: { title: event.title, reviewComment: reviewComment ?? null },
-      },
-      db,
-    );
-
-    return success(updated);
-  } catch (e) {
-    console.error("POST /api/events/[id]/approve", e);
-    return error("Internal server error", 500);
-  }
 }

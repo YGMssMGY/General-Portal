@@ -1,143 +1,133 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { proposals } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 import { writeAuditLog } from "@/lib/audit";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+type BodySchema<T> = {
+    safeParse: (v: unknown) =>
+        | { success: true; data: T }
+        | {
+              success: false;
+              error: { issues: Array<{ path: (string | number)[]; message: string }> };
+          };
+};
 
-    const db = getDbFromCookie(request);
-    const { id } = await params;
-
-    const proposal = await db.proposal.findUnique({
-      where: { id },
-      include: {
-        createdBy: { select: { id: true, name: true, email: true, image: true } },
-      },
-    });
-
-    if (!proposal) return error("Proposal not found", 404);
-
-    const portal = session.user.portal;
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace || proposal.workspaceId !== workspace.id) {
-      return error("Proposal not found", 404);
-    }
-
-    return success(proposal);
-  } catch (e) {
-    console.error("GET /api/proposals/[id]", e);
-    return error("Internal server error", 500);
-  }
+async function parse<T>(schema: z.ZodType<T>, request: NextRequest): Promise<T> {
+    return parseBody(schema as unknown as BodySchema<T>, request);
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+const updateProposalSchema = z.object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().trim().min(1).optional(),
+});
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+const scoped = (id: string, workspaceId: string) =>
+    and(eq(proposals.id, id), eq(proposals.workspaceId, workspaceId), isNull(proposals.deletedAt));
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const existing = await db.proposal.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspace.id) {
-      return error("Proposal not found", 404);
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "proposals" });
+        const id = requireUuid((await params).id);
+        const proposal = await t.db.query.proposals.findFirst({
+            where: scoped(id, t.workspaceId),
+            with: {
+                createdBy: { columns: { id: true, name: true, email: true, image: true } },
+            },
+        });
+        if (!proposal) throw new ApiError("Proposal not found", 404);
+        return ok(proposal);
+    } catch (e) {
+        return handleRouteError("GET /api/proposals/[id]", e);
     }
+}
 
-    const body = await request.json();
-    const { title, description } = body;
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "proposals" });
+        const id = requireUuid((await params).id);
+        const existing = await t.db.query.proposals.findFirst({ where: scoped(id, t.workspaceId) });
+        if (!existing) throw new ApiError("Proposal not found", 404);
+        if (existing.createdById !== t.userId && !t.permissions.includes("approve_proposal")) {
+            throw new ApiError("Forbidden", 403);
+        }
 
-    const data: Record<string, string> = {};
-    if (title && typeof title === "string") data.title = title.trim();
-    if (description && typeof description === "string") data.description = description.trim();
+        const body = await parse(updateProposalSchema, request);
+        if (Object.keys(body).length === 0) throw new ApiError("No fields to update", 400);
 
-    if (Object.keys(data).length === 0) {
-      return error("No fields to update", 400);
+        const set: Partial<typeof proposals.$inferInsert> = { updatedAt: new Date() };
+        if (body.title !== undefined) set.title = body.title;
+        if (body.description !== undefined) set.description = body.description;
+
+        const updated = await t.db
+            .update(proposals)
+            .set(set)
+            .where(scoped(id, t.workspaceId))
+            .returning();
+        const proposal = updated[0];
+        if (!proposal) throw new ApiError("Proposal not found", 404);
+
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "update",
+                entityType: "proposal",
+                entityId: id,
+                metadata: { changes: body },
+                ipAddress: clientIp(request),
+            },
+            t.db,
+        );
+
+        return ok(proposal);
+    } catch (e) {
+        return handleRouteError("PUT /api/proposals/[id]", e);
     }
-
-    const proposal = await db.proposal.update({
-      where: { id },
-      data,
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "update",
-        entityType: "proposal",
-        entityId: proposal.id,
-        metadata: { changes: data },
-      },
-      db,
-    );
-
-    return success(proposal);
-  } catch (e) {
-    console.error("PUT /api/proposals/[id]", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "proposals" });
+        const id = requireUuid((await params).id);
+        const existing = await t.db.query.proposals.findFirst({ where: scoped(id, t.workspaceId) });
+        if (!existing) throw new ApiError("Proposal not found", 404);
+        if (existing.createdById !== t.userId && !t.permissions.includes("approve_proposal")) {
+            throw new ApiError("Forbidden", 403);
+        }
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        const permanent = new URL(request.url).searchParams.get("permanent") === "true";
+        if (permanent && t.roleName === "admin") {
+            await t.db
+                .delete(proposals)
+                .where(and(eq(proposals.id, id), eq(proposals.workspaceId, t.workspaceId)));
+        } else {
+            await t.db
+                .update(proposals)
+                .set({ deletedAt: new Date() })
+                .where(scoped(id, t.workspaceId));
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "delete",
+                entityType: "proposal",
+                entityId: id,
+                metadata: { title: existing.title },
+                ipAddress: clientIp(request),
+            },
+            t.db,
+        );
 
-    const existing = await db.proposal.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspace.id) {
-      return error("Proposal not found", 404);
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/proposals/[id]", e);
     }
-
-    await db.proposal.delete({ where: { id } });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "delete",
-        entityType: "proposal",
-        entityId: id,
-        metadata: { title: existing.title },
-      },
-      db,
-    );
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/proposals/[id]", e);
-    return error("Internal server error", 500);
-  }
 }

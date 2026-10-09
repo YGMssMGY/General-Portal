@@ -1,89 +1,113 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import type { NextRequest } from "next/server";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { annualEventPlans } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+
+type BodySchema<T> = {
+    safeParse: (v: unknown) =>
+        | { success: true; data: T }
+        | {
+              success: false;
+              error: { issues: Array<{ path: (string | number)[]; message: string }> };
+          };
+};
+
+async function parse<T>(schema: z.ZodType<T>, request: NextRequest): Promise<T> {
+    return parseBody(schema as unknown as BodySchema<T>, request);
+}
+
+const createPlanSchema = z.object({
+    name: z.string().trim().min(1, "Name is required"),
+    academicYear: z.string().trim().min(1, "Academic year is required"),
+    description: z.string().trim().nullish(),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "events" });
+        const { searchParams } = new URL(request.url);
+        const { limit, cursor } = parsePagination(searchParams);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const conds = [
+            eq(annualEventPlans.workspaceId, t.workspaceId),
+            isNull(annualEventPlans.deletedAt),
+        ];
+        const cv = decodeCursorValues(cursor);
+        if (cv && typeof cv[0] === "string" && typeof cv[1] === "string") {
+            const cursorDate = new Date(cv[0]);
+            if (!Number.isNaN(cursorDate.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: annualEventPlans.createdAt, value: cursorDate }],
+                        annualEventPlans.id,
+                        cv[1],
+                    ),
+                );
+            }
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db.query.annualEventPlans.findMany({
+            where: and(...conds),
+            orderBy: [desc(annualEventPlans.createdAt), desc(annualEventPlans.id)],
+            limit: limit + 1,
+        });
 
-    const plans = await db.annualEventPlan.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { events: true } },
-      },
-    });
-
-    return success(plans);
-  } catch (e) {
-    console.error("GET /api/events/annual-plan", e);
-    return error("Internal server error", 500);
-  }
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            rows.pop();
+            const last = rows[rows.length - 1];
+            if (last) nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/events/annual-plan", e);
+    }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { permission: "create_event", module: "events" });
+        const body = await parse(createPlanSchema, request);
 
-    const role = session.user.role;
-    if (role !== "admin") return error("Forbidden: admin only", 403);
+        const inserted = await t.db
+            .insert(annualEventPlans)
+            .values({
+                workspaceId: t.workspaceId,
+                name: body.name,
+                academicYear: body.academicYear,
+                description: body.description ?? null,
+            })
+            .returning();
+        const plan = inserted[0];
+        if (!plan) throw new ApiError("Failed to create annual plan", 500);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "create",
+            entityType: "annual_event_plan",
+            entityId: plan.id,
+            metadata: { name: plan.name, academicYear: plan.academicYear },
+            ipAddress: clientIp(request),
+        });
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const body = await request.json();
-    const { name, academicYear, description } = body;
-
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return error("Name is required", 400);
+        return ok(plan, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/events/annual-plan", e);
     }
-    if (!academicYear || typeof academicYear !== "string" || !academicYear.trim()) {
-      return error("Academic year is required", 400);
-    }
-
-    const plan = await db.annualEventPlan.create({
-      data: {
-        workspaceId: workspace.id,
-        name: name.trim(),
-        academicYear: academicYear.trim(),
-        description: description?.trim() ?? null,
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create",
-        entityType: "annual_event_plan",
-        entityId: plan.id,
-        metadata: { name: plan.name, academicYear: plan.academicYear },
-      },
-      db,
-    );
-
-    return success(plan, 201);
-  } catch (e) {
-    console.error("POST /api/events/annual-plan", e);
-    return error("Internal server error", 500);
-  }
 }
