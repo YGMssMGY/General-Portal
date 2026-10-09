@@ -1,145 +1,145 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { events } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 import { writeAuditLog } from "@/lib/audit";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+type BodySchema<T> = {
+    safeParse: (v: unknown) =>
+        | { success: true; data: T }
+        | {
+              success: false;
+              error: { issues: Array<{ path: (string | number)[]; message: string }> };
+          };
+};
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const event = await db.eventItem.findUnique({
-      where: { id },
-      include: {
-        createdBy: { select: { id: true, name: true, email: true, image: true } },
-      },
-    });
-
-    if (!event || event.workspaceId !== workspace.id) {
-      return error("Event not found", 404);
-    }
-
-    return success(event);
-  } catch (e) {
-    console.error("GET /api/events/[id]", e);
-    return error("Internal server error", 500);
-  }
+async function parse<T>(schema: z.ZodType<T>, request: NextRequest): Promise<T> {
+    return parseBody(schema as unknown as BodySchema<T>, request);
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+const updateEventSchema = z.object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().trim().nullable().optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().nullable().optional(),
+    location: z.string().nullable().optional(),
+    isPublic: z.boolean().optional(),
+    status: z.enum(["draft", "published", "cancelled"]).optional(),
+});
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+const scoped = (id: string, workspaceId: string) =>
+    and(eq(events.id, id), eq(events.workspaceId, workspaceId), isNull(events.deletedAt));
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const existing = await db.eventItem.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspace.id) {
-      return error("Event not found", 404);
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "events" });
+        const id = requireUuid((await params).id);
+        const event = await t.db.query.events.findFirst({
+            where: scoped(id, t.workspaceId),
+            with: {
+                createdBy: { columns: { id: true, name: true, email: true, image: true } },
+                approvedBy: { columns: { id: true, name: true, email: true, image: true } },
+                annualPlan: { columns: { id: true, name: true, academicYear: true } },
+            },
+        });
+        if (!event) throw new ApiError("Event not found", 404);
+        return ok(event);
+    } catch (e) {
+        return handleRouteError("GET /api/events/[id]", e);
     }
+}
 
-    const body = await request.json();
-    const { title, description, startDate, endDate, location, isPublic, status } = body;
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "events" });
+        const id = requireUuid((await params).id);
+        const existing = await t.db.query.events.findFirst({ where: scoped(id, t.workspaceId) });
+        if (!existing) throw new ApiError("Event not found", 404);
+        if (existing.createdById !== t.userId && !t.permissions.includes("manage_all_events")) {
+            throw new ApiError("Forbidden", 403);
+        }
 
-    const data: Record<string, unknown> = {};
-    if (title !== undefined) data.title = title;
-    if (description !== undefined) data.description = description;
-    if (startDate !== undefined) data.startDate = new Date(startDate);
-    if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
-    if (location !== undefined) data.location = location;
-    if (isPublic !== undefined) data.isPublic = isPublic;
-    if (status !== undefined) data.status = status;
+        const body = await parse(updateEventSchema, request);
+        if (Object.keys(body).length === 0) throw new ApiError("No fields to update", 400);
 
-    if (Object.keys(data).length === 0) {
-      return error("No fields to update", 400);
+        const set: Partial<typeof events.$inferInsert> = { updatedAt: new Date() };
+        if (body.title !== undefined) set.title = body.title;
+        if (body.description !== undefined) set.description = body.description;
+        if (body.startDate !== undefined) set.startDate = body.startDate;
+        if (body.endDate !== undefined) set.endDate = body.endDate;
+        if (body.location !== undefined) set.location = body.location;
+        if (body.isPublic !== undefined) set.isPublic = body.isPublic;
+        if (body.status !== undefined) set.status = body.status;
+
+        const updated = await t.db
+            .update(events)
+            .set(set)
+            .where(scoped(id, t.workspaceId))
+            .returning();
+        const event = updated[0];
+        if (!event) throw new ApiError("Event not found", 404);
+
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "update",
+                entityType: "event",
+                entityId: id,
+                metadata: { changes: body },
+                ipAddress: clientIp(request),
+            },
+            t.db,
+        );
+
+        return ok(event);
+    } catch (e) {
+        return handleRouteError("PUT /api/events/[id]", e);
     }
-
-    const event = await db.eventItem.update({ where: { id }, data });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "update",
-        entityType: "event",
-        entityId: id,
-        metadata: { changes: data },
-      },
-      db,
-    );
-
-    return success(event);
-  } catch (e) {
-    console.error("PUT /api/events/[id]", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "events" });
+        const id = requireUuid((await params).id);
+        const existing = await t.db.query.events.findFirst({ where: scoped(id, t.workspaceId) });
+        if (!existing) throw new ApiError("Event not found", 404);
+        if (existing.createdById !== t.userId && !t.permissions.includes("manage_all_events")) {
+            throw new ApiError("Forbidden", 403);
+        }
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        const permanent = new URL(request.url).searchParams.get("permanent") === "true";
+        if (permanent && t.roleName === "admin") {
+            await t.db
+                .delete(events)
+                .where(and(eq(events.id, id), eq(events.workspaceId, t.workspaceId)));
+        } else {
+            await t.db
+                .update(events)
+                .set({ deletedAt: new Date() })
+                .where(scoped(id, t.workspaceId));
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "delete",
+                entityType: "event",
+                entityId: id,
+                metadata: { title: existing.title },
+                ipAddress: clientIp(request),
+            },
+            t.db,
+        );
 
-    const existing = await db.eventItem.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspace.id) {
-      return error("Event not found", 404);
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/events/[id]", e);
     }
-
-    await db.eventItem.delete({ where: { id } });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "delete",
-        entityType: "event",
-        entityId: id,
-        metadata: { title: existing.title },
-      },
-      db,
-    );
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/events/[id]", e);
-    return error("Internal server error", 500);
-  }
 }

@@ -1,82 +1,91 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { annualEventPlans, events } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 import { writeAuditLog } from "@/lib/audit";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+type BodySchema<T> = {
+    safeParse: (v: unknown) =>
+        | { success: true; data: T }
+        | {
+              success: false;
+              error: { issues: Array<{ path: (string | number)[]; message: string }> };
+          };
+};
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const planId = (await params).id;
+async function parse<T>(schema: z.ZodType<T>, request: NextRequest): Promise<T> {
+    return parseBody(schema as unknown as BodySchema<T>, request);
+}
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+const linkSchema = z.object({
+    eventId: z.string().uuid(),
+    action: z.enum(["link", "unlink"]),
+});
 
-    const plan = await db.annualEventPlan.findUnique({ where: { id: planId } });
-    if (!plan || plan.workspaceId !== workspace.id) {
-      return error("Annual plan not found", 404);
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { permission: "create_event", module: "events" });
+        const planId = requireUuid((await params).id);
+        const plan = await t.db.query.annualEventPlans.findFirst({
+            where: and(
+                eq(annualEventPlans.id, planId),
+                eq(annualEventPlans.workspaceId, t.workspaceId),
+                isNull(annualEventPlans.deletedAt),
+            ),
+        });
+        if (!plan) throw new ApiError("Annual plan not found", 404);
+
+        const body = await parse(linkSchema, request);
+        const event = await t.db.query.events.findFirst({
+            where: and(
+                eq(events.id, body.eventId),
+                eq(events.workspaceId, t.workspaceId),
+                isNull(events.deletedAt),
+            ),
+        });
+        if (!event) throw new ApiError("Event not found", 404);
+
+        if (body.action === "link") {
+            if (event.annualPlanId)
+                throw new ApiError("Event is already linked to an annual plan", 400);
+        } else if (event.annualPlanId !== planId) {
+            throw new ApiError("Event is not linked to this annual plan", 400);
+        }
+
+        const [rows] = await Promise.all([
+            t.db
+                .update(events)
+                .set({
+                    annualPlanId: body.action === "link" ? planId : null,
+                    updatedAt: new Date(),
+                })
+                .where(
+                    and(
+                        eq(events.id, body.eventId),
+                        eq(events.workspaceId, t.workspaceId),
+                        isNull(events.deletedAt),
+                    ),
+                )
+                .returning({ id: events.id }),
+            writeAuditLog(
+                {
+                    workspaceId: t.workspaceId,
+                    userId: t.userId,
+                    action: body.action,
+                    entityType: "event",
+                    entityId: body.eventId,
+                    metadata: { planId, planName: plan.name, eventTitle: event.title },
+                    ipAddress: clientIp(request),
+                },
+                t.db,
+            ),
+        ]);
+        if (rows.length === 0) throw new ApiError("Event not found", 404);
+
+        return ok({ linked: body.action === "link" });
+    } catch (e) {
+        return handleRouteError("POST /api/events/annual-plan/[id]/link", e);
     }
-
-    const body = await request.json();
-    const { eventId, action } = body;
-
-    if (!eventId || typeof eventId !== "string") {
-      return error("eventId is required", 400);
-    }
-    if (action !== "link" && action !== "unlink") {
-      return error('action must be "link" or "unlink"', 400);
-    }
-
-    const event = await db.eventItem.findUnique({ where: { id: eventId } });
-    if (!event || event.workspaceId !== workspace.id) {
-      return error("Event not found", 404);
-    }
-
-    if (action === "link") {
-      if (event.annualPlanId) {
-        return error("Event is already linked to an annual plan", 400);
-      }
-
-      await db.eventItem.update({
-        where: { id: eventId },
-        data: { annualPlanId: planId },
-      });
-    } else {
-      if (event.annualPlanId !== planId) {
-        return error("Event is not linked to this annual plan", 400);
-      }
-
-      await db.eventItem.update({
-        where: { id: eventId },
-        data: { annualPlanId: null },
-      });
-    }
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: action === "link" ? "link" : "unlink",
-        entityType: "event",
-        entityId: eventId,
-        metadata: { planId, planName: plan.name, eventTitle: event.title },
-      },
-      db,
-    );
-
-    return success({ linked: action === "link" });
-  } catch (e) {
-    console.error("POST /api/events/annual-plan/[id]/link", e);
-    return error("Internal server error", 500);
-  }
 }

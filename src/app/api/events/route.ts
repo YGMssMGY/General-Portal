@@ -1,113 +1,138 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
-import type { EventStatus } from "@prisma/client";
+import type { NextRequest } from "next/server";
+import { and, desc, eq, gte, isNull, lte } from "drizzle-orm";
+import { z } from "zod";
+import { events } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+
+type BodySchema<T> = {
+    safeParse: (v: unknown) =>
+        | { success: true; data: T }
+        | {
+              success: false;
+              error: { issues: Array<{ path: (string | number)[]; message: string }> };
+          };
+};
+
+async function parse<T>(schema: z.ZodType<T>, request: NextRequest): Promise<T> {
+    return parseBody(schema as unknown as BodySchema<T>, request);
+}
+
+const createEventSchema = z.object({
+    title: z.string().trim().min(1, "Title is required"),
+    description: z.string().trim().nullish(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date().nullish(),
+    location: z.string().nullish(),
+    isPublic: z.boolean().optional(),
+    status: z.enum(["draft", "published", "cancelled"]).optional(),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "events" });
+        const { searchParams } = new URL(request.url);
+        const { limit, cursor } = parsePagination(searchParams);
+        const status = searchParams.get("status");
+        const from = searchParams.get("from");
+        const to = searchParams.get("to");
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const conds = [eq(events.workspaceId, t.workspaceId), isNull(events.deletedAt)];
+        if (status === "draft" || status === "published" || status === "cancelled") {
+            conds.push(eq(events.status, status));
+        }
+        if (from) {
+            const fromDate = new Date(from);
+            if (!Number.isNaN(fromDate.getTime())) conds.push(gte(events.startDate, fromDate));
+        }
+        if (to) {
+            const toDate = new Date(to);
+            if (!Number.isNaN(toDate.getTime())) conds.push(lte(events.startDate, toDate));
+        }
+        const cv = decodeCursorValues(cursor);
+        if (cv && typeof cv[0] === "string" && typeof cv[1] === "string") {
+            const cursorDate = new Date(cv[0]);
+            if (!Number.isNaN(cursorDate.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: events.startDate, value: cursorDate }],
+                        events.id,
+                        cv[1],
+                    ),
+                );
+            }
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db.query.events.findMany({
+            where: and(...conds),
+            orderBy: [desc(events.startDate), desc(events.id)],
+            limit: limit + 1,
+            with: {
+                createdBy: { columns: { id: true, name: true, email: true, image: true } },
+                approvedBy: { columns: { id: true, name: true, email: true, image: true } },
+                annualPlan: { columns: { id: true, name: true, academicYear: true } },
+            },
+        });
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") as EventStatus | null;
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
-
-    const where: Record<string, unknown> = { workspaceId: workspace.id };
-    if (status && ["draft", "published", "cancelled"].includes(status)) {
-      where.status = status;
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            rows.pop();
+            const last = rows[rows.length - 1];
+            if (last) nextCursor = encodeCursorValues([last.startDate.toISOString(), last.id]);
+        }
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/events", e);
     }
-    if (from || to) {
-      const startDate: Record<string, Date> = {};
-      if (from) startDate.gte = new Date(from);
-      if (to) startDate.lte = new Date(to);
-      where.startDate = startDate;
-    }
-
-    const events = await db.eventItem.findMany({
-      where,
-      orderBy: { startDate: "asc" },
-      skip,
-      take: limit,
-      include: {
-        createdBy: { select: { id: true, name: true, email: true, image: true } },
-      },
-    });
-
-    return success(events);
-  } catch (e) {
-    console.error("GET /api/events", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { permission: "create_event", module: "events" });
+        const body = await parse(createEventSchema, request);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const inserted = await t.db
+            .insert(events)
+            .values({
+                workspaceId: t.workspaceId,
+                title: body.title,
+                description: body.description ?? null,
+                startDate: body.startDate,
+                endDate: body.endDate ?? null,
+                location: body.location ?? null,
+                isPublic: body.isPublic ?? false,
+                status: body.status ?? "draft",
+                createdById: t.userId,
+            })
+            .returning();
+        const event = inserted[0];
+        if (!event) throw new ApiError("Failed to create event", 500);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "create",
+            entityType: "event",
+            entityId: event.id,
+            metadata: { title: event.title },
+            ipAddress: clientIp(request),
+        });
 
-    const body = await request.json();
-    const { title, description, startDate, endDate, location, isPublic, status } = body;
-
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return error("Title is required", 400);
+        return ok(event, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/events", e);
     }
-    if (!startDate) {
-      return error("Start date is required", 400);
-    }
-
-    const event = await db.eventItem.create({
-      data: {
-        workspaceId: workspace.id,
-        title: title.trim(),
-        description: description?.trim() ?? null,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        location: location ?? null,
-        isPublic: isPublic ?? false,
-        status: status ?? "draft",
-        createdById: session.user.id,
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create",
-        entityType: "event",
-        entityId: event.id,
-        metadata: { title: event.title },
-      },
-      db,
-    );
-
-    return success(event, 201);
-  } catch (e) {
-    console.error("POST /api/events", e);
-    return error("Internal server error", 500);
-  }
 }
