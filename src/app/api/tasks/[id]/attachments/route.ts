@@ -1,107 +1,121 @@
-import { NextRequest } from "next/server";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { writeFile } from "node:fs/promises";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { NextRequest } from "next/server";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { attachments, tasks } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, requireUuid } from "@/lib/api";
+import { config } from "@/config";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-const UPLOADS_DIR = process.env.UPLOADS_DIR || join(process.cwd(), "uploads");
-const MAX_FILE_SIZE = 500 * 1024 * 1024;
-const ALLOWED_MIME_PATTERNS = [/^image\//, /^application\/pdf$/, /^text\//];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "ico", "svg"]);
 
-function isAllowedMime(mime: string): boolean {
-  return ALLOWED_MIME_PATTERNS.some((pattern) => pattern.test(mime));
+function uploadExt(fileName: string, mime: string): string {
+    const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+    if (!ext) throw new ApiError("File must have an extension", 400);
+    if (mime.startsWith("image/") && IMAGE_EXTS.has(ext)) return ext;
+    if (mime === "application/pdf" && ext === "pdf") return ext;
+    if (mime === "text/plain" && (ext === "txt" || ext === "md")) return ext;
+    throw new ApiError("File type not allowed. Accepted: images, PDF, plain text", 400);
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
 
-    const db = getDbFromCookie(request);
-    const { id } = await params;
+        const task = await t.db.query.tasks.findFirst({
+            where: and(
+                eq(tasks.id, id),
+                eq(tasks.workspaceId, t.workspaceId),
+                isNull(tasks.deletedAt),
+            ),
+            columns: { id: true },
+        });
+        if (!task) throw new ApiError("Task not found", 404);
 
-    const portal = session.user.portal;
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db.query.attachments.findMany({
+            where: and(
+                eq(attachments.entityType, "task"),
+                eq(attachments.entityId, id),
+                eq(attachments.workspaceId, t.workspaceId),
+                isNull(attachments.deletedAt),
+            ),
+            orderBy: [desc(attachments.createdAt)],
+            with: { uploadedBy: { columns: { id: true, name: true, image: true } } },
+        });
 
-    const task = await db.taskItem.findUnique({ where: { id } });
-    if (!task || task.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/tasks/[id]/attachments", e);
     }
-
-    const attachments = await db.attachment.findMany({
-      where: { entityType: "task", entityId: id },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return success(attachments);
-  } catch (e) {
-    console.error("GET /api/tasks/[id]/attachments", e);
-    return error("Internal server error", 500);
-  }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { permission: "create_task", module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        const task = await t.db.query.tasks.findFirst({
+            where: and(
+                eq(tasks.id, id),
+                eq(tasks.workspaceId, t.workspaceId),
+                isNull(tasks.deletedAt),
+            ),
+            columns: { id: true },
+        });
+        if (!task) throw new ApiError("Task not found", 404);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const formData = await request.formData();
+        const file = formData.get("file");
+        if (!(file instanceof File)) throw new ApiError("No file provided", 400);
+        if (file.size > MAX_FILE_SIZE) throw new ApiError("File exceeds 10 MB limit", 400);
 
-    const task = await db.taskItem.findUnique({ where: { id } });
-    if (!task || task.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
+        const ext = uploadExt(file.name, file.type);
+        const bytes = Buffer.from(await file.arrayBuffer());
+        const sha256 = createHash("sha256").update(bytes).digest("hex");
+
+        const dir = join(config.uploadsDir, t.portal);
+        await mkdir(dir, { recursive: true });
+        const attachmentId = randomUUID();
+        const storagePath = join(dir, `${attachmentId}.${ext}`);
+        await writeFile(storagePath, bytes);
+
+        const [[attachment]] = await Promise.all([
+            t.db
+                .insert(attachments)
+                .values({
+                    id: attachmentId,
+                    workspaceId: t.workspaceId,
+                    entityType: "task",
+                    entityId: id,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    mimeType: file.type,
+                    storagePath,
+                    sha256,
+                    uploadedById: t.userId,
+                })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create",
+                entityType: "attachment",
+                entityId: attachmentId,
+                metadata: { taskId: id, fileName: file.name },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+
+        return ok(attachment, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/tasks/[id]/attachments", e);
     }
-
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-
-    if (!file) return error("No file provided", 400);
-    if (file.size > MAX_FILE_SIZE) return error("File exceeds 500 MB limit", 400);
-    if (!isAllowedMime(file.type)) {
-      return error("File type not allowed. Accepted: images, PDF, text files", 400);
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uniqueName = `${crypto.randomUUID()}-${file.name}`;
-    const storagePath = join(UPLOADS_DIR, uniqueName);
-
-    await writeFile(storagePath, buffer);
-
-    const attachment = await db.attachment.create({
-      data: {
-        workspaceId: workspace.id,
-        entityType: "task",
-        entityId: id,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        storagePath,
-        uploadedById: session.user.id,
-      },
-    });
-
-    return success(attachment, 201);
-  } catch (e) {
-    console.error("POST /api/tasks/[id]/attachments", e);
-    return error("Internal server error", 500);
-  }
 }

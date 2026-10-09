@@ -1,89 +1,123 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { subTasks, tasks } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+const createSubtaskSchema = z.object({ title: z.string().trim().min(1) });
+type CreateSubtaskInput = z.infer<typeof createSubtaskSchema>;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
+async function scopedTask(t: Awaited<ReturnType<typeof requireTenant>>, taskId: string) {
+    const task = await t.db.query.tasks.findFirst({
+        where: and(
+            eq(tasks.id, taskId),
+            eq(tasks.workspaceId, t.workspaceId),
+            isNull(tasks.deletedAt),
+        ),
     });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const task = await db.taskItem.findUnique({
-      where: { id },
-      select: { workspaceId: true },
-    });
-    if (!task || task.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
-    }
-
-    const subtasks = await db.subTask.findMany({
-      where: { taskId: id },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return success(subtasks);
-  } catch (e) {
-    console.error("GET /api/tasks/[id]/subtasks", e);
-    return error("Internal server error", 500);
-  }
+    if (!task) throw new ApiError("Task not found", 404);
+    return task;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+function canManageTask(
+    t: Awaited<ReturnType<typeof requireTenant>>,
+    task: { createdById: string; assigneeId: string | null },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const task = await db.taskItem.findUnique({
-      where: { id },
-      select: { workspaceId: true },
-    });
-    if (!task || task.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
+    if (
+        task.createdById !== t.userId &&
+        task.assigneeId !== t.userId &&
+        !t.permissions.includes("manage_all_tasks")
+    ) {
+        throw new ApiError("Forbidden", 403);
     }
+}
 
-    const body = await request.json();
-    const { title } = body;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
+        await scopedTask(t, id);
 
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return error("Title is required", 400);
+        const rows = await t.db.query.subTasks.findMany({
+            where: eq(subTasks.taskId, id),
+            orderBy: [asc(subTasks.createdAt)],
+        });
+
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/tasks/[id]/subtasks", e);
     }
+}
 
-    const subtask = await db.subTask.create({
-      data: {
-        taskId: id,
-        title: title.trim(),
-      },
-    });
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { permission: "create_task", module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
+        await scopedTask(t, id);
 
-    return success(subtask, 201);
-  } catch (e) {
-    console.error("POST /api/tasks/[id]/subtasks", e);
-    return error("Internal server error", 500);
-  }
+        const body = await parseBody<CreateSubtaskInput>(createSubtaskSchema as never, request);
+        const subtaskId = randomUUID();
+        const [[subtask]] = await Promise.all([
+            t.db
+                .insert(subTasks)
+                .values({ id: subtaskId, taskId: id, title: body.title })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create",
+                entityType: "subtask",
+                entityId: subtaskId,
+                metadata: { taskId: id, title: body.title },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+
+        return ok(subtask, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/tasks/[id]/subtasks", e);
+    }
+}
+
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+) {
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
+        const task = await scopedTask(t, id);
+        canManageTask(t, task);
+
+        const subtaskId = requireUuid(new URL(request.url).searchParams.get("id"), "subtask id");
+        const subtask = await t.db.query.subTasks.findFirst({
+            where: and(eq(subTasks.id, subtaskId), eq(subTasks.taskId, id)),
+        });
+        if (!subtask) throw new ApiError("Subtask not found", 404);
+
+        await Promise.all([
+            t.db.delete(subTasks).where(eq(subTasks.id, subtaskId)),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "delete",
+                entityType: "subtask",
+                entityId: subtaskId,
+                metadata: { taskId: id },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/tasks/[id]/subtasks", e);
+    }
 }

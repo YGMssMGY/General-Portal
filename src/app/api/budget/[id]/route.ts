@@ -1,117 +1,147 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import { NextRequest } from "next/server";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { budgetAllocations, budgetTransactions } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const { id } = await params;
+const updateAllocationSchema = z.object({
+    category: z.string().trim().min(1).optional(),
+    amount: z.number().optional(),
+    fiscalYear: z.number().int().optional(),
+    description: z.string().trim().nullable().optional(),
+    status: z.enum(["active", "spent", "reconciled"]).optional(),
+});
+type UpdateAllocationInput = z.infer<typeof updateAllocationSchema>;
 
-    const allocation = await db.budgetAllocation.findUnique({
-      where: { id },
-      include: {
-        transactions: {
-          orderBy: { createdAt: "desc" },
-          include: {
-            decidedBy: { select: { id: true, name: true } },
-          },
-        },
-      },
-    });
-
-    if (!allocation) return error("Budget allocation not found", 404);
-
-    const data = {
-      ...allocation,
-      amount: Number(allocation.amount),
-      spent: Number(allocation.spent),
-      transactions: allocation.transactions.map((t) => ({
-        ...t,
-        amount: Number(t.amount),
-      })),
-    };
-
-    return success(data);
-  } catch (e) {
-    console.error("GET /api/budget/[id]", e);
-    return error("Internal server error", 500);
-  }
+function toCents(v: unknown): number {
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+        throw new ApiError("Amount must be a finite number", 400);
+    }
+    if (v < 0) throw new ApiError("Amount must be non-negative", 400);
+    return Math.round(v * 100);
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const { id } = await params;
-
-    const allocation = await db.budgetAllocation.findUnique({ where: { id } });
-    if (!allocation) return error("Budget allocation not found", 404);
-
-    const body = await request.json();
-    const { category, amount, fiscalYear, description, status } = body;
-
-    const updated = await db.budgetAllocation.update({
-      where: { id },
-      data: {
-        ...(category !== undefined && { category: category.trim() }),
-        ...(amount !== undefined && { amount }),
-        ...(fiscalYear !== undefined && { fiscalYear }),
-        ...(description !== undefined && { description }),
-        ...(status !== undefined && { status }),
-      },
+async function scopedAllocation(t: Awaited<ReturnType<typeof requireTenant>>, id: string) {
+    const row = await t.db.query.budgetAllocations.findFirst({
+        where: and(
+            eq(budgetAllocations.id, id),
+            eq(budgetAllocations.workspaceId, t.workspaceId),
+            isNull(budgetAllocations.deletedAt),
+        ),
     });
+    if (!row) throw new ApiError("Budget allocation not found", 404);
+    return row;
+}
 
-    return success({
-      ...updated,
-      amount: Number(updated.amount),
-      spent: Number(updated.spent),
-    });
-  } catch (e) {
-    console.error("PUT /api/budget/[id]", e);
-    return error("Internal server error", 500);
-  }
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "budget" });
+        const { id } = await params;
+        requireUuid(id);
+
+        const allocation = await t.db.query.budgetAllocations.findFirst({
+            where: and(
+                eq(budgetAllocations.id, id),
+                eq(budgetAllocations.workspaceId, t.workspaceId),
+                isNull(budgetAllocations.deletedAt),
+            ),
+            with: {
+                transactions: {
+                    orderBy: [desc(budgetTransactions.createdAt)],
+                    with: { decidedBy: { columns: { id: true, name: true } } },
+                },
+            },
+        });
+        if (!allocation) throw new ApiError("Budget allocation not found", 404);
+
+        return ok(allocation);
+    } catch (e) {
+        return handleRouteError("GET /api/budget/[id]", e);
+    }
+}
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { permission: "manage_budget", module: "budget" });
+        const { id } = await params;
+        requireUuid(id);
+        await scopedAllocation(t, id);
+
+        const body = await parseBody<UpdateAllocationInput>(
+            updateAllocationSchema as never,
+            request,
+        );
+        if (!Object.values(body).some((v) => v !== undefined)) {
+            throw new ApiError("No fields to update", 400);
+        }
+
+        const set: Partial<typeof budgetAllocations.$inferInsert> & { updatedAt: Date } = {
+            updatedAt: new Date(),
+        };
+        if (body.category !== undefined) set.category = body.category;
+        if (body.amount !== undefined) set.amountCents = toCents(body.amount);
+        if (body.fiscalYear !== undefined) set.fiscalYear = body.fiscalYear;
+        if (body.description !== undefined) set.description = body.description?.trim() || null;
+        if (body.status !== undefined) set.status = body.status;
+
+        const [[updated]] = await Promise.all([
+            t.db.update(budgetAllocations).set(set).where(eq(budgetAllocations.id, id)).returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "update",
+                entityType: "budget_allocation",
+                entityId: id,
+                metadata: { changes: Object.keys(set).filter((k) => k !== "updatedAt") },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+
+        return ok(updated);
+    } catch (e) {
+        return handleRouteError("PUT /api/budget/[id]", e);
+    }
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const { id } = await params;
+    try {
+        const t = await requireTenant(request, { permission: "manage_budget", module: "budget" });
+        const { id } = await params;
+        requireUuid(id);
+        const existing = await scopedAllocation(t, id);
 
-    const allocation = await db.budgetAllocation.findUnique({ where: { id } });
-    if (!allocation) return error("Budget allocation not found", 404);
+        const permanent = new URL(request.url).searchParams.get("permanent") === "true";
+        const sideEffect = emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "delete_budget_allocation",
+            entityType: "budget_allocation",
+            entityId: id,
+            metadata: { category: existing.category },
+            ipAddress: clientIp(request),
+        });
+        if (permanent && t.roleName === "admin") {
+            await Promise.all([
+                t.db.delete(budgetAllocations).where(eq(budgetAllocations.id, id)),
+                sideEffect,
+            ]);
+        } else {
+            await Promise.all([
+                t.db
+                    .update(budgetAllocations)
+                    .set({ deletedAt: new Date(), updatedAt: new Date() })
+                    .where(eq(budgetAllocations.id, id)),
+                sideEffect,
+            ]);
+        }
 
-    await db.budgetAllocation.delete({ where: { id } });
-
-    await writeAuditLog(
-      {
-        workspaceId: allocation.workspaceId,
-        userId: session.user.id,
-        action: "delete_budget_allocation",
-        entityType: "budget_allocation",
-        entityId: id,
-        metadata: { category: allocation.category },
-      },
-      db,
-    );
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/budget/[id]", e);
-    return error("Internal server error", 500);
-  }
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/budget/[id]", e);
+    }
 }

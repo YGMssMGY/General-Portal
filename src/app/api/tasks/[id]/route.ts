@@ -1,152 +1,180 @@
 import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { subTasks, taskComments, tasks } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    handleRouteError,
+    isUuid,
+    ok,
+    parseBody,
+    requireUuid,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+const updateTaskSchema = z.object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().trim().nullable().optional(),
+    status: z.enum(["todo", "in_progress", "done"]).optional(),
+    priority: z.number().int().optional(),
+    dueDate: z.string().nullable().optional(),
+    assigneeId: z.string().nullable().optional(),
+});
+type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const task = await t.db.query.tasks.findFirst({
+            where: and(
+                eq(tasks.id, id),
+                eq(tasks.workspaceId, t.workspaceId),
+                isNull(tasks.deletedAt),
+            ),
+            with: {
+                createdBy: { columns: { id: true, name: true, email: true, image: true } },
+                assignee: { columns: { id: true, name: true, email: true, image: true } },
+                subtasks: { orderBy: [asc(subTasks.createdAt)] },
+                comments: {
+                    orderBy: [desc(taskComments.createdAt)],
+                    limit: 10,
+                    with: { user: { columns: { id: true, name: true, image: true } } },
+                },
+            },
+        });
+        if (!task) throw new ApiError("Task not found", 404);
 
-    const task = await db.taskItem.findUnique({
-      where: { id },
-      include: {
-        createdBy: { select: { id: true, name: true, email: true, image: true } },
-        assignee: { select: { id: true, name: true, email: true, image: true } },
-        subtasks: { orderBy: { createdAt: "asc" } },
-        comments: {
-          orderBy: { createdAt: "asc" },
-          include: {
-            user: { select: { id: true, name: true, email: true, image: true } },
-          },
-        },
-      },
-    });
-
-    if (!task || task.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
+        return ok(task);
+    } catch (e) {
+        return handleRouteError("GET /api/tasks/[id]", e);
     }
-
-    return success(task);
-  } catch (e) {
-    console.error("GET /api/tasks/[id]", e);
-    return error("Internal server error", 500);
-  }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        const existing = await t.db.query.tasks.findFirst({
+            where: and(
+                eq(tasks.id, id),
+                eq(tasks.workspaceId, t.workspaceId),
+                isNull(tasks.deletedAt),
+            ),
+        });
+        if (!existing) throw new ApiError("Task not found", 404);
+        if (
+            existing.createdById !== t.userId &&
+            existing.assigneeId !== t.userId &&
+            !t.permissions.includes("manage_all_tasks")
+        ) {
+            throw new ApiError("Forbidden", 403);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const body = await parseBody<UpdateTaskInput>(updateTaskSchema as never, request);
+        if (!Object.values(body).some((v) => v !== undefined)) {
+            throw new ApiError("No fields to update", 400);
+        }
 
-    const existing = await db.taskItem.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
+        const set: Partial<typeof tasks.$inferInsert> & { updatedAt: Date } = {
+            updatedAt: new Date(),
+        };
+        if (body.title !== undefined) set.title = body.title;
+        if (body.description !== undefined) set.description = body.description;
+        if (body.status !== undefined) set.status = body.status;
+        if (body.priority !== undefined) set.priority = body.priority;
+        if (body.dueDate !== undefined) {
+            if (body.dueDate === null || body.dueDate === "") {
+                set.dueDate = null;
+            } else {
+                const d = new Date(body.dueDate);
+                if (Number.isNaN(d.getTime())) throw new ApiError("Invalid dueDate", 400);
+                set.dueDate = d;
+            }
+        }
+        if (body.assigneeId !== undefined) {
+            if (body.assigneeId === null || body.assigneeId === "") {
+                set.assigneeId = null;
+            } else {
+                if (!isUuid(body.assigneeId)) throw new ApiError("Invalid assigneeId", 400);
+                set.assigneeId = body.assigneeId;
+            }
+        }
+
+        const [[updated]] = await Promise.all([
+            t.db.update(tasks).set(set).where(eq(tasks.id, id)).returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "update",
+                entityType: "task",
+                entityId: id,
+                metadata: { changes: Object.keys(set).filter((k) => k !== "updatedAt") },
+                ipAddress: clientIp(request),
+            }),
+        ]);
+
+        return ok(updated);
+    } catch (e) {
+        return handleRouteError("PUT /api/tasks/[id]", e);
     }
-
-    const body = await request.json();
-    const { title, description, status, priority, dueDate, assigneeId } = body;
-
-    const data: Record<string, unknown> = {};
-    if (title !== undefined) data.title = title;
-    if (description !== undefined) data.description = description;
-    if (status !== undefined) data.status = status;
-    if (priority !== undefined) data.priority = priority;
-    if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
-    if (assigneeId !== undefined) data.assigneeId = assigneeId || null;
-
-    if (Object.keys(data).length === 0) {
-      return error("No fields to update", 400);
-    }
-
-    const task = await db.taskItem.update({ where: { id }, data });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "update",
-        entityType: "task",
-        entityId: id,
-        metadata: { changes: data },
-      },
-      db,
-    );
-
-    return success(task);
-  } catch (e) {
-    console.error("PUT /api/tasks/[id]", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const { id } = await params;
+        requireUuid(id);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
-    const { id } = await params;
+        const existing = await t.db.query.tasks.findFirst({
+            where: and(
+                eq(tasks.id, id),
+                eq(tasks.workspaceId, t.workspaceId),
+                isNull(tasks.deletedAt),
+            ),
+        });
+        if (!existing) throw new ApiError("Task not found", 404);
+        if (
+            existing.createdById !== t.userId &&
+            existing.assigneeId !== t.userId &&
+            !t.permissions.includes("manage_all_tasks")
+        ) {
+            throw new ApiError("Forbidden", 403);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const permanent = new URL(request.url).searchParams.get("permanent") === "true";
+        const sideEffect = emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "delete",
+            entityType: "task",
+            entityId: id,
+            metadata: { title: existing.title },
+            ipAddress: clientIp(request),
+        });
+        if (permanent && t.roleName === "admin") {
+            await Promise.all([t.db.delete(tasks).where(eq(tasks.id, id)), sideEffect]);
+        } else {
+            await Promise.all([
+                t.db
+                    .update(tasks)
+                    .set({ deletedAt: new Date(), updatedAt: new Date() })
+                    .where(eq(tasks.id, id)),
+                sideEffect,
+            ]);
+        }
 
-    const existing = await db.taskItem.findUnique({ where: { id } });
-    if (!existing || existing.workspaceId !== workspace.id) {
-      return error("Task not found", 404);
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/tasks/[id]", e);
     }
-
-    await db.taskItem.delete({ where: { id } });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "delete",
-        entityType: "task",
-        entityId: id,
-        metadata: { title: existing.title },
-      },
-      db,
-    );
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/tasks/[id]", e);
-    return error("Internal server error", 500);
-  }
 }

@@ -1,57 +1,49 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { NextRequest } from "next/server";
+import { and, count, eq, isNotNull, isNull, sum } from "drizzle-orm";
+import { transactions } from "@/db/schema";
+import { handleRouteError, ok } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "finance" });
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const groups = await t.db
+            .select({
+                category: transactions.category,
+                type: transactions.type,
+                total: sum(transactions.amountCents),
+                n: count(),
+            })
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.workspaceId, t.workspaceId),
+                    isNull(transactions.deletedAt),
+                    isNotNull(transactions.category),
+                ),
+            )
+            .groupBy(transactions.category, transactions.type);
 
-    const [incomeAgg, expenseAgg, categoryGroups, transactionCount] =
-      await Promise.all([
-        db.transaction.aggregate({
-          _sum: { amount: true },
-          where: { workspaceId: workspace.id, type: "income" },
-        }),
-        db.transaction.aggregate({
-          _sum: { amount: true },
-          where: { workspaceId: workspace.id, type: "expense" },
-        }),
-        db.transaction.groupBy({
-          by: ["category", "type"],
-          where: { workspaceId: workspace.id, category: { not: null } },
-          _sum: { amount: true },
-          _count: true,
-        }),
-        db.transaction.count({
-          where: { workspaceId: workspace.id },
-        }),
-      ]);
+        let totalIncome = 0;
+        let totalExpense = 0;
+        let transactionCount = 0;
+        const categoryBreakdown = groups.map((g) => {
+            const total = Number(g.total ?? 0);
+            transactionCount += g.n;
+            if (g.type === "income") totalIncome += total;
+            else totalExpense += total;
+            return { category: g.category, type: g.type, total, count: g.n };
+        });
 
-    const totalIncome = Number(incomeAgg._sum.amount ?? 0);
-    const totalExpense = Number(expenseAgg._sum.amount ?? 0);
-
-    const categoryBreakdown = categoryGroups.map((g) => ({
-      category: g.category,
-      total: Number(g._sum.amount ?? 0),
-      count: g._count,
-    }));
-
-    return success({
-      totalIncome,
-      totalExpense,
-      balance: totalIncome - totalExpense,
-      transactionCount,
-      categoryBreakdown,
-    });
-  } catch (e) {
-    console.error("GET /api/finance/summary", e);
-    return error("Internal server error", 500);
-  }
+        return ok({
+            totalIncome,
+            totalExpense,
+            balance: totalIncome - totalExpense,
+            transactionCount,
+            categoryBreakdown,
+        });
+    } catch (e) {
+        return handleRouteError("GET /api/finance/summary", e);
+    }
 }
