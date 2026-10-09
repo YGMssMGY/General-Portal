@@ -1,33 +1,31 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/QueryClientProvider";
 import { FaviconSwitcher } from "@/components/FaviconSwitcher";
+import "@fontsource-variable/noto-sans";
+import "@fontsource/noto-sans-sc";
+import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "General Portal", template: "%s | General Portal" },
-  description: "Developers' Club & Student Council Portal",
+    title: { default: "General Portal", template: "%s | General Portal" },
+    description: "Workspaces for clubs, teams, and organizations",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        <FaviconSwitcher />
-      </head>
-      <body>
-        <Providers>{children}</Providers>
-      </body>
-    </html>
-  );
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+    const locale = await getLocale();
+    const messages = await getMessages();
+    return (
+        <html lang={locale}>
+            <head>
+                <FaviconSwitcher />
+            </head>
+            <body>
+                <NextIntlClientProvider locale={locale} messages={messages}>
+                    <Providers>{children}</Providers>
+                </NextIntlClientProvider>
+            </body>
+        </html>
+    );
 }
