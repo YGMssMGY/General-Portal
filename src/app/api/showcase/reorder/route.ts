@@ -1,45 +1,69 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { hasPermission } from "@/lib/permissions";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, eq, isNull } from "drizzle-orm";
+import { showcaseItems } from "@/db/schema";
+import { handleRouteError, ok, parseBody } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
+        },
+    };
+}
+
+const reorderSchema = z.object({
+    items: z
+        .array(z.object({ id: z.uuid(), sortOrder: z.number().int().min(0).max(1000000) }))
+        .min(1)
+        .max(500),
+});
 
 export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_showcase",
+            module: "members",
+        });
+        const data = await parseBody(body(reorderSchema), request);
 
-    if (!hasPermission(session.user.role, "manage_showcase")) {
-      return error("Forbidden", 403);
+        await t.db.transaction(async (tx) => {
+            for (const item of data.items) {
+                await tx
+                    .update(showcaseItems)
+                    .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+                    .where(
+                        and(
+                            eq(showcaseItems.id, item.id),
+                            eq(showcaseItems.workspaceId, t.workspaceId),
+                            isNull(showcaseItems.deletedAt),
+                        ),
+                    );
+            }
+        });
+
+        return ok({ reordered: true });
+    } catch (e) {
+        return handleRouteError("PUT /api/showcase/reorder", e);
     }
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const body = await request.json();
-    const { items } = body;
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return error("items array is required", 400);
-    }
-
-    const updates = items.map((item: { id: string; sortOrder: number }) =>
-      db.showcaseItem.updateMany({
-        where: { id: item.id, workspaceId: workspace.id },
-        data: { sortOrder: item.sortOrder },
-      }),
-    );
-
-    await db.$transaction(updates);
-
-    return success({ reordered: true });
-  } catch (e) {
-    console.error("PUT /api/showcase/reorder", e);
-    return error("Internal server error", 500);
-  }
 }

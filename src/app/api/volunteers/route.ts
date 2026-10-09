@@ -1,98 +1,153 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { volunteerSignups, volunteerSlots } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+const createSlotSchema = z.object({
+    title: z.string().trim().min(1),
+    description: z.string().trim().nullable().optional(),
+    startTime: z.string().min(1),
+    endTime: z.string().min(1),
+    capacity: z.number().int().min(1).default(1),
+});
+type CreateSlotInput = z.infer<typeof createSlotSchema>;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "volunteers" });
+        const { limit, cursor } = parsePagination(new URL(request.url).searchParams);
 
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
+        const conds = [
+            eq(volunteerSlots.workspaceId, t.workspaceId),
+            isNull(volunteerSlots.deletedAt),
+        ];
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length >= 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: volunteerSlots.startTime, value: at }],
+                        volunteerSlots.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    const slots = await db.volunteerSlot.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { startTime: "asc" },
-      skip,
-      take: limit,
-      include: {
-        _count: { select: { signups: true } },
-        signups: {
-          where: { userId: session.user.id },
-          select: { id: true },
-        },
-      },
-    });
+        const rows = await t.db.query.volunteerSlots.findMany({
+            where: and(...conds),
+            orderBy: [desc(volunteerSlots.startTime), desc(volunteerSlots.id)],
+            limit: limit + 1,
+        });
 
-    const data = slots.map((s) => ({
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      capacity: s.capacity,
-      signedUp: s._count.signups,
-      userSignedUp: s.signups.length > 0,
-    }));
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.startTime.toISOString(), last.id]);
+        }
 
-    return success(data);
-  } catch (e) {
-    console.error("GET /api/volunteers", e);
-    return error("Internal server error", 500);
-  }
+        const ids = rows.map((r) => r.id);
+        const [counts, mine] = await Promise.all([
+            ids.length > 0
+                ? t.db
+                      .select({ slotId: volunteerSignups.slotId, n: count(volunteerSignups.id) })
+                      .from(volunteerSignups)
+                      .where(inArray(volunteerSignups.slotId, ids))
+                      .groupBy(volunteerSignups.slotId)
+                : [],
+            ids.length > 0
+                ? t.db.query.volunteerSignups.findMany({
+                      where: and(
+                          inArray(volunteerSignups.slotId, ids),
+                          eq(volunteerSignups.userId, t.userId),
+                      ),
+                      columns: { slotId: true },
+                  })
+                : [],
+        ]);
+        const countMap = new Map(counts.map((c) => [c.slotId, c.n]));
+        const mineSet = new Set(mine.map((m) => m.slotId));
+
+        const items = rows.map((s) => ({
+            id: s.id,
+            title: s.title,
+            description: s.description,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            capacity: s.capacity,
+            signedUp: countMap.get(s.id) ?? 0,
+            userSignedUp: mineSet.has(s.id),
+        }));
+
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/volunteers", e);
+    }
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function POST(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, {
+            permission: "manage_volunteer_slots",
+            module: "volunteers",
+        });
+        const body = await parseBody<CreateSlotInput>(createSlotSchema as never, request);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const startTime = new Date(body.startTime);
+        const endTime = new Date(body.endTime);
+        if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+            throw new ApiError("Invalid startTime or endTime", 400);
+        }
 
-    const body = await request.json();
-    const { title, description, startTime, endTime, capacity } = body;
+        const id = randomUUID();
+        const [[slot]] = await Promise.all([
+            t.db
+                .insert(volunteerSlots)
+                .values({
+                    id,
+                    workspaceId: t.workspaceId,
+                    title: body.title,
+                    description: body.description ?? null,
+                    startTime,
+                    endTime,
+                    capacity: body.capacity,
+                })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create",
+                entityType: "volunteer_slot",
+                entityId: id,
+                metadata: { title: body.title },
+                ipAddress: clientIp(request),
+            }),
+        ]);
 
-    if (!title?.trim() || !startTime || !endTime) {
-      return error("Title, startTime, and endTime are required", 400);
+        return ok(slot, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/volunteers", e);
     }
-
-    const slot = await db.volunteerSlot.create({
-      data: {
-        workspaceId: workspace.id,
-        title: title.trim(),
-        description: description ?? null,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        capacity: capacity ?? 1,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "created",
-        entityType: "volunteer_slot",
-        entityId: slot.id,
-        metadata: { title: slot.title },
-      },
-    });
-
-    return success(slot, 201);
-  } catch (e) {
-    console.error("POST /api/volunteers", e);
-    return error("Internal server error", 500);
-  }
 }

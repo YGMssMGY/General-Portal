@@ -1,112 +1,159 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import type { PurchaseRequestStatus } from "@prisma/client";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { purchaseRequests } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
+        },
+    };
+}
+
+const PURCHASE_STATUSES = [
+    "draft",
+    "submitted",
+    "under_review",
+    "approved",
+    "rejected",
+    "fulfilled",
+] as const;
+
+const createSchema = z.object({
+    title: z.string().trim().min(1).max(200),
+    itemName: z.string().trim().min(1).max(200),
+    cost: z.number(),
+    justification: z.string().trim().min(1).max(5000),
+    quantity: z.number().int().positive().max(100000).default(1),
+});
+
+const withCost = <T extends { costCents: number }>(r: T) => ({ ...r, cost: r.costCents / 100 });
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "finance" });
+        const sp = request.nextUrl.searchParams;
+        const { limit, cursor } = parsePagination(sp);
+        const statusParam = sp.get("status")?.trim() || null;
+        const status =
+            statusParam && (PURCHASE_STATUSES as readonly string[]).includes(statusParam)
+                ? statusParam
+                : null;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const cVals = decodeCursorValues(cursor);
+        const cDate =
+            cVals && typeof cVals[0] === "string" && !Number.isNaN(new Date(cVals[0]).getTime())
+                ? new Date(cVals[0])
+                : null;
+        const cId = cVals && typeof cVals[1] === "string" ? cVals[1] : null;
+        const cursorCond =
+            cDate && cId
+                ? keysetWhere(
+                      [{ column: purchaseRequests.createdAt, value: cDate }],
+                      purchaseRequests.id,
+                      cId,
+                  )
+                : undefined;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db.query.purchaseRequests.findMany({
+            where: and(
+                eq(purchaseRequests.workspaceId, t.workspaceId),
+                isNull(purchaseRequests.deletedAt),
+                status
+                    ? eq(purchaseRequests.status, status as (typeof PURCHASE_STATUSES)[number])
+                    : undefined,
+                cursorCond,
+            ),
+            orderBy: [desc(purchaseRequests.createdAt), desc(purchaseRequests.id)],
+            limit: limit + 1,
+            with: {
+                submittedBy: { columns: { id: true, name: true, email: true, image: true } },
+                reviewedBy: { columns: { id: true, name: true, image: true } },
+            },
+        });
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") as PurchaseRequestStatus | null;
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
-
-    const where: Record<string, unknown> = { workspaceId: workspace.id };
-    if (
-      status &&
-      ["draft", "submitted", "under_review", "approved", "rejected", "fulfilled"].includes(status)
-    ) {
-      where.status = status;
+        const items = rows.slice(0, limit).map(withCost);
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last
+                ? encodeCursorValues([last.createdAt.toISOString(), last.id])
+                : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/purchase-requests", e);
     }
-
-    const purchaseRequests = await db.purchaseRequest.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      include: {
-        submittedBy: { select: { id: true, name: true, email: true, image: true } },
-        reviewedBy: { select: { id: true, name: true, image: true } },
-      },
-    });
-
-    return success(purchaseRequests);
-  } catch (e) {
-    console.error("GET /api/purchase-requests", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "finance" });
+        const data = await parseBody(body(createSchema), request);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        if (!Number.isFinite(data.cost) || data.cost < 0)
+            throw new ApiError("Valid cost is required", 400);
+        const costCents = Math.round(data.cost * 100);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const [row] = await t.db
+            .insert(purchaseRequests)
+            .values({
+                workspaceId: t.workspaceId,
+                title: data.title,
+                itemName: data.itemName,
+                costCents,
+                justification: data.justification,
+                quantity: data.quantity,
+                status: "submitted",
+                submittedById: t.userId,
+            })
+            .returning();
 
-    const body = await request.json();
-    const { title, itemName, cost, justification, quantity } = body;
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "submitted",
+            entityType: "purchase_request",
+            entityId: row.id,
+            metadata: { title: row.title, itemName: row.itemName, costCents },
+            ipAddress: clientIp(request),
+        });
 
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return error("Title is required", 400);
+        return ok(withCost({ ...row, submittedBy: null, reviewedBy: null }), 201);
+    } catch (e) {
+        return handleRouteError("POST /api/purchase-requests", e);
     }
-    if (!itemName || typeof itemName !== "string" || !itemName.trim()) {
-      return error("Item name is required", 400);
-    }
-    if (cost == null || isNaN(Number(cost)) || Number(cost) <= 0) {
-      return error("Valid cost is required", 400);
-    }
-    if (!justification || typeof justification !== "string" || !justification.trim()) {
-      return error("Justification is required", 400);
-    }
-
-    const purchaseRequest = await db.purchaseRequest.create({
-      data: {
-        workspaceId: workspace.id,
-        title: title.trim(),
-        itemName: itemName.trim(),
-        cost: Number(cost),
-        justification: justification.trim(),
-        quantity: quantity != null && Number.isInteger(Number(quantity)) ? Number(quantity) : 1,
-        status: "submitted",
-        submittedById: session.user.id,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "submitted",
-        entityType: "purchase_request",
-        entityId: purchaseRequest.id,
-        metadata: { title: purchaseRequest.title, itemName: purchaseRequest.itemName, cost: Number(purchaseRequest.cost) },
-      },
-    });
-
-    return success(purchaseRequest, 201);
-  } catch (e) {
-    console.error("POST /api/purchase-requests", e);
-    return error("Internal server error", 500);
-  }
 }

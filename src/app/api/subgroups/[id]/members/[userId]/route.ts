@@ -1,64 +1,59 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { hasPermission } from "@/lib/permissions";
+import type { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { subgroupMemberships, subgroups } from "@/db/schema";
+import { ApiError, handleRouteError, ok, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 import { writeAuditLog } from "@/lib/audit";
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; userId: string }> },
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string; userId: string }> },
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+    try {
+        const t = await requireTenant(request, { module: "members" });
+        const { id, userId } = await params;
+        const subgroupId = requireUuid(id);
+        const targetUserId = requireUuid(userId, "userId");
 
-    const { id, userId } = await params;
+        const sg = await t.db.query.subgroups.findFirst({
+            where: and(
+                eq(subgroups.id, subgroupId),
+                eq(subgroups.workspaceId, t.workspaceId),
+                isNull(subgroups.deletedAt),
+            ),
+            columns: { id: true, name: true },
+        });
+        if (!sg) throw new ApiError("Subgroup not found", 404);
 
-    if (
-      userId !== session.user.id &&
-      !hasPermission(session.user.role, "manage_subgroups")
-    ) {
-      return error("Forbidden", 403);
+        if (targetUserId !== t.userId && !t.permissions.includes("manage_subgroups")) {
+            throw new ApiError("Forbidden", 403);
+        }
+
+        const membership = await t.db.query.subgroupMemberships.findFirst({
+            where: and(
+                eq(subgroupMemberships.subgroupId, subgroupId),
+                eq(subgroupMemberships.userId, targetUserId),
+            ),
+            columns: { id: true },
+        });
+        if (!membership) throw new ApiError("Membership not found", 404);
+
+        await t.db.delete(subgroupMemberships).where(eq(subgroupMemberships.id, membership.id));
+
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "remove_member",
+                entityType: "subgroup",
+                entityId: subgroupId,
+                metadata: { removedUserId: targetUserId, subgroupName: sg.name },
+            },
+            t.db,
+        );
+
+        return ok({ deleted: true });
+    } catch (e) {
+        return handleRouteError("DELETE /api/subgroups/[id]/members/[userId]", e);
     }
-
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const subgroup = await db.subgroup.findFirst({
-      where: { id, workspaceId: workspace.id },
-    });
-    if (!subgroup) return error("Subgroup not found", 404);
-
-    const membership = await db.subgroupMembership.findUnique({
-      where: { subgroupId_userId: { subgroupId: id, userId } },
-    });
-    if (!membership) return error("Membership not found", 404);
-
-    await db.subgroupMembership.delete({
-      where: { id: membership.id },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "remove_member",
-        entityType: "subgroup",
-        entityId: id,
-        metadata: { removedUserId: userId, subgroupName: subgroup.name },
-      },
-      db,
-    );
-
-    return success({ deleted: true });
-  } catch (e) {
-    console.error("DELETE /api/subgroups/[id]/members/[userId]", e);
-    return error("Internal server error", 500);
-  }
 }

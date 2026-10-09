@@ -1,104 +1,155 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeFile, mkdir } from "node:fs/promises";
+import type { NextRequest } from "next/server";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { attachments } from "@/db/schema";
+import { config } from "@/config";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
 
-const UPLOADS_DIR = process.env.UPLOADS_DIR || "./uploads";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIMES = ["image/", "application/pdf", "text/", "application/msword", "application/vnd.openxmlformats-officedocument", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml"];
+const ALLOWED_MIME_PREFIXES = ["image/", "application/pdf", "text/plain"];
+const ENTITY_TYPES = [
+    "file",
+    "task",
+    "proposal",
+    "event",
+    "thread",
+    "message",
+    "subgroup",
+    "showcase",
+] as const;
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "files" });
+        const sp = request.nextUrl.searchParams;
+        const { limit, cursor } = parsePagination(sp);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const entityParam = sp.get("entityType");
+        if (entityParam !== null && !(ENTITY_TYPES as readonly string[]).includes(entityParam)) {
+            throw new ApiError("Invalid entityType", 400);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const cVals = decodeCursorValues(cursor);
+        const cDate =
+            cVals && typeof cVals[0] === "string" && !Number.isNaN(new Date(cVals[0]).getTime())
+                ? new Date(cVals[0])
+                : null;
+        const cId = cVals && typeof cVals[1] === "string" ? cVals[1] : null;
+        const cursorCond =
+            cDate && cId
+                ? keysetWhere(
+                      [{ column: attachments.createdAt, value: cDate }],
+                      attachments.id,
+                      cId,
+                  )
+                : undefined;
 
-    const { searchParams } = new URL(request.url);
-    const entityType = searchParams.get("entityType") || "file";
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
+        const rows = await t.db.query.attachments.findMany({
+            where: and(
+                eq(attachments.workspaceId, t.workspaceId),
+                isNull(attachments.deletedAt),
+                entityParam ? eq(attachments.entityType, entityParam) : undefined,
+                cursorCond,
+            ),
+            orderBy: [desc(attachments.createdAt), desc(attachments.id)],
+            limit: limit + 1,
+            columns: {
+                id: true,
+                workspaceId: true,
+                entityType: true,
+                entityId: true,
+                fileName: true,
+                fileSize: true,
+                mimeType: true,
+                storagePath: true,
+                sha256: true,
+                uploadedById: true,
+                createdAt: true,
+            },
+            with: { uploadedBy: { columns: { id: true, name: true } } },
+        });
 
-    const where = { workspaceId: workspace.id, entityType };
-
-    const files = await db.attachment.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      include: {
-        uploadedBy: { select: { id: true, name: true } },
-      },
-    });
-
-    return success(files);
-  } catch (e) {
-    console.error("GET /api/files", e);
-    return error("Internal server error", 500);
-  }
+        const items = rows.slice(0, limit);
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last
+                ? encodeCursorValues([last.createdAt.toISOString(), last.id])
+                : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/files", e);
+    }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "files" });
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const entityType = request.nextUrl.searchParams.get("entityType") || "file";
+        if (!(ENTITY_TYPES as readonly string[]).includes(entityType)) {
+            throw new ApiError("Invalid entityType", 400);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const formData = await request.formData();
+        const file = formData.get("file");
+        if (!(file instanceof File)) throw new ApiError("No file provided", 400);
+        if (file.size === 0) throw new ApiError("File is empty", 400);
+        if (file.size > MAX_FILE_SIZE) throw new ApiError("File too large. Max 10MB", 400);
+        if (!ALLOWED_MIME_PREFIXES.some((p) => file.type.startsWith(p))) {
+            throw new ApiError("File type not allowed", 400);
+        }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    if (!file) return error("No file provided", 400);
+        const ext = (file.name.split(".").pop() || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+        const storedName = `${randomUUID()}${ext ? `.${ext}` : ""}`;
+        const dir = join(config.uploadsDir, t.portal);
+        await mkdir(dir, { recursive: true });
 
-    if (file.size > MAX_FILE_SIZE) return error("File too large. Max 10MB", 400);
+        const buffer = Buffer.from(await file.arrayBuffer());
+        await writeFile(join(dir, storedName), buffer);
+        const sha256 = createHash("sha256").update(buffer).digest("hex");
 
-    const allowed = ALLOWED_MIMES.some((prefix) => file.type.startsWith(prefix));
-    if (!allowed) return error("File type not allowed", 400);
+        const [attachment] = await t.db
+            .insert(attachments)
+            .values({
+                workspaceId: t.workspaceId,
+                entityType,
+                entityId: "",
+                fileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type,
+                storagePath: join(t.portal, storedName),
+                sha256,
+                uploadedById: t.userId,
+            })
+            .returning();
 
-    const ext = (file.name.split(".").pop() || "").replace(/[^a-zA-Z0-9]/g, "");
-    const storedName = `${randomUUID()}.${ext}`;
-    const dir = join(UPLOADS_DIR, portal);
-    await mkdir(dir, { recursive: true });
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "created",
+            entityType: "attachment",
+            entityId: attachment.id,
+            metadata: { fileName: attachment.fileName, entityType },
+            ipAddress: clientIp(request),
+        });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(join(dir, storedName), buffer);
-
-    const { searchParams } = new URL(request.url);
-    const entityType = searchParams.get("entityType") || "file";
-
-    const attachment = await db.attachment.create({
-      data: {
-        workspaceId: workspace.id,
-        entityType,
-        entityId: "",
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type || "application/octet-stream",
-        storagePath: join(portal, storedName),
-        uploadedById: session.user.id,
-      },
-    });
-
-    return success(attachment, 201);
-  } catch (e) {
-    console.error("POST /api/files", e);
-    return error("Internal server error", 500);
-  }
+        return ok(attachment, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/files", e);
+    }
 }

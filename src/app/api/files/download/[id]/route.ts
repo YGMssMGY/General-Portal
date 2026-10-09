@@ -1,47 +1,39 @@
-import { error } from "@/lib/api-response";
-import { getDbForPortal } from "@/lib/db";
+import { and, eq, isNull } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
+import { config } from "@/config";
+import { ApiError, handleRouteError, requireUuid } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { attachments } from "@/db/schema";
 
-const UPLOADS_DIR = process.env.UPLOADS_DIR || "./uploads";
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { module: "files" });
+        const { id } = await params;
+        requireUuid(id);
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    let file: {
-      id: string;
-      fileName: string;
-      fileSize: number;
-      mimeType: string;
-      storagePath: string;
-    } | null = null;
+        const file = await t.db.query.attachments.findFirst({
+            where: and(
+                eq(attachments.id, id),
+                eq(attachments.workspaceId, t.workspaceId),
+                isNull(attachments.deletedAt),
+            ),
+            columns: { id: true, fileName: true, fileSize: true, storagePath: true },
+        });
+        if (!file) throw new ApiError("File not found", 404);
 
-    for (const portal of ["developers", "stuco"]) {
-      const db = getDbForPortal(portal);
-      file = await db.attachment.findUnique({
-        where: { id },
-        select: { id: true, fileName: true, fileSize: true, mimeType: true, storagePath: true },
-      });
-      if (file) break;
+        const buffer = await readFile(join(config.uploadsDir, file.storagePath));
+        const encodedName = encodeURIComponent(file.fileName);
+        return new Response(new Uint8Array(buffer), {
+            headers: {
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`,
+                "Content-Length": String(file.fileSize),
+                "X-Content-Type-Options": "nosniff",
+            },
+        });
+    } catch (e) {
+        return handleRouteError("GET /api/files/download/[id]", e);
     }
-
-    if (!file) return error("File not found", 404);
-
-    const buffer = await readFile(join(UPLOADS_DIR, file.storagePath));
-
-    const encodedName = encodeURIComponent(file.fileName);
-    return new Response(buffer, {
-      headers: {
-        "Content-Type": file.mimeType,
-        "Content-Disposition": `inline; filename="${encodedName}"; filename*=UTF-8''${encodedName}`,
-        "Content-Length": String(file.fileSize),
-      },
-    });
-  } catch (e) {
-    console.error("GET /api/files/download/[id]", e);
-    return error("Internal server error", 500);
-  }
 }

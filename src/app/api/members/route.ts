@@ -1,55 +1,73 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { NextRequest } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
+import { memberships } from "@/db/schema";
+import {
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+// ponytail: keyset on (createdAt desc, id desc); role grouping stays client-side
+// (role names sort alphabetically server-side only if the client re-sorts).
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { permission: "view_members", module: "members" });
+        const { limit, cursor } = parsePagination(new URL(request.url).searchParams);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const conds = [eq(memberships.workspaceId, t.workspaceId)];
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length >= 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: memberships.createdAt, value: at }],
+                        memberships.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
+        const rows = await t.db.query.memberships.findMany({
+            where: and(...conds),
+            orderBy: [desc(memberships.createdAt), desc(memberships.id)],
+            limit: limit + 1,
+            with: {
+                role: true,
+                user: { columns: { id: true, name: true, email: true, image: true } },
+            },
+        });
 
-    const where = { workspaceId: workspace.id };
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
 
-    const memberships = await db.membership.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-      },
-      orderBy: [{ role: "asc" }, { user: { name: "asc" } }],
-      skip,
-      take: limit,
-    });
+        const items = rows.map((m) => ({
+            id: m.user.id,
+            name: m.user.name,
+            email: m.user.email,
+            image: m.user.image,
+            role: m.role?.name ?? "member",
+            membershipId: m.id,
+            joinedAt: m.createdAt,
+        }));
 
-    const data = memberships.map((m) => ({
-      id: m.user.id,
-      name: m.user.name,
-      email: m.user.email,
-      image: m.user.image,
-      role: m.role,
-      membershipId: m.id,
-      joinedAt: m.createdAt,
-    }));
-
-    return success(data);
-  } catch (e) {
-    console.error("GET /api/members", e);
-    return error("Internal server error", 500);
-  }
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/members", e);
+    }
 }

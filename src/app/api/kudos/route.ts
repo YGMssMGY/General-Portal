@@ -1,89 +1,118 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { kudos, users } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+    requireUuid,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+const createKudosSchema = z.object({
+    receiverId: z.string(),
+    message: z.string().nullable().optional(),
+});
+type CreateKudosInput = z.infer<typeof createKudosSchema>;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+const person = { id: true, name: true, image: true } as const;
 
-    const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "members" });
+        const { limit, cursor } = parsePagination(new URL(request.url).searchParams);
 
-    const kudos = await db.kudos.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      include: {
-        sender: { select: { id: true, name: true, image: true } },
-        receiver: { select: { id: true, name: true, image: true } },
-      },
-    });
+        const conds = [eq(kudos.workspaceId, t.workspaceId)];
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length >= 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere([{ column: kudos.createdAt, value: at }], kudos.id, vals[1]),
+                );
+            }
+        }
 
-    return success(kudos);
-  } catch (e) {
-    console.error("GET /api/kudos", e);
-    return error("Internal server error", 500);
-  }
+        const rows = await t.db.query.kudos.findMany({
+            where: and(...conds),
+            orderBy: [desc(kudos.createdAt), desc(kudos.id)],
+            limit: limit + 1,
+            with: { sender: { columns: person }, receiver: { columns: person } },
+        });
+
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
+
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/kudos", e);
+    }
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function POST(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { permission: "send_kudos", module: "members" });
+        const body = await parseBody<CreateKudosInput>(createKudosSchema as never, request);
+        const receiverId = requireUuid(body.receiverId, "receiverId");
+        if (receiverId === t.userId) throw new ApiError("You cannot send kudos to yourself", 400);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const receiver = await t.db.query.users.findFirst({
+            where: eq(users.id, receiverId),
+            columns: { id: true, name: true, image: true },
+        });
+        if (!receiver) throw new ApiError("Receiver not found", 404);
 
-    const body = await request.json();
-    const { receiverId, message } = body;
+        const id = randomUUID();
+        const [[created]] = await Promise.all([
+            t.db
+                .insert(kudos)
+                .values({
+                    id,
+                    workspaceId: t.workspaceId,
+                    senderId: t.userId,
+                    receiverId,
+                    message: body.message ?? null,
+                })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "sent_kudos",
+                entityType: "kudos",
+                entityId: id,
+                metadata: { receiverId, receiverName: receiver.name },
+                ipAddress: clientIp(request),
+            }),
+        ]);
 
-    const rId = typeof receiverId === "string" ? receiverId.trim() : "";
-    if (!rId) return error("receiverId is required", 400);
-    if (rId === session.user.id) return error("You cannot send kudos to yourself", 400);
-
-    const receiver = await db.user.findUnique({ where: { id: rId } });
-    if (!receiver) return error("Receiver not found", 404);
-
-    const kudo = await db.kudos.create({
-      data: {
-        workspaceId: workspace.id,
-        senderId: session.user.id,
-        receiverId: rId,
-        message: message ?? null,
-      },
-      include: {
-        sender: { select: { id: true, name: true, image: true } },
-        receiver: { select: { id: true, name: true, image: true } },
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "sent_kudos",
-        entityType: "kudos",
-        entityId: kudo.id,
-        metadata: { receiverId, receiverName: receiver.name },
-      },
-    });
-
-    return success(kudo, 201);
-  } catch (e) {
-    console.error("POST /api/kudos", e);
-    return error("Internal server error", 500);
-  }
+        return ok(
+            {
+                ...created,
+                sender: { id: t.user.id, name: t.user.name, image: t.user.image },
+                receiver,
+            },
+            201,
+        );
+    } catch (e) {
+        return handleRouteError("POST /api/kudos", e);
+    }
 }

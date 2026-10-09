@@ -1,110 +1,163 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { cooperationRequests } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
+import { emitSideEffects } from "@/lib/side-effects";
+
+function body<T>(schema: {
+    safeParse: (
+        v: unknown,
+    ) =>
+        | { success: true; data: T }
+        | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } };
+}) {
+    return {
+        safeParse: (v: unknown) => {
+            const r = schema.safeParse(v);
+            if (r.success) return { success: true as const, data: r.data };
+            return {
+                success: false as const,
+                error: {
+                    issues: r.error.issues.map((i) => ({
+                        path: i.path.filter(
+                            (p): p is string | number =>
+                                typeof p === "string" || typeof p === "number",
+                        ),
+                        message: i.message,
+                    })),
+                },
+            };
+        },
+    };
+}
+
+const createSchema = z
+    .object({
+        clubName: z.string().trim().min(1).max(200),
+        contactName: z.string().trim().min(1).max(200),
+        contactEmail: z.email().max(320).optional(),
+        email: z.email().max(320).optional(),
+        eventTitle: z.string().trim().min(1).max(200),
+        description: z.string().trim().min(1).max(5000),
+        proposedDate: z.string().trim().max(50).optional(),
+        resourcesNeeded: z.string().trim().max(2000).nullish(),
+    })
+    .refine((v) => v.contactEmail || v.email, { message: "Contact email is required" });
+
+const withAliases = <
+    T extends { contactEmail: string; submittedBy: { id: string; name: string | null } | null },
+>(
+    r: T,
+) => ({
+    ...r,
+    email: r.contactEmail,
+    createdBy: r.submittedBy ? { id: r.submittedBy.id, name: r.submittedBy.name } : null,
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "partnerships" });
+        const sp = request.nextUrl.searchParams;
+        const { limit, cursor } = parsePagination(sp);
+        const status = sp.get("status")?.trim() || null;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const cVals = decodeCursorValues(cursor);
+        const cDate =
+            cVals && typeof cVals[0] === "string" && !Number.isNaN(new Date(cVals[0]).getTime())
+                ? new Date(cVals[0])
+                : null;
+        const cId = cVals && typeof cVals[1] === "string" ? cVals[1] : null;
+        const cursorCond =
+            cDate && cId
+                ? keysetWhere(
+                      [{ column: cooperationRequests.createdAt, value: cDate }],
+                      cooperationRequests.id,
+                      cId,
+                  )
+                : undefined;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db.query.cooperationRequests.findMany({
+            where: and(
+                eq(cooperationRequests.workspaceId, t.workspaceId),
+                isNull(cooperationRequests.deletedAt),
+                status ? eq(cooperationRequests.status, status) : undefined,
+                cursorCond,
+            ),
+            orderBy: [desc(cooperationRequests.createdAt), desc(cooperationRequests.id)],
+            limit: limit + 1,
+            with: {
+                submittedBy: { columns: { id: true, name: true, email: true, image: true } },
+                reviewedBy: { columns: { id: true, name: true, image: true } },
+            },
+        });
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
-
-    const where: Record<string, unknown> = { workspaceId: workspace.id };
-    if (status && typeof status === "string" && status.trim()) {
-      where.status = status.trim();
+        const items = rows.slice(0, limit).map(withAliases);
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last
+                ? encodeCursorValues([last.createdAt.toISOString(), last.id])
+                : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/cooperation", e);
     }
-
-    const requests = await db.cooperationRequest.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      include: {
-        submittedBy: { select: { id: true, name: true, email: true, image: true } },
-        reviewedBy: { select: { id: true, name: true, image: true } },
-      },
-    });
-
-    return success(requests);
-  } catch (e) {
-    console.error("GET /api/cooperation", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "partnerships" });
+        const data = await parseBody(body(createSchema), request);
+        const contactEmail = (data.contactEmail ?? data.email) as string;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        let proposedDate: Date | null = null;
+        if (data.proposedDate?.trim()) {
+            proposedDate = new Date(data.proposedDate.trim());
+            if (Number.isNaN(proposedDate.getTime()))
+                throw new ApiError("Invalid proposed date", 400);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const [row] = await t.db
+            .insert(cooperationRequests)
+            .values({
+                workspaceId: t.workspaceId,
+                clubName: data.clubName,
+                contactName: data.contactName,
+                contactEmail,
+                eventTitle: data.eventTitle,
+                description: data.description,
+                proposedDate,
+                resourcesNeeded: data.resourcesNeeded ?? null,
+                status: "pending",
+                submittedById: t.userId,
+            })
+            .returning();
 
-    const body = await request.json();
-    const { clubName, contactName, contactEmail, eventTitle, description, proposedDate, resourcesNeeded } = body;
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "created",
+            entityType: "cooperation_request",
+            entityId: row.id,
+            metadata: { clubName: row.clubName, eventTitle: row.eventTitle },
+            ipAddress: clientIp(request),
+        });
 
-    if (!clubName || typeof clubName !== "string" || !clubName.trim()) {
-      return error("Club name is required", 400);
+        return ok(withAliases({ ...row, submittedBy: null, reviewedBy: null }), 201);
+    } catch (e) {
+        return handleRouteError("POST /api/cooperation", e);
     }
-    if (!contactName || typeof contactName !== "string" || !contactName.trim()) {
-      return error("Contact name is required", 400);
-    }
-    if (!contactEmail || typeof contactEmail !== "string" || !contactEmail.trim()) {
-      return error("Contact email is required", 400);
-    }
-    if (!eventTitle || typeof eventTitle !== "string" || !eventTitle.trim()) {
-      return error("Event title is required", 400);
-    }
-    if (!description || typeof description !== "string" || !description.trim()) {
-      return error("Description is required", 400);
-    }
-
-    let parsedDate: Date | null = null;
-    if (proposedDate) {
-      parsedDate = new Date(proposedDate);
-      if (isNaN(parsedDate.getTime())) {
-        return error("Invalid proposed date", 400);
-      }
-    }
-
-    const cooperationRequest = await db.cooperationRequest.create({
-      data: {
-        workspaceId: workspace.id,
-        clubName: clubName.trim(),
-        contactName: contactName.trim(),
-        contactEmail: contactEmail.trim(),
-        eventTitle: eventTitle.trim(),
-        description: description.trim(),
-        proposedDate: parsedDate,
-        resourcesNeeded: resourcesNeeded?.trim() ?? null,
-        status: "pending",
-        submittedById: session.user.id,
-      },
-    });
-
-    return success(cooperationRequest, 201);
-  } catch (e) {
-    console.error("POST /api/cooperation", e);
-    return error("Internal server error", 500);
-  }
 }
