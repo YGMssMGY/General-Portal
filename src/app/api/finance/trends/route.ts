@@ -1,61 +1,63 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import { NextRequest } from "next/server";
+import { and, desc, eq, gte, isNull } from "drizzle-orm";
+import { transactions } from "@/db/schema";
+import { handleRouteError, ok } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "finance" });
+        const searchParams = new URL(request.url).searchParams;
+        const rawTake = Number.parseInt(searchParams.get("limit") ?? "500", 10);
+        const take = Math.min(500, Math.max(1, Number.isFinite(rawTake) ? rawTake : 500));
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const now = new Date();
+        const buckets: { key: string; income: number; expense: number }[] = [];
+        for (let i = 23; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            buckets.push({
+                key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+                income: 0,
+                expense: 0,
+            });
+        }
+        const since = new Date(now.getFullYear(), now.getMonth() - 23, 1);
 
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
-    twelveMonthsAgo.setDate(1);
-    twelveMonthsAgo.setHours(0, 0, 0, 0);
+        const rows = await t.db
+            .select({
+                amountCents: transactions.amountCents,
+                date: transactions.date,
+                type: transactions.type,
+            })
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.workspaceId, t.workspaceId),
+                    isNull(transactions.deletedAt),
+                    gte(transactions.date, since),
+                ),
+            )
+            .orderBy(desc(transactions.date))
+            .limit(take);
 
-    const transactions = await db.transaction.findMany({
-      where: {
-        workspaceId: workspace.id,
-        date: { gte: twelveMonthsAgo },
-      },
-      take: 5000,
-    });
+        const byKey = new Map(buckets.map((b) => [b.key, b]));
+        for (const r of rows) {
+            const key = `${r.date.getFullYear()}-${String(r.date.getMonth() + 1).padStart(2, "0")}`;
+            const b = byKey.get(key);
+            if (!b) continue;
+            if (r.type === "income") b.income += r.amountCents;
+            else b.expense += r.amountCents;
+        }
 
-    const monthMap = new Map<string, { income: number; expense: number }>();
-
-    for (let i = 0; i < 12; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - (11 - i));
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      monthMap.set(key, { income: 0, expense: 0 });
+        return ok({
+            months: buckets.map((b) => ({
+                month: b.key,
+                income: b.income,
+                expense: b.expense,
+                net: b.income - b.expense,
+            })),
+        });
+    } catch (e) {
+        return handleRouteError("GET /api/finance/trends", e);
     }
-
-    for (const t of transactions) {
-      const d = new Date(t.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const entry = monthMap.get(key);
-      if (entry) {
-        const amt = Number(t.amount);
-        if (t.type === "income") entry.income += amt;
-        else entry.expense += amt;
-      }
-    }
-
-    const months = Array.from(monthMap.entries()).map(([month, data]) => ({
-      month,
-      income: data.income,
-      expense: data.expense,
-      net: data.income - data.expense,
-    }));
-
-    return success({ months });
-  } catch (e) {
-    console.error("GET /api/finance/trends", e);
-    return error("Internal server error", 500);
-  }
 }

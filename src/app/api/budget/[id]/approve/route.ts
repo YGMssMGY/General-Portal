@@ -1,45 +1,44 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import { NextRequest } from "next/server";
+import { and, eq, isNull } from "drizzle-orm";
+import { budgetAllocations } from "@/db/schema";
+import { ApiError, clientIp, handleRouteError, ok, requireUuid } from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
-    const { id } = await params;
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const t = await requireTenant(request, { permission: "manage_budget", module: "budget" });
+        const { id } = await params;
+        requireUuid(id);
 
-    const allocation = await db.budgetAllocation.findUnique({ where: { id } });
-    if (!allocation) return error("Budget allocation not found", 404);
+        const existing = await t.db.query.budgetAllocations.findFirst({
+            where: and(
+                eq(budgetAllocations.id, id),
+                eq(budgetAllocations.workspaceId, t.workspaceId),
+                isNull(budgetAllocations.deletedAt),
+            ),
+        });
+        if (!existing) throw new ApiError("Budget allocation not found", 404);
 
-    const updated = await db.budgetAllocation.update({
-      where: { id },
-      data: { status: "active" },
-    });
+        const [[updated]] = await Promise.all([
+            t.db
+                .update(budgetAllocations)
+                .set({ status: "active", updatedAt: new Date() })
+                .where(eq(budgetAllocations.id, id))
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "approve_budget_allocation",
+                entityType: "budget_allocation",
+                entityId: id,
+                metadata: { category: existing.category },
+                ipAddress: clientIp(request),
+            }),
+        ]);
 
-    await writeAuditLog(
-      {
-        workspaceId: allocation.workspaceId,
-        userId: session.user.id,
-        action: "approve_budget_allocation",
-        entityType: "budget_allocation",
-        entityId: id,
-        metadata: { category: allocation.category },
-      },
-      db,
-    );
-
-    return success({
-      ...updated,
-      amount: Number(updated.amount),
-      spent: Number(updated.spent),
-    });
-  } catch (e) {
-    console.error("POST /api/budget/[id]/approve", e);
-    return error("Internal server error", 500);
-  }
+        return ok(updated);
+    } catch (e) {
+        return handleRouteError("POST /api/budget/[id]/approve", e);
+    }
 }

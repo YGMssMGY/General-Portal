@@ -1,94 +1,124 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import { randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { budgetAllocations } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+const createAllocationSchema = z.object({
+    category: z.string().trim().min(1),
+    amount: z.number(),
+    fiscalYear: z.number().int().optional(),
+    description: z.string().trim().nullable().optional(),
+});
+type CreateAllocationInput = z.infer<typeof createAllocationSchema>;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const currentYear = new Date().getFullYear();
-    const url = new URL(request.url);
-    const fiscalYear = Number(url.searchParams.get("fiscalYear")) || currentYear;
-    const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
-
-    const where = { workspaceId: workspace.id, fiscalYear };
-
-    const allocations = await db.budgetAllocation.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-    });
-
-    const data = allocations.map((a) => ({
-      ...a,
-      amount: Number(a.amount),
-      spent: Number(a.spent),
-    }));
-
-    return success(data);
-  } catch (e) {
-    console.error("GET /api/budget", e);
-    return error("Internal server error", 500);
-  }
+function toCents(v: unknown): number {
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+        throw new ApiError("Amount must be a finite number", 400);
+    }
+    if (v < 0) throw new ApiError("Amount must be non-negative", 400);
+    return Math.round(v * 100);
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "budget" });
+        const searchParams = new URL(request.url).searchParams;
+        const { limit, cursor } = parsePagination(searchParams);
+        const fiscalYear = Number(searchParams.get("fiscalYear")) || new Date().getFullYear();
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const conds = [
+            eq(budgetAllocations.workspaceId, t.workspaceId),
+            eq(budgetAllocations.fiscalYear, fiscalYear),
+            isNull(budgetAllocations.deletedAt),
+        ];
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length === 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: budgetAllocations.createdAt, value: at }],
+                        budgetAllocations.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    const body = await request.json();
-    const { category, amount, fiscalYear, description } = body;
+        const rows = await t.db.query.budgetAllocations.findMany({
+            where: and(...conds),
+            orderBy: [desc(budgetAllocations.createdAt), desc(budgetAllocations.id)],
+            limit: limit + 1,
+        });
 
-    if (!category?.trim() || amount == null) {
-      return error("Category and amount are required", 400);
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
+
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/budget", e);
     }
+}
 
-    const allocation = await db.budgetAllocation.create({
-      data: {
-        workspaceId: workspace.id,
-        category: category.trim(),
-        amount,
-        fiscalYear: fiscalYear ?? new Date().getFullYear(),
-        description: description ?? null,
-      },
-    });
+export async function POST(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { permission: "manage_budget", module: "budget" });
+        const body = await parseBody<CreateAllocationInput>(
+            createAllocationSchema as never,
+            request,
+        );
+        const cents = toCents(body.amount);
 
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create_budget_allocation",
-        entityType: "budget_allocation",
-        entityId: allocation.id,
-        metadata: { category, amount: Number(amount), fiscalYear },
-      },
-      db,
-    );
+        const id = randomUUID();
+        const [[allocation]] = await Promise.all([
+            t.db
+                .insert(budgetAllocations)
+                .values({
+                    id,
+                    workspaceId: t.workspaceId,
+                    category: body.category,
+                    amountCents: cents,
+                    fiscalYear: body.fiscalYear ?? new Date().getFullYear(),
+                    description: body.description?.trim() || null,
+                })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create_budget_allocation",
+                entityType: "budget_allocation",
+                entityId: id,
+                metadata: { category: body.category, amountCents: cents },
+                ipAddress: clientIp(request),
+            }),
+        ]);
 
-    return success(
-      { ...allocation, amount: Number(allocation.amount), spent: Number(allocation.spent) },
-      201,
-    );
-  } catch (e) {
-    console.error("POST /api/budget", e);
-    return error("Internal server error", 500);
-  }
+        return ok(allocation, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/budget", e);
+    }
 }

@@ -1,122 +1,162 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
-import type { TaskStatus } from "@prisma/client";
+import { and, asc, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { subTasks, taskComments, tasks } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
+
+const createTaskSchema = z.object({
+    title: z.string().trim().min(1),
+    description: z.string().trim().nullable().optional(),
+    priority: z.number().int().optional(),
+    dueDate: z.string().nullable().optional(),
+    assigneeId: z.string().uuid().nullable().optional(),
+});
+type CreateTaskInput = z.infer<typeof createTaskSchema>;
+
+function escapeLike(s: string): string {
+    return s.replace(/[\\%_]/g, (m) => `\\${m}`);
+}
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "tasks" });
+        const searchParams = new URL(request.url).searchParams;
+        const { limit, cursor } = parsePagination(searchParams);
+        const status = searchParams.get("status");
+        const assigneeId = searchParams.get("assigneeId");
+        const priorityRaw = searchParams.get("priority");
+        const q = searchParams.get("q")?.trim() || null;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const conds = [eq(tasks.workspaceId, t.workspaceId), isNull(tasks.deletedAt)];
+        if (status === "todo" || status === "in_progress" || status === "done") {
+            conds.push(eq(tasks.status, status));
+        }
+        if (assigneeId) conds.push(eq(tasks.assigneeId, assigneeId));
+        if (priorityRaw !== null && priorityRaw !== "") {
+            const p = Number.parseInt(priorityRaw, 10);
+            if (Number.isInteger(p)) conds.push(eq(tasks.priority, p));
+        }
+        if (q) conds.push(ilike(tasks.title, `%${escapeLike(q)}%`));
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length === 3 &&
+            typeof vals[0] === "number" &&
+            typeof vals[1] === "string" &&
+            typeof vals[2] === "string"
+        ) {
+            const at = new Date(vals[1]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [
+                            { column: tasks.priority, value: vals[0] },
+                            { column: tasks.createdAt, value: at },
+                        ],
+                        tasks.id,
+                        vals[2],
+                    ),
+                );
+            }
+        }
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") as TaskStatus | null;
-    const assigneeId = searchParams.get("assigneeId");
-    const priority = searchParams.get("priority");
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
-    const skip = (page - 1) * limit;
+        const rows = await t.db.query.tasks.findMany({
+            where: and(...conds),
+            orderBy: [desc(tasks.priority), desc(tasks.createdAt), desc(tasks.id)],
+            limit: limit + 1,
+            with: {
+                createdBy: { columns: { id: true, name: true, email: true, image: true } },
+                assignee: { columns: { id: true, name: true, email: true, image: true } },
+                subtasks: { orderBy: [asc(subTasks.createdAt)] },
+            },
+        });
 
-    const where: Record<string, unknown> = { workspaceId: workspace.id };
-    if (status && ["todo", "in_progress", "done"].includes(status)) {
-      where.status = status;
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.priority, last.createdAt.toISOString(), last.id]);
+        }
+
+        const ids = rows.map((r) => r.id);
+        const grouped = new Map<string, object[]>();
+        if (ids.length > 0) {
+            const recent = await t.db.query.taskComments.findMany({
+                where: inArray(taskComments.taskId, ids),
+                orderBy: [desc(taskComments.createdAt)],
+                limit: ids.length * 10,
+                with: { user: { columns: { id: true, name: true, image: true } } },
+            });
+            for (const c of recent) {
+                const list = grouped.get(c.taskId) ?? [];
+                if (list.length < 10) {
+                    list.push(c);
+                    grouped.set(c.taskId, list);
+                }
+            }
+        }
+        const items = rows.map((r) => ({ ...r, comments: grouped.get(r.id) ?? [] }));
+
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/tasks", e);
     }
-    if (assigneeId) where.assigneeId = assigneeId;
-    if (priority) where.priority = parseInt(priority, 10);
-
-    const tasks = await db.taskItem.findMany({
-      where,
-      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-      skip,
-      take: limit,
-      include: {
-        createdBy: { select: { id: true, name: true, email: true, image: true } },
-        assignee: { select: { id: true, name: true, email: true, image: true } },
-        subtasks: { orderBy: { createdAt: "asc" } },
-        comments: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          include: { user: { select: { id: true, name: true, image: true } } },
-        },
-      },
-    });
-
-    return success(tasks);
-  } catch (e) {
-    console.error("GET /api/tasks", e);
-    return error("Internal server error", 500);
-  }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { permission: "create_task", module: "tasks" });
+        const body = await parseBody<CreateTaskInput>(createTaskSchema as never, request);
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        let dueDate: Date | null = null;
+        if (body.dueDate) {
+            dueDate = new Date(body.dueDate);
+            if (Number.isNaN(dueDate.getTime())) throw new ApiError("Invalid dueDate", 400);
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const id = randomUUID();
+        const [[created]] = await Promise.all([
+            t.db
+                .insert(tasks)
+                .values({
+                    id,
+                    workspaceId: t.workspaceId,
+                    title: body.title,
+                    description: body.description ?? null,
+                    priority: body.priority ?? 0,
+                    dueDate,
+                    assigneeId: body.assigneeId ?? null,
+                    createdById: t.userId,
+                })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create",
+                entityType: "task",
+                entityId: id,
+                metadata: { title: body.title },
+                ipAddress: clientIp(request),
+            }),
+        ]);
 
-    const body = await request.json();
-    const { title, description, priority, dueDate, assigneeId } = body;
-
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return error("Title is required", 400);
+        return ok(created, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/tasks", e);
     }
-
-    const task = await db.taskItem.create({
-      data: {
-        workspaceId: workspace.id,
-        title: title.trim(),
-        description: description?.trim() ?? null,
-        priority: typeof priority === "number" ? priority : 0,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        assigneeId: assigneeId ?? null,
-        createdById: session.user.id,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "created",
-        entityType: "task",
-        entityId: task.id,
-        metadata: { title: task.title },
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create",
-        entityType: "task",
-        entityId: task.id,
-        metadata: { title: task.title },
-      },
-      db,
-    );
-
-    return success(task, 201);
-  } catch (e) {
-    console.error("POST /api/tasks", e);
-    return error("Internal server error", 500);
-  }
 }

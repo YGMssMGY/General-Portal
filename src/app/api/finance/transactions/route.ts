@@ -1,116 +1,151 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
-import { writeAuditLog } from "@/lib/audit";
+import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { attachments, transactions } from "@/db/schema";
+import {
+    ApiError,
+    clientIp,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
+import { emitSideEffects } from "@/lib/side-effects";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+const createTransactionSchema = z.object({
+    amount: z.number(),
+    type: z.enum(["income", "expense"]),
+    category: z.string().trim().nullable().optional(),
+    description: z.string().trim().nullable().optional(),
+    date: z.string().nullable().optional(),
+});
+type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+function toCents(v: unknown): number {
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+        throw new ApiError("Amount must be a finite number", 400);
+    }
+    if (v < 0) throw new ApiError("Amount must be non-negative", 400);
+    return Math.round(v * 100);
+}
 
-    const transactions = await db.transaction.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { date: "desc" },
-      take: 20,
-      include: {
-        createdBy: { select: { id: true, name: true, image: true } },
-      },
-    });
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, { module: "finance" });
+        const searchParams = new URL(request.url).searchParams;
+        const { limit, cursor } = parsePagination(searchParams);
+        const type = searchParams.get("type");
 
-    const transactionIds = transactions.map((t) => t.id);
+        const conds = [eq(transactions.workspaceId, t.workspaceId), isNull(transactions.deletedAt)];
+        if (type === "income" || type === "expense") conds.push(eq(transactions.type, type));
 
-    const attachmentCounts = await db.attachment.groupBy({
-      by: ["entityId"],
-      where: {
-        entityType: "transaction",
-        entityId: { in: transactionIds },
-      },
-      _count: true,
-    });
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length === 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: transactions.date, value: at }],
+                        transactions.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    const countMap = Object.fromEntries(
-      attachmentCounts.map((a) => [a.entityId, a._count]),
-    );
+        const rows = await t.db.query.transactions.findMany({
+            where: and(...conds),
+            orderBy: [desc(transactions.date), desc(transactions.id)],
+            limit: limit + 1,
+            with: { createdBy: { columns: { id: true, name: true, image: true } } },
+        });
 
-    const data = transactions.map((t) => ({
-      ...t,
-      amount: Number(t.amount),
-      attachmentCount: countMap[t.id] ?? 0,
-    }));
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.date.toISOString(), last.id]);
+        }
 
-    return success(data);
-  } catch (e) {
-    console.error("GET /api/finance/transactions", e);
-    return error("Internal server error", 500);
-  }
+        const ids = rows.map((r) => r.id);
+        const countMap = new Map<string, number>();
+        if (ids.length > 0) {
+            const counts = await t.db
+                .select({ entityId: attachments.entityId, n: count() })
+                .from(attachments)
+                .where(
+                    and(
+                        eq(attachments.entityType, "transaction"),
+                        inArray(attachments.entityId, ids),
+                        eq(attachments.workspaceId, t.workspaceId),
+                        isNull(attachments.deletedAt),
+                    ),
+                )
+                .groupBy(attachments.entityId);
+            for (const c of counts) countMap.set(c.entityId, c.n);
+        }
+        const items = rows.map((r) => ({ ...r, attachmentCount: countMap.get(r.id) ?? 0 }));
+
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/finance/transactions", e);
+    }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
-    const db = getDbFromCookie(request);
+    try {
+        const t = await requireTenant(request, { permission: "manage_finance", module: "finance" });
+        const body = await parseBody<CreateTransactionInput>(
+            createTransactionSchema as never,
+            request,
+        );
+        const cents = toCents(body.amount);
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: session.user.portal },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        let date = new Date();
+        if (body.date) {
+            date = new Date(body.date);
+            if (Number.isNaN(date.getTime())) throw new ApiError("Invalid date", 400);
+        }
 
-    const body = await request.json();
-    const { amount, type, category, description, date } = body;
+        const id = randomUUID();
+        const [[transaction]] = await Promise.all([
+            t.db
+                .insert(transactions)
+                .values({
+                    id,
+                    workspaceId: t.workspaceId,
+                    amountCents: cents,
+                    type: body.type,
+                    category: body.category?.trim() || null,
+                    description: body.description?.trim() || null,
+                    date,
+                    createdById: t.userId,
+                })
+                .returning(),
+            emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "create_transaction",
+                entityType: "transaction",
+                entityId: id,
+                metadata: { amountCents: cents, type: body.type },
+                ipAddress: clientIp(request),
+            }),
+        ]);
 
-    if (amount == null || !type) {
-      return error("Amount and type are required", 400);
+        return ok(transaction, 201);
+    } catch (e) {
+        return handleRouteError("POST /api/finance/transactions", e);
     }
-    if (!["income", "expense"].includes(type)) {
-      return error("Type must be income or expense", 400);
-    }
-
-    const transaction = await db.transaction.create({
-      data: {
-        workspaceId: workspace.id,
-        amount,
-        type,
-        category: category ?? null,
-        description: description || null,
-        date: date ? new Date(date) : new Date(),
-        createdById: session.user.id,
-      },
-    });
-
-    await db.activityFeed.create({
-      data: {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "created",
-        entityType: "transaction",
-        entityId: transaction.id,
-        metadata: { amount: Number(amount), type },
-      },
-    });
-
-    await writeAuditLog(
-      {
-        workspaceId: workspace.id,
-        userId: session.user.id,
-        action: "create_transaction",
-        entityType: "transaction",
-        entityId: transaction.id,
-        metadata: { amount: Number(amount), type, category },
-      },
-      db,
-    );
-
-    return success({ ...transaction, amount: Number(transaction.amount) }, 201);
-  } catch (e) {
-    console.error("POST /api/finance/transactions", e);
-    return error("Internal server error", 500);
-  }
 }
