@@ -147,3 +147,6 @@ public/img
 main.exe
 
 uploads
+
+# Internal operator notes. Never commit.
+PORTING_GUIDE.md
