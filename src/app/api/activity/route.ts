@@ -1,46 +1,61 @@
-import { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
+import { activityFeed } from "@/db/schema";
+import {
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    keysetWhere,
+    ok,
+    parsePagination,
+} from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+    try {
+        const t = await requireTenant(request, { module: "members" });
+        const searchParams = new URL(request.url).searchParams;
+        const { limit, cursor } = parsePagination(searchParams);
+        const entityType = searchParams.get("entityType")?.trim() || null;
 
-    const db = getDbFromCookie(request);
-    const portal = session.user.portal;
+        const conds = [eq(activityFeed.workspaceId, t.workspaceId)];
+        if (entityType) conds.push(eq(activityFeed.entityType, entityType));
+        const vals = decodeCursorValues(cursor);
+        if (
+            vals &&
+            vals.length >= 2 &&
+            typeof vals[0] === "string" &&
+            typeof vals[1] === "string"
+        ) {
+            const at = new Date(vals[0]);
+            if (!Number.isNaN(at.getTime())) {
+                conds.push(
+                    keysetWhere(
+                        [{ column: activityFeed.createdAt, value: at }],
+                        activityFeed.id,
+                        vals[1],
+                    ),
+                );
+            }
+        }
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
+        const rows = await t.db.query.activityFeed.findMany({
+            where: and(...conds),
+            orderBy: [desc(activityFeed.createdAt), desc(activityFeed.id)],
+            limit: limit + 1,
+            with: { user: { columns: { id: true, name: true, email: true, image: true } } },
+        });
 
-    const { searchParams } = new URL(request.url);
-    const entityType = searchParams.get("entityType") || "";
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") ?? "20", 10)));
+        let nextCursor: string | null = null;
+        if (rows.length > limit) {
+            const last = rows.pop()!;
+            nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
+        }
 
-    const where: Record<string, unknown> = { workspaceId: workspace.id };
-    if (entityType) where.entityType = entityType;
-
-    const [items, total] = await Promise.all([
-      db.activityFeed.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          user: { select: { id: true, name: true, image: true } },
-        },
-      }),
-      db.activityFeed.count({ where }),
-    ]);
-
-    return success({ items, total });
-  } catch (e) {
-    console.error("GET /api/activity", e);
-    return error("Internal server error", 500);
-  }
+        const res = ok(rows);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
+    } catch (e) {
+        return handleRouteError("GET /api/activity", e);
+    }
 }

@@ -1,85 +1,89 @@
-import { auth } from "@/lib/auth";
-import { getDbFromCookie } from "@/lib/db";
-import { success, error } from "@/lib/api-response";
+import type { NextRequest } from "next/server";
+import { and, asc, count, desc, eq, gte, isNull, ne } from "drizzle-orm";
+import { activityFeed, events, memberships, notifications, proposals, tasks } from "@/db/schema";
+import { handleRouteError, ok } from "@/lib/api";
+import { requireTenant } from "@/lib/tenant";
 
-export async function GET(request: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return error("Unauthorized", 401);
+export async function GET(request: NextRequest) {
+    try {
+        const t = await requireTenant(request, {});
+        const now = new Date();
 
-    const portal = session.user.portal;
-    if (!portal) return error("No portal selected", 400);
+        const [taskGroups, upcomingEvents, pendingRows, unreadRows, memberRows, recentActivity] =
+            await Promise.all([
+                t.db
+                    .select({ status: tasks.status, n: count() })
+                    .from(tasks)
+                    .where(
+                        and(
+                            eq(tasks.workspaceId, t.workspaceId),
+                            eq(tasks.assigneeId, t.userId),
+                            ne(tasks.status, "done"),
+                            isNull(tasks.deletedAt),
+                        ),
+                    )
+                    .groupBy(tasks.status),
+                t.db.query.events.findMany({
+                    where: and(
+                        eq(events.workspaceId, t.workspaceId),
+                        isNull(events.deletedAt),
+                        eq(events.status, "published"),
+                        gte(events.startDate, now),
+                    ),
+                    orderBy: [asc(events.startDate), asc(events.id)],
+                    limit: 5,
+                    columns: {
+                        id: true,
+                        title: true,
+                        startDate: true,
+                        endDate: true,
+                        location: true,
+                    },
+                }),
+                t.db
+                    .select({ n: count() })
+                    .from(proposals)
+                    .where(
+                        and(
+                            eq(proposals.workspaceId, t.workspaceId),
+                            eq(proposals.status, "pending"),
+                            isNull(proposals.deletedAt),
+                        ),
+                    ),
+                t.db
+                    .select({ n: count() })
+                    .from(notifications)
+                    .where(
+                        and(
+                            eq(notifications.workspaceId, t.workspaceId),
+                            eq(notifications.userId, t.userId),
+                            eq(notifications.read, false),
+                        ),
+                    ),
+                t.db
+                    .select({ n: count() })
+                    .from(memberships)
+                    .where(eq(memberships.workspaceId, t.workspaceId)),
+                t.db.query.activityFeed.findMany({
+                    where: eq(activityFeed.workspaceId, t.workspaceId),
+                    orderBy: [desc(activityFeed.createdAt), desc(activityFeed.id)],
+                    limit: 8,
+                    with: { user: { columns: { id: true, name: true, email: true, image: true } } },
+                }),
+            ]);
 
-    const db = getDbFromCookie(request);
+        const taskMap: Record<string, number> = {};
+        for (const g of taskGroups) taskMap[g.status] = g.n;
 
-    const workspace = await db.workspace.findUnique({
-      where: { slug: portal },
-      select: { id: true },
-    });
-    if (!workspace) return error("Workspace not found", 404);
-
-    const workspaceId = workspace.id;
-
-    const [taskCounts, upcomingEvents, pendingProposals, unreadNotifications, memberCount, recentActivity] =
-      await Promise.all([
-        db.taskItem.groupBy({
-          by: ["status"],
-          where: { workspaceId },
-          _count: true,
-        }),
-        db.eventItem.findMany({
-          where: {
-            workspaceId,
-            status: "published",
-            startDate: { gte: new Date() },
-          },
-          orderBy: { startDate: "asc" },
-          take: 5,
-          select: {
-            id: true,
-            title: true,
-            startDate: true,
-            endDate: true,
-            location: true,
-          },
-        }),
-        db.proposal.count({
-          where: { workspaceId, status: "pending" },
-        }),
-        db.notification.count({
-          where: { workspaceId, userId: session.user.id, read: false },
-        }),
-        db.membership.count({
-          where: { workspaceId },
-        }),
-        db.activityFeed.findMany({
-          where: { workspaceId },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          include: {
-            user: { select: { id: true, name: true, image: true } },
-          },
-        }),
-      ]);
-
-    const tasks = taskCounts.reduce(
-      (acc, row) => {
-        acc[row.status] = row._count;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-    return success({
-      tasks,
-      upcomingEvents,
-      pendingProposals,
-      unreadNotifications,
-      totalMembers: memberCount,
-      recentActivity,
-    });
-  } catch (e) {
-    console.error("GET /api/dashboard", e);
-    return error("Internal server error", 500);
-  }
+        return ok({
+            tasks: taskMap,
+            upcomingEvents,
+            pendingProposals: pendingRows[0]?.n ?? 0,
+            unreadNotifications: unreadRows[0]?.n ?? 0,
+            totalMembers: memberRows[0]?.n ?? 0,
+            recentActivity,
+        });
+    } catch (e) {
+        return handleRouteError("GET /api/dashboard", e);
+    }
 }
