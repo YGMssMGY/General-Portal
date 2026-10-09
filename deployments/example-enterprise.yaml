@@ -1,0 +1,142 @@
+version: 1
+deployment:
+    id: acme-corp
+    environment: production
+    baseUrl: https://portal.acme.example.com
+defaults:
+    locale: en-US
+    timezone: Asia/Shanghai
+    theme:
+        primary: "#1f3a5f"
+        radius: 5
+portals:
+    - slug: acme
+      name: Acme Corporation
+      category: enterprise
+      description: Company-wide portal for 500 staff across engineering, sales, and operations.
+      branding:
+          logo: /acme.png
+          favicon: /acme.png
+          primary: "#1f3a5f"
+      db:
+          envVar: DATABASE_URL_ACME
+      auth:
+          providers: [saml, oidc]
+          allowedDomains: [acme.example.com]
+      modules:
+          [
+              dashboard,
+              proposals,
+              tasks,
+              events,
+              messages,
+              finance,
+              volunteers,
+              members,
+              files,
+              meetings,
+              activity,
+              subgroups,
+              settings,
+              notifications,
+              partnerships,
+              purchase_requests,
+              calendar,
+              search,
+              accounts,
+              budget,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /proposals
+            label: Proposals
+            icon: file-text
+            module: proposals
+          - path: /tasks
+            label: Tasks
+            icon: clipboard-list
+            module: tasks
+          - path: /events
+            label: Events
+            icon: calendar
+            module: events
+          - path: /messages
+            label: Messages
+            icon: message-square
+            module: messages
+          - path: /finance
+            label: Finance
+            icon: dollar-sign
+            module: finance
+          - path: /volunteers
+            label: Volunteers
+            icon: users
+            module: volunteers
+          - path: /members
+            label: People
+            icon: user-check
+            module: members
+          - path: /files
+            label: Files
+            icon: file
+            module: files
+          - path: /meetings
+            label: Meetings
+            icon: video
+            module: meetings
+          - path: /activity
+            label: Activity
+            icon: activity
+            module: activity
+          - path: /subgroups
+            label: Departments
+            icon: users-round
+            module: subgroups
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+          - path: /notifications
+            label: Notifications
+            icon: bell
+            module: notifications
+          - path: /partnerships
+            label: Partnerships
+            icon: handshake
+            module: partnerships
+          - path: /purchase-requests
+            label: Purchase Requests
+            icon: shopping-cart
+            module: purchase_requests
+          - path: /calendar
+            label: Calendar
+            icon: calendar-days
+            module: calendar
+          - path: /search
+            label: Search
+            icon: search
+            module: search
+          - path: /accounts
+            label: Accounts
+            icon: wallet
+            module: accounts
+          - path: /budget
+            label: Budget
+            icon: piggy-bank
+            module: budget
+      terminology:
+          subgroup: Department
+          academicYear: Quarter
+          member: Colleague
+      roles: [admin, officer, member]
+      seedPack: enterprise_default
+      limits:
+          uploadMb: 50
+          requestsPerMinute: 500
+          auditRetentionDays: 730
+      features: [meeting_minutes, attendance, participation, reports, custom_fields, webhooks]
+      integrations:
+          teamsWebhookEnv: TEAMS_WEBHOOK_URL

@@ -1,0 +1,67 @@
+workspace:
+    name: Developers Club
+    slug: developers_club
+    description: Workspace for the Developers Club - projects, tasks, events and knowledge sharing.
+    settings:
+        dashboard: true
+        proposals: true
+        tasks: true
+        events: true
+        messages: true
+        finance: true
+        volunteers: true
+        members: true
+        files: true
+        meetings: true
+        activity: true
+        subgroups: true
+        settings: true
+        notifications: true
+        partnerships: true
+        purchase_requests: true
+        calendar: true
+        search: true
+        accounts: true
+        budget: true
+roles:
+    - name: admin
+      description: Full control of the workspace
+      isSystem: true
+    - name: officer
+      description: Manages groups, content, and approvals
+      isSystem: true
+    - name: member
+      description: Participates in workspace activities
+      isSystem: true
+users:
+    - email: zhiyu.jiang90454-bisz@basischina.com
+      name: Zhiyu Jiang
+      role: admin
+    - email: chunping.wong12024-bisz@basischina.com
+      name: Chunping Wong
+      role: admin
+    - email: zuheng.liu13010-bisz@basischina.com
+      name: Zuheng Liu
+      role: admin
+sampleTasks:
+    - title: Set up project repository
+      description: Initialize the shared repo with docs and contribution guide.
+      status: todo
+      priority: 1
+      assigneeEmail: zhiyu.jiang90454-bisz@basischina.com
+    - title: Plan kickoff workshop
+      description: Draft the agenda and book a room for the club kickoff session.
+      status: todo
+      priority: 2
+      assigneeEmail: zhiyu.jiang90454-bisz@basischina.com
+sampleEvents:
+    - title: Club kickoff
+      description: Welcome event for new and returning Developers Club members.
+      startDate: +7d
+      location: School Hall
+      status: published
+      isPublic: true
+proposalTemplates:
+    - title: Project proposal
+      description: Template for proposing a new club project with goals and timeline.
+      category: project

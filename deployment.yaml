@@ -1,0 +1,272 @@
+version: 1
+deployment:
+    id: general-portal
+    environment: production
+    baseUrl: http://localhost:3000
+defaults:
+    locale: en-US
+    timezone: Asia/Shanghai
+    theme:
+        primary: "#0f62fe"
+        radius: 5
+portals:
+    - slug: developers
+      name: "Developers' Club"
+      category: technology
+      description: Build software, contribute to open source, and grow your engineering skills through hands-on projects and workshops.
+      branding:
+          logo: /developers.png
+          favicon: /developers.png
+          primary: "#0f62fe"
+      db:
+          envVar: DATABASE_URL_DEVELOPERS
+      auth:
+          providers: [microsoft-entra-id, basis-auth]
+          allowedDomains: [basischina.com]
+      modules:
+          [
+              dashboard,
+              proposals,
+              tasks,
+              events,
+              messages,
+              finance,
+              volunteers,
+              members,
+              files,
+              meetings,
+              activity,
+              subgroups,
+              settings,
+              notifications,
+              partnerships,
+              purchase_requests,
+              calendar,
+              search,
+              accounts,
+              budget,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /proposals
+            label: Proposals
+            icon: file-text
+            module: proposals
+          - path: /tasks
+            label: Tasks
+            icon: clipboard-list
+            module: tasks
+          - path: /events
+            label: Events
+            icon: calendar
+            module: events
+          - path: /messages
+            label: Messages
+            icon: message-square
+            module: messages
+          - path: /finance
+            label: Finance
+            icon: dollar-sign
+            module: finance
+          - path: /volunteers
+            label: Volunteers
+            icon: users
+            module: volunteers
+          - path: /members
+            label: Members
+            icon: user-check
+            module: members
+          - path: /files
+            label: Files
+            icon: file
+            module: files
+          - path: /meetings
+            label: Meetings
+            icon: video
+            module: meetings
+          - path: /activity
+            label: Activity
+            icon: activity
+            module: activity
+          - path: /subgroups
+            label: Guilds
+            icon: users-round
+            module: subgroups
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+          - path: /notifications
+            label: Notifications
+            icon: bell
+            module: notifications
+          - path: /partnerships
+            label: Partnerships
+            icon: handshake
+            module: partnerships
+          - path: /purchase-requests
+            label: Purchase Requests
+            icon: shopping-cart
+            module: purchase_requests
+          - path: /calendar
+            label: Calendar
+            icon: calendar-days
+            module: calendar
+          - path: /search
+            label: Search
+            icon: search
+            module: search
+          - path: /accounts
+            label: Accounts
+            icon: wallet
+            module: accounts
+          - path: /budget
+            label: Budget
+            icon: piggy-bank
+            module: budget
+      terminology:
+          subgroup: Guild
+          academicYear: Academic Year
+          member: Member
+      roles: [admin, officer, member]
+      seedPack: developers_club
+      limits:
+          uploadMb: 10
+          requestsPerMinute: 100
+          auditRetentionDays: 365
+      features: [meeting_minutes, attendance, participation, reports, custom_fields, webhooks]
+      integrations:
+          teamsWebhookEnv: TEAMS_WEBHOOK_URL
+    - slug: stuco
+      name: Student Council
+      category: governance
+      description: Lead student initiatives, organize events, and represent the student body in shaping campus life.
+      branding:
+          logo: /stuco.png
+          favicon: /stuco.png
+          primary: "#0f62fe"
+      db:
+          envVar: DATABASE_URL_STUCO
+      auth:
+          providers: [microsoft-entra-id, basis-auth]
+          allowedDomains: [basischina.com]
+      modules:
+          [
+              dashboard,
+              proposals,
+              tasks,
+              events,
+              messages,
+              finance,
+              volunteers,
+              members,
+              files,
+              meetings,
+              activity,
+              subgroups,
+              settings,
+              notifications,
+              partnerships,
+              purchase_requests,
+              calendar,
+              search,
+              accounts,
+              budget,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /proposals
+            label: Proposals
+            icon: file-text
+            module: proposals
+          - path: /tasks
+            label: Tasks
+            icon: clipboard-list
+            module: tasks
+          - path: /events
+            label: Events
+            icon: calendar
+            module: events
+          - path: /messages
+            label: Messages
+            icon: message-square
+            module: messages
+          - path: /finance
+            label: Finance
+            icon: dollar-sign
+            module: finance
+          - path: /volunteers
+            label: Volunteers
+            icon: users
+            module: volunteers
+          - path: /members
+            label: Members
+            icon: user-check
+            module: members
+          - path: /files
+            label: Files
+            icon: file
+            module: files
+          - path: /meetings
+            label: Meetings
+            icon: video
+            module: meetings
+          - path: /activity
+            label: Activity
+            icon: activity
+            module: activity
+          - path: /subgroups
+            label: Committees
+            icon: users-round
+            module: subgroups
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+          - path: /notifications
+            label: Notifications
+            icon: bell
+            module: notifications
+          - path: /partnerships
+            label: Partnerships
+            icon: handshake
+            module: partnerships
+          - path: /purchase-requests
+            label: Purchase Requests
+            icon: shopping-cart
+            module: purchase_requests
+          - path: /calendar
+            label: Calendar
+            icon: calendar-days
+            module: calendar
+          - path: /search
+            label: Search
+            icon: search
+            module: search
+          - path: /accounts
+            label: Accounts
+            icon: wallet
+            module: accounts
+          - path: /budget
+            label: Budget
+            icon: piggy-bank
+            module: budget
+      terminology:
+          subgroup: Committee
+          academicYear: Academic Year
+          member: Councillor
+      roles: [admin, officer, member]
+      seedPack: student_council
+      limits:
+          uploadMb: 10
+          requestsPerMinute: 100
+          auditRetentionDays: 365
+      features: [meeting_minutes, attendance, participation, reports, custom_fields, webhooks]
+      integrations:
+          teamsWebhookEnv: TEAMS_WEBHOOK_URL

@@ -1,0 +1,67 @@
+workspace:
+    name: Student Council
+    slug: student_council
+    description: Workspace for the Student Council - proposals, events, meetings and school initiatives.
+    settings:
+        dashboard: true
+        proposals: true
+        tasks: true
+        events: true
+        messages: true
+        finance: true
+        volunteers: true
+        members: true
+        files: true
+        meetings: true
+        activity: true
+        subgroups: true
+        settings: true
+        notifications: true
+        partnerships: true
+        purchase_requests: true
+        calendar: true
+        search: true
+        accounts: true
+        budget: true
+roles:
+    - name: admin
+      description: Full control of the workspace
+      isSystem: true
+    - name: officer
+      description: Manages groups, content, and approvals
+      isSystem: true
+    - name: member
+      description: Participates in workspace activities
+      isSystem: true
+users:
+    - email: zhiyu.jiang90454-bisz@basischina.com
+      name: Zhiyu Jiang
+      role: admin
+    - email: chris.xu11265-bisz@basischina.com
+      name: Chris Xu
+      role: admin
+    - email: alice.wu10926-bisz@basischina.com
+      name: Alice Wu
+      role: admin
+sampleTasks:
+    - title: Draft semester plan
+      description: Outline council goals and key initiatives for the semester.
+      status: todo
+      priority: 1
+      assigneeEmail: zhiyu.jiang90454-bisz@basischina.com
+    - title: Collect class feedback
+      description: Gather suggestions from each class for the next council meeting.
+      status: todo
+      priority: 2
+      assigneeEmail: zhiyu.jiang90454-bisz@basischina.com
+sampleEvents:
+    - title: Town hall assembly
+      description: Open forum for students to raise ideas and concerns.
+      startDate: +7d
+      location: School Auditorium
+      status: published
+      isPublic: true
+proposalTemplates:
+    - title: Initiative proposal
+      description: Template for proposing a new student council initiative.
+      category: initiative

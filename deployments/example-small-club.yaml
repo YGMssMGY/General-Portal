@@ -1,0 +1,50 @@
+version: 1
+deployment:
+    id: trail-society
+    environment: production
+    baseUrl: https://hiking.example.com
+defaults:
+    locale: en-US
+    timezone: Asia/Shanghai
+    theme:
+        primary: "#2e7d32"
+        radius: 5
+portals:
+    - slug: hiking-club
+      name: Hiking Club
+      category: sports
+      description: Weekend hikes, trail guides, and outdoor trips for all levels.
+      branding:
+          logo: /hiking.png
+          favicon: /hiking.png
+          primary: "#2e7d32"
+      db:
+          envVar: DATABASE_URL_HIKING_CLUB
+      auth:
+          providers: [google, email-otp]
+          allowedDomains: []
+      modules: [dashboard, events, members]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /events
+            label: Events
+            icon: calendar
+            module: events
+          - path: /members
+            label: Members
+            icon: user-check
+            module: members
+      terminology:
+          subgroup: Team
+          academicYear: Season
+          member: Hiker
+      roles: [admin, officer, member]
+      seedPack: hiking_club
+      limits:
+          uploadMb: 10
+          requestsPerMinute: 100
+          auditRetentionDays: 365
+      features: [attendance, reports]
