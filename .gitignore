@@ -148,5 +148,17 @@ main.exe
 
 uploads
 
+# Playwright test output
+test-results/
+playwright-report/
+blob-report/
+
 # Internal operator notes. Never commit.
 PORTING_GUIDE.md
+
+# Server TUI runtime data. Never commit.
+.backups/
+.tui-audit.log
+
+# Playwright authentication state. Never commit.
+tests/e2e/.auth/
