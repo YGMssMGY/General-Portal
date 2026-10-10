@@ -4,6 +4,7 @@ import { z } from "zod";
 import { events } from "@/db/schema";
 import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
+import { validateCustomFields } from "@/lib/custom-fields";
 import { writeAuditLog } from "@/lib/audit";
 
 type BodySchema<T> = {
@@ -27,6 +28,7 @@ const updateEventSchema = z.object({
     location: z.string().nullable().optional(),
     isPublic: z.boolean().optional(),
     status: z.enum(["draft", "published", "cancelled"]).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const scoped = (id: string, workspaceId: string) =>
@@ -63,8 +65,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         const body = await parse(updateEventSchema, request);
         if (Object.keys(body).length === 0) throw new ApiError("No fields to update", 400);
+        if (body.metadata !== undefined) {
+            const fieldErrors = await validateCustomFields(
+                t.db,
+                t.workspaceId,
+                "event",
+                body.metadata as Record<string, unknown> | undefined,
+            );
+            if (fieldErrors.length > 0) throw new ApiError(fieldErrors.join("; "), 400);
+        }
 
         const set: Partial<typeof events.$inferInsert> = { updatedAt: new Date() };
+        if (body.metadata !== undefined) set.metadata = body.metadata as Record<string, unknown>;
         if (body.title !== undefined) set.title = body.title;
         if (body.description !== undefined) set.description = body.description;
         if (body.startDate !== undefined) set.startDate = body.startDate;

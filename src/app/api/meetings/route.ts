@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -23,8 +23,22 @@ const createMeetingSchema = z.object({
     startTime: z.string().min(1),
     endTime: z.string().nullable().optional(),
     location: z.string().trim().nullable().optional(),
+    checkInCode: z
+        .string()
+        .trim()
+        .regex(/^[A-Za-z0-9]{6}$/)
+        .nullable()
+        .optional(),
+    generateCode: z.boolean().optional(),
 });
 type CreateMeetingInput = z.infer<typeof createMeetingSchema>;
+
+function newMeetingCheckInCode(): string {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let out = "";
+    for (let i = 0; i < 6; i++) out += chars[randomInt(chars.length)];
+    return out;
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -120,6 +134,9 @@ export async function POST(request: NextRequest) {
         }
 
         const id = randomUUID();
+        const checkInCode = body.generateCode
+            ? newMeetingCheckInCode()
+            : (body.checkInCode?.toUpperCase() ?? null);
         const [[meeting]] = await Promise.all([
             t.db
                 .insert(meetings)
@@ -131,6 +148,7 @@ export async function POST(request: NextRequest) {
                     startTime,
                     endTime,
                     location: body.location ?? null,
+                    checkInCode,
                 })
                 .returning(),
             emitSideEffects(t.db, {

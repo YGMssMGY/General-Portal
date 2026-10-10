@@ -15,6 +15,8 @@ import {
     parsePagination,
 } from "@/lib/api";
 import { emitSideEffects } from "@/lib/side-effects";
+import { validateCustomFields } from "@/lib/custom-fields";
+import { parseRecurrenceRule } from "@/lib/recurrence";
 import { requireTenant } from "@/lib/tenant";
 
 const createTaskSchema = z.object({
@@ -23,6 +25,8 @@ const createTaskSchema = z.object({
     priority: z.number().int().optional(),
     dueDate: z.string().nullable().optional(),
     assigneeId: z.string().uuid().nullable().optional(),
+    recurrence: z.string().nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
@@ -122,11 +126,22 @@ export async function POST(request: NextRequest) {
     try {
         const t = await requireTenant(request, { permission: "create_task", module: "tasks" });
         const body = await parseBody<CreateTaskInput>(createTaskSchema as never, request);
+        const fieldErrors = await validateCustomFields(t.db, t.workspaceId, "task", body.metadata);
+        if (fieldErrors.length > 0) throw new ApiError(fieldErrors.join("; "), 400);
 
         let dueDate: Date | null = null;
         if (body.dueDate) {
             dueDate = new Date(body.dueDate);
             if (Number.isNaN(dueDate.getTime())) throw new ApiError("Invalid dueDate", 400);
+        }
+        let recurrence: string | null = null;
+        if (body.recurrence) {
+            try {
+                parseRecurrenceRule(body.recurrence);
+            } catch {
+                throw new ApiError("Invalid recurrence rule", 400);
+            }
+            recurrence = body.recurrence;
         }
 
         const id = randomUUID();
@@ -141,6 +156,8 @@ export async function POST(request: NextRequest) {
                     priority: body.priority ?? 0,
                     dueDate,
                     assigneeId: body.assigneeId ?? null,
+                    recurrence,
+                    metadata: (body.metadata ?? {}) as Record<string, unknown>,
                     createdById: t.userId,
                 })
                 .returning(),

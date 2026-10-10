@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 import { config } from "@/config";
 import { ApiError, handleRouteError, requireUuid } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
-import { attachments } from "@/db/schema";
+import { attachments, attachmentVersions } from "@/db/schema";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -23,13 +23,34 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
         if (!file) throw new ApiError("File not found", 404);
 
-        const buffer = await readFile(join(config.uploadsDir, file.storagePath));
+        const versionParam = request.nextUrl.searchParams.get("version");
+        let storagePath = file.storagePath;
+        let fileSize = file.fileSize;
+        if (versionParam !== null) {
+            const version = Number.parseInt(versionParam, 10);
+            if (!Number.isInteger(version) || version < 1)
+                throw new ApiError("Invalid version", 400);
+            const rows = await t.db.query.attachmentVersions.findMany({
+                where: and(
+                    eq(attachmentVersions.attachmentId, id),
+                    eq(attachmentVersions.version, version),
+                ),
+                columns: { storagePath: true, fileSize: true },
+                limit: 1,
+            });
+            const match = rows[0];
+            if (!match) throw new ApiError("Version not found", 404);
+            storagePath = match.storagePath;
+            fileSize = match.fileSize;
+        }
+
+        const buffer = await readFile(join(config.uploadsDir, storagePath));
         const encodedName = encodeURIComponent(file.fileName);
         return new Response(new Uint8Array(buffer), {
             headers: {
                 "Content-Type": "application/octet-stream",
                 "Content-Disposition": `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`,
-                "Content-Length": String(file.fileSize),
+                "Content-Length": String(fileSize),
                 "X-Content-Type-Options": "nosniff",
             },
         });
