@@ -5,6 +5,7 @@ import { messageThreads, messages } from "@/db/schema";
 import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 import { emitSideEffects } from "@/lib/side-effects";
+import { notifyMentioned } from "@/lib/mentions";
 
 function body<T>(schema: {
     safeParse: (
@@ -73,6 +74,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             metadata: { messageId: message.id },
             ipAddress: clientIp(request),
         });
+
+        void notifyMentioned(t.db, {
+            workspaceId: t.workspaceId,
+            entityType: "message",
+            entityId: message.id,
+            text: data.content,
+            senderId: t.userId,
+            link: `/messages?thread=${threadId}`,
+        }).catch(() => {});
 
         return ok(
             {

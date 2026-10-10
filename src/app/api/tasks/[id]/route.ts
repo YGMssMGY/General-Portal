@@ -12,6 +12,8 @@ import {
     requireUuid,
 } from "@/lib/api";
 import { emitSideEffects } from "@/lib/side-effects";
+import { validateCustomFields } from "@/lib/custom-fields";
+import { parseRecurrenceRule } from "@/lib/recurrence";
 import { requireTenant } from "@/lib/tenant";
 
 const updateTaskSchema = z.object({
@@ -21,6 +23,9 @@ const updateTaskSchema = z.object({
     priority: z.number().int().optional(),
     dueDate: z.string().nullable().optional(),
     assigneeId: z.string().nullable().optional(),
+    dependsOnId: z.string().uuid().nullable().optional(),
+    recurrence: z.string().nullable().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
@@ -49,7 +54,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         });
         if (!task) throw new ApiError("Task not found", 404);
 
-        return ok(task);
+        let blockedBy: { id: string; title: string; status: string } | null = null;
+        if (task.dependsOnId) {
+            const dep = await t.db.query.tasks.findFirst({
+                where: and(
+                    eq(tasks.id, task.dependsOnId),
+                    eq(tasks.workspaceId, t.workspaceId),
+                    isNull(tasks.deletedAt),
+                ),
+                columns: { id: true, title: true, status: true },
+            });
+            if (dep) blockedBy = { id: dep.id, title: dep.title, status: dep.status };
+        }
+        return ok({
+            ...task,
+            blockedBy,
+            isBlocked: blockedBy ? blockedBy.status !== "done" : false,
+        });
     } catch (e) {
         return handleRouteError("GET /api/tasks/[id]", e);
     }
@@ -81,10 +102,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (!Object.values(body).some((v) => v !== undefined)) {
             throw new ApiError("No fields to update", 400);
         }
+        if (body.metadata !== undefined) {
+            const fieldErrors = await validateCustomFields(
+                t.db,
+                t.workspaceId,
+                "task",
+                body.metadata,
+            );
+            if (fieldErrors.length > 0) throw new ApiError(fieldErrors.join("; "), 400);
+        }
 
         const set: Partial<typeof tasks.$inferInsert> & { updatedAt: Date } = {
             updatedAt: new Date(),
         };
+        if (body.metadata !== undefined) set.metadata = body.metadata as Record<string, unknown>;
         if (body.title !== undefined) set.title = body.title;
         if (body.description !== undefined) set.description = body.description;
         if (body.status !== undefined) set.status = body.status;
@@ -104,6 +135,53 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             } else {
                 if (!isUuid(body.assigneeId)) throw new ApiError("Invalid assigneeId", 400);
                 set.assigneeId = body.assigneeId;
+            }
+        }
+        if (body.recurrence !== undefined) {
+            if (body.recurrence === null || body.recurrence === "") {
+                set.recurrence = null;
+            } else {
+                try {
+                    parseRecurrenceRule(body.recurrence);
+                } catch {
+                    throw new ApiError("Invalid recurrence rule", 400);
+                }
+                set.recurrence = body.recurrence;
+            }
+        }
+        if (body.dependsOnId !== undefined) {
+            if (body.dependsOnId === null) {
+                set.dependsOnId = null;
+            } else {
+                if (body.dependsOnId === id)
+                    throw new ApiError("A task cannot depend on itself", 400);
+                const target = await t.db.query.tasks.findFirst({
+                    where: and(
+                        eq(tasks.id, body.dependsOnId),
+                        eq(tasks.workspaceId, t.workspaceId),
+                        isNull(tasks.deletedAt),
+                    ),
+                    columns: { id: true, dependsOnId: true },
+                });
+                if (!target) throw new ApiError("Dependency task not found", 404);
+                let cursor: string | null = target.dependsOnId ?? null;
+                for (let i = 0; i < 50; i++) {
+                    if (!cursor) break;
+                    if (cursor === id)
+                        throw new ApiError("This dependency would create a cycle", 400);
+                    const next = await t.db.query.tasks.findFirst({
+                        where: and(
+                            eq(tasks.id, cursor),
+                            eq(tasks.workspaceId, t.workspaceId),
+                            isNull(tasks.deletedAt),
+                        ),
+                        columns: { id: true, dependsOnId: true },
+                    });
+                    if (!next) break;
+                    cursor = next.dependsOnId ?? null;
+                }
+                if (cursor === id) throw new ApiError("This dependency would create a cycle", 400);
+                set.dependsOnId = body.dependsOnId;
             }
         }
 

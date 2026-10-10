@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 import { emitSideEffects } from "@/lib/side-effects";
+import { validateCustomFields } from "@/lib/custom-fields";
 
 type BodySchema<T> = {
     safeParse: (v: unknown) =>
@@ -37,6 +38,7 @@ const createEventSchema = z.object({
     location: z.string().nullish(),
     isPublic: z.boolean().optional(),
     status: z.enum(["draft", "published", "cancelled"]).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -103,6 +105,13 @@ export async function POST(request: NextRequest) {
     try {
         const t = await requireTenant(request, { permission: "create_event", module: "events" });
         const body = await parse(createEventSchema, request);
+        const fieldErrors = await validateCustomFields(
+            t.db,
+            t.workspaceId,
+            "event",
+            body.metadata as Record<string, unknown> | undefined,
+        );
+        if (fieldErrors.length > 0) throw new ApiError(fieldErrors.join("; "), 400);
 
         const inserted = await t.db
             .insert(events)
@@ -115,6 +124,7 @@ export async function POST(request: NextRequest) {
                 location: body.location ?? null,
                 isPublic: body.isPublic ?? false,
                 status: body.status ?? "draft",
+                metadata: (body.metadata ?? {}) as Record<string, unknown>,
                 createdById: t.userId,
             })
             .returning();

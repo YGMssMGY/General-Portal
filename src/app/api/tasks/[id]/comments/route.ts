@@ -6,6 +6,7 @@ import { taskComments, tasks } from "@/db/schema";
 import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
 import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
+import { notifyMentioned } from "@/lib/mentions";
 
 const createCommentSchema = z.object({ content: z.string().trim().min(1) });
 type CreateCommentInput = z.infer<typeof createCommentSchema>;
@@ -68,6 +69,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 ipAddress: clientIp(request),
             }),
         ]);
+
+        void notifyMentioned(t.db, {
+            workspaceId: t.workspaceId,
+            entityType: "task_comment",
+            entityId: comment.id,
+            text: body.content,
+            senderId: t.userId,
+            link: `/tasks?task=${id}`,
+        }).catch(() => {});
 
         return ok(comment, 201);
     } catch (e) {
