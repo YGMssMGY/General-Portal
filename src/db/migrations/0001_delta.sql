@@ -14,6 +14,8 @@ ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "dependsOnId" uuid;
 --> statement-breakpoint
 ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "recurrence" text;
 --> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "tasks_meeting_idx" ON "tasks" ("meetingId");
+--> statement-breakpoint
 ALTER TABLE "meetings" ADD COLUMN IF NOT EXISTS "checkInCode" varchar(12);
 --> statement-breakpoint
 ALTER TABLE "attachments" ADD COLUMN IF NOT EXISTS "sha256" text;
