@@ -46,6 +46,8 @@ const eslintConfig = [
             "src/tui/**/*",
             "scripts/**/*",
             "instrumentation.ts",
+            "playwright.config.ts",
+            "tests/e2e/**/*",
         ],
         rules: {
             "no-restricted-properties": "off",
