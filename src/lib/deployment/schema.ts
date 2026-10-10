@@ -7,8 +7,7 @@ const providerSchema = z.enum([
     "saml",
     "google",
     "github",
-    "credentials",
-    "magic-link",
+    "password",
     "email-otp",
     "passkey",
 ]);

@@ -65,7 +65,9 @@ function checkRateLimit(request: NextRequest): NextResponse | null {
     const path = request.nextUrl.pathname;
     const sensitive =
         path.startsWith("/api/auth/") || path === "/api/link-preview" || path === "/api/search";
-    const limit = sensitive ? 10 : 100;
+    const limit = sensitive
+        ? Math.max(10, Math.floor(appConfig.rateLimitMax / 10))
+        : appConfig.rateLimitMax;
     const key = `${clientIp(request)}:${path}`;
     const now = Date.now();
     const slot = buckets.get(key);
