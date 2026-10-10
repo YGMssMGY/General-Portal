@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@/db/schema";
+import { config } from "@/config";
 import { logger } from "@/lib/logger";
 
 export type PortalDb = NodePgDatabase<typeof schema>;
@@ -38,7 +39,7 @@ function buildPool(url: string): Pool {
     const separator = url.includes("?") ? "&" : "?";
     return new Pool({
         connectionString: `${url}${separator}statement_timeout=15000`,
-        max: 2,
+        max: config.poolMax,
         idleTimeoutMillis: 30_000,
         connectionTimeoutMillis: 5_000,
     });
