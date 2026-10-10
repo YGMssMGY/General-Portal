@@ -29,7 +29,10 @@ function isKnownProvider(v: string): boolean {
 
 export function getPortalAuthConfig(slug: string): PortalAuthConfig {
     const envKey = `AUTH_PROVIDERS_${slug.toUpperCase().replace(/-/g, "_")}`;
+    // Dynamic per-portal keys cannot be statically typed in @/config; read here.
+    // eslint-disable-next-line no-restricted-properties
     const rawProviders = process.env[envKey];
+    // eslint-disable-next-line no-restricted-properties
     const rawDomains = process.env.ALLOWED_DOMAINS ?? "";
     return portalAuthSchema.parse({
         providers:

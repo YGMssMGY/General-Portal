@@ -7,8 +7,25 @@ export const config = {
 };
 
 const LOCALE_COOKIE = "NEXT_LOCALE";
-const CSP =
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+
+function makeNonce(): string {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    let s = "";
+    for (const b of bytes) s += String.fromCharCode(b);
+    return btoa(s);
+}
+
+function contentSecurityPolicy(nonce: string): string {
+    return (
+        "default-src 'self'; " +
+        `script-src 'self' 'nonce-${nonce}'; ` +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "connect-src 'self'; " +
+        "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+    );
+}
 
 const SUPPORTED: readonly string[] = routing.locales;
 const BASE_FALLBACK: Record<string, string> = {
@@ -29,11 +46,11 @@ function clientIp(request: NextRequest): string {
     );
 }
 
-function applySecurity(res: NextResponse, request: NextRequest): NextResponse {
-    res.headers.set("Content-Security-Policy", CSP);
+function applySecurity(res: NextResponse, request: NextRequest, nonce: string): NextResponse {
+    res.headers.set("Content-Security-Policy", contentSecurityPolicy(nonce));
     if (
         request.headers.get("x-forwarded-proto") === "https" ||
-        process.env.NODE_ENV === "production"
+        appConfig.nodeEnv === "production"
     ) {
         res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     }
@@ -87,18 +104,21 @@ function detectLocale(request: NextRequest): string {
 
 function pass(request: NextRequest): NextResponse {
     const locale = detectLocale(request);
+    const nonce = makeNonce();
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-locale", locale);
+    requestHeaders.set("x-nonce", nonce);
     const res = NextResponse.next({ request: { headers: requestHeaders } });
     if (request.cookies.get(LOCALE_COOKIE)?.value !== locale) {
         res.cookies.set(LOCALE_COOKIE, locale, { path: "/", maxAge: 31536000, sameSite: "lax" });
     }
-    return applySecurity(res, request);
+    return applySecurity(res, request, nonce);
 }
 
 export function middleware(request: NextRequest): NextResponse {
+    const nonce = makeNonce();
     const limited = checkRateLimit(request);
-    if (limited) return applySecurity(limited, request);
+    if (limited) return applySecurity(limited, request, nonce);
 
     const path = request.nextUrl.pathname;
     if (
@@ -112,13 +132,17 @@ export function middleware(request: NextRequest): NextResponse {
         return pass(request);
     }
     if (path.startsWith("/api/")) {
-        if (!request.cookies.get(appConfig.sessionCookie)?.value) {
+        if (
+            !request.cookies.get(appConfig.sessionCookie)?.value &&
+            !request.headers.get("authorization")?.startsWith("Bearer ")
+        ) {
             return applySecurity(
                 NextResponse.json(
                     { success: false as const, error: "Unauthorized" },
                     { status: 401 },
                 ),
                 request,
+                nonce,
             );
         }
         return pass(request);
@@ -127,7 +151,7 @@ export function middleware(request: NextRequest): NextResponse {
         const url = request.nextUrl.clone();
         url.pathname = "/login";
         url.search = `?callbackUrl=${encodeURIComponent(path)}`;
-        return applySecurity(NextResponse.redirect(url), request);
+        return applySecurity(NextResponse.redirect(url), request, nonce);
     }
     return pass(request);
 }

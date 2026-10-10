@@ -1,12 +1,21 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb, listPortalSlugs, type PortalDb } from "@/db/client";
-import { authIdentities, authPending, memberships, sessions, users, workspaces } from "@/db/schema";
+import {
+    authIdentities,
+    authPending,
+    memberships,
+    roles,
+    sessions,
+    users,
+    workspaces,
+} from "@/db/schema";
 import { config } from "@/config";
 import { ApiError, ok } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { newSessionToken, sessionCookieHeader, sessionExpiry } from "@/lib/tenant";
 import { emailAllowed, getPortalAuthConfig, secureCookies } from "@/lib/auth/providers";
+import { getPortal } from "@/lib/deployment";
 
 export class AccessDenied extends Error {
     constructor() {
@@ -104,6 +113,39 @@ async function resolveBasisUser(
     return fresh;
 }
 
+async function autoJoinIfAllowed(
+    db: PortalDb,
+    slug: string,
+    workspaceId: string,
+    userId: string,
+    email: string,
+): Promise<boolean> {
+    let allowed: string[];
+    try {
+        allowed = getPortal(slug).auth.allowedDomains.map((d) => d.toLowerCase());
+    } catch {
+        return false;
+    }
+    if (allowed.length === 0) return false;
+    const domain = email.split("@")[1]?.toLowerCase() ?? "";
+    if (!allowed.includes(domain)) return false;
+    const role = await db.query.roles.findFirst({
+        where: and(
+            eq(roles.workspaceId, workspaceId),
+            eq(roles.name, "member"),
+            eq(roles.isSystem, true),
+        ),
+    });
+    if (!role) return false;
+    try {
+        await db.insert(memberships).values({ userId, workspaceId, roleId: role.id });
+    } catch {
+        return false;
+    }
+    logger.info({ portal: slug, roleId: role.id }, "sso auto-join membership created");
+    return true;
+}
+
 export async function createSessionForUser(input: {
     slug: string;
     provider: string;
@@ -159,7 +201,7 @@ export async function createSessionForUser(input: {
     const member = await db.query.memberships.findFirst({
         where: and(eq(memberships.workspaceId, workspace.id), eq(memberships.userId, user.id)),
     });
-    if (!member) {
+    if (!member && !(await autoJoinIfAllowed(db, input.slug, workspace.id, user.id, email))) {
         logger.info(
             { portal: input.slug, provider: input.provider },
             "login denied: no membership",

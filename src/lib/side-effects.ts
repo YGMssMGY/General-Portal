@@ -1,6 +1,27 @@
+import { eq } from "drizzle-orm";
 import type { PortalDb } from "@/db/client";
-import { activityFeed } from "@/db/schema";
+import { activityFeed, workspaces } from "@/db/schema";
 import { writeAuditLog } from "@/lib/audit";
+import { logger } from "@/lib/logger";
+
+const slugCache = new Map<string, string>();
+
+async function workspaceSlug(db: PortalDb, workspaceId: string): Promise<string | null> {
+    const hit = slugCache.get(workspaceId);
+    if (hit) return hit;
+    try {
+        const rows = await db
+            .select({ slug: workspaces.slug })
+            .from(workspaces)
+            .where(eq(workspaces.id, workspaceId))
+            .limit(1);
+        if (!rows[0]) return null;
+        slugCache.set(workspaceId, rows[0].slug);
+        return rows[0].slug;
+    } catch {
+        return null;
+    }
+}
 
 export async function emitSideEffects(
     db: PortalDb,
@@ -37,4 +58,17 @@ export async function emitSideEffects(
             db,
         ),
     ]);
+    workspaceSlug(db, workspaceId)
+        .then((slug) => {
+            if (!slug) return undefined;
+            return import("@/lib/jobs/webhooks").then(({ publishWebhook }) =>
+                publishWebhook(slug, workspaceId, `${entityType}.${action}`, {
+                    entityType,
+                    entityId: entityId ?? null,
+                    action,
+                    metadata: metadata ?? {},
+                }),
+            );
+        })
+        .catch((err) => logger.debug({ err }, "webhook fan-out skipped"));
 }

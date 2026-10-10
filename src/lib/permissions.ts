@@ -34,6 +34,14 @@ export type Permission =
     | "manage_custom_fields"
     | "manage_webhooks"
     | "manage_api_tokens"
+    | "manage_polls"
+    | "manage_goals"
+    | "manage_assets"
+    | "manage_dues"
+    | "manage_decisions"
+    | "manage_time"
+    | "export_data"
+    | "manage_announcements"
     | "view_reports"
     | "manage_reports"
     | "manage_users"
@@ -55,6 +63,7 @@ const MEMBER_PERMISSIONS: Permission[] = [
     "signup_volunteer",
     "rsvp_meeting",
     "check_in",
+    "manage_time",
 ];
 
 const OFFICER_PERMISSIONS: Permission[] = [
@@ -77,6 +86,20 @@ const OFFICER_PERMISSIONS: Permission[] = [
     "manage_custom_fields",
     "manage_webhooks",
     "manage_api_tokens",
+    "manage_polls",
+    "manage_goals",
+    "manage_assets",
+    "manage_dues",
+    "manage_decisions",
+    "export_data",
+    "manage_announcements",
+    "manage_polls",
+    "manage_goals",
+    "manage_assets",
+    "manage_dues",
+    "manage_decisions",
+    "export_data",
+    "manage_announcements",
     "view_reports",
     "manage_reports",
 ];
