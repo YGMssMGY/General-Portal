@@ -8,13 +8,29 @@ function opt(name: string, fallback = ""): string {
     return process.env[name] ?? fallback;
 }
 
+const LOG_LEVELS = new Set(["trace", "debug", "info", "warn", "error", "fatal", "silent"]);
+const LOG_LEVEL_BY_ENV: Record<string, string> = {
+    production: "info",
+    development: "debug",
+    test: "silent",
+};
+
+function resolveLogLevel(): string {
+    const explicit = opt("LOG_LEVEL", "");
+    if (LOG_LEVELS.has(explicit)) return explicit;
+    const byEnv = LOG_LEVEL_BY_ENV[opt("NODE_ENV", "development")] ?? "info";
+    return LOG_LEVELS.has(byEnv) ? byEnv : "info";
+}
+
 export const config = {
     nodeEnv: opt("NODE_ENV", "development"),
-    logLevel: opt("LOG_LEVEL", opt("NODE_ENV", "development") === "production" ? "info" : "debug"),
+    logLevel: resolveLogLevel(),
     port: Number(opt("PORT", "3000")),
     baseUrl: opt("APP_BASE_URL", opt("AUTH_URL", "http://localhost:3000")),
     deploymentFile: opt("DEPLOYMENT_FILE", "deployment.yaml"),
     uploadsDir: opt("UPLOADS_DIR", "./uploads"),
+    bossUrl: opt("PG_BOSS_URL"),
+    poolMax: Math.max(2, Number(opt("PG_POOL_MAX", "10")) || 10),
     sessionCookie: "gp_session",
     portalCookie: "portal",
     sessionTtlHours: Number(opt("SESSION_TTL_HOURS", "24")),
