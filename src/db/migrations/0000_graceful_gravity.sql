@@ -1,5 +1,961 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 --> statement-breakpoint
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT conname, conrelid::regclass AS tbl FROM pg_constraint WHERE contype = 'f' AND connamespace = 'public'::regnamespace LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT IF EXISTS %I', r.tbl, r.conname);
+  END LOOP;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'accounts' AND column_name = 'providerAccountId') THEN
+    EXECUTE 'DROP TABLE "public"."accounts" CASCADE';
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sessions' AND column_name = 'sessionToken') THEN
+    EXECUTE 'DROP TABLE "public"."sessions" CASCADE';
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'verification_tokens' AND column_name = 'identifier') THEN
+    EXECUTE 'DROP TABLE "public"."verification_tokens" CASCADE';
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'activity_feed' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."activity_feed" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'activity_feed', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'activity_feed' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."activity_feed" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'activity_feed', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'activity_feed' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."activity_feed" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'activity_feed', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'annual_event_plans' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."annual_event_plans" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'annual_event_plans', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'annual_event_plans' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."annual_event_plans" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'annual_event_plans', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'attachments' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."attachments" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'attachments', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'attachments' AND column_name = 'uploadedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."attachments" ALTER COLUMN "uploadedById" TYPE uuid USING "uploadedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'attachments', 'uploadedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'attachments' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."attachments" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'attachments', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."audit_logs" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'audit_logs', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."audit_logs" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'audit_logs', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."audit_logs" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'audit_logs', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'budget_allocations' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."budget_allocations" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'budget_allocations', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'budget_allocations' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."budget_allocations" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'budget_allocations', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'budget_transactions' AND column_name = 'allocationId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."budget_transactions" ALTER COLUMN "allocationId" TYPE uuid USING "allocationId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'budget_transactions', 'allocationId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'budget_transactions' AND column_name = 'decidedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."budget_transactions" ALTER COLUMN "decidedById" TYPE uuid USING "decidedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'budget_transactions', 'decidedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'budget_transactions' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."budget_transactions" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'budget_transactions', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'cooperation_requests' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."cooperation_requests" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'cooperation_requests', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'cooperation_requests' AND column_name = 'reviewedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."cooperation_requests" ALTER COLUMN "reviewedById" TYPE uuid USING "reviewedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'cooperation_requests', 'reviewedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'cooperation_requests' AND column_name = 'submittedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."cooperation_requests" ALTER COLUMN "submittedById" TYPE uuid USING "submittedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'cooperation_requests', 'submittedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'cooperation_requests' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."cooperation_requests" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'cooperation_requests', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'annualPlanId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."events" ALTER COLUMN "annualPlanId" TYPE uuid USING "annualPlanId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'events', 'annualPlanId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'approvedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."events" ALTER COLUMN "approvedById" TYPE uuid USING "approvedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'events', 'approvedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."events" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'events', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."events" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'events', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'events' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."events" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'events', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'historical_members' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."historical_members" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'historical_members', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'historical_members' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."historical_members" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'historical_members', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'kudos' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."kudos" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'kudos', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'kudos' AND column_name = 'receiverId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."kudos" ALTER COLUMN "receiverId" TYPE uuid USING "receiverId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'kudos', 'receiverId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'kudos' AND column_name = 'senderId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."kudos" ALTER COLUMN "senderId" TYPE uuid USING "senderId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'kudos', 'senderId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'kudos' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."kudos" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'kudos', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'link_items' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."link_items" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'link_items', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'link_items' AND column_name = 'uploadedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."link_items" ALTER COLUMN "uploadedById" TYPE uuid USING "uploadedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'link_items', 'uploadedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'link_items' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."link_items" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'link_items', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'meeting_rsvps' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."meeting_rsvps" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'meeting_rsvps', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'meeting_rsvps' AND column_name = 'meetingId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."meeting_rsvps" ALTER COLUMN "meetingId" TYPE uuid USING "meetingId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'meeting_rsvps', 'meetingId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'meeting_rsvps' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."meeting_rsvps" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'meeting_rsvps', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'meetings' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."meetings" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'meetings', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'meetings' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."meetings" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'meetings', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'memberships' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."memberships" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'memberships', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'memberships' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."memberships" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'memberships', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'memberships' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."memberships" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'memberships', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'message_reads' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."message_reads" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'message_reads', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'message_reads' AND column_name = 'messageId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."message_reads" ALTER COLUMN "messageId" TYPE uuid USING "messageId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'message_reads', 'messageId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'message_reads' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."message_reads" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'message_reads', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'message_threads' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."message_threads" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'message_threads', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'message_threads' AND column_name = 'subgroupId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."message_threads" ALTER COLUMN "subgroupId" TYPE uuid USING "subgroupId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'message_threads', 'subgroupId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'message_threads' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."message_threads" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'message_threads', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."messages" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'messages', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'senderId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."messages" ALTER COLUMN "senderId" TYPE uuid USING "senderId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'messages', 'senderId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'messages' AND column_name = 'threadId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."messages" ALTER COLUMN "threadId" TYPE uuid USING "threadId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'messages', 'threadId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."notifications" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'notifications', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."notifications" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'notifications', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."notifications" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'notifications', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'proposal_templates' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."proposal_templates" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'proposal_templates', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'proposal_templates' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."proposal_templates" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'proposal_templates', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'proposal_templates' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."proposal_templates" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'proposal_templates', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'proposals' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."proposals" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'proposals', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'proposals' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."proposals" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'proposals', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'proposals' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."proposals" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'proposals', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'purchase_requests' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."purchase_requests" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'purchase_requests', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'purchase_requests' AND column_name = 'reviewedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."purchase_requests" ALTER COLUMN "reviewedById" TYPE uuid USING "reviewedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'purchase_requests', 'reviewedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'purchase_requests' AND column_name = 'submittedById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."purchase_requests" ALTER COLUMN "submittedById" TYPE uuid USING "submittedById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'purchase_requests', 'submittedById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'purchase_requests' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."purchase_requests" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'purchase_requests', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'showcase_items' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."showcase_items" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'showcase_items', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'showcase_items' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."showcase_items" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'showcase_items', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'showcase_items' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."showcase_items" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'showcase_items', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sub_tasks' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."sub_tasks" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'sub_tasks', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sub_tasks' AND column_name = 'taskId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."sub_tasks" ALTER COLUMN "taskId" TYPE uuid USING "taskId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'sub_tasks', 'taskId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subgroup_memberships' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."subgroup_memberships" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'subgroup_memberships', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subgroup_memberships' AND column_name = 'subgroupId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."subgroup_memberships" ALTER COLUMN "subgroupId" TYPE uuid USING "subgroupId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'subgroup_memberships', 'subgroupId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subgroup_memberships' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."subgroup_memberships" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'subgroup_memberships', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subgroups' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."subgroups" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'subgroups', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subgroups' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."subgroups" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'subgroups', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subgroups' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."subgroups" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'subgroups', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'task_comments' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."task_comments" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'task_comments', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'task_comments' AND column_name = 'taskId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."task_comments" ALTER COLUMN "taskId" TYPE uuid USING "taskId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'task_comments', 'taskId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'task_comments' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."task_comments" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'task_comments', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'assigneeId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."tasks" ALTER COLUMN "assigneeId" TYPE uuid USING "assigneeId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'tasks', 'assigneeId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."tasks" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'tasks', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."tasks" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'tasks', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'subgroupId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."tasks" ALTER COLUMN "subgroupId" TYPE uuid USING "subgroupId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'tasks', 'subgroupId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."tasks" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'tasks', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transactions' AND column_name = 'createdById' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."transactions" ALTER COLUMN "createdById" TYPE uuid USING "createdById"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'transactions', 'createdById', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transactions' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."transactions" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'transactions', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'transactions' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."transactions" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'transactions', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."users" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'users', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'volunteer_signups' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."volunteer_signups" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'volunteer_signups', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'volunteer_signups' AND column_name = 'slotId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."volunteer_signups" ALTER COLUMN "slotId" TYPE uuid USING "slotId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'volunteer_signups', 'slotId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'volunteer_signups' AND column_name = 'userId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."volunteer_signups" ALTER COLUMN "userId" TYPE uuid USING "userId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'volunteer_signups', 'userId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'volunteer_slots' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."volunteer_slots" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'volunteer_slots', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'volunteer_slots' AND column_name = 'workspaceId' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."volunteer_slots" ALTER COLUMN "workspaceId" TYPE uuid USING "workspaceId"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'volunteer_slots', 'workspaceId', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'id' AND data_type = 'text') THEN
+    BEGIN
+      EXECUTE 'ALTER TABLE "public"."workspaces" ALTER COLUMN "id" TYPE uuid USING "id"::uuid';
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'legacy conversion skipped for %.%: %', 'workspaces', 'id', SQLERRM;
+    END;
+  END IF;
+END $$;
+--> statement-breakpoint
+
+--> statement-breakpoint
 DO $$ BEGIN
   CREATE TYPE "public"."ApprovalStatus" AS ENUM('pending', 'approved', 'rejected');
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -1282,7 +2238,6 @@ CREATE INDEX IF NOT EXISTS "tasks_due_idx" ON "tasks" USING btree ("dueDate");
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "tasks_ws_created_idx" ON "tasks" USING btree ("workspaceId","createdAt");
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "tasks_meeting_idx" ON "tasks" USING btree ("meetingId");
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "tasks_subgroup_idx" ON "tasks" USING btree ("subgroupId");
 --> statement-breakpoint

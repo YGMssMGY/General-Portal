@@ -59,6 +59,7 @@ export const users = pgTable(
         disabled: boolean("disabled").notNull().default(false),
         locale: varchar("locale", { length: 8 }).notNull().default("en-US"),
         timezone: varchar("timezone", { length: 64 }).notNull().default("UTC"),
+        uiPrefs: jsonb("uiPrefs").$type<Record<string, unknown>>().notNull().default({}),
         createdAt: ts("createdAt"),
         updatedAt: updatedAt(),
     },
@@ -167,6 +168,7 @@ export const proposals = pgTable(
         title: text("title").notNull(),
         description: text("description").notNull(),
         status: proposalStatusEnum("status").notNull().default("pending"),
+        metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
         createdById: uuid("createdById")
             .notNull()
             .references(() => users.id),
@@ -224,6 +226,7 @@ export const tasks = pgTable(
         meetingId: uuid("meetingId"),
         dependsOnId: uuid("dependsOnId"),
         recurrence: text("recurrence"),
+        metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
         createdAt: ts("createdAt"),
         updatedAt: updatedAt(),
         deletedAt: deletedAt(),
@@ -311,6 +314,7 @@ export const events = pgTable(
         teamsMessageId: text("teamsMessageId"),
         annualPlanId: uuid("annualPlanId").references(() => annualEventPlans.id),
         recurrence: text("recurrence"),
+        metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
         createdById: uuid("createdById")
             .notNull()
             .references(() => users.id),
@@ -782,6 +786,8 @@ export const linkItems = pgTable(
         description: text("description"),
         category: text("category"),
         uploadedById: uuid("uploadedById").references(() => users.id),
+        lastCheckedAt: tsOpt("lastCheckedAt"),
+        checkStatus: text("checkStatus").notNull().default("unknown"),
         createdAt: ts("createdAt"),
         updatedAt: updatedAt(),
         deletedAt: deletedAt(),
@@ -1510,6 +1516,356 @@ export const authIdentitiesRelations = relations(authIdentities, ({ one }) => ({
 
 export const passkeysRelations = relations(passkeys, ({ one }) => ({
     user: one(users, { fields: [passkeys.userId], references: [users.id] }),
+}));
+
+export const eventRsvps = pgTable(
+    "event_rsvps",
+    {
+        id: id(),
+        eventId: uuid("eventId")
+            .notNull()
+            .references(() => events.id, { onDelete: "cascade" }),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        status: text("status").notNull().default("going"),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [
+        uniqueIndex("event_rsvps_uidx").on(t.eventId, t.userId),
+        index("event_rsvps_event_idx").on(t.eventId),
+        index("event_rsvps_user_idx").on(t.userId),
+    ],
+);
+
+export const polls = pgTable(
+    "polls",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        description: text("description"),
+        status: text("status").notNull().default("open"),
+        multiple: boolean("multiple").notNull().default(false),
+        anonymous: boolean("anonymous").notNull().default(false),
+        closesAt: tsOpt("closesAt"),
+        createdById: uuid("createdById")
+            .notNull()
+            .references(() => users.id),
+        createdAt: ts("createdAt"),
+        updatedAt: updatedAt(),
+        deletedAt: deletedAt(),
+    },
+    (t) => [
+        index("polls_ws_idx").on(t.workspaceId),
+        index("polls_ws_created_idx").on(t.workspaceId, t.createdAt),
+    ],
+);
+
+export const pollOptions = pgTable(
+    "poll_options",
+    {
+        id: id(),
+        pollId: uuid("pollId")
+            .notNull()
+            .references(() => polls.id, { onDelete: "cascade" }),
+        text: text("text").notNull(),
+        position: integer("position").notNull().default(0),
+    },
+    (t) => [index("poll_options_poll_idx").on(t.pollId)],
+);
+
+export const pollVotes = pgTable(
+    "poll_votes",
+    {
+        id: id(),
+        pollId: uuid("pollId")
+            .notNull()
+            .references(() => polls.id, { onDelete: "cascade" }),
+        optionId: uuid("optionId")
+            .notNull()
+            .references(() => pollOptions.id, { onDelete: "cascade" }),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [
+        uniqueIndex("poll_votes_uidx").on(t.pollId, t.optionId, t.userId),
+        index("poll_votes_poll_idx").on(t.pollId),
+        index("poll_votes_user_idx").on(t.userId),
+    ],
+);
+
+export const goals = pgTable(
+    "goals",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        description: text("description"),
+        ownerId: uuid("ownerId").references(() => users.id),
+        status: text("status").notNull().default("active"),
+        dueDate: tsOpt("dueDate"),
+        createdAt: ts("createdAt"),
+        updatedAt: updatedAt(),
+        deletedAt: deletedAt(),
+    },
+    (t) => [
+        index("goals_ws_idx").on(t.workspaceId),
+        index("goals_ws_created_idx").on(t.workspaceId, t.createdAt),
+    ],
+);
+
+export const keyResults = pgTable(
+    "key_results",
+    {
+        id: id(),
+        goalId: uuid("goalId")
+            .notNull()
+            .references(() => goals.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        target: integer("target").notNull(),
+        current: integer("current").notNull().default(0),
+        unit: text("unit").notNull().default(""),
+        position: integer("position").notNull().default(0),
+    },
+    (t) => [index("key_results_goal_idx").on(t.goalId)],
+);
+
+export const memberDues = pgTable(
+    "member_dues",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        title: text("title").notNull(),
+        amountCents: bigint("amountCents", { mode: "number" }).notNull(),
+        dueDate: tsOpt("dueDate"),
+        status: text("status").notNull().default("unpaid"),
+        paidAt: tsOpt("paidAt"),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [
+        index("member_dues_ws_idx").on(t.workspaceId),
+        index("member_dues_user_idx").on(t.workspaceId, t.userId),
+        index("member_dues_ws_created_idx").on(t.workspaceId, t.createdAt),
+    ],
+);
+
+export const assets = pgTable(
+    "assets",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        name: text("name").notNull(),
+        description: text("description"),
+        quantity: integer("quantity").notNull().default(1),
+        condition: text("condition").notNull().default("good"),
+        createdAt: ts("createdAt"),
+        deletedAt: deletedAt(),
+    },
+    (t) => [index("assets_ws_idx").on(t.workspaceId)],
+);
+
+export const assetLoans = pgTable(
+    "asset_loans",
+    {
+        id: id(),
+        assetId: uuid("assetId")
+            .notNull()
+            .references(() => assets.id, { onDelete: "cascade" }),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        quantity: integer("quantity").notNull().default(1),
+        borrowedAt: ts("borrowedAt"),
+        dueAt: tsOpt("dueAt"),
+        returnedAt: tsOpt("returnedAt"),
+        status: text("status").notNull().default("out"),
+    },
+    (t) => [
+        index("asset_loans_asset_idx").on(t.assetId),
+        index("asset_loans_user_idx").on(t.userId),
+    ],
+);
+
+export const decisions = pgTable(
+    "decisions",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        summary: text("summary").notNull(),
+        entityType: text("entityType"),
+        entityId: text("entityId"),
+        decidedById: uuid("decidedById").references(() => users.id),
+        decidedAt: ts("decidedAt"),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [
+        index("decisions_ws_idx").on(t.workspaceId),
+        index("decisions_ws_created_idx").on(t.workspaceId, t.createdAt),
+    ],
+);
+
+export const taskTimeEntries = pgTable(
+    "task_time_entries",
+    {
+        id: id(),
+        taskId: uuid("taskId")
+            .notNull()
+            .references(() => tasks.id, { onDelete: "cascade" }),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        minutes: integer("minutes").notNull(),
+        note: text("note"),
+        date: ts("date"),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [index("task_time_task_idx").on(t.taskId), index("task_time_user_idx").on(t.userId)],
+);
+
+export const reactions = pgTable(
+    "reactions",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        entityType: text("entityType").notNull(),
+        entityId: text("entityId").notNull(),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        emoji: varchar("emoji", { length: 16 }).notNull(),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [
+        uniqueIndex("reactions_uidx").on(t.entityType, t.entityId, t.userId, t.emoji),
+        index("reactions_entity_idx").on(t.entityType, t.entityId),
+    ],
+);
+
+export const attachmentVersions = pgTable(
+    "attachment_versions",
+    {
+        id: id(),
+        attachmentId: uuid("attachmentId")
+            .notNull()
+            .references(() => attachments.id, { onDelete: "cascade" }),
+        version: integer("version").notNull(),
+        storagePath: text("storagePath").notNull(),
+        fileSize: integer("fileSize").notNull(),
+        sha256: text("sha256"),
+        createdById: uuid("createdById").references(() => users.id),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [index("attachment_versions_att_idx").on(t.attachmentId)],
+);
+
+export const agendaItems = pgTable(
+    "agenda_items",
+    {
+        id: id(),
+        meetingId: uuid("meetingId")
+            .notNull()
+            .references(() => meetings.id, { onDelete: "cascade" }),
+        title: text("title").notNull(),
+        description: text("description"),
+        position: integer("position").notNull().default(0),
+        status: text("status").notNull().default("open"),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [index("agenda_items_meeting_idx").on(t.meetingId)],
+);
+
+export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
+    event: one(events, { fields: [eventRsvps.eventId], references: [events.id] }),
+    user: one(users, { fields: [eventRsvps.userId], references: [users.id] }),
+}));
+
+export const pollsRelations = relations(polls, ({ one, many }) => ({
+    workspace: one(workspaces, { fields: [polls.workspaceId], references: [workspaces.id] }),
+    createdBy: one(users, { fields: [polls.createdById], references: [users.id] }),
+    options: many(pollOptions),
+    votes: many(pollVotes),
+}));
+
+export const pollOptionsRelations = relations(pollOptions, ({ one, many }) => ({
+    poll: one(polls, { fields: [pollOptions.pollId], references: [polls.id] }),
+    votes: many(pollVotes),
+}));
+
+export const pollVotesRelations = relations(pollVotes, ({ one }) => ({
+    poll: one(polls, { fields: [pollVotes.pollId], references: [polls.id] }),
+    option: one(pollOptions, { fields: [pollVotes.optionId], references: [pollOptions.id] }),
+    user: one(users, { fields: [pollVotes.userId], references: [users.id] }),
+}));
+
+export const goalsRelations = relations(goals, ({ one, many }) => ({
+    workspace: one(workspaces, { fields: [goals.workspaceId], references: [workspaces.id] }),
+    owner: one(users, { fields: [goals.ownerId], references: [users.id] }),
+    keyResults: many(keyResults),
+}));
+
+export const keyResultsRelations = relations(keyResults, ({ one }) => ({
+    goal: one(goals, { fields: [keyResults.goalId], references: [goals.id] }),
+}));
+
+export const memberDuesRelations = relations(memberDues, ({ one }) => ({
+    workspace: one(workspaces, { fields: [memberDues.workspaceId], references: [workspaces.id] }),
+    user: one(users, { fields: [memberDues.userId], references: [users.id] }),
+}));
+
+export const assetsRelations = relations(assets, ({ one, many }) => ({
+    workspace: one(workspaces, { fields: [assets.workspaceId], references: [workspaces.id] }),
+    loans: many(assetLoans),
+}));
+
+export const assetLoansRelations = relations(assetLoans, ({ one }) => ({
+    asset: one(assets, { fields: [assetLoans.assetId], references: [assets.id] }),
+    user: one(users, { fields: [assetLoans.userId], references: [users.id] }),
+}));
+
+export const decisionsRelations = relations(decisions, ({ one }) => ({
+    workspace: one(workspaces, { fields: [decisions.workspaceId], references: [workspaces.id] }),
+    decidedBy: one(users, { fields: [decisions.decidedById], references: [users.id] }),
+}));
+
+export const taskTimeEntriesRelations = relations(taskTimeEntries, ({ one }) => ({
+    task: one(tasks, { fields: [taskTimeEntries.taskId], references: [tasks.id] }),
+    user: one(users, { fields: [taskTimeEntries.userId], references: [users.id] }),
+}));
+
+export const reactionsRelations = relations(reactions, ({ one }) => ({
+    workspace: one(workspaces, { fields: [reactions.workspaceId], references: [workspaces.id] }),
+    user: one(users, { fields: [reactions.userId], references: [users.id] }),
+}));
+
+export const attachmentVersionsRelations = relations(attachmentVersions, ({ one }) => ({
+    attachment: one(attachments, {
+        fields: [attachmentVersions.attachmentId],
+        references: [attachments.id],
+    }),
+    createdBy: one(users, { fields: [attachmentVersions.createdById], references: [users.id] }),
+}));
+
+export const agendaItemsRelations = relations(agendaItems, ({ one }) => ({
+    meeting: one(meetings, { fields: [agendaItems.meetingId], references: [meetings.id] }),
 }));
 
 export type Workspace = typeof workspaces.$inferSelect;

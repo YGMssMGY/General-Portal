@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parse } from "yaml";
 import { normalizeSlug, portalDbUrl } from "../src/db/client";
+import { hashPassword } from "../src/lib/auth/passwords";
 import { DEFAULT_ROLES, getDefaultPermissions } from "../src/lib/permissions";
 
 interface PackRole {
@@ -91,9 +92,22 @@ function resolveDate(v: string | number | Date): Date {
 }
 
 async function main(): Promise<void> {
-    const rawSlug = process.argv[2];
+    const positionals: string[] = [];
+    let setPassword: string | null = null;
+    const args = process.argv.slice(2);
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === "--set-password") {
+            setPassword = args[i + 1] ?? null;
+            i += 1;
+        } else if (args[i] !== undefined) {
+            positionals.push(args[i] as string);
+        }
+    }
+    const rawSlug = positionals[0];
     if (!rawSlug) {
-        console.error("Usage: tsx scripts/seed.ts <portalSlug> [packFile]");
+        console.error(
+            "Usage: tsx scripts/seed.ts <portalSlug> [packFile] [--set-password <email>=<password>]",
+        );
         process.exit(1);
     }
     const slug = normalizeSlug(rawSlug);
@@ -108,10 +122,11 @@ async function main(): Promise<void> {
         );
         process.exit(1);
     }
-    const packArg = process.argv[3] ?? path.join("deployments", "seed-packs", `${slug}.yaml`);
+    const packArg = positionals[1] ?? path.join("deployments", "seed-packs", `${slug}.yaml`);
     const pack = parse(await readFile(path.resolve(process.cwd(), packArg), "utf8")) as Pack;
     if (!pack.workspace?.slug || !pack.workspace?.name)
         throw new Error(`Invalid pack: missing workspace.name/slug`);
+    pack.workspace.slug = slug;
     const pool = new Pool({ connectionString: url });
     const counts = {
         workspaces: 0,
@@ -336,6 +351,19 @@ async function main(): Promise<void> {
         console.log(
             `seeded portal "${slug}" from ${packArg}: workspace=${pack.workspace.slug} (+${counts.workspaces}) roles=+${counts.roles} users=+${counts.users} memberships=+${counts.memberships} tasks=+${counts.tasks} events=+${counts.events} templates=+${counts.templates} transactions=+${counts.transactions} budgets=+${counts.budgets}`,
         );
+        if (setPassword !== null) {
+            const eq = setPassword.indexOf("=");
+            const email = (eq < 0 ? "" : setPassword.slice(0, eq)).trim().toLowerCase();
+            const password = eq < 0 ? "" : setPassword.slice(eq + 1);
+            if (!email || !password) throw new Error("--set-password expects <email>=<password>");
+            const updated = await pool.query(
+                'UPDATE users SET "passwordHash" = $2 WHERE email = $1',
+                [email, await hashPassword(password)],
+            );
+            if ((updated.rowCount ?? 0) === 0)
+                throw new Error(`--set-password: no user with email "${email}"`);
+            console.log(`password set for "${email}" in portal "${slug}"`);
+        }
     } finally {
         await pool.end();
     }
