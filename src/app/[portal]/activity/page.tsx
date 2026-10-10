@@ -1,105 +1,109 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
-import {
-    Activity,
-    PlusCircle,
-    Edit3,
-    Trash2,
-    UserPlus,
-    CheckCircle,
-    AlertCircle,
-} from "lucide-react";
+import { toast } from "sonner";
+import { fetchPage } from "@/lib/api-client";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Activity } from "lucide-react";
 
-interface ActivityItem {
+interface ActivityRow {
     id: string;
-    type: "create" | "update" | "delete" | "signup" | "complete" | "other";
+    action: string;
     entityType: string;
-    description: string;
-    userName: string;
-    userAvatar?: string;
-    timestamp: string;
+    entityId: string | null;
+    metadata: Record<string, unknown> | null;
+    createdAt: string;
+    user: { id: string; name: string | null; email: string; image: string | null } | null;
 }
 
-const entityTypes = ["all", "tasks", "events", "proposals", "files", "meetings", "volunteers"];
-
-const typeIcons: Record<string, typeof Activity> = {
-    create: PlusCircle,
-    update: Edit3,
-    delete: Trash2,
-    signup: UserPlus,
-    complete: CheckCircle,
-    other: AlertCircle,
-};
-
-const typeColors: Record<string, string> = {
-    create: "var(--color-success)",
-    update: "var(--color-primary)",
-    delete: "var(--color-destructive)",
-    signup: "var(--color-warning)",
-    complete: "var(--color-success)",
-    other: "var(--color-text-secondary)",
-};
+const PAGE_SIZE = 20;
+const ENTITY_FILTERS = [
+    "task",
+    "event",
+    "proposal",
+    "meeting",
+    "message",
+    "subgroup",
+    "cooperation_request",
+    "member",
+];
 
 function relativeTime(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime();
     const seconds = Math.floor(diff / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return `${hours}h`;
     const days = Math.floor(hours / 24);
-    if (days < 30) return `${days}d ago`;
+    if (days < 30) return `${days}d`;
     return new Date(iso).toLocaleDateString();
 }
 
-const btnBase: React.CSSProperties = {
-    padding: "6px 12px",
-    borderRadius: "var(--radius-sm)",
-    border: "1px solid var(--color-border)",
-    fontSize: "12px",
-    fontWeight: 500,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    backgroundColor: "transparent",
-    color: "var(--color-text-secondary)",
-    transition: "background-color 100ms ease, color 100ms ease",
-    minHeight: "32px",
-};
-
 export default function ActivityPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Activity | ${portalName}`);
-    const [filter, setFilter] = useState("all");
-    const [page, setPage] = useState(1);
-    const pageSize = 20;
+    const { data: workspace } = useWorkspace();
+    const t = useTranslations("activity");
+    const tc = useTranslations("common");
+    const te = useTranslations("errors");
+    usePageTitle(`${t("title")} | ${workspace?.name ?? portal}`);
 
-    const { data, isLoading } = useQuery<{ items: ActivityItem[]; total: number }>({
-        queryKey: [portal, "activity", filter, page],
+    const [filter, setFilter] = useState("all");
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [items, setItems] = useState<ActivityRow[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [appliedKey, setAppliedKey] = useState("");
+
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: [portal, "activity", filter, cursor ?? ""],
         queryFn: () =>
-            fetchJson(
-                `/api/activity?entityType=${filter === "all" ? "" : filter}&page=${page}&pageSize=${pageSize}`,
+            fetchPage<ActivityRow>(
+                `/api/activity?limit=${PAGE_SIZE}${filter !== "all" ? `&entityType=${encodeURIComponent(filter)}` : ""}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
             ),
+        enabled: portal !== "",
     });
 
-    const items = data?.items ?? [];
-    const total = data?.total ?? 0;
-    const totalPages = Math.ceil(total / pageSize);
+    const key = `${filter}|${cursor ?? ""}`;
+    if (data && appliedKey !== key) {
+        setAppliedKey(key);
+        setNextCursor(data.nextCursor);
+        setItems((prev) => (cursor ? [...prev, ...data.items] : data.items));
+    }
+
+    useEffect(() => {
+        if (isError) toast.error(te("internal"));
+    }, [isError, te]);
+
+    function actionLabel(action: string): string {
+        if (action === "create" || action === "created") return t("created");
+        if (action === "update" || action === "updated") return t("updated");
+        if (action === "delete" || action === "deleted") return t("deleted");
+        if (action === "approve" || action === "approved") return t("approved");
+        if (action === "reject" || action === "rejected") return t("rejected");
+        return action;
+    }
+
+    function pickFilter(value: string) {
+        setFilter(value);
+        setCursor(null);
+    }
 
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div
                 style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: "20px",
                     flexWrap: "wrap",
                     gap: "12px",
                 }}
@@ -112,74 +116,70 @@ export default function ActivityPage() {
                         color: "var(--color-text)",
                     }}
                 >
-                    Activity Feed
+                    {t("title")}
                 </h1>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                    {tc("retry")}
+                </Button>
             </div>
 
-            <div
-                style={{
-                    display: "flex",
-                    gap: "6px",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
-                }}
-            >
-                {entityTypes.map((type) => (
-                    <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                            setFilter(type);
-                            setPage(1);
-                        }}
-                        style={{
-                            ...btnBase,
-                            backgroundColor:
-                                filter === type ? "var(--color-primary)" : "transparent",
-                            color: filter === type ? "#fff" : "var(--color-text-secondary)",
-                            borderColor:
-                                filter === type ? "var(--color-primary)" : "var(--color-border)",
-                            textTransform: "capitalize",
-                        }}
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <Button
+                    size="sm"
+                    variant={filter === "all" ? "default" : "outline"}
+                    onClick={() => pickFilter("all")}
+                >
+                    {t("allTypes")}
+                </Button>
+                {ENTITY_FILTERS.map((entity) => (
+                    <Button
+                        key={entity}
+                        size="sm"
+                        variant={filter === entity ? "default" : "outline"}
+                        onClick={() => pickFilter(entity)}
                     >
-                        {type === "all" ? "All" : type}
-                    </button>
+                        {entity}
+                    </Button>
                 ))}
             </div>
 
-            {isLoading ? (
-                <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>
-                    Loading...
+            {isLoading && items.length === 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton
+                            key={i}
+                            style={{ width: "100%", height: "64px", borderRadius: "5px" }}
+                        />
+                    ))}
                 </div>
             ) : items.length === 0 ? (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: "48px 16px",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                    }}
-                >
-                    <Activity size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                    <p style={{ margin: 0 }}>No activity recorded yet.</p>
-                </div>
+                <Card>
+                    <CardContent
+                        style={{
+                            padding: "48px 24px",
+                            textAlign: "center",
+                            color: "var(--color-text-secondary)",
+                        }}
+                    >
+                        <Activity size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                        <p style={{ fontSize: "14px", margin: 0 }}>{t("noActivity")}</p>
+                    </CardContent>
+                </Card>
             ) : (
-                <>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {items.map((item) => {
-                            const Icon = typeIcons[item.type] ?? Activity;
-                            const color = typeColors[item.type] ?? "var(--color-text-secondary)";
-                            return (
-                                <div
-                                    key={item.id}
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {items.map((row) => {
+                        const metaTitle =
+                            row.metadata && typeof row.metadata.title === "string"
+                                ? row.metadata.title
+                                : null;
+                        return (
+                            <Card key={row.id}>
+                                <CardContent
                                     style={{
+                                        padding: "12px 16px",
                                         display: "flex",
                                         alignItems: "flex-start",
                                         gap: "12px",
-                                        padding: "12px",
-                                        borderRadius: "var(--radius-sm)",
-                                        border: "1px solid var(--color-border)",
-                                        backgroundColor: "var(--color-bg)",
                                     }}
                                 >
                                     <div
@@ -192,10 +192,14 @@ export default function ActivityPage() {
                                             alignItems: "center",
                                             justifyContent: "center",
                                             flexShrink: 0,
-                                            color: color,
+                                            fontSize: "13px",
+                                            fontWeight: 700,
+                                            color: "var(--color-text-secondary)",
                                         }}
                                     >
-                                        <Icon size={16} />
+                                        {(row.user?.name ?? row.user?.email ?? "?")
+                                            .charAt(0)
+                                            .toUpperCase()}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div
@@ -205,9 +209,12 @@ export default function ActivityPage() {
                                                 lineHeight: 1.4,
                                             }}
                                         >
-                                            <strong>{item.userName}</strong>{" "}
+                                            <strong>
+                                                {row.user?.name ?? row.user?.email ?? tc("unknown")}
+                                            </strong>{" "}
                                             <span style={{ color: "var(--color-text-secondary)" }}>
-                                                {item.description}
+                                                {actionLabel(row.action)}
+                                                {metaTitle ? ` ${metaTitle}` : ""}
                                             </span>
                                         </div>
                                         <div
@@ -224,62 +231,25 @@ export default function ActivityPage() {
                                                     color: "var(--color-text-secondary)",
                                                 }}
                                             >
-                                                {relativeTime(item.timestamp)}
+                                                {relativeTime(row.createdAt)}
                                             </span>
-                                            <span
-                                                style={{
-                                                    padding: "1px 5px",
-                                                    borderRadius: "var(--radius-sm)",
-                                                    fontSize: "10px",
-                                                    fontWeight: 600,
-                                                    color: "var(--color-primary)",
-                                                    backgroundColor: "var(--color-primary-light)",
-                                                    textTransform: "capitalize",
-                                                }}
-                                            >
-                                                {item.entityType}
-                                            </span>
+                                            <Badge variant="secondary" style={{ fontSize: "11px" }}>
+                                                {row.entityType}
+                                            </Badge>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {totalPages > 1 && (
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                gap: "8px",
-                                marginTop: "20px",
-                            }}
-                        >
-                            <button
-                                type="button"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page <= 1}
-                                style={{ ...btnBase, opacity: page <= 1 ? 0.4 : 1 }}
-                            >
-                                Previous
-                            </button>
-                            <span
-                                style={{ fontSize: "13px", color: "var(--color-text-secondary)" }}
-                            >
-                                Page {page} of {totalPages}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page >= totalPages}
-                                style={{ ...btnBase, opacity: page >= totalPages ? 0.4 : 1 }}
-                            >
-                                Next
-                            </button>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                    {nextCursor && (
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                            <Button variant="outline" onClick={() => setCursor(nextCursor)}>
+                                {tc("showMore")}
+                            </Button>
                         </div>
                     )}
-                </>
+                </div>
             )}
         </div>
     );

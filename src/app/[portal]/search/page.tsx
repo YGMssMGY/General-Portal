@@ -1,26 +1,22 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/api-client";
-import {
-    Search as SearchIcon,
-    FileText,
-    Calendar,
-    ClipboardList,
-    User,
-    File,
-    ExternalLink,
-    Video,
-} from "lucide-react";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search as SearchIcon, ExternalLink } from "lucide-react";
 
 interface SearchResult {
     id: string;
     title: string;
     snippet: string;
-    type: "tasks" | "events" | "proposals" | "members" | "files" | "meetings";
+    type: "tasks" | "events" | "proposals" | "members" | "meetings";
     url: string;
 }
 
@@ -29,19 +25,13 @@ interface SearchResponse {
     total: number;
 }
 
-const typeConfig: Record<string, { icon: typeof FileText; color: string; bg: string }> = {
-    tasks: { icon: ClipboardList, color: "var(--color-primary)", bg: "var(--color-primary-light)" },
-    events: { icon: Calendar, color: "var(--color-success)", bg: "#e8f5e9" },
-    proposals: { icon: FileText, color: "var(--color-warning)", bg: "#fff8e1" },
-    members: { icon: User, color: "var(--color-text)", bg: "var(--color-bg-secondary)" },
-    files: { icon: File, color: "var(--color-text-secondary)", bg: "var(--color-bg-secondary)" },
-    meetings: { icon: Video, color: "var(--color-success)", bg: "#e8f5e9" },
-};
-
 export default function SearchPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Search | ${portalName}`);
+    const { data: workspace } = useWorkspace();
+    const t = useTranslations("search");
+    const tn = useTranslations("nav");
+    usePageTitle(`${t("title")} | ${workspace?.name ?? portal}`);
+
     const [query, setQuery] = useState("");
     const [debounced, setDebounced] = useState("");
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -57,7 +47,7 @@ export default function SearchPage() {
     const { data, isLoading } = useQuery<SearchResponse>({
         queryKey: [portal, "search", debounced],
         queryFn: () => fetchJson(`/api/search?q=${encodeURIComponent(debounced)}`),
-        enabled: debounced.length > 0,
+        enabled: portal !== "" && debounced.length > 0,
     });
 
     const results = data?.results ?? [];
@@ -68,20 +58,28 @@ export default function SearchPage() {
         return acc;
     }, {});
 
+    function typeLabel(type: string): string {
+        try {
+            return tn(type);
+        } catch {
+            return type;
+        }
+    }
+
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <h1
                 style={{
                     fontSize: "20px",
                     fontWeight: 700,
-                    margin: "0 0 20px",
+                    margin: 0,
                     color: "var(--color-text)",
                 }}
             >
-                Search
+                {t("title")}
             </h1>
 
-            <div style={{ position: "relative", marginBottom: "20px" }}>
+            <div style={{ position: "relative" }}>
                 <SearchIcon
                     size={18}
                     style={{
@@ -93,67 +91,50 @@ export default function SearchPage() {
                         pointerEvents: "none",
                     }}
                 />
-                <input
-                    style={{
-                        width: "100%",
-                        padding: "12px 14px 12px 42px",
-                        fontSize: "16px",
-                        border: "2px solid var(--color-border)",
-                        borderRadius: "var(--radius-sm)",
-                        backgroundColor: "var(--color-bg)",
-                        color: "var(--color-text)",
-                        fontFamily: "inherit",
-                        outline: "none",
-                    }}
-                    placeholder="Search across the portal..."
+                <Input
+                    placeholder={t("placeholder")}
                     value={query}
                     onChange={(e) => handleChange(e.target.value)}
                     autoFocus
+                    style={{ paddingLeft: "42px", height: "44px", fontSize: "16px" }}
                 />
             </div>
 
             {isLoading && (
-                <div
-                    style={{
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                        padding: "24px 0",
-                    }}
-                >
-                    Searching...
-                </div>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: "14px", margin: 0 }}>
+                    {t("title")}...
+                </p>
             )}
 
             {!isLoading && debounced.length === 0 && (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: "64px 16px",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                    }}
-                >
-                    <SearchIcon size={40} style={{ marginBottom: "16px", opacity: 0.3 }} />
-                    <p style={{ margin: 0, fontSize: "16px" }}>Search across the portal...</p>
-                    <p style={{ margin: "4px 0 0", fontSize: "13px" }}>
-                        Find tasks, events, proposals, members, and files.
-                    </p>
-                </div>
+                <Card>
+                    <CardContent
+                        style={{
+                            padding: "64px 16px",
+                            textAlign: "center",
+                            color: "var(--color-text-secondary)",
+                        }}
+                    >
+                        <SearchIcon size={40} style={{ marginBottom: "16px", opacity: 0.3 }} />
+                        <p style={{ margin: 0, fontSize: "14px" }}>{t("searchHint")}</p>
+                    </CardContent>
+                </Card>
             )}
 
             {!isLoading && debounced.length > 0 && results.length === 0 && (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: "48px 16px",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                    }}
-                >
-                    <p style={{ margin: 0 }}>
-                        No results found for <strong>{debounced}</strong>.
-                    </p>
-                </div>
+                <Card>
+                    <CardContent style={{ padding: "48px 16px", textAlign: "center" }}>
+                        <p
+                            style={{
+                                margin: 0,
+                                fontSize: "14px",
+                                color: "var(--color-text-secondary)",
+                            }}
+                        >
+                            {t("noResults")}
+                        </p>
+                    </CardContent>
+                </Card>
             )}
 
             {!isLoading && results.length > 0 && (
@@ -165,124 +146,94 @@ export default function SearchPage() {
                             margin: 0,
                         }}
                     >
-                        {data?.total ?? results.length} result
-                        {(data?.total ?? results.length) !== 1 ? "s" : ""} for &quot;{debounced}
-                        &quot;
+                        {t("resultsFor", { query: debounced })}
                     </p>
-                    {Object.entries(grouped).map(([type, items]) => {
-                        const cfg = typeConfig[type] ?? typeConfig.tasks;
-                        const Icon = cfg.icon;
-                        return (
-                            <div key={type}>
-                                <div
+                    {Object.entries(grouped).map(([type, items]) => (
+                        <div key={type}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    marginBottom: "8px",
+                                }}
+                            >
+                                <h3
                                     style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        marginBottom: "8px",
+                                        fontSize: "14px",
+                                        fontWeight: 600,
+                                        margin: 0,
+                                        color: "var(--color-text)",
+                                        textTransform: "capitalize",
                                     }}
                                 >
-                                    <Icon size={16} color={cfg.color} />
-                                    <h3
-                                        style={{
-                                            fontSize: "14px",
-                                            fontWeight: 600,
-                                            margin: 0,
-                                            color: "var(--color-text)",
-                                            textTransform: "capitalize",
-                                        }}
-                                    >
-                                        {type}
-                                    </h3>
-                                    <span
-                                        style={{
-                                            fontSize: "12px",
-                                            color: "var(--color-text-secondary)",
-                                        }}
-                                    >
-                                        ({items.length})
-                                    </span>
-                                </div>
-                                <div
-                                    style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+                                    {typeLabel(type)}
+                                </h3>
+                                <span
+                                    style={{
+                                        fontSize: "12px",
+                                        color: "var(--color-text-secondary)",
+                                    }}
                                 >
-                                    {items.map((item) => (
-                                        <a
-                                            key={`${item.type}-${item.id}`}
-                                            href={item.url}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "10px",
-                                                padding: "10px 12px",
-                                                borderRadius: "var(--radius-sm)",
-                                                border: "1px solid var(--color-border)",
-                                                backgroundColor: "var(--color-bg)",
-                                                textDecoration: "none",
-                                                transition: "background-color 100ms ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor =
-                                                    "var(--color-bg-secondary)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor =
-                                                    "var(--color-bg)";
-                                            }}
-                                        >
-                                            <div
+                                    ({items.length})
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                {items.map((item) => (
+                                    <Link
+                                        key={`${item.type}-${item.id}`}
+                                        href={item.url}
+                                        style={{ textDecoration: "none" }}
+                                    >
+                                        <Card>
+                                            <CardContent
                                                 style={{
-                                                    padding: "4px 8px",
-                                                    borderRadius: "var(--radius-sm)",
-                                                    fontSize: "11px",
-                                                    fontWeight: 600,
-                                                    color: cfg.color,
-                                                    backgroundColor: cfg.bg,
-                                                    textTransform: "capitalize",
-                                                    flexShrink: 0,
+                                                    padding: "10px 12px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "10px",
                                                 }}
                                             >
-                                                {type === "members" ? "Member" : type.slice(0, -1)}
-                                            </div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div
-                                                    style={{
-                                                        fontSize: "14px",
-                                                        fontWeight: 600,
-                                                        color: "var(--color-text)",
-                                                        overflow: "hidden",
-                                                        textOverflow: "ellipsis",
-                                                        whiteSpace: "nowrap",
-                                                    }}
-                                                >
-                                                    {item.title}
-                                                </div>
-                                                {item.snippet && (
+                                                <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div
                                                         style={{
-                                                            fontSize: "13px",
-                                                            color: "var(--color-text-secondary)",
+                                                            fontSize: "14px",
+                                                            fontWeight: 600,
+                                                            color: "var(--color-text)",
                                                             overflow: "hidden",
                                                             textOverflow: "ellipsis",
                                                             whiteSpace: "nowrap",
-                                                            marginTop: "2px",
                                                         }}
                                                     >
-                                                        {item.snippet}
+                                                        {item.title}
                                                     </div>
-                                                )}
-                                            </div>
-                                            <ExternalLink
-                                                size={14}
-                                                color="var(--color-text-secondary)"
-                                                style={{ flexShrink: 0 }}
-                                            />
-                                        </a>
-                                    ))}
-                                </div>
+                                                    {item.snippet && (
+                                                        <div
+                                                            style={{
+                                                                fontSize: "13px",
+                                                                color: "var(--color-text-secondary)",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                whiteSpace: "nowrap",
+                                                                marginTop: "2px",
+                                                            }}
+                                                        >
+                                                            {item.snippet}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <ExternalLink
+                                                    size={14}
+                                                    color="var(--color-text-secondary)"
+                                                    style={{ flexShrink: 0 }}
+                                                />
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                ))}
                             </div>
-                        );
-                    })}
+                        </div>
+                    ))}
                 </div>
             )}
         </div>

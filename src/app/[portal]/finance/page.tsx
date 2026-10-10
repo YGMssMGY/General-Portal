@@ -1,24 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
-import { fetchJson } from "@/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Legend,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
+import { fetchJson, fetchPage } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     Dialog,
     DialogContent,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogDescription,
-    DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectContent,
@@ -26,51 +40,35 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { format } from "date-fns";
-import {
-    DollarSign,
-    TrendingUp,
-    TrendingDown,
-    Plus,
-    Wallet,
-    ArrowUpRight,
-    ArrowDownRight,
-    CheckCircle,
-    RotateCcw,
-    Receipt,
-    ShoppingCart,
-} from "lucide-react";
-import { usePageTitle } from "@/hooks/usePageTitle";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 interface FinanceSummary {
     totalIncome: number;
     totalExpense: number;
     balance: number;
+    transactionCount: number;
+    categoryBreakdown: { category: string | null; type: string; total: number; count: number }[];
 }
 
 interface Transaction {
     id: string;
-    amount: number;
+    amountCents: number;
     type: "income" | "expense";
     category: string | null;
     description: string | null;
     date: string;
-    createdBy: { id: string; name: string | null } | null;
     createdAt: string;
+    createdBy: { id: string; name: string | null; image: string | null } | null;
+    attachmentCount: number;
 }
 
-interface BudgetAllocation {
-    id: string;
-    category: string;
-    amount: number;
-    spent: number;
-    remaining: number;
-    status: "pending" | "active" | "spent" | "reconciled";
-    fiscalYear: string;
-    description: string | null;
-    createdBy: { id: string; name: string | null } | null;
-    createdAt: string;
+interface TrendMonth {
+    month: string;
+    income: number;
+    expense: number;
+    net: number;
 }
 
 interface BudgetOverview {
@@ -79,105 +77,241 @@ interface BudgetOverview {
     totalRemaining: number;
 }
 
-function formatCurrency(amount: number): string {
-    const abs = Math.abs(amount);
-    return `\u00A5${abs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+interface Allocation {
+    id: string;
+    category: string;
+    amountCents: number;
+    spentCents: number;
+    fiscalYear: number;
+    status: string;
+    description: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
-const categories = [
-    "Dues",
-    "Events",
-    "Merchandise",
-    "Food & Drinks",
-    "Supplies",
-    "Equipment",
-    "Travel",
-    "Donations",
-    "Fees",
-    "Other",
-];
+interface PurchaseRequest {
+    id: string;
+    title: string;
+    itemName: string;
+    costCents: number;
+    cost: number;
+    quantity: number;
+    justification: string;
+    status: string;
+    reviewComment: string | null;
+    createdAt: string;
+    updatedAt: string;
+    submittedBy: { id: string; name: string | null; email: string | null } | null;
+    reviewedBy: { id: string; name: string | null } | null;
+}
 
-const budgetCategories = [
-    "Dues",
-    "Events",
-    "Merchandise",
-    "Food & Drinks",
-    "Supplies",
-    "Equipment",
-    "Travel",
-    "Donations",
-    "Fees",
-    "Operating",
-    "Marketing",
-    "Other",
-];
+const PR_STATUSES = ["draft", "submitted", "under_review", "approved", "rejected", "fulfilled"];
 
-const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-    pending: { label: "Pending", color: "var(--color-warning)", bg: "rgba(245,158,11,0.1)" },
-    active: { label: "Active", color: "var(--color-info)", bg: "rgba(59,130,246,0.1)" },
-    spent: { label: "Spent", color: "var(--color-text-secondary)", bg: "rgba(107,114,128,0.1)" },
-    reconciled: { label: "Reconciled", color: "var(--color-success)", bg: "rgba(16,185,129,0.1)" },
-};
+function errorMessage(e: unknown, fallback: string): string {
+    return e instanceof Error ? e.message : fallback;
+}
+
+function formatMoney(cents: number, locale: string | undefined): string {
+    return (cents / 100).toLocaleString(locale, { style: "currency", currency: "CNY" });
+}
 
 export default function FinancePage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Finance | ${portalName}`);
+    const { user } = useAuthSession();
+    const { data: workspace } = useWorkspace();
+    const tF = useTranslations("finance");
+    const tB = useTranslations("budget");
+    const tP = useTranslations("purchaseRequests");
+    const tC = useTranslations("common");
+    const tE = useTranslations("errors");
     const queryClient = useQueryClient();
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
+    const locale = user?.locale || undefined;
+    const wsName = workspace?.name ?? portal;
+    usePageTitle(`${tF("title")} | ${wsName}`);
+    const canManageBudget =
+        user?.role === "admin" || (user?.permissions ?? []).includes("manage_budget");
+    const canManageFinance =
+        user?.role === "admin" || (user?.permissions ?? []).includes("manage_finance");
+    const canReviewPurchases =
+        user?.role === "admin" || (user?.permissions ?? []).includes("manage_purchase_requests");
 
-    // Transaction state
+    const [tab, setTab] = useState("transactions");
     const [typeFilter, setTypeFilter] = useState("all");
-    const [showCreateTx, setShowCreateTx] = useState(false);
-    const [newAmount, setNewAmount] = useState("");
-    const [newType, setNewType] = useState<"income" | "expense">("expense");
-    const [newCategory, setNewCategory] = useState("");
-    const [newDescription, setNewDescription] = useState("");
+    const [fiscalYear, setFiscalYear] = useState(() => new Date().getFullYear().toString());
+    const [prStatus, setPrStatus] = useState("all");
 
-    // Budget state
-    const [showCreateAlloc, setShowCreateAlloc] = useState(false);
-    const [selectedAlloc, setSelectedAlloc] = useState<BudgetAllocation | null>(null);
+    const [txOpen, setTxOpen] = useState(false);
+    const [txAmount, setTxAmount] = useState("");
+    const [txType, setTxType] = useState("expense");
+    const [txCategory, setTxCategory] = useState("");
+    const [txDescription, setTxDescription] = useState("");
+    const [txDate, setTxDate] = useState("");
+
+    const [allocOpen, setAllocOpen] = useState(false);
     const [allocCategory, setAllocCategory] = useState("");
     const [allocAmount, setAllocAmount] = useState("");
-    const [allocFiscalYear, setAllocFiscalYear] = useState(new Date().getFullYear().toString());
     const [allocDescription, setAllocDescription] = useState("");
+
+    const [spendTarget, setSpendTarget] = useState<Allocation | null>(null);
     const [spendAmount, setSpendAmount] = useState("");
     const [spendDescription, setSpendDescription] = useState("");
 
-    // Finance queries
-    const { data: summary, isLoading: summaryLoading } = useQuery<FinanceSummary>({
+    const [prOpen, setPrOpen] = useState(false);
+    const [prTitle, setPrTitle] = useState("");
+    const [prItem, setPrItem] = useState("");
+    const [prCost, setPrCost] = useState("");
+    const [prQuantity, setPrQuantity] = useState("1");
+    const [prJustification, setPrJustification] = useState("");
+
+    const [reviewTarget, setReviewTarget] = useState<PurchaseRequest | null>(null);
+    const [reviewStatus, setReviewStatus] = useState("approved");
+    const [reviewComment, setReviewComment] = useState("");
+
+    const [budgetDelete, setBudgetDelete] = useState<Allocation | null>(null);
+    const [budgetPermanent, setBudgetPermanent] = useState<Allocation | null>(null);
+    const [prDelete, setPrDelete] = useState<PurchaseRequest | null>(null);
+    const [prPermanent, setPrPermanent] = useState<PurchaseRequest | null>(null);
+    const [txDelete, setTxDelete] = useState<Transaction | null>(null);
+
+    const { data: summary, isLoading: summaryLoading } = useQuery({
         queryKey: [portal, "finance", "summary"],
         queryFn: () => fetchJson<FinanceSummary>("/api/finance/summary"),
+        enabled: portal !== "",
     });
 
-    const {
-        data: transactionsData,
-        isLoading: txLoading,
-        isError: txError,
-    } = useQuery<Transaction[]>({
-        queryKey: [portal, "finance", "transactions"],
-        queryFn: () => fetchJson<Transaction[]>("/api/finance/transactions"),
+    const { data: trends } = useQuery({
+        queryKey: [portal, "finance", "trends"],
+        queryFn: () => fetchJson<{ months: TrendMonth[] }>("/api/finance/trends"),
+        enabled: portal !== "",
     });
 
-    // Budget queries
-    const { data: budgetOverview, isLoading: budgetOverviewLoading } = useQuery<BudgetOverview>({
+    const { data: overview } = useQuery({
         queryKey: [portal, "budget", "overview"],
         queryFn: () => fetchJson<BudgetOverview>("/api/budget/overview"),
+        enabled: portal !== "",
     });
 
-    const { data: allocationsData, isLoading: allocLoading } = useQuery<BudgetAllocation[]>({
-        queryKey: [portal, "budget", "allocations"],
-        queryFn: () => fetchJson<BudgetAllocation[]>("/api/budget"),
+    const { data: txFirst, isLoading: txLoading } = useQuery({
+        queryKey: [portal, "finance", "transactions", typeFilter],
+        queryFn: () =>
+            fetchPage<Transaction>(
+                typeFilter === "all"
+                    ? "/api/finance/transactions"
+                    : `/api/finance/transactions?type=${typeFilter}`,
+            ),
+        enabled: portal !== "",
     });
+    const [txExtra, setTxExtra] = useState<Transaction[]>([]);
+    const [txNext, setTxNext] = useState<string | null>(null);
+    const [txMoreLoading, setTxMoreLoading] = useState(false);
+    const [prevTxFirst, setPrevTxFirst] = useState(txFirst);
+    if (txFirst !== prevTxFirst) {
+        setPrevTxFirst(txFirst);
+        setTxExtra([]);
+        setTxNext(txFirst?.nextCursor ?? null);
+    }
+    const transactions = [...(txFirst?.items ?? []), ...txExtra];
 
-    // Finance mutations
-    const createTxMutation = useMutation({
+    async function loadMoreTx() {
+        if (!txNext || txMoreLoading) return;
+        setTxMoreLoading(true);
+        try {
+            const base =
+                typeFilter === "all"
+                    ? "/api/finance/transactions"
+                    : `/api/finance/transactions?type=${typeFilter}`;
+            const page = await fetchPage<Transaction>(
+                `${base}${base.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(txNext)}`,
+            );
+            setTxExtra((prev) => [...prev, ...page.items]);
+            setTxNext(page.nextCursor);
+        } catch (e) {
+            toast.error(errorMessage(e, tE("internal")));
+        } finally {
+            setTxMoreLoading(false);
+        }
+    }
+
+    const { data: allocFirst, isLoading: allocLoading } = useQuery({
+        queryKey: [portal, "budget", fiscalYear],
+        queryFn: () => fetchPage<Allocation>(`/api/budget?fiscalYear=${fiscalYear}`),
+        enabled: portal !== "",
+    });
+    const [allocExtra, setAllocExtra] = useState<Allocation[]>([]);
+    const [allocNext, setAllocNext] = useState<string | null>(null);
+    const [allocMoreLoading, setAllocMoreLoading] = useState(false);
+    const [prevAllocFirst, setPrevAllocFirst] = useState(allocFirst);
+    if (allocFirst !== prevAllocFirst) {
+        setPrevAllocFirst(allocFirst);
+        setAllocExtra([]);
+        setAllocNext(allocFirst?.nextCursor ?? null);
+    }
+    const allocations = [...(allocFirst?.items ?? []), ...allocExtra];
+
+    async function loadMoreAlloc() {
+        if (!allocNext || allocMoreLoading) return;
+        setAllocMoreLoading(true);
+        try {
+            const page = await fetchPage<Allocation>(
+                `/api/budget?fiscalYear=${fiscalYear}&cursor=${encodeURIComponent(allocNext)}`,
+            );
+            setAllocExtra((prev) => [...prev, ...page.items]);
+            setAllocNext(page.nextCursor);
+        } catch (e) {
+            toast.error(errorMessage(e, tE("internal")));
+        } finally {
+            setAllocMoreLoading(false);
+        }
+    }
+
+    const { data: prFirst, isLoading: prLoading } = useQuery({
+        queryKey: [portal, "purchase-requests", prStatus],
+        queryFn: () =>
+            fetchPage<PurchaseRequest>(
+                prStatus === "all"
+                    ? "/api/purchase-requests"
+                    : `/api/purchase-requests?status=${prStatus}`,
+            ),
+        enabled: portal !== "",
+    });
+    const [prExtra, setPrExtra] = useState<PurchaseRequest[]>([]);
+    const [prNext, setPrNext] = useState<string | null>(null);
+    const [prMoreLoading, setPrMoreLoading] = useState(false);
+    const [prevPrFirst, setPrevPrFirst] = useState(prFirst);
+    if (prFirst !== prevPrFirst) {
+        setPrevPrFirst(prFirst);
+        setPrExtra([]);
+        setPrNext(prFirst?.nextCursor ?? null);
+    }
+    const purchaseRequests = [...(prFirst?.items ?? []), ...prExtra];
+
+    async function loadMorePr() {
+        if (!prNext || prMoreLoading) return;
+        setPrMoreLoading(true);
+        try {
+            const base =
+                prStatus === "all"
+                    ? "/api/purchase-requests"
+                    : `/api/purchase-requests?status=${prStatus}`;
+            const page = await fetchPage<PurchaseRequest>(
+                `${base}${base.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(prNext)}`,
+            );
+            setPrExtra((prev) => [...prev, ...page.items]);
+            setPrNext(page.nextCursor);
+        } catch (e) {
+            toast.error(errorMessage(e, tE("internal")));
+        } finally {
+            setPrMoreLoading(false);
+        }
+    }
+
+    const createTx = useMutation({
         mutationFn: (body: {
             amount: number;
-            type: "income" | "expense";
-            category: string;
-            description: string;
+            type: string;
+            category?: string | null;
+            description?: string | null;
+            date?: string | null;
         }) =>
             fetchJson<Transaction>("/api/finance/transactions", {
                 method: "POST",
@@ -186,354 +320,302 @@ export default function FinancePage() {
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "finance"] });
-            setShowCreateTx(false);
-            setNewAmount("");
-            setNewType("expense");
-            setNewCategory("");
-            setNewDescription("");
+            setTxOpen(false);
+            setTxAmount("");
+            setTxType("expense");
+            setTxCategory("");
+            setTxDescription("");
+            setTxDate("");
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    // Budget mutations
-    const createAllocMutation = useMutation({
+    const deleteTx = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson<{ deleted: boolean }>(`/api/finance/transactions/${id}`, {
+                method: "DELETE",
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "finance"] });
+            setTxDelete(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
+    });
+
+    const createAlloc = useMutation({
         mutationFn: (body: {
             category: string;
             amount: number;
-            fiscalYear: string;
-            description: string;
+            fiscalYear: number;
+            description?: string | null;
         }) =>
-            fetchJson<BudgetAllocation>("/api/budget", {
+            fetchJson<Allocation>("/api/budget", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
-            setShowCreateAlloc(false);
+            setAllocOpen(false);
             setAllocCategory("");
             setAllocAmount("");
-            setAllocFiscalYear(new Date().getFullYear().toString());
             setAllocDescription("");
         },
-    });
-
-    const approveMutation = useMutation({
-        mutationFn: (id: string) =>
-            fetchJson<void>(`/api/budget/${id}/approve`, { method: "POST" }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
-            setSelectedAlloc(null);
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    const spendMutation = useMutation({
-        mutationFn: ({
-            id,
-            amount,
-            description,
-        }: {
-            id: string;
-            amount: number;
-            description: string;
-        }) =>
-            fetchJson<void>(`/api/budget/${id}/spend`, {
+    const approveAlloc = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson<Allocation>(`/api/budget/${id}/approve`, { method: "POST" }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
+    });
+
+    const recordSpend = useMutation({
+        mutationFn: (body: { id: string; amount: number; description?: string | null }) =>
+            fetchJson(`/api/budget/${body.id}/spend`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount, description }),
+                body: JSON.stringify({ amount: body.amount, description: body.description }),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
-            setSelectedAlloc(null);
+            setSpendTarget(null);
             setSpendAmount("");
             setSpendDescription("");
         },
-    });
-
-    const reconcileMutation = useMutation({
-        mutationFn: (id: string) =>
-            fetchJson<void>(`/api/budget/${id}/reconcile`, { method: "POST" }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
-            setSelectedAlloc(null);
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    const isLoading = summaryLoading || txLoading;
-    const isBudgetLoading = budgetOverviewLoading || allocLoading;
-
-    // Purchase request state and mutations
-    const [showCreatePr, setShowCreatePr] = useState(false);
-    const [prForm, setPrForm] = useState({
-        title: "",
-        itemName: "",
-        cost: "",
-        quantity: 1,
-        justification: "",
+    const reconcileAlloc = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson<Allocation>(`/api/budget/${id}/reconcile`, { method: "POST" }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
     });
-    const [prExpanded, setPrExpanded] = useState<string | null>(null);
-    const [prReview, setPrReview] = useState<{
-        id: string;
-        status: string;
-        comment: string;
-    } | null>(null);
 
-    const { data: prData, isLoading: prLoading } = useQuery<Record<string, unknown>[]>({
-        queryKey: [portal, "purchase-requests"],
-        queryFn: () => fetchJson("/api/purchase-requests"),
+    const deleteAlloc = useMutation({
+        mutationFn: ({ id, permanent }: { id: string; permanent: boolean }) =>
+            fetchJson<{ deleted: boolean }>(
+                permanent ? `/api/budget/${id}?permanent=true` : `/api/budget/${id}`,
+                { method: "DELETE" },
+            ),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "budget"] });
+            setBudgetDelete(null);
+            setBudgetPermanent(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
     });
 
     const createPr = useMutation({
-        mutationFn: (body: Record<string, unknown>) =>
-            fetchJson("/api/purchase-requests", {
+        mutationFn: (body: {
+            title: string;
+            itemName: string;
+            cost: number;
+            quantity: number;
+            justification: string;
+        }) =>
+            fetchJson<PurchaseRequest>("/api/purchase-requests", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] });
-            setShowCreatePr(false);
-            setPrForm({ title: "", itemName: "", cost: "", quantity: 1, justification: "" });
+            setPrOpen(false);
+            setPrTitle("");
+            setPrItem("");
+            setPrCost("");
+            setPrQuantity("1");
+            setPrJustification("");
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
     const reviewPr = useMutation({
-        mutationFn: ({
-            id,
-            status,
-            reviewComment,
-        }: {
-            id: string;
-            status: string;
-            reviewComment?: string;
-        }) =>
-            fetchJson(`/api/purchase-requests/${id}/review`, {
+        mutationFn: (body: { id: string; status: string; reviewComment?: string | null }) =>
+            fetchJson<PurchaseRequest>(`/api/purchase-requests/${body.id}/review`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status, reviewComment }),
+                body: JSON.stringify({ status: body.status, reviewComment: body.reviewComment }),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] });
-            setPrReview(null);
+            setReviewTarget(null);
+            setReviewStatus("approved");
+            setReviewComment("");
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    // --- Loading state ---
-    if (isLoading) {
-        return (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div>
-                    <h1
-                        style={{
-                            fontSize: "20px",
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            margin: 0,
-                        }}
-                    >
-                        Finance
-                    </h1>
-                    <p
-                        style={{
-                            fontSize: "14px",
-                            color: "var(--color-text-secondary)",
-                            margin: "4px 0 0",
-                        }}
-                    >
-                        Track income and expenses
-                    </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                        <Card key={i}>
-                            <CardContent style={{ padding: "20px" }}>
-                                <Skeleton
-                                    style={{
-                                        width: "80px",
-                                        height: "14px",
-                                        borderRadius: "5px",
-                                        marginBottom: "8px",
-                                    }}
-                                />
-                                <Skeleton
-                                    style={{ width: "120px", height: "28px", borderRadius: "5px" }}
-                                />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-                <Card>
-                    <CardContent style={{ padding: "20px" }}>
-                        <Skeleton
-                            style={{
-                                width: "100px",
-                                height: "16px",
-                                borderRadius: "5px",
-                                marginBottom: "16px",
-                            }}
-                        />
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    padding: "12px 0",
-                                    borderBottom: "1px solid var(--color-border)",
-                                }}
-                            >
-                                <div>
-                                    <Skeleton
-                                        style={{
-                                            width: "140px",
-                                            height: "14px",
-                                            borderRadius: "5px",
-                                            marginBottom: "4px",
-                                        }}
-                                    />
-                                    <Skeleton
-                                        style={{
-                                            width: "80px",
-                                            height: "12px",
-                                            borderRadius: "5px",
-                                        }}
-                                    />
-                                </div>
-                                <Skeleton
-                                    style={{ width: "80px", height: "16px", borderRadius: "5px" }}
-                                />
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
+    const deletePr = useMutation({
+        mutationFn: ({ id, permanent }: { id: string; permanent: boolean }) =>
+            fetchJson<{ deleted: boolean }>(
+                permanent
+                    ? `/api/purchase-requests/${id}?permanent=true`
+                    : `/api/purchase-requests/${id}`,
+                { method: "DELETE" },
+            ),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "purchase-requests"] });
+            setPrDelete(null);
+            setPrPermanent(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
+    });
 
-    if (txError) {
-        return (
-            <div style={{ textAlign: "center", padding: "48px 24px" }}>
-                <p style={{ fontSize: "14px", color: "var(--color-destructive)", margin: 0 }}>
-                    Failed to load financial data.
-                </p>
-            </div>
-        );
-    }
-
-    // --- Derived data ---
-    const transactions = transactionsData ?? [];
-    const filteredTx =
-        typeFilter === "all" ? transactions : transactions.filter((tx) => tx.type === typeFilter);
-
-    const s = summary ?? { totalIncome: 0, totalExpense: 0, balance: 0 };
-    const bo = budgetOverview ?? { totalAllocated: 0, totalSpent: 0, totalRemaining: 0 };
-    const allocations = allocationsData ?? [];
-
-    // --- Handlers ---
     function handleCreateTx() {
-        const amount = parseFloat(newAmount);
-        if (isNaN(amount) || amount <= 0) return;
-        createTxMutation.mutate({
+        const amount = Number.parseFloat(txAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast.error(tE("invalidField", { field: tF("amount") }));
+            return;
+        }
+        createTx.mutate({
             amount,
-            type: newType,
-            category: newCategory,
-            description: newDescription.trim(),
+            type: txType,
+            category: txCategory.trim() || null,
+            description: txDescription.trim() || null,
+            date: txDate || null,
         });
     }
 
     function handleCreateAlloc() {
-        const amount = parseFloat(allocAmount);
-        if (isNaN(amount) || amount <= 0) return;
-        createAllocMutation.mutate({
-            category: allocCategory,
+        const amount = Number.parseFloat(allocAmount);
+        const year = Number.parseInt(fiscalYear, 10);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast.error(tE("invalidField", { field: tF("amount") }));
+            return;
+        }
+        createAlloc.mutate({
+            category: allocCategory.trim(),
             amount,
-            fiscalYear: allocFiscalYear,
-            description: allocDescription.trim(),
+            fiscalYear: Number.isFinite(year) ? year : new Date().getFullYear(),
+            description: allocDescription.trim() || null,
         });
     }
 
     function handleSpend() {
-        if (!selectedAlloc) return;
-        const amount = parseFloat(spendAmount);
-        if (isNaN(amount) || amount <= 0) return;
-        spendMutation.mutate({
-            id: selectedAlloc.id,
+        if (!spendTarget) return;
+        const amount = Number.parseFloat(spendAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast.error(tE("invalidField", { field: tF("amount") }));
+            return;
+        }
+        recordSpend.mutate({
+            id: spendTarget.id,
             amount,
-            description: spendDescription.trim(),
+            description: spendDescription.trim() || null,
         });
     }
 
-    const prStatusStyles: Record<string, { color: string; bg: string }> = {
-        submitted: { color: "var(--color-primary)", bg: "var(--color-primary-light)" },
-        under_review: { color: "var(--color-warning)", bg: "#fff8e1" },
-        approved: { color: "var(--color-success)", bg: "#e8f5e9" },
-        rejected: { color: "var(--color-destructive)", bg: "#fff5f5" },
-        fulfilled: { color: "var(--color-text-secondary)", bg: "var(--color-bg-secondary)" },
-    };
+    function handleCreatePr() {
+        const cost = Number.parseFloat(prCost);
+        const quantity = Number.parseInt(prQuantity, 10);
+        if (!Number.isFinite(cost) || cost < 0) {
+            toast.error(tE("invalidField", { field: tP("cost") }));
+            return;
+        }
+        createPr.mutate({
+            title: prTitle.trim(),
+            itemName: prItem.trim(),
+            cost,
+            quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+            justification: prJustification.trim(),
+        });
+    }
 
-    const inputStyle: React.CSSProperties = {
-        width: "100%",
-        padding: "10px 12px",
-        fontSize: "14px",
-        border: "1px solid var(--color-border)",
-        borderRadius: "5px",
-        backgroundColor: "var(--color-bg)",
-        color: "var(--color-text)",
-        fontFamily: "inherit",
-        outline: "none",
-    };
+    function budgetStatusLabel(status: string): string {
+        if (status === "active") return tB("statusActive");
+        if (status === "spent") return tB("statusSpent");
+        if (status === "reconciled") return tB("statusReconciled");
+        return status;
+    }
+
+    function prStatusLabel(status: string): string {
+        if (status === "draft") return tP("statusDraft");
+        if (status === "submitted") return tP("statusSubmitted");
+        if (status === "under_review") return tP("statusUnderReview");
+        if (status === "approved") return tP("statusApproved");
+        if (status === "rejected") return tP("statusRejected");
+        return tP("statusFulffilled");
+    }
+
+    const trendRows = (trends?.months ?? []).map((m) => ({
+        month: m.month,
+        income: m.income / 100,
+        expense: m.expense / 100,
+        net: m.net / 100,
+    }));
+    const budgetRows = allocations.map((a) => ({
+        category: a.category,
+        allocated: a.amountCents / 100,
+        spent: a.spentCents / 100,
+    }));
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            {/* ===== SECTION 1: FINANCE OVERVIEW ===== */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div>
-                <div
+                <h1
                     style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: "16px",
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        color: "var(--color-text)",
+                        margin: 0,
                     }}
                 >
-                    <p
-                        style={{
-                            fontSize: "14px",
-                            color: "var(--color-text-secondary)",
-                            margin: 0,
-                        }}
-                    >
-                        Track income and expenses
-                    </p>
-                    <Button onClick={() => setShowCreateTx(true)}>
-                        <Plus size={16} />
-                        <span>Add Transaction</span>
-                    </Button>
-                </div>
-
-                <div
-                    className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-                    style={{ marginBottom: "16px" }}
+                    {tF("title")}
+                </h1>
+                <p
+                    style={{
+                        fontSize: "14px",
+                        color: "var(--color-text-secondary)",
+                        margin: "4px 0 0",
+                    }}
                 >
-                    <Card>
-                        <CardContent style={{ padding: "20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "8px",
-                                }}
-                            >
-                                <TrendingUp size={18} style={{ color: "var(--color-success)" }} />
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                    }}
-                                >
-                                    Total Income
-                                </span>
-                            </div>
+                    {wsName}
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card>
+                    <CardContent style={{ padding: "20px" }}>
+                        <p
+                            style={{
+                                fontSize: "13px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 8px",
+                            }}
+                        >
+                            {tF("totalIncome")}
+                        </p>
+                        {summaryLoading ? (
+                            <Skeleton className="h-7 w-28" />
+                        ) : (
                             <p
                                 style={{
                                     fontSize: "24px",
@@ -542,34 +624,25 @@ export default function FinancePage() {
                                     margin: 0,
                                 }}
                             >
-                                {formatCurrency(s.totalIncome)}
+                                {formatMoney(summary?.totalIncome ?? 0, locale)}
                             </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent style={{ padding: "20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "8px",
-                                }}
-                            >
-                                <TrendingDown
-                                    size={18}
-                                    style={{ color: "var(--color-destructive)" }}
-                                />
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                    }}
-                                >
-                                    Total Expenses
-                                </span>
-                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent style={{ padding: "20px" }}>
+                        <p
+                            style={{
+                                fontSize: "13px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 8px",
+                            }}
+                        >
+                            {tF("totalExpense")}
+                        </p>
+                        {summaryLoading ? (
+                            <Skeleton className="h-7 w-28" />
+                        ) : (
                             <p
                                 style={{
                                     fontSize: "24px",
@@ -578,620 +651,407 @@ export default function FinancePage() {
                                     margin: 0,
                                 }}
                             >
-                                {formatCurrency(s.totalExpense)}
+                                {formatMoney(summary?.totalExpense ?? 0, locale)}
                             </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent style={{ padding: "20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "8px",
-                                }}
-                            >
-                                <Wallet
-                                    size={18}
-                                    style={{
-                                        color:
-                                            s.balance >= 0
-                                                ? "var(--color-success)"
-                                                : "var(--color-destructive)",
-                                    }}
-                                />
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                    }}
-                                >
-                                    Balance
-                                </span>
-                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent style={{ padding: "20px" }}>
+                        <p
+                            style={{
+                                fontSize: "13px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 8px",
+                            }}
+                        >
+                            {tF("netBalance")}
+                        </p>
+                        {summaryLoading ? (
+                            <Skeleton className="h-7 w-28" />
+                        ) : (
                             <p
                                 style={{
                                     fontSize: "24px",
                                     fontWeight: 700,
-                                    color:
-                                        s.balance >= 0
-                                            ? "var(--color-text)"
-                                            : "var(--color-destructive)",
+                                    color: "var(--color-text)",
                                     margin: 0,
                                 }}
                             >
-                                {formatCurrency(s.balance)}
+                                {formatMoney(summary?.balance ?? 0, locale)}
                             </p>
-                        </CardContent>
-                    </Card>
-                </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
-                <Tabs defaultValue="all" onValueChange={(v) => setTypeFilter(v)}>
+            <Card>
+                <CardContent style={{ padding: "20px" }}>
+                    <h2
+                        style={{
+                            fontSize: "15px",
+                            fontWeight: 600,
+                            color: "var(--color-text)",
+                            margin: "0 0 12px",
+                        }}
+                    >
+                        {tF("trends")}
+                    </h2>
+                    {trendRows.length === 0 ? (
+                        <Skeleton className="h-60 w-full" />
+                    ) : (
+                        <div style={{ height: "260px" }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={trendRows}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                    <YAxis tick={{ fontSize: 11 }} />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="income"
+                                        name={tF("income")}
+                                        stroke="var(--color-success)"
+                                        dot={false}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="expense"
+                                        name={tF("expense")}
+                                        stroke="var(--color-destructive)"
+                                        dot={false}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="net"
+                                        name={tF("netBalance")}
+                                        stroke="var(--color-primary)"
+                                        dot={false}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Tabs value={tab} onValueChange={setTab}>
+                <TabsList>
+                    <TabsTrigger value="transactions">{tF("transactions")}</TabsTrigger>
+                    <TabsTrigger value="budget">{tB("title")}</TabsTrigger>
+                    <TabsTrigger value="requests">{tP("title")}</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="transactions">
                     <div
                         style={{
                             display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
+                            gap: "8px",
                             marginBottom: "12px",
+                            flexWrap: "wrap",
                         }}
                     >
-                        <TabsList>
-                            <TabsTrigger value="all">All</TabsTrigger>
-                            <TabsTrigger value="income">Income</TabsTrigger>
-                            <TabsTrigger value="expense">Expense</TabsTrigger>
-                        </TabsList>
-                    </div>
-
-                    <TabsContent value={typeFilter}>
-                        {filteredTx.length === 0 ? (
-                            <Card>
-                                <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
-                                    <DollarSign
-                                        size={32}
-                                        style={{
-                                            color: "var(--color-text-secondary)",
-                                            marginBottom: "12px",
-                                        }}
-                                    />
-                                    <p
-                                        style={{
-                                            fontSize: "14px",
-                                            fontWeight: 600,
-                                            color: "var(--color-text)",
-                                            margin: "0 0 4px",
-                                        }}
-                                    >
-                                        No transactions
-                                    </p>
-                                    <p
-                                        style={{
-                                            fontSize: "13px",
-                                            color: "var(--color-text-secondary)",
-                                            margin: 0,
-                                        }}
-                                    >
-                                        {typeFilter === "all"
-                                            ? "Add your first transaction."
-                                            : `No ${typeFilter} transactions recorded.`}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ) : (
-                            <>
-                                <div className="hidden md:block">
-                                    <Card>
-                                        <div
-                                            style={{
-                                                display: "grid",
-                                                gridTemplateColumns: "1fr 2fr 1fr 1fr auto",
-                                                gap: "12px",
-                                                padding: "12px 20px",
-                                                borderBottom: "1px solid var(--color-border)",
-                                                fontSize: "12px",
-                                                fontWeight: 600,
-                                                color: "var(--color-text-secondary)",
-                                                textTransform: "uppercase",
-                                            }}
-                                        >
-                                            <span>Date</span>
-                                            <span>Description</span>
-                                            <span>Category</span>
-                                            <span>Type</span>
-                                            <span>Amount</span>
-                                        </div>
-                                        {filteredTx.map((tx) => (
-                                            <div
-                                                key={tx.id}
-                                                style={{
-                                                    display: "grid",
-                                                    gridTemplateColumns: "1fr 2fr 1fr 1fr auto",
-                                                    gap: "12px",
-                                                    padding: "14px 20px",
-                                                    borderBottom: "1px solid var(--color-border)",
-                                                    alignItems: "center",
-                                                    fontSize: "13px",
-                                                }}
-                                            >
-                                                <span
-                                                    style={{ color: "var(--color-text-secondary)" }}
-                                                >
-                                                    {format(new Date(tx.date), "MMM d, yyyy")}
-                                                </span>
-                                                <span
-                                                    style={{
-                                                        color: "var(--color-text)",
-                                                        fontWeight: 500,
-                                                    }}
-                                                >
-                                                    {tx.description || "No description"}
-                                                </span>
-                                                <span
-                                                    style={{ color: "var(--color-text-secondary)" }}
-                                                >
-                                                    {tx.category ?? "-"}
-                                                </span>
-                                                <div>
-                                                    <Badge
-                                                        variant="outline"
-                                                        style={{
-                                                            color:
-                                                                tx.type === "income"
-                                                                    ? "var(--color-success)"
-                                                                    : "var(--color-destructive)",
-                                                            borderColor:
-                                                                tx.type === "income"
-                                                                    ? "var(--color-success)"
-                                                                    : "var(--color-destructive)",
-                                                        }}
-                                                    >
-                                                        {tx.type === "income"
-                                                            ? "Income"
-                                                            : "Expense"}
-                                                    </Badge>
-                                                </div>
-                                                <span
-                                                    style={{
-                                                        fontWeight: 600,
-                                                        color:
-                                                            tx.type === "income"
-                                                                ? "var(--color-success)"
-                                                                : "var(--color-destructive)",
-                                                        textAlign: "right",
-                                                    }}
-                                                >
-                                                    {tx.type === "income" ? "+" : "-"}
-                                                    {formatCurrency(tx.amount)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </Card>
-                                </div>
-
-                                <div
-                                    className="md:hidden"
-                                    style={{ display: "flex", flexDirection: "column", gap: "8px" }}
-                                >
-                                    {filteredTx.map((tx) => (
-                                        <Card key={tx.id}>
-                                            <CardContent style={{ padding: "16px" }}>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "space-between",
-                                                        alignItems: "flex-start",
-                                                        marginBottom: "8px",
-                                                    }}
-                                                >
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <p
-                                                            style={{
-                                                                fontSize: "14px",
-                                                                fontWeight: 600,
-                                                                color: "var(--color-text)",
-                                                                margin: "0 0 4px",
-                                                            }}
-                                                        >
-                                                            {tx.description || "No description"}
-                                                        </p>
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                gap: "8px",
-                                                                flexWrap: "wrap",
-                                                            }}
-                                                        >
-                                                            <span
-                                                                style={{
-                                                                    fontSize: "12px",
-                                                                    color: "var(--color-text-secondary)",
-                                                                }}
-                                                            >
-                                                                {format(
-                                                                    new Date(tx.date),
-                                                                    "MMM d, yyyy",
-                                                                )}
-                                                            </span>
-                                                            {tx.category && (
-                                                                <span
-                                                                    style={{
-                                                                        fontSize: "12px",
-                                                                        color: "var(--color-text-secondary)",
-                                                                    }}
-                                                                >
-                                                                    {tx.category}
-                                                                </span>
-                                                            )}
-                                                            <Badge
-                                                                variant="outline"
-                                                                style={{
-                                                                    color:
-                                                                        tx.type === "income"
-                                                                            ? "var(--color-success)"
-                                                                            : "var(--color-destructive)",
-                                                                    borderColor:
-                                                                        tx.type === "income"
-                                                                            ? "var(--color-success)"
-                                                                            : "var(--color-destructive)",
-                                                                    fontSize: "10px",
-                                                                }}
-                                                            >
-                                                                {tx.type === "income"
-                                                                    ? "Income"
-                                                                    : "Expense"}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-                                                    <span
-                                                        style={{
-                                                            fontSize: "16px",
-                                                            fontWeight: 700,
-                                                            color:
-                                                                tx.type === "income"
-                                                                    ? "var(--color-success)"
-                                                                    : "var(--color-destructive)",
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        {tx.type === "income" ? "+" : "-"}
-                                                        {formatCurrency(tx.amount)}
-                                                    </span>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </>
+                        <Select value={typeFilter} onValueChange={setTypeFilter}>
+                            <SelectTrigger style={{ width: "160px" }}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{tC("all")}</SelectItem>
+                                <SelectItem value="income">{tF("income")}</SelectItem>
+                                <SelectItem value="expense">{tF("expense")}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {canManageFinance && (
+                            <Button onClick={() => setTxOpen(true)}>{tF("newTransaction")}</Button>
                         )}
-                    </TabsContent>
-                </Tabs>
-            </div>
-
-            {/* ===== SECTION 2: BUDGET ALLOCATIONS ===== */}
-            <div>
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: "16px",
-                    }}
-                >
-                    <div>
-                        <h2
-                            style={{
-                                fontSize: "18px",
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                                margin: 0,
-                            }}
-                        >
-                            Budget Allocations
-                        </h2>
-                        <p
-                            style={{
-                                fontSize: "14px",
-                                color: "var(--color-text-secondary)",
-                                margin: "4px 0 0",
-                            }}
-                        >
-                            Manage budget allocations and track spending
-                        </p>
                     </div>
-                    <Button onClick={() => setShowCreateAlloc(true)}>
-                        <Plus size={16} />
-                        <span>New Allocation</span>
-                    </Button>
-                </div>
-
-                {/* Budget overview cards */}
-                <div
-                    className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-                    style={{ marginBottom: "16px" }}
-                >
-                    <Card>
-                        <CardContent style={{ padding: "16px 20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                <Wallet
-                                    size={16}
-                                    style={{ color: "var(--color-text-secondary)" }}
-                                />
-                                <span
+                    {txLoading ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <Skeleton key={i} className="h-14 w-full" />
+                            ))}
+                        </div>
+                    ) : transactions.length === 0 ? (
+                        <Card>
+                            <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
+                                <p
                                     style={{
-                                        fontSize: "12px",
-                                        fontWeight: 500,
+                                        fontSize: "14px",
                                         color: "var(--color-text-secondary)",
+                                        margin: 0,
                                     }}
                                 >
-                                    Total Allocated
-                                </span>
-                            </div>
-                            <p
-                                style={{
-                                    fontSize: "22px",
-                                    fontWeight: 700,
-                                    color: "var(--color-text)",
-                                    margin: 0,
-                                }}
-                            >
-                                {isBudgetLoading ? (
-                                    <Skeleton
+                                    {tF("noTransactions")}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {transactions.map((tx) => (
+                                <Card key={tx.id}>
+                                    <CardContent
                                         style={{
-                                            width: "100px",
-                                            height: "26px",
-                                            borderRadius: "5px",
-                                        }}
-                                    />
-                                ) : (
-                                    formatCurrency(bo.totalAllocated)
-                                )}
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent style={{ padding: "16px 20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                <Receipt size={16} style={{ color: "var(--color-destructive)" }} />
-                                <span
-                                    style={{
-                                        fontSize: "12px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                    }}
-                                >
-                                    Total Spent
-                                </span>
-                            </div>
-                            <p
-                                style={{
-                                    fontSize: "22px",
-                                    fontWeight: 700,
-                                    color: "var(--color-destructive)",
-                                    margin: 0,
-                                }}
-                            >
-                                {isBudgetLoading ? (
-                                    <Skeleton
-                                        style={{
-                                            width: "100px",
-                                            height: "26px",
-                                            borderRadius: "5px",
-                                        }}
-                                    />
-                                ) : (
-                                    formatCurrency(bo.totalSpent)
-                                )}
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent style={{ padding: "16px 20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                <CheckCircle size={16} style={{ color: "var(--color-success)" }} />
-                                <span
-                                    style={{
-                                        fontSize: "12px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                    }}
-                                >
-                                    Total Remaining
-                                </span>
-                            </div>
-                            <p
-                                style={{
-                                    fontSize: "22px",
-                                    fontWeight: 700,
-                                    color: "var(--color-success)",
-                                    margin: 0,
-                                }}
-                            >
-                                {isBudgetLoading ? (
-                                    <Skeleton
-                                        style={{
-                                            width: "100px",
-                                            height: "26px",
-                                            borderRadius: "5px",
-                                        }}
-                                    />
-                                ) : (
-                                    formatCurrency(bo.totalRemaining)
-                                )}
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Allocations list */}
-                {isBudgetLoading ? (
-                    <Card>
-                        <CardContent style={{ padding: "20px" }}>
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} style={{ marginBottom: i < 2 ? "16px" : 0 }}>
-                                    <div
-                                        style={{
+                                            padding: "12px 16px",
                                             display: "flex",
                                             justifyContent: "space-between",
-                                            marginBottom: "8px",
+                                            alignItems: "center",
+                                            gap: "12px",
                                         }}
                                     >
-                                        <Skeleton
-                                            style={{
-                                                width: "120px",
-                                                height: "14px",
-                                                borderRadius: "5px",
-                                            }}
-                                        />
-                                        <Skeleton
-                                            style={{
-                                                width: "60px",
-                                                height: "14px",
-                                                borderRadius: "5px",
-                                            }}
-                                        />
-                                    </div>
-                                    <Skeleton
-                                        style={{
-                                            width: "100%",
-                                            height: "8px",
-                                            borderRadius: "4px",
-                                            marginBottom: "4px",
-                                        }}
-                                    />
-                                    <div
-                                        style={{ display: "flex", justifyContent: "space-between" }}
-                                    >
-                                        <Skeleton
-                                            style={{
-                                                width: "80px",
-                                                height: "12px",
-                                                borderRadius: "5px",
-                                            }}
-                                        />
-                                        <Skeleton
-                                            style={{
-                                                width: "60px",
-                                                height: "12px",
-                                                borderRadius: "5px",
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-                ) : allocations.length === 0 ? (
-                    <Card>
-                        <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
-                            <Wallet
-                                size={32}
-                                style={{
-                                    color: "var(--color-text-secondary)",
-                                    marginBottom: "12px",
-                                }}
-                            />
-                            <p
-                                style={{
-                                    fontSize: "14px",
-                                    fontWeight: 600,
-                                    color: "var(--color-text)",
-                                    margin: "0 0 4px",
-                                }}
-                            >
-                                No budget allocations
-                            </p>
-                            <p
-                                style={{
-                                    fontSize: "13px",
-                                    color: "var(--color-text-secondary)",
-                                    marginBottom: "16px",
-                                }}
-                            >
-                                Create your first budget allocation to start tracking.
-                            </p>
-                            <Button variant="outline" onClick={() => setShowCreateAlloc(true)}>
-                                <Plus size={14} />
-                                <span>Create Allocation</span>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {allocations.map((alloc) => {
-                            const pct =
-                                alloc.amount > 0
-                                    ? Math.min((alloc.spent / alloc.amount) * 100, 100)
-                                    : 0;
-                            const sc = statusConfig[alloc.status] ?? statusConfig.pending;
-                            return (
-                                <Card
-                                    key={alloc.id}
-                                    style={{ cursor: "pointer" }}
-                                    onClick={() => setSelectedAlloc(alloc)}
-                                >
-                                    <CardContent style={{ padding: "16px 20px" }}>
+                                        <div style={{ minWidth: 0 }}>
+                                            <p
+                                                style={{
+                                                    fontSize: "14px",
+                                                    fontWeight: 600,
+                                                    color: "var(--color-text)",
+                                                    margin: 0,
+                                                }}
+                                            >
+                                                {tx.description || tC("unknown")}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    fontSize: "12px",
+                                                    color: "var(--color-text-secondary)",
+                                                    margin: "2px 0 0",
+                                                }}
+                                            >
+                                                {new Date(tx.date).toLocaleDateString(locale)}
+                                                {tx.category ? ` · ${tx.category}` : ""}
+                                                {tx.createdBy?.name
+                                                    ? ` · ${tx.createdBy.name}`
+                                                    : ""}
+                                            </p>
+                                        </div>
                                         <div
                                             style={{
                                                 display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "flex-start",
-                                                marginBottom: "8px",
+                                                alignItems: "center",
+                                                gap: "8px",
+                                                flexShrink: 0,
                                             }}
                                         >
-                                            <div>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "8px",
-                                                        marginBottom: "2px",
-                                                    }}
+                                            <Badge
+                                                variant={
+                                                    tx.type === "income" ? "default" : "secondary"
+                                                }
+                                            >
+                                                {tx.type === "income"
+                                                    ? tF("income")
+                                                    : tF("expense")}
+                                            </Badge>
+                                            <span
+                                                style={{
+                                                    fontWeight: 700,
+                                                    color:
+                                                        tx.type === "income"
+                                                            ? "var(--color-success)"
+                                                            : "var(--color-destructive)",
+                                                }}
+                                            >
+                                                {formatMoney(tx.amountCents, locale)}
+                                            </span>
+                                            {canManageFinance && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setTxDelete(tx)}
                                                 >
-                                                    <span
+                                                    {tC("delete")}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                            {txNext && (
+                                <Button
+                                    variant="outline"
+                                    onClick={loadMoreTx}
+                                    disabled={txMoreLoading}
+                                >
+                                    {txMoreLoading ? tC("loading") : tC("showMore")}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="budget">
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "12px",
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <Input
+                            value={fiscalYear}
+                            onChange={(e) => setFiscalYear(e.target.value)}
+                            placeholder={tB("fiscalYear")}
+                            style={{ width: "140px" }}
+                            inputMode="numeric"
+                        />
+                        {canManageBudget && (
+                            <Button onClick={() => setAllocOpen(true)}>
+                                {tB("newAllocation")}
+                            </Button>
+                        )}
+                    </div>
+                    <div
+                        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                        style={{ marginBottom: "12px" }}
+                    >
+                        <Card>
+                            <CardContent style={{ padding: "16px 20px" }}>
+                                <p
+                                    style={{
+                                        fontSize: "12px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: "0 0 4px",
+                                    }}
+                                >
+                                    {tB("allocated")}
+                                </p>
+                                <p
+                                    style={{
+                                        fontSize: "20px",
+                                        fontWeight: 700,
+                                        color: "var(--color-text)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {formatMoney(overview?.totalAllocated ?? 0, locale)}
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent style={{ padding: "16px 20px" }}>
+                                <p
+                                    style={{
+                                        fontSize: "12px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: "0 0 4px",
+                                    }}
+                                >
+                                    {tB("spent")}
+                                </p>
+                                <p
+                                    style={{
+                                        fontSize: "20px",
+                                        fontWeight: 700,
+                                        color: "var(--color-destructive)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {formatMoney(overview?.totalSpent ?? 0, locale)}
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent style={{ padding: "16px 20px" }}>
+                                <p
+                                    style={{
+                                        fontSize: "12px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: "0 0 4px",
+                                    }}
+                                >
+                                    {tB("remaining")}
+                                </p>
+                                <p
+                                    style={{
+                                        fontSize: "20px",
+                                        fontWeight: 700,
+                                        color: "var(--color-success)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {formatMoney(overview?.totalRemaining ?? 0, locale)}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    {budgetRows.length > 0 && (
+                        <Card style={{ marginBottom: "12px" }}>
+                            <CardContent style={{ padding: "20px" }}>
+                                <div style={{ height: "240px" }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={budgetRows}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                                            <YAxis tick={{ fontSize: 11 }} />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Bar
+                                                dataKey="allocated"
+                                                name={tB("allocated")}
+                                                fill="var(--color-primary)"
+                                            />
+                                            <Bar
+                                                dataKey="spent"
+                                                name={tB("spent")}
+                                                fill="var(--color-warning)"
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                    {allocLoading ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <Skeleton key={i} className="h-20 w-full" />
+                            ))}
+                        </div>
+                    ) : allocations.length === 0 ? (
+                        <Card>
+                            <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {tB("noAllocations")}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {allocations.map((a) => {
+                                const remaining = a.amountCents - a.spentCents;
+                                const pct =
+                                    a.amountCents > 0
+                                        ? Math.min(100, (a.spentCents / a.amountCents) * 100)
+                                        : 0;
+                                return (
+                                    <Card key={a.id}>
+                                        <CardContent style={{ padding: "16px 20px" }}>
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    gap: "12px",
+                                                    flexWrap: "wrap",
+                                                }}
+                                            >
+                                                <div>
+                                                    <p
                                                         style={{
                                                             fontSize: "14px",
                                                             fontWeight: 600,
                                                             color: "var(--color-text)",
+                                                            margin: 0,
                                                         }}
                                                     >
-                                                        {alloc.category}
-                                                    </span>
-                                                    <Badge
-                                                        style={{
-                                                            backgroundColor: sc.bg,
-                                                            color: sc.color,
-                                                            border: "none",
-                                                            fontSize: "10px",
-                                                            padding: "2px 8px",
-                                                        }}
-                                                    >
-                                                        {sc.label}
-                                                    </Badge>
-                                                </div>
-                                                {alloc.description && (
+                                                        {a.category}
+                                                    </p>
                                                     <p
                                                         style={{
                                                             fontSize: "12px",
@@ -1199,995 +1059,578 @@ export default function FinancePage() {
                                                             margin: "2px 0 0",
                                                         }}
                                                     >
-                                                        {alloc.description}
+                                                        {tB("allocated")}:{" "}
+                                                        {formatMoney(a.amountCents, locale)}
+                                                        {` · ${tB("spent")}: ${formatMoney(a.spentCents, locale)}`}
+                                                        {` · ${tB("remaining")}: ${formatMoney(remaining, locale)}`}
                                                     </p>
-                                                )}
+                                                    {a.description && (
+                                                        <p
+                                                            style={{
+                                                                fontSize: "12px",
+                                                                color: "var(--color-text-secondary)",
+                                                                margin: "2px 0 0",
+                                                            }}
+                                                        >
+                                                            {a.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <Badge
+                                                    variant={
+                                                        remaining < 0 ? "destructive" : "outline"
+                                                    }
+                                                >
+                                                    {remaining < 0
+                                                        ? tB("overspend")
+                                                        : budgetStatusLabel(a.status)}
+                                                </Badge>
                                             </div>
-                                            <span
-                                                style={{
-                                                    fontSize: "14px",
-                                                    fontWeight: 700,
-                                                    color: "var(--color-text)",
-                                                    flexShrink: 0,
-                                                    marginLeft: "12px",
-                                                }}
-                                            >
-                                                {formatCurrency(alloc.amount)}
-                                            </span>
-                                        </div>
-
-                                        {/* Progress bar */}
-                                        <div
-                                            style={{
-                                                height: "6px",
-                                                backgroundColor: "var(--color-bg-secondary)",
-                                                borderRadius: "3px",
-                                                overflow: "hidden",
-                                                marginBottom: "6px",
-                                            }}
-                                        >
                                             <div
                                                 style={{
-                                                    height: "100%",
-                                                    width: `${pct}%`,
-                                                    backgroundColor:
-                                                        alloc.status === "reconciled"
-                                                            ? "var(--color-success)"
-                                                            : alloc.status === "spent"
-                                                              ? "var(--color-text-secondary)"
-                                                              : "var(--color-info)",
-                                                    borderRadius: "3px",
-                                                    transition: "width 0.3s ease",
-                                                }}
-                                            />
-                                        </div>
-
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                fontSize: "12px",
-                                                color: "var(--color-text-secondary)",
-                                            }}
-                                        >
-                                            <span>{formatCurrency(alloc.spent)} spent</span>
-                                            <span>{formatCurrency(alloc.remaining)} remaining</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
-            {/* ===== CREATE TRANSACTION DIALOG ===== */}
-            <Dialog open={showCreateTx} onOpenChange={setShowCreateTx}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add Transaction</DialogTitle>
-                        <DialogDescription>Record a new income or expense entry.</DialogDescription>
-                    </DialogHeader>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Amount
-                            </label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
-                                placeholder="0.00"
-                                value={newAmount}
-                                onChange={(e) => setNewAmount(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Type
-                            </label>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    gap: "8px",
-                                    padding: "4px",
-                                    backgroundColor: "var(--color-bg-secondary)",
-                                    borderRadius: "5px",
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => setNewType("expense")}
-                                    style={{
-                                        flex: 1,
-                                        padding: "8px 16px",
-                                        border: "none",
-                                        borderRadius: "5px",
-                                        backgroundColor:
-                                            newType === "expense"
-                                                ? "var(--color-bg)"
-                                                : "transparent",
-                                        color:
-                                            newType === "expense"
-                                                ? "var(--color-destructive)"
-                                                : "var(--color-text-secondary)",
-                                        fontWeight: 500,
-                                        fontSize: "13px",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: "6px",
-                                    }}
-                                >
-                                    <ArrowDownRight size={14} />
-                                    Expense
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setNewType("income")}
-                                    style={{
-                                        flex: 1,
-                                        padding: "8px 16px",
-                                        border: "none",
-                                        borderRadius: "5px",
-                                        backgroundColor:
-                                            newType === "income"
-                                                ? "var(--color-bg)"
-                                                : "transparent",
-                                        color:
-                                            newType === "income"
-                                                ? "var(--color-success)"
-                                                : "var(--color-text-secondary)",
-                                        fontWeight: 500,
-                                        fontSize: "13px",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: "6px",
-                                    }}
-                                >
-                                    <ArrowUpRight size={14} />
-                                    Income
-                                </button>
-                            </div>
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Category
-                            </label>
-                            <Select value={newCategory} onValueChange={setNewCategory}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {categories.map((cat) => (
-                                        <SelectItem key={cat} value={cat}>
-                                            {cat}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Description
-                            </label>
-                            <Textarea
-                                placeholder="Enter description"
-                                value={newDescription}
-                                onChange={(e) => setNewDescription(e.target.value)}
-                                rows={2}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowCreateTx(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleCreateTx}
-                            disabled={
-                                !newAmount ||
-                                parseFloat(newAmount) <= 0 ||
-                                createTxMutation.isPending
-                            }
-                        >
-                            {createTxMutation.isPending ? "Adding..." : "Add Transaction"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* ===== CREATE ALLOCATION DIALOG ===== */}
-            <Dialog open={showCreateAlloc} onOpenChange={setShowCreateAlloc}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>New Budget Allocation</DialogTitle>
-                        <DialogDescription>
-                            Create a budget allocation for a specific category.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Category
-                            </label>
-                            <Select value={allocCategory} onValueChange={setAllocCategory}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {budgetCategories.map((cat) => (
-                                        <SelectItem key={cat} value={cat}>
-                                            {cat}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Amount (¥)
-                            </label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
-                                placeholder="0.00"
-                                value={allocAmount}
-                                onChange={(e) => setAllocAmount(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Fiscal Year
-                            </label>
-                            <Select value={allocFiscalYear} onValueChange={setAllocFiscalYear}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select year" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Array.from({ length: 5 }, (_, i) =>
-                                        (new Date().getFullYear() - 2 + i).toString(),
-                                    ).map((y) => (
-                                        <SelectItem key={y} value={y}>
-                                            {y}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Description
-                            </label>
-                            <Textarea
-                                placeholder="Enter description"
-                                value={allocDescription}
-                                onChange={(e) => setAllocDescription(e.target.value)}
-                                rows={2}
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowCreateAlloc(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleCreateAlloc}
-                            disabled={
-                                !allocCategory ||
-                                !allocAmount ||
-                                parseFloat(allocAmount) <= 0 ||
-                                createAllocMutation.isPending
-                            }
-                        >
-                            {createAllocMutation.isPending ? "Creating..." : "Create Allocation"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* ===== ALLOCATION DETAIL DIALOG ===== */}
-            <Dialog
-                open={!!selectedAlloc}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setSelectedAlloc(null);
-                        setSpendAmount("");
-                        setSpendDescription("");
-                    }
-                }}
-            >
-                {selectedAlloc && (
-                    <DialogContent style={{ maxWidth: "480px" }}>
-                        <DialogHeader>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <DialogTitle>{selectedAlloc.category}</DialogTitle>
-                                <Badge
-                                    style={{
-                                        backgroundColor:
-                                            statusConfig[selectedAlloc.status]?.bg ?? "transparent",
-                                        color:
-                                            statusConfig[selectedAlloc.status]?.color ??
-                                            "var(--color-text-secondary)",
-                                        border: "none",
-                                        fontSize: "10px",
-                                        padding: "2px 8px",
-                                    }}
-                                >
-                                    {statusConfig[selectedAlloc.status]?.label ??
-                                        selectedAlloc.status}
-                                </Badge>
-                            </div>
-                            <DialogDescription>
-                                {selectedAlloc.description ?? "No description"} &middot; FY{" "}
-                                {selectedAlloc.fiscalYear}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="grid grid-cols-3 gap-4" style={{ marginTop: "8px" }}>
-                            <div style={{ textAlign: "center" }}>
-                                <p
-                                    style={{
-                                        fontSize: "11px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                        margin: "0 0 4px",
-                                        textTransform: "uppercase",
-                                    }}
-                                >
-                                    Allocated
-                                </p>
-                                <p
-                                    style={{
-                                        fontSize: "18px",
-                                        fontWeight: 700,
-                                        color: "var(--color-text)",
-                                        margin: 0,
-                                    }}
-                                >
-                                    {formatCurrency(selectedAlloc.amount)}
-                                </p>
-                            </div>
-                            <div style={{ textAlign: "center" }}>
-                                <p
-                                    style={{
-                                        fontSize: "11px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                        margin: "0 0 4px",
-                                        textTransform: "uppercase",
-                                    }}
-                                >
-                                    Spent
-                                </p>
-                                <p
-                                    style={{
-                                        fontSize: "18px",
-                                        fontWeight: 700,
-                                        color: "var(--color-destructive)",
-                                        margin: 0,
-                                    }}
-                                >
-                                    {formatCurrency(selectedAlloc.spent)}
-                                </p>
-                            </div>
-                            <div style={{ textAlign: "center" }}>
-                                <p
-                                    style={{
-                                        fontSize: "11px",
-                                        fontWeight: 500,
-                                        color: "var(--color-text-secondary)",
-                                        margin: "0 0 4px",
-                                        textTransform: "uppercase",
-                                    }}
-                                >
-                                    Remaining
-                                </p>
-                                <p
-                                    style={{
-                                        fontSize: "18px",
-                                        fontWeight: 700,
-                                        color: "var(--color-success)",
-                                        margin: 0,
-                                    }}
-                                >
-                                    {formatCurrency(selectedAlloc.remaining)}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Progress bar */}
-                        <div style={{ marginTop: "4px" }}>
-                            <div
-                                style={{
-                                    height: "8px",
-                                    backgroundColor: "var(--color-bg-secondary)",
-                                    borderRadius: "4px",
-                                    overflow: "hidden",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        height: "100%",
-                                        width: `${selectedAlloc.amount > 0 ? Math.min((selectedAlloc.spent / selectedAlloc.amount) * 100, 100) : 0}%`,
-                                        backgroundColor:
-                                            selectedAlloc.status === "reconciled"
-                                                ? "var(--color-success)"
-                                                : selectedAlloc.status === "spent"
-                                                  ? "var(--color-text-secondary)"
-                                                  : "var(--color-info)",
-                                        borderRadius: "4px",
-                                        transition: "width 0.3s ease",
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Admin actions */}
-                        {isAdmin && (
-                            <div
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "12px",
-                                    marginTop: "16px",
-                                    borderTop: "1px solid var(--color-border)",
-                                    paddingTop: "16px",
-                                }}
-                            >
-                                <p
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 600,
-                                        color: "var(--color-text)",
-                                        margin: 0,
-                                    }}
-                                >
-                                    Admin Actions
-                                </p>
-
-                                {selectedAlloc.status === "pending" && (
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        <Button
-                                            style={{ flex: 1 }}
-                                            onClick={() => approveMutation.mutate(selectedAlloc.id)}
-                                            disabled={approveMutation.isPending}
-                                        >
-                                            <RotateCcw size={14} />
-                                            <span>
-                                                {approveMutation.isPending
-                                                    ? "Approving..."
-                                                    : "Approve"}
-                                            </span>
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {(selectedAlloc.status === "active" ||
-                                    selectedAlloc.status === "pending") && (
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            gap: "8px",
-                                            padding: "12px",
-                                            backgroundColor: "var(--color-bg-secondary)",
-                                            borderRadius: "5px",
-                                        }}
-                                    >
-                                        <p
-                                            style={{
-                                                fontSize: "12px",
-                                                fontWeight: 600,
-                                                color: "var(--color-text)",
-                                                margin: 0,
-                                            }}
-                                        >
-                                            Record Spend
-                                        </p>
-                                        <div style={{ display: "flex", gap: "8px" }}>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                min="0.01"
-                                                placeholder="Amount"
-                                                value={spendAmount}
-                                                onChange={(e) => setSpendAmount(e.target.value)}
-                                                style={{ flex: 1 }}
-                                            />
-                                        </div>
-                                        <Input
-                                            placeholder="Spend description"
-                                            value={spendDescription}
-                                            onChange={(e) => setSpendDescription(e.target.value)}
-                                        />
-                                        <Button
-                                            size="sm"
-                                            onClick={handleSpend}
-                                            disabled={
-                                                !spendAmount ||
-                                                parseFloat(spendAmount) <= 0 ||
-                                                spendMutation.isPending
-                                            }
-                                        >
-                                            <Receipt size={14} />
-                                            <span>
-                                                {spendMutation.isPending
-                                                    ? "Recording..."
-                                                    : "Record Spend"}
-                                            </span>
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {selectedAlloc.status !== "reconciled" && (
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => reconcileMutation.mutate(selectedAlloc.id)}
-                                        disabled={reconcileMutation.isPending}
-                                    >
-                                        <CheckCircle size={14} />
-                                        <span>
-                                            {reconcileMutation.isPending
-                                                ? "Reconciling..."
-                                                : "Reconcile"}
-                                        </span>
-                                    </Button>
-                                )}
-                            </div>
-                        )}
-
-                        <div
-                            style={{
-                                fontSize: "11px",
-                                color: "var(--color-text-secondary)",
-                                marginTop: "12px",
-                                textAlign: "center",
-                            }}
-                        >
-                            Created {format(new Date(selectedAlloc.createdAt), "MMM d, yyyy")}
-                            {selectedAlloc.createdBy
-                                ? ` by ${selectedAlloc.createdBy.name ?? "Unknown"}`
-                                : ""}
-                        </div>
-                    </DialogContent>
-                )}
-            </Dialog>
-
-            {/* ===== SECTION 3: PURCHASE REQUESTS ===== */}
-            <div>
-                <h2
-                    style={{
-                        fontSize: "18px",
-                        fontWeight: 700,
-                        color: "var(--color-text)",
-                        margin: 0,
-                    }}
-                >
-                    Purchase Requests
-                </h2>
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "16px",
-                    }}
-                >
-                    <p
-                        style={{
-                            fontSize: "14px",
-                            color: "var(--color-text-secondary)",
-                            margin: 0,
-                        }}
-                    >
-                        Submit and manage purchase requests
-                    </p>
-                    <Button onClick={() => setShowCreatePr(true)}>
-                        <Plus size={16} />
-                        <span>New Request</span>
-                    </Button>
-                </div>
-
-                {showCreatePr && (
-                    <div
-                        style={{
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "5px",
-                            padding: "16px",
-                            marginBottom: "16px",
-                            backgroundColor: "var(--color-bg-secondary)",
-                        }}
-                    >
-                        <h4
-                            style={{
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                margin: "0 0 12px",
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            New Purchase Request
-                        </h4>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                            <input
-                                style={inputStyle}
-                                placeholder="Request title"
-                                value={prForm.title}
-                                onChange={(e) => setPrForm({ ...prForm, title: e.target.value })}
-                            />
-                            <input
-                                style={inputStyle}
-                                placeholder="Item name"
-                                value={prForm.itemName}
-                                onChange={(e) => setPrForm({ ...prForm, itemName: e.target.value })}
-                            />
-                            <div style={{ display: "flex", gap: "10px" }}>
-                                <input
-                                    style={{ ...inputStyle, flex: 1 }}
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Cost"
-                                    value={prForm.cost}
-                                    onChange={(e) => setPrForm({ ...prForm, cost: e.target.value })}
-                                />
-                                <input
-                                    style={{ ...inputStyle, width: "100px" }}
-                                    type="number"
-                                    min="1"
-                                    placeholder="Qty"
-                                    value={prForm.quantity}
-                                    onChange={(e) =>
-                                        setPrForm({
-                                            ...prForm,
-                                            quantity: Math.max(1, parseInt(e.target.value) || 1),
-                                        })
-                                    }
-                                />
-                            </div>
-                            <textarea
-                                style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }}
-                                placeholder="Justification"
-                                value={prForm.justification}
-                                onChange={(e) =>
-                                    setPrForm({ ...prForm, justification: e.target.value })
-                                }
-                            />
-                            <div style={{ display: "flex", gap: "8px" }}>
-                                <Button
-                                    onClick={() =>
-                                        createPr.mutate({
-                                            title: prForm.title,
-                                            itemName: prForm.itemName,
-                                            cost: parseFloat(prForm.cost) || 0,
-                                            quantity: prForm.quantity,
-                                            justification: prForm.justification,
-                                        })
-                                    }
-                                    disabled={
-                                        !prForm.title ||
-                                        !prForm.itemName ||
-                                        !prForm.cost ||
-                                        parseFloat(prForm.cost) <= 0 ||
-                                        createPr.isPending
-                                    }
-                                >
-                                    {createPr.isPending ? "Submitting..." : "Submit"}
-                                </Button>
-                                <Button variant="outline" onClick={() => setShowCreatePr(false)}>
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {prLoading ? (
-                    <p style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
-                        Loading...
-                    </p>
-                ) : !prData || prData.length === 0 ? (
-                    <Card>
-                        <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
-                            <ShoppingCart
-                                size={32}
-                                style={{
-                                    color: "var(--color-text-secondary)",
-                                    marginBottom: "12px",
-                                }}
-                            />
-                            <p
-                                style={{
-                                    fontSize: "14px",
-                                    fontWeight: 600,
-                                    color: "var(--color-text)",
-                                    margin: "0 0 4px",
-                                }}
-                            >
-                                No purchase requests
-                            </p>
-                            <p
-                                style={{
-                                    fontSize: "13px",
-                                    color: "var(--color-text-secondary)",
-                                    margin: 0,
-                                }}
-                            >
-                                Submit your first purchase request.
-                            </p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {prData.map((pr: Record<string, unknown>) => {
-                            const ps =
-                                prStatusStyles[(pr.status as string) ?? "submitted"] ??
-                                prStatusStyles.submitted;
-                            const isExpanded = prExpanded === pr.id;
-                            return (
-                                <Card key={pr.id as string}>
-                                    <div
-                                        onClick={() =>
-                                            setPrExpanded(isExpanded ? null : (pr.id as string))
-                                        }
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            padding: "16px",
-                                            cursor: "pointer",
-                                            borderBottom: isExpanded
-                                                ? "1px solid var(--color-border)"
-                                                : "none",
-                                        }}
-                                    >
-                                        <div style={{ flex: 1 }}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "8px",
-                                                    marginBottom: "4px",
+                                                    height: "6px",
+                                                    borderRadius: "5px",
+                                                    backgroundColor: "var(--color-bg-secondary)",
+                                                    marginTop: "10px",
+                                                    overflow: "hidden",
                                                 }}
                                             >
-                                                <span
+                                                <div
                                                     style={{
-                                                        fontSize: "14px",
-                                                        fontWeight: 600,
-                                                        color: "var(--color-text)",
+                                                        width: `${pct}%`,
+                                                        height: "100%",
+                                                        backgroundColor:
+                                                            remaining < 0
+                                                                ? "var(--color-destructive)"
+                                                                : "var(--color-primary)",
                                                     }}
-                                                >
-                                                    {pr.title as string}
-                                                </span>
-                                                <span
-                                                    style={{
-                                                        padding: "2px 8px",
-                                                        borderRadius: "5px",
-                                                        fontSize: "11px",
-                                                        fontWeight: 600,
-                                                        color: ps.color,
-                                                        backgroundColor: ps.bg,
-                                                        textTransform: "capitalize",
-                                                    }}
-                                                >
-                                                    {pr.status as string}
-                                                </span>
+                                                />
                                             </div>
-                                            <p
-                                                style={{
-                                                    fontSize: "13px",
-                                                    color: "var(--color-text-secondary)",
-                                                    margin: 0,
-                                                }}
-                                            >
-                                                {pr.itemName as string} &middot; ¥
-                                                {Number(pr.cost || 0).toFixed(2)} x{" "}
-                                                {String(pr.quantity || "1")}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    {isExpanded && (
-                                        <div style={{ padding: "16px" }}>
-                                            <p
-                                                style={{
-                                                    fontSize: "13px",
-                                                    color: "var(--color-text)",
-                                                    margin: "0 0 12px",
-                                                    whiteSpace: "pre-wrap",
-                                                }}
-                                            >
-                                                {(pr.justification as string) ||
-                                                    "No justification provided."}
-                                            </p>
-                                            {(pr.reviewComment as string) && (
-                                                <p
-                                                    style={{
-                                                        fontSize: "12px",
-                                                        color: "var(--color-text-secondary)",
-                                                        margin: "0 0 8px",
-                                                        fontStyle: "italic",
-                                                    }}
-                                                >
-                                                    Review: {pr.reviewComment as string}
-                                                </p>
-                                            )}
-                                            {isAdmin && (pr.status as string) === "submitted" && (
+                                            {canManageBudget && (
                                                 <div
                                                     style={{
                                                         display: "flex",
                                                         gap: "8px",
-                                                        alignItems: "flex-start",
+                                                        marginTop: "12px",
+                                                        flexWrap: "wrap",
                                                     }}
                                                 >
-                                                    <div style={{ flex: 1 }}>
-                                                        <input
-                                                            style={{
-                                                                ...inputStyle,
-                                                                fontSize: "12px",
-                                                                padding: "6px 10px",
-                                                            }}
-                                                            placeholder="Review comment (optional)"
-                                                            value={
-                                                                prReview?.id === pr.id
-                                                                    ? (prReview?.comment ?? "")
-                                                                    : ""
-                                                            }
-                                                            onChange={(e) =>
-                                                                setPrReview({
-                                                                    id: pr.id as string,
-                                                                    status:
-                                                                        (prReview?.status as string) ||
-                                                                        "",
-                                                                    comment: e.target.value,
-                                                                })
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            reviewPr.mutate({
-                                                                id: pr.id as string,
-                                                                status: "approved",
-                                                                reviewComment:
-                                                                    prReview?.id === pr.id
-                                                                        ? (prReview?.comment ?? "")
-                                                                        : "",
-                                                            })
-                                                        }
-                                                        style={{
-                                                            padding: "8px 14px",
-                                                            border: "none",
-                                                            borderRadius: "5px",
-                                                            background: "var(--color-success)",
-                                                            color: "#fff",
-                                                            cursor: "pointer",
-                                                            fontSize: "12px",
-                                                            fontWeight: 600,
-                                                            fontFamily: "inherit",
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => approveAlloc.mutate(a.id)}
+                                                    >
+                                                        {tB("approve")}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setSpendTarget(a);
+                                                            setSpendAmount("");
+                                                            setSpendDescription("");
                                                         }}
                                                     >
-                                                        Approve
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            reviewPr.mutate({
-                                                                id: pr.id as string,
-                                                                status: "rejected",
-                                                                reviewComment:
-                                                                    prReview?.id === pr.id
-                                                                        ? (prReview?.comment ?? "")
-                                                                        : "",
-                                                            })
-                                                        }
-                                                        style={{
-                                                            padding: "8px 14px",
-                                                            border: "none",
-                                                            borderRadius: "5px",
-                                                            background: "var(--color-destructive)",
-                                                            color: "#fff",
-                                                            cursor: "pointer",
-                                                            fontSize: "12px",
-                                                            fontWeight: 600,
-                                                            fontFamily: "inherit",
-                                                        }}
+                                                        {tB("spend")}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => reconcileAlloc.mutate(a.id)}
                                                     >
-                                                        Reject
-                                                    </button>
+                                                        {tB("reconcile")}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setBudgetDelete(a)}
+                                                    >
+                                                        {tC("delete")}
+                                                    </Button>
+                                                    {user?.role === "admin" && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => setBudgetPermanent(a)}
+                                                        >
+                                                            {tC("deleteForever")}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             )}
-                                            <p
-                                                style={{
-                                                    fontSize: "11px",
-                                                    color: "var(--color-text-secondary)",
-                                                    marginTop: "12px",
-                                                }}
-                                            >
-                                                Submitted by{" "}
-                                                {((pr.submittedBy as Record<string, unknown>)
-                                                    ?.name as string) ?? "Unknown"}{" "}
-                                                &middot;{" "}
-                                                {new Date(
-                                                    pr.createdAt as string,
-                                                ).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                    )}
-                                </Card>
-                            );
-                        })}
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                            {allocNext && (
+                                <Button
+                                    variant="outline"
+                                    onClick={loadMoreAlloc}
+                                    disabled={allocMoreLoading}
+                                >
+                                    {allocMoreLoading ? tC("loading") : tC("showMore")}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="requests">
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "12px",
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <Select value={prStatus} onValueChange={setPrStatus}>
+                            <SelectTrigger style={{ width: "180px" }}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{tC("all")}</SelectItem>
+                                {PR_STATUSES.map((s) => (
+                                    <SelectItem key={s} value={s}>
+                                        {prStatusLabel(s)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={() => setPrOpen(true)}>{tP("submit")}</Button>
                     </div>
-                )}
-            </div>
+                    {prLoading ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <Skeleton key={i} className="h-20 w-full" />
+                            ))}
+                        </div>
+                    ) : purchaseRequests.length === 0 ? (
+                        <Card>
+                            <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {tP("noRequests")}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {purchaseRequests.map((pr) => (
+                                <Card key={pr.id}>
+                                    <CardContent style={{ padding: "16px 20px" }}>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "flex-start",
+                                                gap: "12px",
+                                            }}
+                                        >
+                                            <div style={{ minWidth: 0 }}>
+                                                <p
+                                                    style={{
+                                                        fontSize: "14px",
+                                                        fontWeight: 600,
+                                                        color: "var(--color-text)",
+                                                        margin: 0,
+                                                    }}
+                                                >
+                                                    {pr.title}
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        color: "var(--color-text-secondary)",
+                                                        margin: "2px 0 0",
+                                                    }}
+                                                >
+                                                    {tP("itemName")}: {pr.itemName}
+                                                    {` · ${tP("cost")}: ${formatMoney(pr.costCents, locale)}`}
+                                                    {` · ${tP("quantity")}: ${pr.quantity}`}
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        fontSize: "13px",
+                                                        color: "var(--color-text)",
+                                                        margin: "6px 0 0",
+                                                    }}
+                                                >
+                                                    {pr.justification}
+                                                </p>
+                                                {pr.reviewComment && (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "12px",
+                                                            color: "var(--color-text-secondary)",
+                                                            margin: "4px 0 0",
+                                                        }}
+                                                    >
+                                                        {tP("reviewComment")}: {pr.reviewComment}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Badge variant="outline">
+                                                {prStatusLabel(pr.status)}
+                                            </Badge>
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                gap: "8px",
+                                                marginTop: "12px",
+                                                flexWrap: "wrap",
+                                            }}
+                                        >
+                                            {canReviewPurchases &&
+                                                (pr.status === "submitted" ||
+                                                    pr.status === "under_review") && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setReviewTarget(pr);
+                                                            setReviewStatus("approved");
+                                                            setReviewComment("");
+                                                        }}
+                                                    >
+                                                        {tP("review")}
+                                                    </Button>
+                                                )}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => setPrDelete(pr)}
+                                            >
+                                                {tC("delete")}
+                                            </Button>
+                                            {user?.role === "admin" && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    onClick={() => setPrPermanent(pr)}
+                                                >
+                                                    {tC("deleteForever")}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                            {prNext && (
+                                <Button
+                                    variant="outline"
+                                    onClick={loadMorePr}
+                                    disabled={prMoreLoading}
+                                >
+                                    {prMoreLoading ? tC("loading") : tC("showMore")}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+            </Tabs>
+
+            <Dialog open={txOpen} onOpenChange={setTxOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tF("newTransaction")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tF("amount")}
+                            value={txAmount}
+                            onChange={(e) => setTxAmount(e.target.value)}
+                            inputMode="decimal"
+                        />
+                        <Select value={txType} onValueChange={setTxType}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="income">{tF("income")}</SelectItem>
+                                <SelectItem value="expense">{tF("expense")}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input
+                            placeholder={tF("category")}
+                            value={txCategory}
+                            onChange={(e) => setTxCategory(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tF("summary")}
+                            value={txDescription}
+                            onChange={(e) => setTxDescription(e.target.value)}
+                            rows={2}
+                        />
+                        <Input
+                            type="date"
+                            value={txDate}
+                            onChange={(e) => setTxDate(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setTxOpen(false)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button onClick={handleCreateTx} disabled={createTx.isPending}>
+                            {tC("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={allocOpen} onOpenChange={setAllocOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tB("newAllocation")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tF("category")}
+                            value={allocCategory}
+                            onChange={(e) => setAllocCategory(e.target.value)}
+                        />
+                        <Input
+                            placeholder={tF("amount")}
+                            value={allocAmount}
+                            onChange={(e) => setAllocAmount(e.target.value)}
+                            inputMode="decimal"
+                        />
+                        <Textarea
+                            placeholder={tC("description")}
+                            value={allocDescription}
+                            onChange={(e) => setAllocDescription(e.target.value)}
+                            rows={2}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setAllocOpen(false)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button
+                            onClick={handleCreateAlloc}
+                            disabled={!allocCategory.trim() || createAlloc.isPending}
+                        >
+                            {tC("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={spendTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setSpendTarget(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tB("recordSpend")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tF("amount")}
+                            value={spendAmount}
+                            onChange={(e) => setSpendAmount(e.target.value)}
+                            inputMode="decimal"
+                        />
+                        <Textarea
+                            placeholder={tC("description")}
+                            value={spendDescription}
+                            onChange={(e) => setSpendDescription(e.target.value)}
+                            rows={2}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSpendTarget(null)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button onClick={handleSpend} disabled={recordSpend.isPending}>
+                            {tC("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={prOpen} onOpenChange={setPrOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tP("title")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tC("title")}
+                            value={prTitle}
+                            onChange={(e) => setPrTitle(e.target.value)}
+                        />
+                        <Input
+                            placeholder={tP("itemName")}
+                            value={prItem}
+                            onChange={(e) => setPrItem(e.target.value)}
+                        />
+                        <Input
+                            placeholder={tP("cost")}
+                            value={prCost}
+                            onChange={(e) => setPrCost(e.target.value)}
+                            inputMode="decimal"
+                        />
+                        <Input
+                            placeholder={tP("quantity")}
+                            value={prQuantity}
+                            onChange={(e) => setPrQuantity(e.target.value)}
+                            inputMode="numeric"
+                        />
+                        <Textarea
+                            placeholder={tP("justification")}
+                            value={prJustification}
+                            onChange={(e) => setPrJustification(e.target.value)}
+                            rows={3}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setPrOpen(false)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button
+                            onClick={handleCreatePr}
+                            disabled={
+                                !prTitle.trim() ||
+                                !prItem.trim() ||
+                                !prJustification.trim() ||
+                                createPr.isPending
+                            }
+                        >
+                            {tP("submit")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={reviewTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setReviewTarget(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tP("review")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Select value={reviewStatus} onValueChange={setReviewStatus}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="approved">{tP("approve")}</SelectItem>
+                                <SelectItem value="rejected">{tP("reject")}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Textarea
+                            placeholder={tP("reviewComment")}
+                            value={reviewComment}
+                            onChange={(e) => setReviewComment(e.target.value)}
+                            rows={3}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setReviewTarget(null)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (reviewTarget) {
+                                    reviewPr.mutate({
+                                        id: reviewTarget.id,
+                                        status: reviewStatus,
+                                        reviewComment: reviewComment.trim() || null,
+                                    });
+                                }
+                            }}
+                            disabled={reviewPr.isPending}
+                        >
+                            {tC("submit")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={txDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) setTxDelete(null);
+                }}
+                title={tC("delete")}
+                description={tF("deleteConfirm")}
+                confirmLabel={tC("delete")}
+                destructive
+                onConfirm={() => {
+                    if (txDelete) deleteTx.mutate(txDelete.id);
+                }}
+            />
+            <ConfirmDialog
+                open={budgetDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) setBudgetDelete(null);
+                }}
+                title={tC("delete")}
+                description={tB("deleteConfirm")}
+                confirmLabel={tC("delete")}
+                destructive
+                onConfirm={() => {
+                    if (budgetDelete) deleteAlloc.mutate({ id: budgetDelete.id, permanent: false });
+                }}
+            />
+            <ConfirmDialog
+                open={budgetPermanent !== null}
+                onOpenChange={(open) => {
+                    if (!open) setBudgetPermanent(null);
+                }}
+                title={tC("deleteForever")}
+                description={budgetPermanent?.category}
+                confirmLabel={tC("deleteForever")}
+                destructive
+                requireTypedText
+                typingChallenge={budgetPermanent?.category ?? tC("deleteForever")}
+                onConfirm={() => {
+                    if (budgetPermanent)
+                        deleteAlloc.mutate({ id: budgetPermanent.id, permanent: true });
+                }}
+            />
+            <ConfirmDialog
+                open={prDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) setPrDelete(null);
+                }}
+                title={tC("delete")}
+                description={prDelete ? `${tP("title")}: ${prDelete.title}` : undefined}
+                confirmLabel={tC("delete")}
+                destructive
+                onConfirm={() => {
+                    if (prDelete) deletePr.mutate({ id: prDelete.id, permanent: false });
+                }}
+            />
+            <ConfirmDialog
+                open={prPermanent !== null}
+                onOpenChange={(open) => {
+                    if (!open) setPrPermanent(null);
+                }}
+                title={tC("deleteForever")}
+                description={prPermanent ? `${tP("title")}: ${prPermanent.title}` : undefined}
+                confirmLabel={tC("deleteForever")}
+                destructive
+                requireTypedText
+                typingChallenge={prPermanent?.title ?? tC("deleteForever")}
+                onConfirm={() => {
+                    if (prPermanent) deletePr.mutate({ id: prPermanent.id, permanent: true });
+                }}
+            />
         </div>
     );
 }

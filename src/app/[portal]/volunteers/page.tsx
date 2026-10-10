@@ -1,17 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
-import { useSession } from "next-auth/react";
-import { Plus, UserCheck, UserX, Clock, Users, Trophy, Eye, EyeOff } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { fetchJson, fetchPage } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 
-interface VolunteerSlot {
+interface Slot {
     id: string;
     title: string;
-    description: string;
+    description: string | null;
     startTime: string;
     endTime: string;
     capacity: number;
@@ -19,668 +35,795 @@ interface VolunteerSlot {
     userSignedUp: boolean;
 }
 
-interface VolunteerStats {
-    totalSlots: number;
-    mySignups: number;
-    topVolunteers: { name: string; count: number }[];
+interface Signup {
+    id: string;
+    userId: string;
+    name: string | null;
+    email: string;
+    signedUpAt: string;
 }
 
-const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: "14px",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-sm)",
-    backgroundColor: "var(--color-bg)",
-    color: "var(--color-text)",
-    fontFamily: "inherit",
-    outline: "none",
-};
+interface Stats {
+    totalSlots: number;
+    totalSignups: number;
+    upcomingSlots: number;
+    topVolunteers: { userId: string; name: string | null; count: number }[];
+}
 
-const labelStyle: React.CSSProperties = {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "var(--color-text)",
-    marginBottom: "4px",
-    display: "block",
-};
+interface Hours {
+    userId: string;
+    hours: number;
+    breakdown: { slotId: string; title: string; hours: number; date: string }[];
+}
 
-const btnBase: React.CSSProperties = {
-    padding: "8px 16px",
-    borderRadius: "var(--radius-sm)",
-    border: "none",
-    fontSize: "13px",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    minHeight: "36px",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    transition: "background-color 100ms ease",
-};
+function errorMessage(e: unknown, fallback: string): string {
+    return e instanceof Error ? e.message : fallback;
+}
 
 export default function VolunteersPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Volunteers | ${portalName}`);
-    const qc = useQueryClient();
-    const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({
-        title: "",
-        description: "",
-        startTime: "",
-        endTime: "",
-        capacity: 1,
-    });
+    const { user } = useAuthSession();
+    const { data: workspace } = useWorkspace();
+    const t = useTranslations("volunteers");
+    const tC = useTranslations("common");
+    const tE = useTranslations("errors");
+    const queryClient = useQueryClient();
+    const locale = user?.locale || undefined;
+    const wsName = workspace?.name ?? portal;
+    usePageTitle(`${t("title")} | ${wsName}`);
+    const canManage =
+        user?.role === "admin" || (user?.permissions ?? []).includes("manage_volunteer_slots");
 
-    const { data: slots, isLoading: slotsLoading } = useQuery<VolunteerSlot[]>({
+    const [createOpen, setCreateOpen] = useState(false);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
+    const [capacity, setCapacity] = useState("5");
+    const [openSlot, setOpenSlot] = useState<string | null>(null);
+    const [editTarget, setEditTarget] = useState<Slot | null>(null);
+    const [editTitle, setEditTitle] = useState("");
+    const [editDescription, setEditDescription] = useState("");
+    const [editStart, setEditStart] = useState("");
+    const [editEnd, setEditEnd] = useState("");
+    const [editCapacity, setEditCapacity] = useState("");
+    const [deleteTarget, setDeleteTarget] = useState<Slot | null>(null);
+
+    function toLocalInput(iso: string): string {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return "";
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function openEdit(slot: Slot) {
+        setEditTarget(slot);
+        setEditTitle(slot.title);
+        setEditDescription(slot.description ?? "");
+        setEditStart(toLocalInput(slot.startTime));
+        setEditEnd(toLocalInput(slot.endTime));
+        setEditCapacity(String(slot.capacity));
+    }
+
+    const { data: firstPage, isLoading: slotsLoading } = useQuery({
         queryKey: [portal, "volunteers"],
-        queryFn: () => fetchJson(`/api/volunteers`),
+        queryFn: () => fetchPage<Slot>("/api/volunteers"),
+        enabled: portal !== "",
     });
+    const [extra, setExtra] = useState<Slot[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [moreLoading, setMoreLoading] = useState(false);
+    const [prevFirstPage, setPrevFirstPage] = useState<typeof firstPage>(undefined);
+    if (firstPage !== prevFirstPage) {
+        setPrevFirstPage(firstPage);
+        setExtra([]);
+        setNextCursor(firstPage?.nextCursor ?? null);
+    }
+    const slots = [...(firstPage?.items ?? []), ...extra];
 
-    const { data: stats, isLoading: statsLoading } = useQuery<VolunteerStats>({
+    async function loadMore() {
+        if (!nextCursor || moreLoading) return;
+        setMoreLoading(true);
+        try {
+            const page = await fetchPage<Slot>(
+                `/api/volunteers?cursor=${encodeURIComponent(nextCursor)}`,
+            );
+            setExtra((prev) => [...prev, ...page.items]);
+            setNextCursor(page.nextCursor);
+        } catch (e) {
+            toast.error(errorMessage(e, tE("internal")));
+        } finally {
+            setMoreLoading(false);
+        }
+    }
+
+    const { data: stats } = useQuery({
         queryKey: [portal, "volunteers", "stats"],
-        queryFn: () => fetchJson(`/api/volunteers/stats`),
+        queryFn: () => fetchJson<Stats>("/api/volunteers/stats"),
+        enabled: portal !== "",
     });
 
-    const createMutation = useMutation({
-        mutationFn: (data: typeof form) =>
-            fetchJson(`/api/volunteers`, {
+    const { data: hours } = useQuery({
+        queryKey: [portal, "volunteers", "hours"],
+        queryFn: () => fetchJson<Hours>("/api/volunteers/hours"),
+        enabled: portal !== "",
+    });
+
+    const { data: signupPage, isLoading: signupsLoading } = useQuery({
+        queryKey: [portal, "volunteers", "signups", openSlot],
+        queryFn: () => fetchPage<Signup>(`/api/volunteers/signups?slotId=${openSlot}`),
+        enabled: portal !== "" && openSlot !== null,
+    });
+
+    function invalidate() {
+        queryClient.invalidateQueries({ queryKey: [portal, "volunteers"] });
+    }
+
+    const createSlot = useMutation({
+        mutationFn: (body: {
+            title: string;
+            description?: string | null;
+            startTime: string;
+            endTime: string;
+            capacity: number;
+        }) =>
+            fetchJson<Slot>("/api/volunteers", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
+                body: JSON.stringify(body),
             }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "volunteers"] });
-            qc.invalidateQueries({ queryKey: [portal, "volunteers", "stats"] });
-            setShowForm(false);
-            setForm({ title: "", description: "", startTime: "", endTime: "", capacity: 1 });
+            invalidate();
+            setCreateOpen(false);
+            setTitle("");
+            setDescription("");
+            setStartTime("");
+            setEndTime("");
+            setCapacity("5");
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    const signupMutation = useMutation({
+    const signUp = useMutation({
         mutationFn: (slotId: string) =>
-            fetchJson(`/api/volunteers/signups`, {
+            fetchJson("/api/volunteers/signups", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ slotId }),
             }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "volunteers"] });
-            qc.invalidateQueries({ queryKey: [portal, "volunteers", "stats"] });
+            invalidate();
+            toast.success(t("signUpSuccess"));
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, t("alreadySignedUp")));
         },
     });
 
-    const cancelMutation = useMutation({
+    const withdraw = useMutation({
         mutationFn: (slotId: string) =>
-            fetchJson(`/api/volunteers/signups`, {
+            fetchJson("/api/volunteers/signups", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ slotId }),
             }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "volunteers"] });
-            qc.invalidateQueries({ queryKey: [portal, "volunteers", "stats"] });
+            invalidate();
+            toast.success(t("unregisterSuccess"));
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
+    const updateSlot = useMutation({
+        mutationFn: (body: {
+            id: string;
+            title?: string;
+            description?: string | null;
+            startTime?: string;
+            endTime?: string;
+            capacity?: number;
+        }) =>
+            fetchJson<Slot>("/api/volunteers/slots", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            }),
+        onSuccess: () => {
+            invalidate();
+            setEditTarget(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
+    });
 
-    const [showSignups, setShowSignups] = useState<Record<string, boolean>>({});
-    const [signupData, setSignupData] = useState<
-        Record<string, { id: string; name: string; email: string; signedUpAt: string }[]>
-    >({});
-    const [loadingSignups, setLoadingSignups] = useState<Record<string, boolean>>({});
+    const deleteSlot = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson<{ deleted: boolean }>("/api/volunteers/slots", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+            }),
+        onSuccess: () => {
+            invalidate();
+            setDeleteTarget(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
+    });
 
-    const fetchSignups = async (slotId: string) => {
-        if (signupData[slotId]) {
-            setShowSignups((prev) => ({ ...prev, [slotId]: !prev[slotId] }));
+    function handleUpdateSlot() {
+        if (!editTarget) return;
+        if (!editTitle.trim() || !editStart || !editEnd) {
+            toast.error(tE("validationFailed"));
             return;
         }
-        setLoadingSignups((prev) => ({ ...prev, [slotId]: true }));
-        setShowSignups((prev) => ({ ...prev, [slotId]: true }));
-        try {
-            const data = await fetchJson<
-                { id: string; name: string; email: string; signedUpAt: string }[]
-            >(`/api/volunteers/signups?slotId=${slotId}`);
-            setSignupData((prev) => ({ ...prev, [slotId]: data }));
-        } catch {
-            // ignore
-        } finally {
-            setLoadingSignups((prev) => ({ ...prev, [slotId]: false }));
-        }
-    };
-
-    if (slotsLoading || statsLoading) {
-        return (
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>
-        );
+        const cap = Number.parseInt(editCapacity, 10);
+        updateSlot.mutate({
+            id: editTarget.id,
+            title: editTitle.trim(),
+            description: editDescription.trim() || null,
+            startTime: new Date(editStart).toISOString(),
+            endTime: new Date(editEnd).toISOString(),
+            capacity: Number.isFinite(cap) && cap > 0 ? cap : 1,
+        });
     }
 
-    const slotList = slots ?? [];
+    function handleCreate() {
+        const cap = Number.parseInt(capacity, 10);
+        if (!title.trim() || !startTime || !endTime) {
+            toast.error(tE("validationFailed"));
+            return;
+        }
+        createSlot.mutate({
+            title: title.trim(),
+            description: description.trim() || null,
+            startTime: new Date(startTime).toISOString(),
+            endTime: new Date(endTime).toISOString(),
+            capacity: Number.isFinite(cap) && cap > 0 ? cap : 1,
+        });
+    }
+
+    const mine = slots.filter((s) => s.userSignedUp).length;
 
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div
                 style={{
                     display: "flex",
-                    alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
+                    alignItems: "flex-start",
                     gap: "12px",
+                    flexWrap: "wrap",
                 }}
             >
-                <h1
-                    style={{
-                        fontSize: "20px",
-                        fontWeight: 700,
-                        margin: 0,
-                        color: "var(--color-text)",
-                    }}
-                >
-                    Volunteer Signups
-                </h1>
-                <button
-                    type="button"
-                    onClick={() => setShowForm(true)}
-                    style={{ ...btnBase, backgroundColor: "var(--color-primary)", color: "#fff" }}
-                    onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "var(--color-primary-hover)")
-                    }
-                    onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "var(--color-primary)")
-                    }
-                >
-                    <Plus size={16} /> New Slot
-                </button>
-            </div>
-
-            {stats && (
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                        gap: "12px",
-                        marginBottom: "20px",
-                    }}
-                >
-                    <div style={statCardStyle}>
-                        <Clock size={18} color="var(--color-primary)" />
-                        <span
-                            style={{
-                                fontSize: "24px",
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            {stats.totalSlots}
-                        </span>
-                        <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                            Total Slots
-                        </span>
-                    </div>
-                    <div style={statCardStyle}>
-                        <UserCheck size={18} color="var(--color-success)" />
-                        <span
-                            style={{
-                                fontSize: "24px",
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            {stats.mySignups}
-                        </span>
-                        <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                            My Signups
-                        </span>
-                    </div>
-                    <div style={statCardStyle}>
-                        <Trophy size={18} color="var(--color-warning)" />
-                        <span
-                            style={{
-                                fontSize: "14px",
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            {stats.topVolunteers
-                                .slice(0, 3)
-                                .map((v) => v.name)
-                                .join(", ") || "None"}
-                        </span>
-                        <span style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
-                            Top Volunteers
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {showForm && (
-                <div
-                    style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "16px",
-                        marginBottom: "20px",
-                        backgroundColor: "var(--color-bg-secondary)",
-                    }}
-                >
-                    <h3
+                <div>
+                    <h1
                         style={{
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            margin: "0 0 12px",
+                            fontSize: "20px",
+                            fontWeight: 700,
                             color: "var(--color-text)",
+                            margin: 0,
                         }}
                     >
-                        Create Volunteer Slot
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <div>
-                            <label style={labelStyle}>Title</label>
-                            <input
-                                style={inputStyle}
-                                value={form.title}
-                                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Description</label>
-                            <textarea
-                                style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }}
-                                value={form.description}
-                                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                            />
-                        </div>
-                        <div
-                            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}
-                        >
-                            <div>
-                                <label style={labelStyle}>Start Time</label>
-                                <input
-                                    type="datetime-local"
-                                    style={inputStyle}
-                                    value={form.startTime}
-                                    onChange={(e) =>
-                                        setForm({ ...form, startTime: e.target.value })
-                                    }
-                                />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>End Time</label>
-                                <input
-                                    type="datetime-local"
-                                    style={inputStyle}
-                                    value={form.endTime}
-                                    onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Capacity</label>
-                            <input
-                                type="number"
-                                min={1}
-                                style={inputStyle}
-                                value={form.capacity}
-                                onChange={(e) =>
-                                    setForm({
-                                        ...form,
-                                        capacity: Math.max(1, parseInt(e.target.value) || 1),
-                                    })
-                                }
-                            />
-                        </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <button
-                                type="button"
-                                onClick={() => createMutation.mutate(form)}
-                                disabled={
-                                    !form.title ||
-                                    !form.startTime ||
-                                    !form.endTime ||
-                                    createMutation.isPending
-                                }
-                                style={{
-                                    ...btnBase,
-                                    backgroundColor: "var(--color-primary)",
-                                    color: "#fff",
-                                    opacity:
-                                        !form.title ||
-                                        !form.startTime ||
-                                        !form.endTime ||
-                                        createMutation.isPending
-                                            ? 0.5
-                                            : 1,
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!createMutation.isPending)
-                                        e.currentTarget.style.backgroundColor =
-                                            "var(--color-primary-hover)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = "var(--color-primary)";
-                                }}
-                            >
-                                {createMutation.isPending ? "Saving..." : "Save"}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowForm(false)}
-                                style={{
-                                    ...btnBase,
-                                    backgroundColor: "transparent",
-                                    color: "var(--color-text-secondary)",
-                                    border: "1px solid var(--color-border)",
-                                }}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {slotList.length === 0 ? (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: "48px 16px",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                    }}
-                >
-                    <Users size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                    <p style={{ margin: 0 }}>No volunteer slots available yet.</p>
-                    <p style={{ margin: "4px 0 0", fontSize: "13px" }}>
-                        Create one to get started.
+                        {t("title")}
+                    </h1>
+                    <p
+                        style={{
+                            fontSize: "14px",
+                            color: "var(--color-text-secondary)",
+                            margin: "4px 0 0",
+                        }}
+                    >
+                        {wsName}
                     </p>
                 </div>
+                {canManage && <Button onClick={() => setCreateOpen(true)}>{t("newSlot")}</Button>}
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                    <CardContent style={{ padding: "16px 20px" }}>
+                        <p
+                            style={{
+                                fontSize: "12px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 4px",
+                            }}
+                        >
+                            {t("slots")}
+                        </p>
+                        <p
+                            style={{
+                                fontSize: "22px",
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                margin: 0,
+                            }}
+                        >
+                            {stats?.totalSlots ?? 0}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent style={{ padding: "16px 20px" }}>
+                        <p
+                            style={{
+                                fontSize: "12px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 4px",
+                            }}
+                        >
+                            {t("signups")}
+                        </p>
+                        <p
+                            style={{
+                                fontSize: "22px",
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                margin: 0,
+                            }}
+                        >
+                            {stats?.totalSignups ?? 0}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent style={{ padding: "16px 20px" }}>
+                        <p
+                            style={{
+                                fontSize: "12px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 4px",
+                            }}
+                        >
+                            {tC("soon")}
+                        </p>
+                        <p
+                            style={{
+                                fontSize: "22px",
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                margin: 0,
+                            }}
+                        >
+                            {stats?.upcomingSlots ?? 0}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent style={{ padding: "16px 20px" }}>
+                        <p
+                            style={{
+                                fontSize: "12px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 4px",
+                            }}
+                        >
+                            {t("mySignups")}
+                        </p>
+                        <p
+                            style={{
+                                fontSize: "22px",
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                margin: 0,
+                            }}
+                        >
+                            {mine}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent style={{ padding: "16px 20px" }}>
+                        <p
+                            style={{
+                                fontSize: "12px",
+                                color: "var(--color-text-secondary)",
+                                margin: "0 0 4px",
+                            }}
+                        >
+                            {t("myHours")}
+                        </p>
+                        <p
+                            style={{
+                                fontSize: "22px",
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                margin: 0,
+                            }}
+                        >
+                            {hours?.hours ?? 0}
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {(stats?.topVolunteers?.length ?? 0) > 0 && (
+                <Card>
+                    <CardContent style={{ padding: "16px 20px" }}>
+                        <p
+                            style={{
+                                fontSize: "13px",
+                                fontWeight: 600,
+                                color: "var(--color-text)",
+                                margin: "0 0 8px",
+                            }}
+                        >
+                            {t("signups")}
+                        </p>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            {(stats?.topVolunteers ?? []).slice(0, 10).map((v) => (
+                                <Badge key={v.userId} variant="outline">
+                                    {v.name ?? tC("unknown")} · {v.count}
+                                </Badge>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {slotsLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                    ))}
+                </div>
+            ) : slots.length === 0 ? (
+                <Card>
+                    <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
+                        <p
+                            style={{
+                                fontSize: "14px",
+                                color: "var(--color-text-secondary)",
+                                margin: 0,
+                            }}
+                        >
+                            {t("noSlots")}
+                        </p>
+                    </CardContent>
+                </Card>
             ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {slotList.map((slot) => {
-                        const pct = slot.capacity > 0 ? (slot.signedUp / slot.capacity) * 100 : 0;
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {slots.map((slot) => {
                         const full = slot.signedUp >= slot.capacity;
+                        const pct =
+                            slot.capacity > 0
+                                ? Math.min(100, (slot.signedUp / slot.capacity) * 100)
+                                : 0;
                         return (
-                            <div
-                                key={slot.id}
-                                style={{
-                                    border: "1px solid var(--color-border)",
-                                    borderRadius: "var(--radius-sm)",
-                                    padding: "16px",
-                                    backgroundColor: "var(--color-bg)",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "flex-start",
-                                        flexWrap: "wrap",
-                                        gap: "8px",
-                                    }}
-                                >
-                                    <div style={{ flex: 1, minWidth: "200px" }}>
-                                        <h3
-                                            style={{
-                                                fontSize: "15px",
-                                                fontWeight: 600,
-                                                margin: "0 0 4px",
-                                                color: "var(--color-text)",
-                                            }}
-                                        >
-                                            {slot.title}
-                                        </h3>
-                                        {slot.description && (
-                                            <p
-                                                style={{
-                                                    fontSize: "13px",
-                                                    color: "var(--color-text-secondary)",
-                                                    margin: "0 0 8px",
-                                                }}
-                                            >
-                                                {slot.description}
-                                            </p>
-                                        )}
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                gap: "16px",
-                                                flexWrap: "wrap",
-                                                fontSize: "13px",
-                                                color: "var(--color-text-secondary)",
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "4px",
-                                                }}
-                                            >
-                                                <Clock size={14} />
-                                                {new Date(slot.startTime).toLocaleString()} –{" "}
-                                                {new Date(slot.endTime).toLocaleString()}
-                                            </span>
-                                            <span
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "4px",
-                                                }}
-                                            >
-                                                <Users size={14} />
-                                                {slot.signedUp}/{slot.capacity} signed up
-                                            </span>
-                                        </div>
-                                    </div>
+                            <Card key={slot.id}>
+                                <CardContent style={{ padding: "16px 20px" }}>
                                     <div
                                         style={{
                                             display: "flex",
-                                            flexDirection: "column",
-                                            alignItems: "flex-end",
-                                            gap: "8px",
-                                            minWidth: "120px",
+                                            justifyContent: "space-between",
+                                            alignItems: "flex-start",
+                                            gap: "12px",
+                                            flexWrap: "wrap",
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                width: "100%",
-                                                height: "6px",
-                                                backgroundColor: "var(--color-bg-secondary)",
-                                                borderRadius: "var(--radius-sm)",
-                                                overflow: "hidden",
-                                            }}
-                                        >
-                                            <div
+                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                            <p
                                                 style={{
-                                                    width: `${Math.min(pct, 100)}%`,
-                                                    height: "100%",
-                                                    backgroundColor: full
-                                                        ? "var(--color-destructive)"
-                                                        : "var(--color-primary)",
-                                                    borderRadius: "var(--radius-sm)",
-                                                    transition: "width 200ms ease",
-                                                }}
-                                            />
-                                        </div>
-                                        <span
-                                            style={{
-                                                fontSize: "11px",
-                                                color: full
-                                                    ? "var(--color-destructive)"
-                                                    : "var(--color-text-secondary)",
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            {full ? "Full" : `${Math.round(pct)}% filled`}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div
-                                    style={{
-                                        marginTop: "12px",
-                                        display: "flex",
-                                        gap: "8px",
-                                        flexWrap: "wrap",
-                                    }}
-                                >
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        {slot.userSignedUp ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => cancelMutation.mutate(slot.id)}
-                                                disabled={cancelMutation.isPending}
-                                                style={{
-                                                    ...btnBase,
-                                                    backgroundColor: "transparent",
-                                                    color: "var(--color-destructive)",
-                                                    border: "1px solid var(--color-destructive)",
-                                                    opacity: cancelMutation.isPending ? 0.5 : 1,
+                                                    fontSize: "14px",
+                                                    fontWeight: 600,
+                                                    color: "var(--color-text)",
+                                                    margin: 0,
                                                 }}
                                             >
-                                                <UserX size={15} /> Cancel
-                                            </button>
-                                        ) : !full ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => signupMutation.mutate(slot.id)}
-                                                disabled={signupMutation.isPending}
-                                                style={{
-                                                    ...btnBase,
-                                                    backgroundColor: "var(--color-primary)",
-                                                    color: "#fff",
-                                                    opacity: signupMutation.isPending ? 0.5 : 1,
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!signupMutation.isPending)
-                                                        e.currentTarget.style.backgroundColor =
-                                                            "var(--color-primary-hover)";
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.backgroundColor =
-                                                        "var(--color-primary)";
-                                                }}
-                                            >
-                                                <UserCheck size={15} /> Sign Up
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                    {isAdmin && (
-                                        <button
-                                            type="button"
-                                            onClick={() => fetchSignups(slot.id)}
-                                            style={{
-                                                ...btnBase,
-                                                backgroundColor: "transparent",
-                                                color: "var(--color-primary)",
-                                                border: "1px solid var(--color-border)",
-                                            }}
-                                        >
-                                            {loadingSignups[slot.id] ? (
-                                                "Loading..."
-                                            ) : showSignups[slot.id] ? (
-                                                <>
-                                                    <EyeOff size={15} /> Hide Signups
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Eye size={15} /> View Signups ({slot.signedUp})
-                                                </>
+                                                {slot.title}
+                                            </p>
+                                            {slot.description && (
+                                                <p
+                                                    style={{
+                                                        fontSize: "13px",
+                                                        color: "var(--color-text-secondary)",
+                                                        margin: "4px 0 0",
+                                                    }}
+                                                >
+                                                    {slot.description}
+                                                </p>
                                             )}
-                                        </button>
-                                    )}
-                                </div>
-                                {isAdmin && showSignups[slot.id] && signupData[slot.id] && (
-                                    <div
-                                        style={{
-                                            marginTop: "10px",
-                                            padding: "10px 12px",
-                                            border: "1px solid var(--color-border)",
-                                            borderRadius: "var(--radius-sm)",
-                                            backgroundColor: "var(--color-bg-secondary)",
-                                            fontSize: "13px",
-                                        }}
-                                    >
+                                            <p
+                                                style={{
+                                                    fontSize: "12px",
+                                                    color: "var(--color-text-secondary)",
+                                                    margin: "4px 0 0",
+                                                }}
+                                            >
+                                                {t("startsAt")}:{" "}
+                                                {new Date(slot.startTime).toLocaleString(locale)}
+                                                {` · ${t("endsAt")}: ${new Date(slot.endTime).toLocaleString(locale)}`}
+                                            </p>
+                                            <p
+                                                style={{
+                                                    fontSize: "12px",
+                                                    color: "var(--color-text-secondary)",
+                                                    margin: "4px 0 0",
+                                                }}
+                                            >
+                                                {slot.signedUp}/{slot.capacity} {t("signups")} ·{" "}
+                                                {t("capacity")}: {slot.capacity}
+                                            </p>
+                                            <div
+                                                style={{
+                                                    height: "6px",
+                                                    borderRadius: "5px",
+                                                    backgroundColor: "var(--color-bg-secondary)",
+                                                    marginTop: "8px",
+                                                    overflow: "hidden",
+                                                    maxWidth: "320px",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        width: `${pct}%`,
+                                                        height: "100%",
+                                                        backgroundColor: full
+                                                            ? "var(--color-destructive)"
+                                                            : "var(--color-primary)",
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                         <div
                                             style={{
-                                                fontWeight: 600,
-                                                marginBottom: "6px",
-                                                color: "var(--color-text)",
-                                                fontSize: "13px",
+                                                display: "flex",
+                                                gap: "8px",
+                                                flexShrink: 0,
+                                                flexWrap: "wrap",
                                             }}
                                         >
-                                            Signed Up Members
-                                        </div>
-                                        {signupData[slot.id].length === 0 ? (
-                                            <div
-                                                style={{
-                                                    color: "var(--color-text-secondary)",
-                                                    fontSize: "12px",
-                                                }}
-                                            >
-                                                No signups yet.
-                                            </div>
-                                        ) : (
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: "4px",
-                                                }}
-                                            >
-                                                {signupData[slot.id].map((su) => (
-                                                    <div
-                                                        key={su.id}
-                                                        style={{
-                                                            display: "flex",
-                                                            justifyContent: "space-between",
-                                                            alignItems: "center",
-                                                            padding: "4px 0",
-                                                            borderBottom:
-                                                                "1px solid var(--color-border)",
-                                                        }}
+                                            {full && !slot.userSignedUp && (
+                                                <Badge variant="destructive">{t("full")}</Badge>
+                                            )}
+                                            {slot.userSignedUp ? (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => withdraw.mutate(slot.id)}
+                                                    disabled={withdraw.isPending}
+                                                >
+                                                    {t("unregister")}
+                                                </Button>
+                                            ) : (
+                                                !full && (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => signUp.mutate(slot.id)}
+                                                        disabled={signUp.isPending}
                                                     >
-                                                        <span
+                                                        {t("signUp")}
+                                                    </Button>
+                                                )
+                                            )}
+                                            {canManage && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setOpenSlot(
+                                                            openSlot === slot.id ? null : slot.id,
+                                                        )
+                                                    }
+                                                >
+                                                    {t("signups")} ({slot.signedUp})
+                                                </Button>
+                                            )}
+                                            {canManage && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => openEdit(slot)}
+                                                >
+                                                    {tC("edit")}
+                                                </Button>
+                                            )}
+                                            {canManage && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    onClick={() => setDeleteTarget(slot)}
+                                                >
+                                                    {tC("delete")}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {canManage && openSlot === slot.id && (
+                                        <div
+                                            style={{
+                                                marginTop: "12px",
+                                                borderTop: "1px solid var(--color-border)",
+                                                paddingTop: "12px",
+                                            }}
+                                        >
+                                            {signupsLoading ? (
+                                                <Skeleton className="h-10 w-full" />
+                                            ) : (signupPage?.items ?? []).length === 0 ? (
+                                                <p
+                                                    style={{
+                                                        fontSize: "13px",
+                                                        color: "var(--color-text-secondary)",
+                                                        margin: 0,
+                                                    }}
+                                                >
+                                                    {t("noSlots")}
+                                                </p>
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        gap: "4px",
+                                                    }}
+                                                >
+                                                    {(signupPage?.items ?? []).map((s) => (
+                                                        <div
+                                                            key={s.id}
                                                             style={{
-                                                                fontWeight: 500,
+                                                                display: "flex",
+                                                                justifyContent: "space-between",
+                                                                gap: "8px",
+                                                                fontSize: "13px",
                                                                 color: "var(--color-text)",
                                                             }}
                                                         >
-                                                            {su.name}
-                                                        </span>
-                                                        <span
+                                                            <span>
+                                                                {s.name ?? s.email} ({s.email})
+                                                            </span>
+                                                            <span
+                                                                style={{
+                                                                    color: "var(--color-text-secondary)",
+                                                                }}
+                                                            >
+                                                                {new Date(
+                                                                    s.signedUpAt,
+                                                                ).toLocaleString(locale)}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                    {signupPage?.nextCursor && (
+                                                        <p
                                                             style={{
                                                                 fontSize: "12px",
                                                                 color: "var(--color-text-secondary)",
+                                                                margin: "4px 0 0",
                                                             }}
                                                         >
-                                                            {su.email}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                                                            {tC("more")}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         );
                     })}
+                    {nextCursor && (
+                        <Button variant="outline" onClick={loadMore} disabled={moreLoading}>
+                            {moreLoading ? tC("loading") : tC("showMore")}
+                        </Button>
+                    )}
                 </div>
             )}
+
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("newSlot")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tC("title")}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tC("description")}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <Input
+                            type="datetime-local"
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                        />
+                        <Input
+                            type="datetime-local"
+                            value={endTime}
+                            onChange={(e) => setEndTime(e.target.value)}
+                        />
+                        <Input
+                            placeholder={t("capacity")}
+                            value={capacity}
+                            onChange={(e) => setCapacity(e.target.value)}
+                            inputMode="numeric"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button onClick={handleCreate} disabled={createSlot.isPending}>
+                            {tC("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={editTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setEditTarget(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tC("edit")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tC("title")}
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tC("description")}
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <Input
+                            type="datetime-local"
+                            value={editStart}
+                            onChange={(e) => setEditStart(e.target.value)}
+                        />
+                        <Input
+                            type="datetime-local"
+                            value={editEnd}
+                            onChange={(e) => setEditEnd(e.target.value)}
+                        />
+                        <Input
+                            placeholder={t("capacity")}
+                            value={editCapacity}
+                            onChange={(e) => setEditCapacity(e.target.value)}
+                            inputMode="numeric"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditTarget(null)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button onClick={handleUpdateSlot} disabled={updateSlot.isPending}>
+                            {tC("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteTarget(null);
+                }}
+                title={tC("delete")}
+                description={deleteTarget?.title}
+                confirmLabel={tC("delete")}
+                destructive
+                onConfirm={() => {
+                    if (deleteTarget) deleteSlot.mutate(deleteTarget.id);
+                }}
+            />
         </div>
     );
 }
-
-const statCardStyle: React.CSSProperties = {
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-sm)",
-    padding: "16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    backgroundColor: "var(--color-bg)",
-};

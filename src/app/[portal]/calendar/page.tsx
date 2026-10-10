@@ -3,75 +3,123 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { usePortal } from "@/hooks/usePortal";
-import { usePageTitle } from "@/hooks/usePageTitle";
+import { useTranslations } from "next-intl";
 import { fetchJson } from "@/lib/api-client";
+import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { formatDateKey, getMonthGrid, getMonthName } from "@/lib/calendar-utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 
-interface CalendarItem {
+interface CalEvent {
     id: string;
     title: string;
-    date: string;
-    type: "event" | "deadline" | "meeting" | "volunteer";
-    entityId: string;
+    startDate: string;
+    endDate: string | null;
+    location: string | null;
+    status: string;
+}
+
+interface CalTask {
+    id: string;
+    title: string;
+    dueDate: string | null;
+    status: string;
+    priority: number;
+}
+
+interface CalMeeting {
+    id: string;
+    title: string;
+    startTime: string;
+    endTime: string | null;
+    location: string | null;
+}
+
+interface CalSlot {
+    id: string;
+    title: string;
+    startTime: string;
+    endTime: string | null;
 }
 
 interface CalendarResponse {
-    items: CalendarItem[];
-    month: number;
-    year: number;
+    events: CalEvent[];
+    tasks: CalTask[];
+    meetings: CalMeeting[];
+    slots: CalSlot[];
 }
 
-const TYPE_STYLES: Record<string, { bg: string }> = {
-    event: { bg: "var(--color-primary)" },
-    deadline: { bg: "#c48200" },
-    meeting: { bg: "var(--color-success)" },
-    volunteer: { bg: "var(--color-warning)" },
-};
+interface DayItem {
+    id: string;
+    title: string;
+    kind: "event" | "task" | "meeting" | "slot";
+    route: string;
+}
 
-const TYPE_LABELS: Record<string, string> = {
-    event: "Event",
-    deadline: "Deadline",
-    meeting: "Meeting",
-    volunteer: "Volunteer",
-};
-
-const TYPE_ROUTES: Record<string, string> = {
-    event: "/events",
-    deadline: "/tasks",
-    meeting: "/meetings",
-    volunteer: "/volunteers",
+const KIND_COLORS: Record<DayItem["kind"], string> = {
+    event: "var(--color-primary)",
+    task: "#c48200",
+    meeting: "var(--color-success)",
+    slot: "var(--color-warning)",
 };
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+function dateKeyOf(d: Date): string {
+    return formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export default function CalendarPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Calendar | ${portalName}`);
+    const { data: workspace } = useWorkspace();
+    const tNav = useTranslations("nav");
+    const tCommon = useTranslations("common");
+    const tErrors = useTranslations("errors");
+    const tTasks = useTranslations("tasks");
+    const tEvents = useTranslations("events");
+    usePageTitle(`${tNav("calendar")} | ${workspace?.name ?? portal}`);
     const router = useRouter();
 
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
 
-    const queryKey = [portal, "calendar-page", year, month];
-    const { data, isLoading, isError } = useQuery<CalendarResponse>({
-        queryKey,
-        queryFn: () => fetchJson<CalendarResponse>(`/api/calendar?month=${month}&year=${year}`),
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+    const { data, isLoading, isError, refetch } = useQuery<CalendarResponse>({
+        queryKey: [portal, "calendar", year, month],
+        queryFn: () =>
+            fetchJson<CalendarResponse>(
+                `/api/calendar?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`,
+            ),
+        enabled: portal !== "",
     });
 
-    const itemsByDate = new Map<string, CalendarItem[]>();
-    if (data?.items) {
-        for (const item of data.items) {
-            const d = new Date(item.date);
-            const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
-            if (!itemsByDate.has(key)) itemsByDate.set(key, []);
-            itemsByDate.get(key)!.push(item);
-        }
+    const itemsByDate = new Map<string, DayItem[]>();
+    function push(dateStr: string | null, item: DayItem) {
+        if (!dateStr) return;
+        const key = dateKeyOf(new Date(dateStr));
+        const list = itemsByDate.get(key) ?? [];
+        list.push(item);
+        itemsByDate.set(key, list);
+    }
+    for (const e of data?.events ?? []) {
+        push(e.startDate, { id: e.id, title: e.title, kind: "event", route: "/events" });
+    }
+    for (const task of data?.tasks ?? []) {
+        push(task.dueDate, { id: task.id, title: task.title, kind: "task", route: "/tasks" });
+    }
+    for (const m of data?.meetings ?? []) {
+        push(m.startTime, { id: m.id, title: m.title, kind: "meeting", route: "/meetings" });
+    }
+    for (const s of data?.slots ?? []) {
+        push(s.startTime, { id: s.id, title: s.title, kind: "slot", route: "/volunteers" });
     }
 
     const weeks = getMonthGrid(year, month);
@@ -94,20 +142,21 @@ export default function CalendarPage() {
         }
     }
 
-    function handleItemClick(item: CalendarItem) {
-        const route = TYPE_ROUTES[item.type] ?? "/events";
-        router.push(`/${portal}${route}`);
+    function kindLabel(kind: DayItem["kind"]): string {
+        if (kind === "event") return tEvents("title");
+        if (kind === "task") return tTasks("singular");
+        if (kind === "meeting") return tNav("meetings");
+        return tNav("volunteers");
     }
 
+    const totalItems =
+        (data?.events.length ?? 0) +
+        (data?.tasks.length ?? 0) +
+        (data?.meetings.length ?? 0) +
+        (data?.slots.length ?? 0);
+
     return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "20px",
-                maxWidth: "1200px",
-            }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1200px" }}>
             <div>
                 <h1
                     style={{
@@ -117,7 +166,7 @@ export default function CalendarPage() {
                         margin: 0,
                     }}
                 >
-                    Calendar
+                    {tNav("calendar")}
                 </h1>
                 <p
                     style={{
@@ -126,112 +175,72 @@ export default function CalendarPage() {
                         margin: "4px 0 0",
                     }}
                 >
-                    All scheduled items across your portal
+                    {tEvents("title")} &middot; {tTasks("plural")} &middot; {tNav("meetings")}{" "}
+                    &middot; {tNav("volunteers")}
                 </p>
             </div>
 
-            {/* Navigation */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                }}
-            >
-                <button
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Button
                     type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={prevMonth}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "36px",
-                        height: "36px",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "5px",
-                        background: "var(--color-bg)",
-                        cursor: "pointer",
-                        color: "var(--color-text)",
-                    }}
+                    aria-label={tCommon("previous")}
                 >
                     <ChevronLeft size={16} />
-                </button>
-                <span
-                    style={{
-                        fontSize: "18px",
-                        fontWeight: 600,
-                        color: "var(--color-text)",
-                    }}
-                >
+                </Button>
+                <span style={{ fontSize: "18px", fontWeight: 600, color: "var(--color-text)" }}>
                     {getMonthName(month)} {year}
                 </span>
-                <button
+                <Button
                     type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={nextMonth}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "36px",
-                        height: "36px",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "5px",
-                        background: "var(--color-bg)",
-                        cursor: "pointer",
-                        color: "var(--color-text)",
-                    }}
+                    aria-label={tCommon("next")}
                 >
                     <ChevronRight size={16} />
-                </button>
+                </Button>
             </div>
 
-            {/* Loading state */}
             {isLoading && (
                 <Card>
                     <CardContent style={{ padding: "16px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(7, 1fr)",
-                                    gap: "4px",
-                                }}
-                            >
-                                {Array.from({ length: 35 }).map((_, i) => (
-                                    <Skeleton
-                                        key={i}
-                                        style={{ height: "80px", borderRadius: "5px" }}
-                                    />
-                                ))}
-                            </div>
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(7, 1fr)",
+                                gap: "4px",
+                            }}
+                        >
+                            {Array.from({ length: 35 }).map((_, i) => (
+                                <Skeleton key={i} style={{ height: "80px" }} />
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Error state */}
             {isError && (
                 <Card>
-                    <CardContent
-                        style={{
-                            padding: "40px 20px",
-                            textAlign: "center",
-                        }}
-                    >
+                    <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
                         <p
                             style={{
                                 fontSize: "14px",
                                 color: "var(--color-destructive)",
-                                margin: 0,
+                                margin: "0 0 16px",
                             }}
                         >
-                            Failed to load calendar data.
+                            {tErrors("internal")}
                         </p>
+                        <Button variant="outline" onClick={() => refetch()}>
+                            {tCommon("retry")}
+                        </Button>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Loaded state */}
             {!isLoading && !isError && (
                 <Card>
                     <CardContent style={{ padding: "0", overflow: "hidden" }}>
@@ -243,7 +252,6 @@ export default function CalendarPage() {
                                 gap: "1px",
                             }}
                         >
-                            {/* Day name headers */}
                             {DAY_NAMES.map((name) => (
                                 <div
                                     key={name}
@@ -261,8 +269,6 @@ export default function CalendarPage() {
                                     {name}
                                 </div>
                             ))}
-
-                            {/* Day cells */}
                             {weeks.map((week, wi) =>
                                 week.map((day, di) => {
                                     if (day === null) {
@@ -276,14 +282,12 @@ export default function CalendarPage() {
                                             />
                                         );
                                     }
-
                                     const key = formatDateKey(year, month, day);
                                     const dayItems = itemsByDate.get(key) ?? [];
                                     const isToday =
                                         today.getFullYear() === year &&
                                         today.getMonth() === month &&
                                         today.getDate() === day;
-
                                     return (
                                         <div
                                             key={key}
@@ -320,38 +324,36 @@ export default function CalendarPage() {
                                                     flex: 1,
                                                 }}
                                             >
-                                                {dayItems.map((item) => {
-                                                    const typeStyle =
-                                                        TYPE_STYLES[item.type] ?? TYPE_STYLES.event;
-                                                    return (
-                                                        <button
-                                                            key={item.id}
-                                                            type="button"
-                                                            onClick={() => handleItemClick(item)}
-                                                            title={`${item.title} (${TYPE_LABELS[item.type] ?? item.type})`}
-                                                            style={{
-                                                                display: "block",
-                                                                width: "100%",
-                                                                padding: "4px 6px",
-                                                                border: "none",
-                                                                borderRadius: "4px",
-                                                                fontSize: "11px",
-                                                                fontWeight: 600,
-                                                                textAlign: "left",
-                                                                cursor: "pointer",
-                                                                fontFamily: "inherit",
-                                                                color: "#fff",
-                                                                backgroundColor: typeStyle.bg,
-                                                                lineHeight: 1.3,
-                                                                overflow: "hidden",
-                                                                textOverflow: "ellipsis",
-                                                                whiteSpace: "nowrap",
-                                                            }}
-                                                        >
-                                                            {item.title}
-                                                        </button>
-                                                    );
-                                                })}
+                                                {dayItems.slice(0, 4).map((item) => (
+                                                    <button
+                                                        key={`${item.kind}-${item.id}`}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            router.push(`/${portal}${item.route}`)
+                                                        }
+                                                        title={`${item.title} (${kindLabel(item.kind)})`}
+                                                        style={{
+                                                            display: "block",
+                                                            width: "100%",
+                                                            padding: "4px 6px",
+                                                            border: "none",
+                                                            borderRadius: "4px",
+                                                            fontSize: "11px",
+                                                            fontWeight: 600,
+                                                            textAlign: "left",
+                                                            cursor: "pointer",
+                                                            fontFamily: "inherit",
+                                                            color: "#fff",
+                                                            backgroundColor: KIND_COLORS[item.kind],
+                                                            lineHeight: 1.3,
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            whiteSpace: "nowrap",
+                                                        }}
+                                                    >
+                                                        {item.title}
+                                                    </button>
+                                                ))}
                                                 {dayItems.length > 4 && (
                                                     <span
                                                         style={{
@@ -361,7 +363,7 @@ export default function CalendarPage() {
                                                             padding: "2px 4px",
                                                         }}
                                                     >
-                                                        +{dayItems.length - 4} more
+                                                        +{dayItems.length - 4} {tCommon("more")}
                                                     </span>
                                                 )}
                                             </div>
@@ -374,43 +376,14 @@ export default function CalendarPage() {
                 </Card>
             )}
 
-            {/* Empty state */}
-            {!isLoading && !isError && data?.items && data.items.length === 0 && (
-                <Card>
-                    <CardContent
-                        style={{
-                            padding: "40px 20px",
-                            textAlign: "center",
-                        }}
-                    >
-                        <CalendarIcon
-                            size={32}
-                            style={{ color: "var(--color-text-secondary)", marginBottom: "12px" }}
-                        />
-                        <p
-                            style={{
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                color: "var(--color-text)",
-                                margin: "0 0 4px",
-                            }}
-                        >
-                            No items this month
-                        </p>
-                        <p
-                            style={{
-                                fontSize: "13px",
-                                color: "var(--color-text-secondary)",
-                                margin: 0,
-                            }}
-                        >
-                            Try browsing another month.
-                        </p>
-                    </CardContent>
-                </Card>
+            {!isLoading && !isError && totalItems === 0 && (
+                <EmptyState
+                    icon={<CalendarIcon size={24} />}
+                    title={tCommon("none")}
+                    description={tEvents("noEvents")}
+                />
             )}
 
-            {/* Legend */}
             <div
                 style={{
                     display: "flex",
@@ -421,18 +394,18 @@ export default function CalendarPage() {
                     color: "var(--color-text-secondary)",
                 }}
             >
-                {Object.entries(TYPE_STYLES).map(([type, style]) => (
-                    <div key={type} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {(Object.keys(KIND_COLORS) as DayItem["kind"][]).map((kind) => (
+                    <div key={kind} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <span
                             style={{
                                 display: "inline-block",
                                 width: "10px",
                                 height: "10px",
                                 borderRadius: "2px",
-                                backgroundColor: style.bg,
+                                backgroundColor: KIND_COLORS[kind],
                             }}
                         />
-                        {TYPE_LABELS[type] ?? type}
+                        {kindLabel(kind)}
                     </div>
                 ))}
             </div>

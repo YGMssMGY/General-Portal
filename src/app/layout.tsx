@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/QueryClientProvider";
-import { FaviconSwitcher } from "@/components/FaviconSwitcher";
+import { normalizeSlug } from "@/db/client";
 import "@fontsource-variable/noto-sans";
 import "@fontsource/noto-sans-sc";
 import "@fontsource-variable/jetbrains-mono";
@@ -16,10 +17,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
     const locale = await getLocale();
     const messages = await getMessages();
+    const store = await cookies();
+    const portal = normalizeSlug(store.get("portal")?.value ?? "");
     return (
         <html lang={locale}>
             <head>
-                <FaviconSwitcher />
+                <link rel="icon" href={portal ? `/${portal}.png` : "/icon.svg"} />
             </head>
             <body>
                 <NextIntlClientProvider locale={locale} messages={messages}>

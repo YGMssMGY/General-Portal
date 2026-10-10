@@ -1,40 +1,51 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { fetchJson, fetchPage } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogDescription,
     DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
-import { format } from "date-fns";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-    FileText,
-    Plus,
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    CheckCircle,
     ChevronDown,
     ChevronUp,
-    CheckCircle,
-    XCircle,
-    Clock,
-    Trash2,
     File,
+    FileText,
+    Plus,
+    Trash2,
+    XCircle,
 } from "lucide-react";
-import { usePageTitle } from "@/hooks/usePageTitle";
-import { LinkPreview } from "@/components/LinkPreview";
-import { extractUrls } from "@/lib/extract-urls";
 
 interface Proposal {
     id: string;
@@ -46,97 +57,123 @@ interface Proposal {
     updatedAt: string;
 }
 
-interface ProposalsResponse {
-    proposals: Proposal[];
-    total: number;
-}
-
 interface ProposalTemplate {
     id: string;
-    name: string;
     title: string;
     description: string;
-    createdBy: { id: string; name: string | null };
+    category: string | null;
+    createdBy: { id: string; name: string | null; image: string | null };
     createdAt: string;
 }
 
-const statusConfig: Record<
-    string,
-    { label: string; variant: "secondary" | "default" | "destructive"; icon: typeof Clock }
-> = {
-    pending: { label: "Pending", variant: "secondary", icon: Clock },
-    approved: { label: "Approved", variant: "default", icon: CheckCircle },
-    rejected: { label: "Rejected", variant: "destructive", icon: XCircle },
-};
+const PAGE_SIZE = 20;
 
 export default function ProposalsPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Proposals | ${portalName}`);
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
+    const { data: workspace } = useWorkspace();
+    const { user } = useAuthSession();
+    const t = useTranslations("proposals");
+    const tCommon = useTranslations("common");
+    const tErrors = useTranslations("errors");
+    usePageTitle(`${t("title")} | ${workspace?.name ?? portal}`);
     const queryClient = useQueryClient();
+
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [showCreate, setShowCreate] = useState(false);
     const [newTitle, setNewTitle] = useState("");
     const [newDescription, setNewDescription] = useState("");
     const [activeTab, setActiveTab] = useState("proposals");
-
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [cursorStack, setCursorStack] = useState<string[]>([]);
     const [showCreateTemplate, setShowCreateTemplate] = useState(false);
-    const [templateName, setTemplateName] = useState("");
     const [templateTitle, setTemplateTitle] = useState("");
     const [templateDescription, setTemplateDescription] = useState("");
+    const [templateCategory, setTemplateCategory] = useState("");
+    const [pendingDelete, setPendingDelete] = useState<{
+        id: string;
+        title: string;
+        kind: "proposal" | "template";
+    } | null>(null);
+    const [permanent, setPermanent] = useState(false);
 
-    const { data, isLoading, isError } = useQuery<ProposalsResponse>({
-        queryKey: [portal, "proposals"],
-        queryFn: () => fetchJson<ProposalsResponse>(`/api/proposals`),
+    const isAdmin = user?.role === "admin";
+    const cursor = cursorStack.length > 0 ? cursorStack[cursorStack.length - 1] : null;
+
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: [portal, "proposals", statusFilter, cursor ?? ""],
+        queryFn: () =>
+            fetchPage<Proposal>(
+                `/api/proposals?limit=${PAGE_SIZE}` +
+                    (statusFilter !== "all" ? `&status=${statusFilter}` : "") +
+                    (cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""),
+            ),
+        enabled: portal !== "",
     });
 
-    const { data: templates } = useQuery<ProposalTemplate[]>({
+    const { data: templates, isLoading: templatesLoading } = useQuery({
         queryKey: [portal, "proposals", "templates"],
-        queryFn: () => fetchJson<ProposalTemplate[]>(`/api/proposals/templates`),
-        enabled: activeTab === "templates",
+        queryFn: () => fetchJson<ProposalTemplate[]>("/api/proposals/templates"),
+        enabled: portal !== "" && activeTab === "templates",
     });
+
+    const proposals = data?.items ?? [];
+    const nextCursor = data?.nextCursor ?? null;
 
     const createMutation = useMutation({
         mutationFn: (body: { title: string; description: string }) =>
-            fetchJson<Proposal>(`/api/proposals`, {
+            fetchJson<Proposal>("/api/proposals", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             }),
-        onSuccess: () => {
+        onSuccess: (created) => {
             queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
             setShowCreate(false);
             setNewTitle("");
             setNewDescription("");
+            toast.success(t("new"), {
+                action: {
+                    label: tCommon("undo"),
+                    onClick: () => deleteProposal.mutate({ id: created.id, permanent: false }),
+                },
+            });
         },
+        onError: () => toast.error(tErrors("internal")),
     });
 
     const approveMutation = useMutation({
         mutationFn: (id: string) => fetchJson(`/api/proposals/${id}/approve`, { method: "POST" }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
+            toast.success(t("statusApproved"));
         },
+        onError: () => toast.error(tErrors("internal")),
     });
 
     const rejectMutation = useMutation({
         mutationFn: (id: string) => fetchJson(`/api/proposals/${id}/reject`, { method: "POST" }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
+            toast.success(t("statusRejected"));
         },
+        onError: () => toast.error(tErrors("internal")),
     });
 
     const deleteProposal = useMutation({
-        mutationFn: (id: string) => fetchJson(`/api/proposals/${id}`, { method: "DELETE" }),
+        mutationFn: ({ id, permanent: perm }: { id: string; permanent: boolean }) =>
+            fetchJson(`/api/proposals/${id}${perm ? "?permanent=true" : ""}`, { method: "DELETE" }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "proposals"] });
+            setPendingDelete(null);
+            setPermanent(false);
+            toast.success(tCommon("delete"));
         },
+        onError: () => toast.error(tErrors("internal")),
     });
 
     const createTemplateMutation = useMutation({
-        mutationFn: (body: { name: string; title: string; description: string }) =>
-            fetchJson<ProposalTemplate>(`/api/proposals/templates`, {
+        mutationFn: (body: { title: string; description: string; category?: string }) =>
+            fetchJson<ProposalTemplate>("/api/proposals/templates", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
@@ -144,18 +181,26 @@ export default function ProposalsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "proposals", "templates"] });
             setShowCreateTemplate(false);
-            setTemplateName("");
             setTemplateTitle("");
             setTemplateDescription("");
+            setTemplateCategory("");
+            toast.success(tCommon("create"));
         },
+        onError: () => toast.error(tErrors("internal")),
     });
 
     const deleteTemplateMutation = useMutation({
-        mutationFn: (id: string) =>
-            fetchJson(`/api/proposals/templates/${id}`, { method: "DELETE" }),
+        mutationFn: ({ id, permanent: perm }: { id: string; permanent: boolean }) =>
+            fetchJson(`/api/proposals/templates/${id}${perm ? "?permanent=true" : ""}`, {
+                method: "DELETE",
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "proposals", "templates"] });
+            setPendingDelete(null);
+            setPermanent(false);
+            toast.success(tCommon("delete"));
         },
+        onError: () => toast.error(tErrors("internal")),
     });
 
     function applyTemplate(tmpl: ProposalTemplate) {
@@ -165,83 +210,23 @@ export default function ProposalsPage() {
         setShowCreate(true);
     }
 
-    if (isLoading) {
-        return (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                    }}
-                >
-                    <div>
-                        <h1
-                            style={{
-                                fontSize: "20px",
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                                margin: 0,
-                            }}
-                        >
-                            Proposals
-                        </h1>
-                        <p
-                            style={{
-                                fontSize: "14px",
-                                color: "var(--color-text-secondary)",
-                                margin: "4px 0 0",
-                            }}
-                        >
-                            Submit and review proposals
-                        </p>
-                    </div>
-                </div>
-                {Array.from({ length: 4 }).map((_, i) => (
-                    <Card key={i}>
-                        <CardContent style={{ padding: "20px" }}>
-                            <Skeleton
-                                style={{
-                                    width: "60%",
-                                    height: "18px",
-                                    borderRadius: "5px",
-                                    marginBottom: "8px",
-                                }}
-                            />
-                            <Skeleton
-                                style={{
-                                    width: "100%",
-                                    height: "14px",
-                                    borderRadius: "5px",
-                                    marginBottom: "8px",
-                                }}
-                            />
-                            <Skeleton
-                                style={{ width: "80px", height: "22px", borderRadius: "5px" }}
-                            />
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        );
-    }
-
-    if (isError || !data) {
-        return (
-            <div style={{ textAlign: "center", padding: "48px 24px" }}>
-                <p style={{ fontSize: "14px", color: "var(--color-destructive)", margin: 0 }}>
-                    Failed to load proposals.
-                </p>
-            </div>
-        );
-    }
-
-    const proposals = data.proposals ?? [];
-
     function handleCreate() {
         if (!newTitle.trim() || !newDescription.trim()) return;
         createMutation.mutate({ title: newTitle.trim(), description: newDescription.trim() });
     }
+
+    function statusLabel(status: Proposal["status"]): string {
+        if (status === "approved") return t("statusApproved");
+        if (status === "rejected") return t("statusRejected");
+        return t("statusPending");
+    }
+
+    const statusTabs = [
+        { value: "all", label: tCommon("all") },
+        { value: "pending", label: t("statusPending") },
+        { value: "approved", label: t("statusApproved") },
+        { value: "rejected", label: t("statusRejected") },
+    ];
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -250,6 +235,7 @@ export default function ProposalsPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
+                    gap: "12px",
                 }}
             >
                 <div>
@@ -261,7 +247,7 @@ export default function ProposalsPage() {
                             margin: 0,
                         }}
                     >
-                        Proposals
+                        {t("title")}
                     </h1>
                     <p
                         style={{
@@ -270,302 +256,380 @@ export default function ProposalsPage() {
                             margin: "4px 0 0",
                         }}
                     >
-                        Submit and review proposals
+                        {t("justification")}
                     </p>
                 </div>
                 {activeTab === "proposals" && (
                     <Button onClick={() => setShowCreate(true)}>
                         <Plus size={16} />
-                        <span>New Proposal</span>
+                        <span>{t("new")}</span>
                     </Button>
                 )}
                 {activeTab === "templates" && isAdmin && (
                     <Button onClick={() => setShowCreateTemplate(true)}>
                         <Plus size={16} />
-                        <span>New Template</span>
+                        <span>{t("newTemplate")}</span>
                     </Button>
                 )}
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
-                    <TabsTrigger value="proposals">Proposals</TabsTrigger>
-                    <TabsTrigger value="templates">Templates</TabsTrigger>
+                    <TabsTrigger value="proposals">{t("title")}</TabsTrigger>
+                    <TabsTrigger value="templates">{t("templates")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="proposals">
-                    {proposals.length === 0 ? (
-                        <Card>
-                            <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
-                                <FileText
-                                    size={32}
+                    <Tabs
+                        value={statusFilter}
+                        onValueChange={(v) => {
+                            setStatusFilter(v);
+                            setCursorStack([]);
+                        }}
+                    >
+                        <TabsList>
+                            {statusTabs.map((tab) => (
+                                <TabsTrigger key={tab.value} value={tab.value}>
+                                    {tab.label}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                        <TabsContent value={statusFilter}>
+                            {isLoading ? (
+                                <div
                                     style={{
-                                        color: "var(--color-text-secondary)",
-                                        marginBottom: "12px",
-                                    }}
-                                />
-                                <p
-                                    style={{
-                                        fontSize: "14px",
-                                        fontWeight: 600,
-                                        color: "var(--color-text)",
-                                        margin: "0 0 4px",
-                                    }}
-                                >
-                                    No proposals yet
-                                </p>
-                                <p
-                                    style={{
-                                        fontSize: "13px",
-                                        color: "var(--color-text-secondary)",
-                                        margin: 0,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "12px",
                                     }}
                                 >
-                                    Create the first proposal for your organization.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        proposals.map((proposal) => {
-                            const isExpanded = expandedId === proposal.id;
-                            const config = statusConfig[proposal.status] ?? statusConfig.pending;
-                            const Icon = config.icon;
-
-                            return (
-                                <Card key={proposal.id}>
-                                    <div
-                                        onClick={() =>
-                                            setExpandedId(isExpanded ? null : proposal.id)
-                                        }
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <Card key={i}>
+                                            <CardContent style={{ padding: "20px" }}>
+                                                <Skeleton
+                                                    style={{
+                                                        width: "60%",
+                                                        height: "18px",
+                                                        marginBottom: "8px",
+                                                    }}
+                                                />
+                                                <Skeleton
+                                                    style={{ width: "80px", height: "22px" }}
+                                                />
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : isError ? (
+                                <div style={{ textAlign: "center", padding: "48px 24px" }}>
+                                    <p
                                         style={{
-                                            display: "flex",
-                                            alignItems: "flex-start",
-                                            justifyContent: "space-between",
-                                            padding: "20px",
-                                            cursor: "pointer",
-                                            gap: "12px",
-                                            borderBottom: isExpanded
-                                                ? "1px solid var(--color-border)"
-                                                : "none",
+                                            fontSize: "14px",
+                                            color: "var(--color-destructive)",
+                                            margin: 0,
                                         }}
                                     >
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "8px",
-                                                    marginBottom: "4px",
-                                                    flexWrap: "wrap",
-                                                }}
-                                            >
-                                                <h3
-                                                    style={{
-                                                        fontSize: "15px",
-                                                        fontWeight: 600,
-                                                        color: "var(--color-text)",
-                                                        margin: 0,
-                                                    }}
-                                                >
-                                                    {proposal.title}
-                                                </h3>
-                                                <Badge
-                                                    variant={
-                                                        config.variant as
-                                                            | "default"
-                                                            | "secondary"
-                                                            | "destructive"
-                                                            | "outline"
+                                        {tErrors("internal")}
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        style={{ marginTop: "16px" }}
+                                        onClick={() => refetch()}
+                                    >
+                                        {tCommon("retry")}
+                                    </Button>
+                                </div>
+                            ) : proposals.length === 0 ? (
+                                <EmptyState
+                                    icon={<FileText size={24} />}
+                                    title={t("noProposals")}
+                                />
+                            ) : (
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "12px",
+                                    }}
+                                >
+                                    {proposals.map((proposal) => {
+                                        const isExpanded = expandedId === proposal.id;
+                                        return (
+                                            <Card key={proposal.id}>
+                                                <div
+                                                    onClick={() =>
+                                                        setExpandedId(
+                                                            isExpanded ? null : proposal.id,
+                                                        )
                                                     }
-                                                >
-                                                    <Icon
-                                                        size={12}
-                                                        style={{ marginRight: "4px" }}
-                                                    />
-                                                    {config.label}
-                                                </Badge>
-                                            </div>
-                                            {!isExpanded && (
-                                                <p
                                                     style={{
-                                                        fontSize: "13px",
-                                                        color: "var(--color-text-secondary)",
-                                                        margin: "4px 0 0",
-                                                        overflow: "hidden",
-                                                        textOverflow: "ellipsis",
-                                                        whiteSpace: "nowrap",
+                                                        display: "flex",
+                                                        alignItems: "flex-start",
+                                                        justifyContent: "space-between",
+                                                        padding: "20px",
+                                                        cursor: "pointer",
+                                                        gap: "12px",
+                                                        borderBottom: isExpanded
+                                                            ? "1px solid var(--color-border)"
+                                                            : "none",
                                                     }}
                                                 >
-                                                    {proposal.description}
-                                                </p>
-                                            )}
-                                            <p
-                                                style={{
-                                                    fontSize: "12px",
-                                                    color: "var(--color-text-secondary)",
-                                                    margin: "6px 0 0",
-                                                }}
-                                            >
-                                                By {proposal.createdBy?.name ?? "Unknown"} &middot;{" "}
-                                                {format(
-                                                    new Date(proposal.createdAt),
-                                                    "MMM d, yyyy",
-                                                )}
-                                            </p>
-                                        </div>
-                                        {isExpanded ? (
-                                            <ChevronUp
-                                                size={18}
-                                                style={{
-                                                    flexShrink: 0,
-                                                    color: "var(--color-text-secondary)",
-                                                }}
-                                            />
-                                        ) : (
-                                            <ChevronDown
-                                                size={18}
-                                                style={{
-                                                    flexShrink: 0,
-                                                    color: "var(--color-text-secondary)",
-                                                }}
-                                            />
-                                        )}
-                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: "8px",
+                                                                flexWrap: "wrap",
+                                                            }}
+                                                        >
+                                                            <h3
+                                                                style={{
+                                                                    fontSize: "15px",
+                                                                    fontWeight: 600,
+                                                                    color: "var(--color-text)",
+                                                                    margin: 0,
+                                                                }}
+                                                            >
+                                                                {proposal.title}
+                                                            </h3>
+                                                            <Badge
+                                                                variant={
+                                                                    proposal.status === "approved"
+                                                                        ? "default"
+                                                                        : proposal.status ===
+                                                                            "rejected"
+                                                                          ? "destructive"
+                                                                          : "secondary"
+                                                                }
+                                                            >
+                                                                {statusLabel(proposal.status)}
+                                                            </Badge>
+                                                        </div>
+                                                        {!isExpanded && (
+                                                            <p
+                                                                style={{
+                                                                    fontSize: "13px",
+                                                                    color: "var(--color-text-secondary)",
+                                                                    margin: "4px 0 0",
+                                                                    overflow: "hidden",
+                                                                    textOverflow: "ellipsis",
+                                                                    whiteSpace: "nowrap",
+                                                                }}
+                                                            >
+                                                                {proposal.description}
+                                                            </p>
+                                                        )}
+                                                        <p
+                                                            style={{
+                                                                fontSize: "12px",
+                                                                color: "var(--color-text-secondary)",
+                                                                margin: "6px 0 0",
+                                                            }}
+                                                        >
+                                                            {proposal.createdBy?.name ??
+                                                                tCommon("unknown")}{" "}
+                                                            &middot;{" "}
+                                                            {format(
+                                                                new Date(proposal.createdAt),
+                                                                "MMM d, yyyy",
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    {isExpanded ? (
+                                                        <ChevronUp
+                                                            size={18}
+                                                            style={{
+                                                                flexShrink: 0,
+                                                                color: "var(--color-text-secondary)",
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <ChevronDown
+                                                            size={18}
+                                                            style={{
+                                                                flexShrink: 0,
+                                                                color: "var(--color-text-secondary)",
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
 
-                                    {isExpanded && (
-                                        <div style={{ padding: "20px" }}>
-                                            <p
-                                                style={{
-                                                    fontSize: "14px",
-                                                    color: "var(--color-text)",
-                                                    margin: "0 0 16px",
-                                                    lineHeight: 1.6,
-                                                    whiteSpace: "pre-wrap",
-                                                }}
-                                            >
-                                                {proposal.description}
-                                            </p>
-                                            {extractUrls(proposal.description).map((url) => (
-                                                <LinkPreview key={url} url={url} />
-                                            ))}
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    gap: "8px",
-                                                    flexWrap: "wrap",
-                                                }}
-                                            >
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    disabled={
-                                                        proposal.status !== "pending" ||
-                                                        approveMutation.isPending
-                                                    }
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        approveMutation.mutate(proposal.id);
-                                                    }}
-                                                >
-                                                    Approve
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    disabled={
-                                                        proposal.status !== "pending" ||
-                                                        rejectMutation.isPending
-                                                    }
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        rejectMutation.mutate(proposal.id);
-                                                    }}
-                                                >
-                                                    Reject
-                                                </Button>
-                                                {isAdmin && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (confirm("Delete this proposal?"))
-                                                                deleteProposal.mutate(proposal.id);
-                                                        }}
+                                                {isExpanded && (
+                                                    <div
                                                         style={{
+                                                            padding: "20px",
                                                             display: "flex",
-                                                            alignItems: "center",
-                                                            gap: "6px",
-                                                            padding: "8px 12px",
-                                                            border: "1px solid var(--color-destructive)",
-                                                            borderRadius: "5px",
-                                                            background: "var(--color-bg)",
-                                                            cursor: "pointer",
-                                                            fontSize: "13px",
-                                                            fontFamily: "inherit",
-                                                            color: "var(--color-destructive)",
+                                                            flexDirection: "column",
+                                                            gap: "16px",
                                                         }}
+                                                        onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <Trash2 size={14} /> Delete
-                                                    </button>
+                                                        <p
+                                                            style={{
+                                                                fontSize: "14px",
+                                                                color: "var(--color-text)",
+                                                                margin: 0,
+                                                                lineHeight: 1.6,
+                                                                whiteSpace: "pre-wrap",
+                                                            }}
+                                                        >
+                                                            {proposal.description}
+                                                        </p>
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                gap: "8px",
+                                                                flexWrap: "wrap",
+                                                                alignItems: "center",
+                                                            }}
+                                                        >
+                                                            {proposal.status === "pending" && (
+                                                                <>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        disabled={
+                                                                            approveMutation.isPending
+                                                                        }
+                                                                        onClick={() =>
+                                                                            approveMutation.mutate(
+                                                                                proposal.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <CheckCircle size={14} />
+                                                                        {t("approve")}
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        disabled={
+                                                                            rejectMutation.isPending
+                                                                        }
+                                                                        onClick={() =>
+                                                                            rejectMutation.mutate(
+                                                                                proposal.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <XCircle size={14} />
+                                                                        {t("reject")}
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    setPendingDelete({
+                                                                        id: proposal.id,
+                                                                        title: proposal.title,
+                                                                        kind: "proposal",
+                                                                    })
+                                                                }
+                                                            >
+                                                                <Trash2 size={14} />
+                                                                {tCommon("delete")}
+                                                            </Button>
+                                                            {isAdmin && (
+                                                                <div
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: "8px",
+                                                                    }}
+                                                                >
+                                                                    <Checkbox
+                                                                        id={`permanent-${proposal.id}`}
+                                                                        checked={permanent}
+                                                                        onCheckedChange={(v) =>
+                                                                            setPermanent(v === true)
+                                                                        }
+                                                                    />
+                                                                    <Label
+                                                                        htmlFor={`permanent-${proposal.id}`}
+                                                                        style={{
+                                                                            fontSize: "13px",
+                                                                            cursor: "pointer",
+                                                                        }}
+                                                                    >
+                                                                        {tCommon(
+                                                                            "permanentlyDelete",
+                                                                        )}
+                                                                    </Label>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 )}
-                                            </div>
-                                        </div>
+                                            </Card>
+                                        );
+                                    })}
+
+                                    {(nextCursor || cursorStack.length > 0) && (
+                                        <Pagination>
+                                            <PaginationContent>
+                                                <PaginationItem>
+                                                    <PaginationPrevious
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            if (cursorStack.length > 0)
+                                                                setCursorStack((s) =>
+                                                                    s.slice(0, -1),
+                                                                );
+                                                        }}
+                                                        style={
+                                                            cursorStack.length === 0
+                                                                ? {
+                                                                      opacity: 0.4,
+                                                                      pointerEvents: "none",
+                                                                  }
+                                                                : undefined
+                                                        }
+                                                    />
+                                                </PaginationItem>
+                                                <PaginationItem>
+                                                    <PaginationNext
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            if (nextCursor)
+                                                                setCursorStack((s) => [
+                                                                    ...s,
+                                                                    nextCursor,
+                                                                ]);
+                                                        }}
+                                                        style={
+                                                            !nextCursor
+                                                                ? {
+                                                                      opacity: 0.4,
+                                                                      pointerEvents: "none",
+                                                                  }
+                                                                : undefined
+                                                        }
+                                                    />
+                                                </PaginationItem>
+                                            </PaginationContent>
+                                        </Pagination>
                                     )}
-                                </Card>
-                            );
-                        })
-                    )}
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
                 </TabsContent>
 
                 <TabsContent value="templates">
-                    {!templates ? (
+                    {templatesLoading ? (
                         <Card>
                             <CardContent style={{ padding: "20px" }}>
                                 <Skeleton
-                                    style={{
-                                        width: "60%",
-                                        height: "16px",
-                                        borderRadius: "5px",
-                                        marginBottom: "8px",
-                                    }}
+                                    style={{ width: "60%", height: "16px", marginBottom: "8px" }}
                                 />
-                                <Skeleton
-                                    style={{ width: "40%", height: "14px", borderRadius: "5px" }}
-                                />
+                                <Skeleton style={{ width: "40%", height: "14px" }} />
                             </CardContent>
                         </Card>
-                    ) : templates.length === 0 ? (
-                        <Card>
-                            <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
-                                <File
-                                    size={32}
-                                    style={{
-                                        color: "var(--color-text-secondary)",
-                                        marginBottom: "12px",
-                                    }}
-                                />
-                                <p
-                                    style={{
-                                        fontSize: "14px",
-                                        fontWeight: 600,
-                                        color: "var(--color-text)",
-                                        margin: "0 0 4px",
-                                    }}
-                                >
-                                    No templates yet
-                                </p>
-                                <p
-                                    style={{
-                                        fontSize: "13px",
-                                        color: "var(--color-text-secondary)",
-                                        margin: 0,
-                                    }}
-                                >
-                                    {isAdmin
-                                        ? "Create a template to help standardize proposals."
-                                        : "Templates will appear here once created by an admin."}
-                                </p>
-                            </CardContent>
-                        </Card>
+                    ) : !templates || templates.length === 0 ? (
+                        <EmptyState icon={<File size={24} />} title={t("noTemplates")} />
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                             {templates.map((tmpl) => (
@@ -588,23 +652,21 @@ export default function ProposalsPage() {
                                                         margin: "0 0 4px",
                                                     }}
                                                 >
-                                                    {tmpl.name}
-                                                </h3>
-                                                <p
-                                                    style={{
-                                                        fontSize: "13px",
-                                                        fontWeight: 500,
-                                                        color: "var(--color-primary)",
-                                                        margin: "0 0 4px",
-                                                    }}
-                                                >
                                                     {tmpl.title}
-                                                </p>
+                                                </h3>
+                                                {tmpl.category && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        style={{ marginBottom: "4px" }}
+                                                    >
+                                                        {t("category")}: {tmpl.category}
+                                                    </Badge>
+                                                )}
                                                 <p
                                                     style={{
                                                         fontSize: "13px",
                                                         color: "var(--color-text-secondary)",
-                                                        margin: "0 0 4px",
+                                                        margin: "4px 0",
                                                         whiteSpace: "pre-wrap",
                                                     }}
                                                 >
@@ -619,7 +681,7 @@ export default function ProposalsPage() {
                                                         margin: "4px 0 0",
                                                     }}
                                                 >
-                                                    Created by {tmpl.createdBy?.name ?? "Unknown"}{" "}
+                                                    {tmpl.createdBy?.name ?? tCommon("unknown")}{" "}
                                                     &middot;{" "}
                                                     {format(
                                                         new Date(tmpl.createdAt),
@@ -635,36 +697,30 @@ export default function ProposalsPage() {
                                                 }}
                                             >
                                                 <Button
-                                                    size="sm"
+                                                    size="icon"
                                                     variant="outline"
                                                     onClick={() => applyTemplate(tmpl)}
+                                                    aria-label={t("new")}
+                                                    title={t("new")}
                                                 >
-                                                    Use
+                                                    <Plus size={14} />
                                                 </Button>
                                                 {isAdmin && (
-                                                    <button
+                                                    <Button
                                                         type="button"
-                                                        onClick={() => {
-                                                            if (confirm("Delete this template?"))
-                                                                deleteTemplateMutation.mutate(
-                                                                    tmpl.id,
-                                                                );
-                                                        }}
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            width: "32px",
-                                                            height: "32px",
-                                                            border: "1px solid var(--color-destructive)",
-                                                            borderRadius: "5px",
-                                                            background: "var(--color-bg)",
-                                                            cursor: "pointer",
-                                                            color: "var(--color-destructive)",
-                                                        }}
+                                                        size="icon"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            setPendingDelete({
+                                                                id: tmpl.id,
+                                                                title: tmpl.title,
+                                                                kind: "template",
+                                                            })
+                                                        }
+                                                        aria-label={tCommon("delete")}
                                                     >
                                                         <Trash2 size={14} />
-                                                    </button>
+                                                    </Button>
                                                 )}
                                             </div>
                                         </div>
@@ -679,42 +735,26 @@ export default function ProposalsPage() {
             <Dialog open={showCreate} onOpenChange={setShowCreate}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>New Proposal</DialogTitle>
-                        <DialogDescription>Submit a new proposal for review.</DialogDescription>
+                        <DialogTitle>{t("new")}</DialogTitle>
+                        <DialogDescription>{t("justification")}</DialogDescription>
                     </DialogHeader>
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                         <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Title
-                            </label>
+                            <Label style={{ display: "block", marginBottom: "6px" }}>
+                                {tCommon("title")}
+                            </Label>
                             <Input
-                                placeholder="Enter proposal title"
+                                placeholder={t("new")}
                                 value={newTitle}
                                 onChange={(e) => setNewTitle(e.target.value)}
                             />
                         </div>
                         <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Description
-                            </label>
+                            <Label style={{ display: "block", marginBottom: "6px" }}>
+                                {t("justification")}
+                            </Label>
                             <Textarea
-                                placeholder="Describe your proposal in detail"
+                                placeholder={t("justification")}
                                 value={newDescription}
                                 onChange={(e) => setNewDescription(e.target.value)}
                                 rows={5}
@@ -723,7 +763,7 @@ export default function ProposalsPage() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowCreate(false)}>
-                            Cancel
+                            {tCommon("cancel")}
                         </Button>
                         <Button
                             onClick={handleCreate}
@@ -733,7 +773,7 @@ export default function ProposalsPage() {
                                 createMutation.isPending
                             }
                         >
-                            {createMutation.isPending ? "Submitting..." : "Submit Proposal"}
+                            {createMutation.isPending ? tCommon("saving") : tCommon("submit")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -742,92 +782,91 @@ export default function ProposalsPage() {
             <Dialog open={showCreateTemplate} onOpenChange={setShowCreateTemplate}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>New Template</DialogTitle>
-                        <DialogDescription>
-                            Create a proposal template for others to use.
-                        </DialogDescription>
+                        <DialogTitle>{t("newTemplate")}</DialogTitle>
+                        <DialogDescription>{t("templates")}</DialogDescription>
                     </DialogHeader>
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                         <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Template Name
-                            </label>
+                            <Label style={{ display: "block", marginBottom: "6px" }}>
+                                {tCommon("title")}
+                            </Label>
                             <Input
-                                placeholder="e.g., Event Sponsorship"
-                                value={templateName}
-                                onChange={(e) => setTemplateName(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Default Title
-                            </label>
-                            <Input
-                                placeholder="Proposal title that will be pre-filled"
+                                placeholder={t("new")}
                                 value={templateTitle}
                                 onChange={(e) => setTemplateTitle(e.target.value)}
                             />
                         </div>
                         <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Default Description
-                            </label>
+                            <Label style={{ display: "block", marginBottom: "6px" }}>
+                                {tCommon("description")}
+                            </Label>
                             <Textarea
-                                placeholder="Proposal description that will be pre-filled"
+                                placeholder={tCommon("description")}
                                 value={templateDescription}
                                 onChange={(e) => setTemplateDescription(e.target.value)}
                                 rows={5}
                             />
                         </div>
+                        <div>
+                            <Label style={{ display: "block", marginBottom: "6px" }}>
+                                {t("category")}
+                            </Label>
+                            <Input
+                                placeholder={t("category")}
+                                value={templateCategory}
+                                onChange={(e) => setTemplateCategory(e.target.value)}
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowCreateTemplate(false)}>
-                            Cancel
+                            {tCommon("cancel")}
                         </Button>
                         <Button
                             onClick={() =>
                                 createTemplateMutation.mutate({
-                                    name: templateName.trim(),
                                     title: templateTitle.trim(),
                                     description: templateDescription.trim(),
+                                    category: templateCategory.trim() || undefined,
                                 })
                             }
                             disabled={
-                                !templateName.trim() ||
                                 !templateTitle.trim() ||
                                 !templateDescription.trim() ||
                                 createTemplateMutation.isPending
                             }
                         >
-                            {createTemplateMutation.isPending ? "Creating..." : "Create Template"}
+                            {createTemplateMutation.isPending
+                                ? tCommon("saving")
+                                : tCommon("create")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDialog
+                open={pendingDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingDelete(null);
+                        setPermanent(false);
+                    }
+                }}
+                title={tCommon("delete")}
+                description={pendingDelete?.title ?? ""}
+                confirmLabel={permanent ? tCommon("deleteForever") : tCommon("delete")}
+                destructive
+                requireTypedText={permanent}
+                typingChallenge={pendingDelete?.title ?? ""}
+                onConfirm={() => {
+                    if (!pendingDelete) return;
+                    if (pendingDelete.kind === "template") {
+                        deleteTemplateMutation.mutate({ id: pendingDelete.id, permanent });
+                    } else {
+                        deleteProposal.mutate({ id: pendingDelete.id, permanent });
+                    }
+                }}
+            />
         </div>
     );
 }

@@ -1,73 +1,68 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
+import { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { fetchJson, fetchPage } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-    FileText,
-    Image,
-    FileSpreadsheet,
-    FileArchive,
-    Video,
-    File,
-    Upload,
-    Trash2,
-    Download,
-    Link,
-    Plus,
-    ExternalLink,
-} from "lucide-react";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { LinkPreview } from "@/components/LinkPreview";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FileItem {
     id: string;
+    workspaceId: string;
+    entityType: string;
+    entityId: string;
     fileName: string;
     fileSize: number;
     mimeType: string;
     storagePath: string;
+    sha256: string | null;
+    uploadedById: string;
     createdAt: string;
     uploadedBy: { id: string; name: string | null } | null;
 }
 
-interface LinkItem {
+interface VersionRow {
     id: string;
-    title: string;
-    url: string;
-    description: string | null;
-    category: string | null;
+    version: number;
+    fileSize: number;
+    storagePath: string;
+    sha256: string | null;
+    createdById: string | null;
     createdAt: string;
-    uploadedBy: { id: string; name: string | null; image: string | null } | null;
+    createdBy: { id: string; name: string | null } | null;
 }
 
-const btnBase: React.CSSProperties = {
-    padding: "8px 16px",
-    borderRadius: "var(--radius-sm)",
-    border: "none",
-    fontSize: "13px",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    minHeight: "36px",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    transition: "background-color 100ms ease",
-};
+const ENTITY_TYPES = [
+    "file",
+    "task",
+    "proposal",
+    "event",
+    "thread",
+    "message",
+    "subgroup",
+    "showcase",
+];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-function getFileIcon(mime: string) {
-    if (mime.startsWith("image/")) return Image;
-    if (mime.includes("spreadsheet") || mime.includes("excel") || mime.includes("csv"))
-        return FileSpreadsheet;
-    if (mime.includes("zip") || mime.includes("tar") || mime.includes("rar") || mime.includes("7z"))
-        return FileArchive;
-    if (mime.startsWith("video/")) return Video;
-    if (mime.includes("pdf") || mime.includes("document") || mime.includes("text")) return FileText;
-    return File;
+function errorMessage(e: unknown, fallback: string): string {
+    return e instanceof Error ? e.message : fallback;
 }
 
 function formatSize(bytes: number): string {
@@ -76,602 +71,436 @@ function formatSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString();
-}
-
 export default function FilesPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Files & Links | ${portalName}`);
-    const qc = useQueryClient();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [activeTab, setActiveTab] = useState("files");
+    const { user } = useAuthSession();
+    const { data: workspace } = useWorkspace();
+    const t = useTranslations("files");
+    const tV = useTranslations("versions");
+    const tC = useTranslations("common");
+    const tE = useTranslations("errors");
+    const queryClient = useQueryClient();
+    const locale = user?.locale || undefined;
+    const wsName = workspace?.name ?? portal;
+    usePageTitle(`${t("title")} | ${wsName}`);
+    const isAdmin = user?.role === "admin";
+
+    const [entity, setEntity] = useState("file");
     const [uploading, setUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<FileItem | null>(null);
+    const [permanentTarget, setPermanentTarget] = useState<FileItem | null>(null);
+    const [historyTarget, setHistoryTarget] = useState<FileItem | null>(null);
+    const [versionCounts, setVersionCounts] = useState<Record<string, number>>({});
+    const [versionUploading, setVersionUploading] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const versionInputRef = useRef<HTMLInputElement>(null);
 
-    // Links state
-    const [showLinkForm, setShowLinkForm] = useState(false);
-    const [linkTitle, setLinkTitle] = useState("");
-    const [linkUrl, setLinkUrl] = useState("");
-    const [linkDescription, setLinkDescription] = useState("");
-
-    // ---- Files ----
-    const { data: files, isLoading: filesLoading } = useQuery<FileItem[]>({
-        queryKey: [portal, "files"],
-        queryFn: () => fetchJson(`/api/files?entityType=file`),
+    const { data: firstPage, isLoading } = useQuery({
+        queryKey: [portal, "files", entity],
+        queryFn: () => fetchPage<FileItem>(`/api/files?entityType=${entity}`),
+        enabled: portal !== "",
     });
+    const [extra, setExtra] = useState<FileItem[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [moreLoading, setMoreLoading] = useState(false);
+    const [prevFirstPage, setPrevFirstPage] = useState(firstPage);
+    if (firstPage !== prevFirstPage) {
+        setPrevFirstPage(firstPage);
+        setExtra([]);
+        setNextCursor(firstPage?.nextCursor ?? null);
+    }
+    const files = [...(firstPage?.items ?? []), ...extra];
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => fetchJson(`/api/files/${id}`, { method: "DELETE" }),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "files"] });
-            setConfirmDelete(null);
+    const { data: versions, isLoading: versionsLoading } = useQuery({
+        queryKey: [portal, "files", "versions", historyTarget?.id ?? ""],
+        queryFn: async () => {
+            const rows = await fetchJson<VersionRow[]>(`/api/files/${historyTarget?.id}/versions`);
+            setVersionCounts((prev) => ({ ...prev, [historyTarget?.id ?? ""]: rows.length }));
+            return rows;
         },
+        enabled: portal !== "" && historyTarget !== null,
     });
 
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploading(true);
-        setUploadProgress(0);
+    async function handleNewVersion(file: File) {
+        if (!historyTarget) return;
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error(errorMessage(new Error(tE("fileTooLarge")), t("uploadFailed")));
+            return;
+        }
+        setVersionUploading(true);
         try {
             const form = new FormData();
             form.append("file", file);
-            const xhr = new XMLHttpRequest();
-            xhr.upload.addEventListener("progress", (evt) => {
-                if (evt.lengthComputable) {
-                    setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
-                }
+            const res = await fetch(`/api/files/${historyTarget.id}/versions`, {
+                method: "POST",
+                body: form,
             });
-            await new Promise<void>((resolve, reject) => {
-                xhr.addEventListener("load", () => {
-                    if (xhr.status >= 200 && xhr.status < 300) resolve();
-                    else reject(new Error(`Upload failed: ${xhr.status}`));
-                });
-                xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-                xhr.open("POST", `/api/files?entityType=file`);
-                xhr.send(form);
+            const json = await res.json().catch(() => null);
+            if (!res.ok || (json && json.success === false)) {
+                throw new Error(typeof json?.error === "string" ? json.error : t("uploadFailed"));
+            }
+            queryClient.invalidateQueries({ queryKey: [portal, "files"] });
+            queryClient.invalidateQueries({
+                queryKey: [portal, "files", "versions", historyTarget.id],
             });
-            qc.invalidateQueries({ queryKey: [portal, "files"] });
+        } catch (e) {
+            toast.error(errorMessage(e, t("uploadFailed")));
+        } finally {
+            setVersionUploading(false);
+            if (versionInputRef.current) versionInputRef.current.value = "";
+        }
+    }
+
+    async function loadMore() {
+        if (!nextCursor || moreLoading) return;
+        setMoreLoading(true);
+        try {
+            const page = await fetchPage<FileItem>(
+                `/api/files?entityType=${entity}&cursor=${encodeURIComponent(nextCursor)}`,
+            );
+            setExtra((prev) => [...prev, ...page.items]);
+            setNextCursor(page.nextCursor);
+        } catch (e) {
+            toast.error(errorMessage(e, tE("internal")));
+        } finally {
+            setMoreLoading(false);
+        }
+    }
+
+    const deleteFile = useMutation({
+        mutationFn: ({ id, permanent }: { id: string; permanent: boolean }) =>
+            fetchJson<{ deleted: boolean }>(
+                permanent ? `/api/files/${id}?permanent=true` : `/api/files/${id}`,
+                { method: "DELETE" },
+            ),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "files"] });
+            setDeleteTarget(null);
+            setPermanentTarget(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, t("deleteFailed")));
+        },
+    });
+
+    async function handleUpload(file: File) {
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error(tE("fileTooLarge"));
+            return;
+        }
+        setUploading(true);
+        try {
+            const form = new FormData();
+            form.append("file", file);
+            const res = await fetch(`/api/files?entityType=${entity}`, {
+                method: "POST",
+                body: form,
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || (json && json.success === false)) {
+                throw new Error(typeof json?.error === "string" ? json.error : t("uploadFailed"));
+            }
+            queryClient.invalidateQueries({ queryKey: [portal, "files"] });
+        } catch (e) {
+            toast.error(errorMessage(e, t("uploadFailed")));
         } finally {
             setUploading(false);
-            setUploadProgress(0);
-            if (fileInputRef.current) fileInputRef.current.value = "";
+            if (inputRef.current) inputRef.current.value = "";
         }
-    };
-
-    // ---- Links ----
-    const { data: links, isLoading: linksLoading } = useQuery<LinkItem[]>({
-        queryKey: [portal, "links"],
-        queryFn: () => fetchJson(`/api/links`),
-    });
-
-    const createLink = useMutation({
-        mutationFn: (body: { title: string; url: string; description?: string }) =>
-            fetchJson(`/api/links`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            }),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "links"] });
-            setShowLinkForm(false);
-            setLinkTitle("");
-            setLinkUrl("");
-            setLinkDescription("");
-        },
-    });
-
-    const deleteLink = useMutation({
-        mutationFn: (id: string) => fetchJson(`/api/links/${id}`, { method: "DELETE" }),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "links"] });
-        },
-    });
-
-    const fileList = files ?? [];
-    const linkList = links ?? [];
-    const groups = groupByDate(fileList);
-
-    if (filesLoading) {
-        return (
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>
-        );
     }
 
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div
                 style={{
                     display: "flex",
-                    alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: "20px",
-                    flexWrap: "wrap",
+                    alignItems: "flex-start",
                     gap: "12px",
+                    flexWrap: "wrap",
                 }}
             >
-                <h1
-                    style={{
-                        fontSize: "20px",
-                        fontWeight: 700,
-                        margin: 0,
-                        color: "var(--color-text)",
-                    }}
-                >
-                    Files & Links
-                </h1>
+                <div>
+                    <h1
+                        style={{
+                            fontSize: "20px",
+                            fontWeight: 700,
+                            color: "var(--color-text)",
+                            margin: 0,
+                        }}
+                    >
+                        {t("title")}
+                    </h1>
+                    <p
+                        style={{
+                            fontSize: "14px",
+                            color: "var(--color-text-secondary)",
+                            margin: "4px 0 0",
+                        }}
+                    >
+                        {wsName} · {t("maxSize", { size: "10MB" })}
+                    </p>
+                </div>
+                <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
+                    {uploading ? tC("loading") : t("upload")}
+                </Button>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList style={{ marginBottom: "16px" }}>
-                    <TabsTrigger value="files">Files</TabsTrigger>
-                    <TabsTrigger value="links">Links</TabsTrigger>
-                </TabsList>
+            <input
+                ref={inputRef}
+                type="file"
+                accept="image/*,application/pdf,text/plain"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleUpload(file);
+                }}
+            />
 
-                <TabsContent value="files">
-                    <>
-                        <div
+            <div style={{ maxWidth: "280px" }}>
+                <Select value={entity} onValueChange={setEntity}>
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {ENTITY_TYPES.map((e) => (
+                            <SelectItem key={e} value={e}>
+                                {e}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {isLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                </div>
+            ) : files.length === 0 ? (
+                <Card>
+                    <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
+                        <p
                             style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "flex-end",
-                                marginBottom: "16px",
+                                fontSize: "14px",
+                                color: "var(--color-text-secondary)",
+                                margin: 0,
                             }}
                         >
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
+                            {t("noFiles")}
+                        </p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {files.map((f) => (
+                        <Card key={f.id}>
+                            <CardContent
                                 style={{
-                                    ...btnBase,
-                                    backgroundColor: "var(--color-primary)",
-                                    color: "#fff",
-                                    opacity: uploading ? 0.5 : 1,
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!uploading)
-                                        e.currentTarget.style.backgroundColor =
-                                            "var(--color-primary-hover)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = "var(--color-primary)";
-                                }}
-                            >
-                                <Upload size={16} />{" "}
-                                {uploading ? `Uploading ${uploadProgress}%` : "Upload File"}
-                            </button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                style={{ display: "none" }}
-                                onChange={handleUpload}
-                            />
-                        </div>
-
-                        {uploading && (
-                            <div
-                                style={{
-                                    border: "1px solid var(--color-border)",
-                                    borderRadius: "var(--radius-sm)",
                                     padding: "12px 16px",
-                                    marginBottom: "16px",
-                                    backgroundColor: "var(--color-bg-secondary)",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: "12px",
                                 }}
                             >
+                                <div style={{ minWidth: 0 }}>
+                                    <p
+                                        style={{
+                                            fontSize: "14px",
+                                            fontWeight: 600,
+                                            color: "var(--color-text)",
+                                            margin: 0,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {f.fileName}
+                                    </p>
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-secondary)",
+                                            margin: "2px 0 0",
+                                        }}
+                                    >
+                                        {t("fileSize")}: {formatSize(f.fileSize)}
+                                        {` · ${t("uploadedBy")}: ${f.uploadedBy?.name ?? tC("unknown")}`}
+                                        {` · ${t("uploadedAt")}: ${new Date(f.createdAt).toLocaleString(locale)}`}
+                                    </p>
+                                </div>
                                 <div
                                     style={{
                                         display: "flex",
-                                        justifyContent: "space-between",
-                                        fontSize: "13px",
-                                        color: "var(--color-text)",
-                                        marginBottom: "6px",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        flexShrink: 0,
                                     }}
                                 >
-                                    <span>Uploading...</span>
-                                    <span>{uploadProgress}%</span>
-                                </div>
-                                <div
-                                    style={{
-                                        width: "100%",
-                                        height: "6px",
-                                        backgroundColor: "var(--color-bg)",
-                                        borderRadius: "var(--radius-sm)",
-                                        overflow: "hidden",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            width: `${uploadProgress}%`,
-                                            height: "100%",
-                                            backgroundColor: "var(--color-primary)",
-                                            borderRadius: "var(--radius-sm)",
-                                            transition: "width 200ms ease",
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {fileList.length === 0 ? (
-                            <div
-                                style={{
-                                    textAlign: "center",
-                                    padding: "48px 16px",
-                                    color: "var(--color-text-secondary)",
-                                    fontSize: "14px",
-                                }}
-                            >
-                                <File size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                                <p style={{ margin: 0 }}>No files uploaded yet.</p>
-                            </div>
-                        ) : (
-                            Object.entries(groups).map(([date, groupFiles]) => (
-                                <div key={date} style={{ marginBottom: "24px" }}>
-                                    <h3
+                                    <Badge variant="outline">{f.entityType}</Badge>
+                                    {(versionCounts[f.id] ?? 0) > 0 && (
+                                        <Badge variant="secondary">
+                                            {tV("version")} {versionCounts[f.id]}
+                                        </Badge>
+                                    )}
+                                    <a
+                                        href={`/api/files/download/${f.id}`}
+                                        download
                                         style={{
                                             fontSize: "13px",
                                             fontWeight: 600,
-                                            color: "var(--color-text-secondary)",
-                                            margin: "0 0 10px",
-                                            textTransform: "uppercase",
-                                            letterSpacing: "0.05em",
+                                            color: "var(--color-primary)",
+                                            textDecoration: "none",
                                         }}
                                     >
-                                        {date}
-                                    </h3>
-                                    <div
-                                        style={{
-                                            display: "grid",
-                                            gridTemplateColumns:
-                                                "repeat(auto-fill, minmax(200px, 1fr))",
-                                            gap: "12px",
-                                        }}
-                                    >
-                                        {groupFiles.map((f) => {
-                                            const Icon = getFileIcon(f.mimeType);
-                                            return (
-                                                <div
-                                                    key={f.id}
-                                                    style={{
-                                                        border: "1px solid var(--color-border)",
-                                                        borderRadius: "var(--radius-sm)",
-                                                        padding: "16px",
-                                                        backgroundColor: "var(--color-bg)",
-                                                        display: "flex",
-                                                        flexDirection: "column",
-                                                        gap: "8px",
-                                                    }}
-                                                >
-                                                    <div
-                                                        style={{
-                                                            width: "40px",
-                                                            height: "40px",
-                                                            borderRadius: "var(--radius-sm)",
-                                                            backgroundColor:
-                                                                "var(--color-bg-secondary)",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            color: "var(--color-primary)",
-                                                        }}
-                                                    >
-                                                        <Icon size={20} />
-                                                    </div>
-                                                    <div>
-                                                        <p
-                                                            style={{
-                                                                margin: 0,
-                                                                fontSize: "14px",
-                                                                fontWeight: 600,
-                                                                color: "var(--color-text)",
-                                                                overflow: "hidden",
-                                                                textOverflow: "ellipsis",
-                                                                whiteSpace: "nowrap",
-                                                            }}
-                                                            title={f.fileName}
-                                                        >
-                                                            {f.fileName}
-                                                        </p>
-                                                        <p
-                                                            style={{
-                                                                margin: "2px 0 0",
-                                                                fontSize: "12px",
-                                                                color: "var(--color-text-secondary)",
-                                                            }}
-                                                        >
-                                                            {formatSize(f.fileSize)} &middot;{" "}
-                                                            {f.uploadedBy?.name ?? "Unknown"}
-                                                        </p>
-                                                    </div>
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            gap: "6px",
-                                                            marginTop: "auto",
-                                                        }}
-                                                    >
-                                                        <a
-                                                            href={`/api/files/download/${f.id}`}
-                                                            download
-                                                            style={{
-                                                                ...btnBase,
-                                                                backgroundColor: "transparent",
-                                                                color: "var(--color-primary)",
-                                                                border: "1px solid var(--color-border)",
-                                                                textDecoration: "none",
-                                                                fontSize: "12px",
-                                                                padding: "6px 12px",
-                                                            }}
-                                                        >
-                                                            <Download size={13} /> Download
-                                                        </a>
-                                                        {confirmDelete === f.id ? (
-                                                            <div
-                                                                style={{
-                                                                    display: "flex",
-                                                                    gap: "4px",
-                                                                }}
-                                                            >
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        deleteMutation.mutate(f.id)
-                                                                    }
-                                                                    disabled={
-                                                                        deleteMutation.isPending
-                                                                    }
-                                                                    style={{
-                                                                        ...btnBase,
-                                                                        backgroundColor:
-                                                                            "var(--color-destructive)",
-                                                                        color: "#fff",
-                                                                        fontSize: "11px",
-                                                                        padding: "6px 8px",
-                                                                        opacity:
-                                                                            deleteMutation.isPending
-                                                                                ? 0.5
-                                                                                : 1,
-                                                                    }}
-                                                                >
-                                                                    Confirm
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        setConfirmDelete(null)
-                                                                    }
-                                                                    style={{
-                                                                        ...btnBase,
-                                                                        backgroundColor:
-                                                                            "transparent",
-                                                                        color: "var(--color-text-secondary)",
-                                                                        border: "1px solid var(--color-border)",
-                                                                        fontSize: "11px",
-                                                                        padding: "6px 8px",
-                                                                    }}
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setConfirmDelete(f.id)
-                                                                }
-                                                                style={{
-                                                                    ...btnBase,
-                                                                    backgroundColor: "transparent",
-                                                                    color: "var(--color-destructive)",
-                                                                    border: "1px solid var(--color-border)",
-                                                                    fontSize: "12px",
-                                                                    padding: "6px 12px",
-                                                                }}
-                                                            >
-                                                                <Trash2 size={13} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </>
-                </TabsContent>
-
-                <TabsContent value="links">
-                    <>
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "flex-end",
-                                marginBottom: "16px",
-                            }}
-                        >
-                            <Button
-                                size="sm"
-                                onClick={() => setShowLinkForm(!showLinkForm)}
-                                variant={showLinkForm ? "outline" : "default"}
-                            >
-                                <Plus size={14} />
-                                <span>{showLinkForm ? "Cancel" : "Add Link"}</span>
-                            </Button>
-                        </div>
-
-                        {showLinkForm && (
-                            <div
-                                style={{
-                                    border: "1px solid var(--color-border)",
-                                    borderRadius: "var(--radius-sm)",
-                                    padding: "16px",
-                                    marginBottom: "16px",
-                                    backgroundColor: "var(--color-bg-secondary)",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "10px",
-                                }}
-                            >
-                                <Input
-                                    placeholder="Title"
-                                    value={linkTitle}
-                                    onChange={(e) => setLinkTitle(e.target.value)}
-                                />
-                                <Input
-                                    placeholder="URL"
-                                    value={linkUrl}
-                                    onChange={(e) => setLinkUrl(e.target.value)}
-                                />
-                                <Input
-                                    placeholder="Description (optional)"
-                                    value={linkDescription}
-                                    onChange={(e) => setLinkDescription(e.target.value)}
-                                />
-                                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                        {t("download")}
+                                    </a>
                                     <Button
                                         size="sm"
-                                        onClick={() => {
-                                            if (!linkTitle.trim() || !linkUrl.trim()) return;
-                                            createLink.mutate({
-                                                title: linkTitle.trim(),
-                                                url: linkUrl.trim(),
-                                                description: linkDescription.trim() || undefined,
-                                            });
-                                        }}
-                                        disabled={
-                                            !linkTitle.trim() ||
-                                            !linkUrl.trim() ||
-                                            createLink.isPending
-                                        }
+                                        variant="outline"
+                                        onClick={() => setDeleteTarget(f)}
                                     >
-                                        {createLink.isPending ? "Adding..." : "Add"}
+                                        {t("delete")}
                                     </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setHistoryTarget(f)}
+                                    >
+                                        {tV("history")}
+                                    </Button>
+                                    {isAdmin && (
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => setPermanentTarget(f)}
+                                        >
+                                            {tC("deleteForever")}
+                                        </Button>
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            </CardContent>
+                        </Card>
+                    ))}
+                    {nextCursor && (
+                        <Button variant="outline" onClick={loadMore} disabled={moreLoading}>
+                            {moreLoading ? tC("loading") : tC("showMore")}
+                        </Button>
+                    )}
+                </div>
+            )}
 
-                        {linksLoading ? (
-                            <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>
-                                Loading links...
-                            </div>
-                        ) : linkList.length === 0 ? (
-                            <div
-                                style={{
-                                    textAlign: "center",
-                                    padding: "48px 16px",
-                                    color: "var(--color-text-secondary)",
-                                    fontSize: "14px",
-                                }}
-                            >
-                                <Link size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                                <p style={{ margin: 0 }}>No links added yet.</p>
-                            </div>
-                        ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                {linkList.map((linkItem) => (
-                                    <div
-                                        key={linkItem.id}
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteTarget(null);
+                }}
+                title={t("delete")}
+                description={deleteTarget?.fileName}
+                confirmLabel={t("delete")}
+                destructive
+                onConfirm={() => {
+                    if (deleteTarget) deleteFile.mutate({ id: deleteTarget.id, permanent: false });
+                }}
+            />
+            <Dialog
+                open={historyTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setHistoryTarget(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {tV("history")}: {historyTarget?.fileName}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <input
+                        ref={versionInputRef}
+                        type="file"
+                        accept="image/*,application/pdf,text/plain"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleNewVersion(file);
+                        }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => versionInputRef.current?.click()}
+                            disabled={versionUploading}
+                        >
+                            {versionUploading ? tC("loading") : tV("uploadNew")}
+                        </Button>
+                    </div>
+                    {versionsLoading ? (
+                        <Skeleton className="h-16 w-full" />
+                    ) : (versions ?? []).length === 0 ? (
+                        <p
+                            style={{
+                                fontSize: "13px",
+                                color: "var(--color-text-secondary)",
+                                margin: 0,
+                            }}
+                        >
+                            {tV("empty")}
+                        </p>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {(versions ?? []).map((v) => (
+                                <div
+                                    key={v.id}
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        fontSize: "13px",
+                                        color: "var(--color-text)",
+                                    }}
+                                >
+                                    <span>
+                                        {tV("version")} {v.version} · {formatSize(v.fileSize)} ·{" "}
+                                        {new Date(v.createdAt).toLocaleString(locale)}
+                                    </span>
+                                    <a
+                                        href={`/api/files/download/${historyTarget?.id}?version=${v.version}`}
+                                        download
                                         style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "12px",
-                                            padding: "12px 16px",
-                                            border: "1px solid var(--color-border)",
-                                            borderRadius: "var(--radius-sm)",
-                                            backgroundColor: "var(--color-bg)",
+                                            fontSize: "13px",
+                                            fontWeight: 600,
+                                            color: "var(--color-primary)",
+                                            textDecoration: "none",
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                width: "36px",
-                                                height: "36px",
-                                                borderRadius: "var(--radius-sm)",
-                                                backgroundColor: "var(--color-bg-secondary)",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                color: "var(--color-primary)",
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <Link size={16} />
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <a
-                                                href={linkItem.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                style={{
-                                                    fontSize: "14px",
-                                                    fontWeight: 600,
-                                                    color: "var(--color-primary)",
-                                                    textDecoration: "none",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "4px",
-                                                }}
-                                            >
-                                                {linkItem.title}
-                                                <ExternalLink size={12} />
-                                            </a>
-                                            {linkItem.description && (
-                                                <p
-                                                    style={{
-                                                        fontSize: "12px",
-                                                        color: "var(--color-text-secondary)",
-                                                        margin: "2px 0 0",
-                                                    }}
-                                                >
-                                                    {linkItem.description}
-                                                </p>
-                                            )}
-                                            <LinkPreview url={linkItem.url} />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (confirm("Delete this link?"))
-                                                    deleteLink.mutate(linkItem.id);
-                                            }}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "32px",
-                                                height: "32px",
-                                                border: "1px solid var(--color-border)",
-                                                borderRadius: "var(--radius-sm)",
-                                                backgroundColor: "transparent",
-                                                cursor: "pointer",
-                                                color: "var(--color-destructive)",
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </>
-                </TabsContent>
-            </Tabs>
+                                        {t("download")}
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+            <ConfirmDialog
+                open={permanentTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setPermanentTarget(null);
+                }}
+                title={tC("deleteForever")}
+                description={permanentTarget?.fileName}
+                confirmLabel={tC("deleteForever")}
+                destructive
+                requireTypedText
+                typingChallenge={permanentTarget?.fileName ?? tC("deleteForever")}
+                onConfirm={() => {
+                    if (permanentTarget)
+                        deleteFile.mutate({ id: permanentTarget.id, permanent: true });
+                }}
+            />
         </div>
     );
-}
-
-function groupByDate(items: FileItem[]): Record<string, FileItem[]> {
-    const groups: Record<string, FileItem[]> = {};
-    for (const item of items) {
-        const key = formatDate(item.createdAt);
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(item);
-    }
-    return groups;
 }
