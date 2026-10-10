@@ -1,257 +1,327 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { fetchJson } from "@/lib/api-client";
-import { Save, Shield } from "lucide-react";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useAuthSession } from "@/components/AuthSessionProvider";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Shield } from "lucide-react";
 
-interface Workspace {
+interface SettingsRecord {
     id: string;
     name: string;
+    description: string | null;
+    logoUrl: string | null;
     settings: Record<string, boolean>;
 }
 
 const MODULES = [
-    { key: "proposals", label: "Proposals" },
-    { key: "tasks", label: "Tasks" },
-    { key: "events", label: "Events" },
-    { key: "messages", label: "Messages" },
-    { key: "finance", label: "Finance" },
-    { key: "volunteers", label: "Volunteers" },
-    { key: "members", label: "Members" },
-    { key: "files", label: "Files" },
-    { key: "meetings", label: "Meetings" },
-    { key: "activity", label: "Activity Feed" },
-    { key: "search", label: "Search" },
-    { key: "accounts", label: "Accounts & Kudos" },
-    { key: "notifications", label: "Notifications" },
-    { key: "budget", label: "Budget" },
+    "proposals",
+    "tasks",
+    "events",
+    "messages",
+    "finance",
+    "volunteers",
+    "members",
+    "files",
+    "meetings",
+    "activity",
+    "search",
+    "notifications",
+    "budget",
 ];
-
-const btnBase: React.CSSProperties = {
-    padding: "8px 16px",
-    borderRadius: "var(--radius-sm)",
-    border: "none",
-    fontSize: "13px",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    minHeight: "36px",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    transition: "background-color 100ms ease",
-};
 
 export default function SettingsPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Settings | ${portalName}`);
-    const qc = useQueryClient();
-    const { data: workspace, isLoading } = useQuery<Workspace>({
+    const { data: workspace } = useWorkspace();
+    const { user } = useAuthSession();
+    const t = useTranslations("settings");
+    const tc = useTranslations("common");
+    const tn = useTranslations("nav");
+    const te = useTranslations("errors");
+    usePageTitle(`${t("title")} | ${workspace?.name ?? portal}`);
+    const queryClient = useQueryClient();
+
+    const canEdit = user?.permissions.includes("manage_settings") ?? false;
+
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+    const [logoUrl, setLogoUrl] = useState("");
+    const [toggles, setToggles] = useState<Record<string, boolean>>({});
+    const [hydrated, setHydrated] = useState(false);
+
+    const { data, isLoading, isError, refetch } = useQuery<SettingsRecord>({
         queryKey: [portal, "settings"],
         queryFn: () => fetchJson(`/api/settings`),
+        enabled: portal !== "",
     });
 
-    const { data: profile } = useQuery<{ role: string }>({
-        queryKey: [portal, "me"],
-        queryFn: () => fetchJson(`/api/me`),
-    });
+    if (data && !hydrated) {
+        setHydrated(true);
+        setName(data.name ?? "");
+        setDescription(data.description ?? "");
+        setLogoUrl(data.logoUrl ?? "");
+        setToggles(data.settings ?? {});
+    }
 
-    // User overrides applied on top of workspace settings
-    const [userToggles, setUserToggles] = useState<Record<string, boolean> | null>(null);
-    const toggles = useMemo(() => {
-        const base = workspace?.settings ?? {};
-        return userToggles ? { ...base, ...userToggles } : base;
-    }, [workspace?.settings, userToggles]);
+    useEffect(() => {
+        if (isError) toast.error(te("internal"));
+    }, [isError, te]);
 
-    const updateMutation = useMutation({
-        mutationFn: (settings: Record<string, boolean>) =>
+    const saveMutation = useMutation({
+        mutationFn: (body: {
+            name?: string;
+            description?: string | null;
+            logoUrl?: string | null;
+            settings?: Record<string, boolean>;
+        }) =>
             fetchJson(`/api/settings`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ settings }),
+                body: JSON.stringify(body),
             }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "settings"] });
+            queryClient.invalidateQueries({ queryKey: [portal, "settings"] });
+            queryClient.invalidateQueries({ queryKey: [portal, "workspace"] });
+            toast.success(t("saved"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
-    const isAdmin = profile?.role === "admin";
+    function moduleLabel(key: string): string {
+        try {
+            return tn(key);
+        } catch {
+            return key;
+        }
+    }
 
-    if (isLoading) {
+    function handleSave() {
+        saveMutation.mutate({
+            name: name.trim() || undefined,
+            description: description.trim() ? description.trim() : null,
+            logoUrl: logoUrl.trim() ? logoUrl.trim() : null,
+            settings: toggles,
+        });
+    }
+
+    if (isLoading || !hydrated) {
         return (
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <Skeleton style={{ width: "30%", height: "24px", borderRadius: "5px" }} />
+                <Skeleton style={{ width: "100%", height: "160px", borderRadius: "5px" }} />
+            </div>
+        );
+    }
+
+    if (!data) {
+        return (
+            <Card>
+                <CardContent style={{ padding: "48px 24px", textAlign: "center" }}>
+                    <p style={{ fontSize: "14px", color: "var(--color-destructive)", margin: 0 }}>
+                        {te("internal")}
+                    </p>
+                    <div style={{ marginTop: "12px" }}>
+                        <Button variant="outline" size="sm" onClick={() => refetch()}>
+                            {tc("retry")}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         );
     }
 
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <h1
                 style={{
                     fontSize: "20px",
                     fontWeight: 700,
-                    margin: "0 0 20px",
+                    margin: 0,
                     color: "var(--color-text)",
                 }}
             >
-                Workspace Settings
+                {t("title")}
             </h1>
 
-            <div
-                style={{
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-sm)",
-                    padding: "16px",
-                    marginBottom: "20px",
-                    backgroundColor: "var(--color-bg)",
-                }}
-            >
-                <h3
-                    style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        margin: "0 0 8px",
-                        color: "var(--color-text)",
-                    }}
-                >
-                    Workspace
-                </h3>
-                <p style={{ fontSize: "14px", color: "var(--color-text)", margin: 0 }}>
-                    {workspace?.name ?? "Untitled"}
-                </p>
-            </div>
-
-            {!isAdmin ? (
-                <div
-                    style={{
-                        padding: "16px",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-sm)",
-                        backgroundColor: "var(--color-bg-secondary)",
-                        fontSize: "14px",
-                        color: "var(--color-text-secondary)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                    }}
-                >
-                    <Shield size={18} />
-                    Only administrators can edit workspace settings.
-                </div>
-            ) : (
-                <>
-                    <div
+            <Card>
+                <CardContent style={{ padding: "20px" }}>
+                    <h3
                         style={{
-                            border: "1px solid var(--color-border)",
-                            borderRadius: "var(--radius-sm)",
-                            padding: "16px",
-                            marginBottom: "16px",
-                            backgroundColor: "var(--color-bg)",
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            margin: "0 0 12px",
+                            color: "var(--color-text)",
                         }}
                     >
-                        <h3
-                            style={{
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                margin: "0 0 12px",
-                                color: "var(--color-text)",
-                            }}
-                        >
-                            Module Toggles
-                        </h3>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            {MODULES.map((mod) => (
-                                <label
-                                    key={mod.key}
+                        {t("workspace")}
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <div>
+                            <span
+                                style={{
+                                    fontSize: "13px",
+                                    fontWeight: 500,
+                                    color: "var(--color-text)",
+                                    display: "block",
+                                    marginBottom: "6px",
+                                }}
+                            >
+                                {t("workspaceName")}
+                            </span>
+                            {canEdit ? (
+                                <Input value={name} onChange={(e) => setName(e.target.value)} />
+                            ) : (
+                                <p
                                     style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "10px",
-                                        padding: "8px 0",
-                                        cursor: "pointer",
                                         fontSize: "14px",
                                         color: "var(--color-text)",
-                                        borderBottom: "1px solid var(--color-border)",
+                                        margin: 0,
                                     }}
                                 >
-                                    <div
-                                        style={{
-                                            position: "relative",
-                                            width: "40px",
-                                            height: "24px",
-                                            borderRadius: "12px",
-                                            backgroundColor:
-                                                toggles[mod.key] !== false
-                                                    ? "var(--color-primary)"
-                                                    : "var(--color-border)",
-                                            transition: "background-color 150ms ease",
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                position: "absolute",
-                                                top: "3px",
-                                                left: toggles[mod.key] !== false ? "19px" : "3px",
-                                                width: "18px",
-                                                height: "18px",
-                                                borderRadius: "50%",
-                                                backgroundColor: "#fff",
-                                                transition: "left 150ms ease",
-                                            }}
-                                        />
-                                        <input
-                                            type="checkbox"
-                                            checked={toggles[mod.key] !== false}
-                                            onChange={() =>
-                                                setUserToggles((prev) => ({
-                                                    ...(prev ?? {}),
-                                                    [mod.key]:
-                                                        toggles[mod.key] !== false ? false : true,
-                                                }))
-                                            }
-                                            style={{
-                                                opacity: 0,
-                                                position: "absolute",
-                                                width: "100%",
-                                                height: "100%",
-                                                cursor: "pointer",
-                                                margin: 0,
-                                            }}
-                                        />
-                                    </div>
-                                    <span>{mod.label}</span>
-                                </label>
-                            ))}
+                                    {data.name}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <span
+                                style={{
+                                    fontSize: "13px",
+                                    fontWeight: 500,
+                                    color: "var(--color-text)",
+                                    display: "block",
+                                    marginBottom: "6px",
+                                }}
+                            >
+                                {tc("description")}
+                            </span>
+                            {canEdit ? (
+                                <Textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={3}
+                                />
+                            ) : (
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {data.description ?? ""}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <span
+                                style={{
+                                    fontSize: "13px",
+                                    fontWeight: 500,
+                                    color: "var(--color-text)",
+                                    display: "block",
+                                    marginBottom: "6px",
+                                }}
+                            >
+                                {t("logo")}
+                            </span>
+                            {canEdit ? (
+                                <Input
+                                    placeholder={t("logo")}
+                                    value={logoUrl}
+                                    onChange={(e) => setLogoUrl(e.target.value)}
+                                />
+                            ) : (
+                                <p
+                                    style={{
+                                        fontSize: "14px",
+                                        color: "var(--color-text-secondary)",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {data.logoUrl ?? ""}
+                                </p>
+                            )}
                         </div>
                     </div>
+                </CardContent>
+            </Card>
 
-                    <button
-                        type="button"
-                        onClick={() => updateMutation.mutate(toggles)}
-                        disabled={updateMutation.isPending}
+            <Card>
+                <CardContent style={{ padding: "20px" }}>
+                    <h3
                         style={{
-                            ...btnBase,
-                            backgroundColor: "var(--color-primary)",
-                            color: "#fff",
-                            opacity: updateMutation.isPending ? 0.5 : 1,
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!updateMutation.isPending)
-                                e.currentTarget.style.backgroundColor =
-                                    "var(--color-primary-hover)";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--color-primary)";
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            margin: "0 0 12px",
+                            color: "var(--color-text)",
                         }}
                     >
-                        <Save size={16} />{" "}
-                        {updateMutation.isPending ? "Saving..." : "Save Settings"}
-                    </button>
-                </>
+                        {t("modules")}
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {MODULES.map((key) => (
+                            <div
+                                key={key}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: "10px",
+                                    padding: "8px 0",
+                                    borderBottom: "1px solid var(--color-border)",
+                                }}
+                            >
+                                <span style={{ fontSize: "14px", color: "var(--color-text)" }}>
+                                    {moduleLabel(key)}
+                                </span>
+                                <Switch
+                                    checked={toggles[key] !== false}
+                                    disabled={!canEdit}
+                                    onCheckedChange={(checked) =>
+                                        setToggles((prev) => ({ ...prev, [key]: checked }))
+                                    }
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {canEdit ? (
+                <div>
+                    <Button onClick={handleSave} disabled={saveMutation.isPending}>
+                        {saveMutation.isPending ? tc("saving") : t("save")}
+                    </Button>
+                </div>
+            ) : (
+                <Card>
+                    <CardContent
+                        style={{
+                            padding: "16px",
+                            fontSize: "14px",
+                            color: "var(--color-text-secondary)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <Shield size={18} />
+                        {te("forbidden")}
+                    </CardContent>
+                </Card>
             )}
         </div>
     );

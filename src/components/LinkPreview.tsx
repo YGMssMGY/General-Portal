@@ -82,6 +82,7 @@ export function LinkPreview({ url }: { url: string }) {
                         justifyContent: "center",
                     }}
                 >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- external untrusted preview images must not pass through the next/image optimizer (SSRF via fetch); plain img with an error fallback is the secure choice. */}
                     <img
                         src={data.image}
                         alt={data.title ?? "Link preview"}

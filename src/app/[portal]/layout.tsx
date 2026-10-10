@@ -1,60 +1,135 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams, usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { useSession, signOut } from "next-auth/react";
-import { SessionProvider } from "@/components/SessionProvider";
-import { fetchJson } from "@/lib/api-client";
-import {
-    LayoutDashboard,
-    FileText,
-    ClipboardList,
-    CalendarDays,
-    Calendar,
-    MessageSquare,
-    DollarSign,
-    Users,
-    UserCheck,
-    File,
-    Video,
-    Activity,
-    Settings,
-    Bell,
-    Menu,
-    LogOut,
-    X,
-    Handshake,
-    UsersRound,
-    Search,
-    Eye,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { AuthSessionProvider, useAuthSession } from "@/components/AuthSessionProvider";
+import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { fetchJson } from "@/lib/api-client";
+import { CommandPalette } from "@/components/CommandPalette";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
+import { nav as workflowsNav } from "./workflows/nav";
+import { nav as attendanceNav } from "./attendance/nav";
+import { nav as participationNav } from "./participation/nav";
+import { nav as pollsNav } from "./polls/nav";
+import { nav as goalsNav } from "./goals/nav";
+import { nav as decisionsNav } from "./decisions/nav";
+import { duesNav } from "./dues/nav";
+import { assetsNav } from "./assets/nav";
+import { nav as kudosNav } from "./kudos/nav";
+import { nav as trashNav } from "./trash/nav";
+import { nav as reportsNav } from "./reports/nav";
+import { nav as webhooksNav } from "./webhooks/nav";
+import { nav as apiTokensNav } from "./api-tokens/nav";
+import { nav as customFieldsNav } from "./custom-fields/nav";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Toaster } from "@/components/ui/sonner";
+import {
+    Activity,
+    Bell,
+    Calendar,
+    CalendarDays,
+    ClipboardCheck,
+    ClipboardList,
+    DollarSign,
+    Eye,
+    File,
+    FileBarChart,
+    FileText,
+    GitBranch,
+    Handshake,
+    HeartHandshake,
+    KeyRound,
+    LayoutDashboard,
+    List,
+    ListPlus,
+    LogOut,
+    Menu,
+    MessageSquare,
+    Moon,
+    Package,
+    Receipt,
+    Scale,
+    Search,
+    Settings,
+    Sun,
+    Target,
+    Trash2,
+    Trophy,
+    UserCheck,
+    Users,
+    UsersRound,
+    Video,
+    Vote,
+    Webhook,
+    X,
+} from "lucide-react";
+
+const EXTRA_NAV_ICONS: Record<string, typeof LayoutDashboard> = {
+    GitBranch,
+    ClipboardCheck,
+    Trophy,
+    FileBarChart,
+    ListPlus,
+    Webhook,
+    KeyRound,
+    Trash2,
+    Vote,
+    Target,
+    Scale,
+    Receipt,
+    Package,
+    HeartHandshake,
+};
+
+const EXTRA_NAV = [
+    { ...workflowsNav, key: "workflows" },
+    { ...attendanceNav, key: "attendance" },
+    { ...participationNav, key: "participation" },
+    { ...pollsNav, key: "polls" },
+    { ...goalsNav, key: "goals" },
+    { ...decisionsNav, key: "decisions" },
+    { ...duesNav, key: "dues" },
+    { ...assetsNav, key: "assets" },
+    { ...kudosNav, key: "kudos" },
+    { ...trashNav, key: "trash" },
+    { ...reportsNav, key: "reports" },
+    { ...webhooksNav, key: "webhooks" },
+    { ...apiTokensNav, key: "apiTokens" },
+    { ...customFieldsNav, key: "customFields" },
+].map((item) => ({ ...item, icon: EXTRA_NAV_ICONS[item.icon] ?? List }));
 
 const NAV_ITEMS = [
-    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-    { label: "Proposals", path: "/proposals", icon: FileText },
-    { label: "Tasks", path: "/tasks", icon: ClipboardList },
-    { label: "Calendar", path: "/calendar", icon: CalendarDays },
-    { label: "Events", path: "/events", icon: Calendar },
-    { label: "Messages", path: "/messages", icon: MessageSquare },
-    { label: "Finance", path: "/finance", icon: DollarSign },
-    { label: "Volunteers", path: "/volunteers", icon: Users },
-    { label: "Members", path: "/members", icon: UserCheck },
-    { label: "Files & Links", path: "/files", icon: File },
-    { label: "Meetings", path: "/meetings", icon: Video },
-    { label: "Activity", path: "/activity", icon: Activity },
-    { label: "Subgroups", path: "/subgroups", icon: UsersRound },
-    { label: "Settings", path: "/settings", icon: Settings },
-    { label: "Cooperation", path: "/cooperation", icon: Handshake },
-    { label: "Notifications", path: "/notifications", icon: Bell },
+    { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { key: "proposals", path: "/proposals", icon: FileText },
+    { key: "tasks", path: "/tasks", icon: ClipboardList },
+    { key: "calendar", path: "/calendar", icon: CalendarDays },
+    { key: "events", path: "/events", icon: Calendar },
+    { key: "messages", path: "/messages", icon: MessageSquare },
+    { key: "finance", path: "/finance", icon: DollarSign },
+    { key: "volunteers", path: "/volunteers", icon: Users },
+    { key: "members", path: "/members", icon: UserCheck },
+    { key: "files", path: "/files", icon: File },
+    { key: "meetings", path: "/meetings", icon: Video },
+    { key: "activity", path: "/activity", icon: Activity },
+    { key: "subgroups", path: "/subgroups", icon: UsersRound },
+    { key: "settings", path: "/settings", icon: Settings },
+    { key: "cooperation", path: "/cooperation", icon: Handshake },
+    { key: "notifications", path: "/notifications", icon: Bell },
 ] as const;
 
 interface SearchResultItem {
     id: string;
     title: string;
+    snippet: string;
     type: string;
-    portal: string;
     url: string;
 }
 
@@ -63,24 +138,16 @@ interface SearchResponse {
     total: number;
 }
 
-function SearchDropdown({
-    portal,
-    router,
-}: {
-    portal: string;
-    router: ReturnType<typeof useRouter>;
-}) {
+function SearchDropdown({ portal }: { portal: string }) {
+    const router = useRouter();
+    const tSearch = useTranslations("search");
     const [query, setQuery] = useState("");
     const [debouncedQuery, setDebouncedQuery] = useState("");
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedQuery(query);
-        }, 300);
+        const timer = setTimeout(() => setDebouncedQuery(query), 300);
         return () => clearTimeout(timer);
     }, [query]);
 
@@ -114,16 +181,14 @@ function SearchDropdown({
     return (
         <div
             ref={containerRef}
+            className="hidden sm:flex"
             style={{
-                display: "flex",
                 alignItems: "center",
-                gap: "12px",
                 flex: 1,
                 maxWidth: "400px",
                 margin: "0 16px",
                 position: "relative",
             }}
-            className="hidden sm:flex"
         >
             <Search
                 size={16}
@@ -137,9 +202,8 @@ function SearchDropdown({
                     zIndex: 1,
                 }}
             />
-            <input
-                ref={inputRef}
-                placeholder="Search..."
+            <Input
+                placeholder={tSearch("placeholder")}
                 value={query}
                 onChange={(e) => {
                     setQuery(e.target.value);
@@ -148,20 +212,13 @@ function SearchDropdown({
                 onFocus={() => {
                     if (query.trim()) setOpen(true);
                 }}
-                style={{
-                    width: "100%",
-                    padding: "8px 12px 8px 36px",
-                    fontSize: "13px",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-sm)",
-                    backgroundColor: "var(--color-bg-secondary)",
-                    color: "var(--color-text)",
-                    fontFamily: "inherit",
-                    outline: "none",
-                    minHeight: "36px",
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && query.trim()) {
+                        handleSelect(`/${portal}/search?q=${encodeURIComponent(query.trim())}`);
+                    }
                 }}
+                style={{ width: "100%", paddingLeft: "36px" }}
             />
-
             {showDropdown && (
                 <div
                     style={{
@@ -186,10 +243,9 @@ function SearchDropdown({
                                 color: "var(--color-text-secondary)",
                             }}
                         >
-                            Searching...
+                            {tSearch("placeholder")}...
                         </div>
                     )}
-
                     {!isLoading && results.length === 0 && debouncedQuery.trim() && (
                         <div
                             style={{
@@ -198,120 +254,115 @@ function SearchDropdown({
                                 color: "var(--color-text-secondary)",
                             }}
                         >
-                            No results found
+                            {tSearch("noResults")}
                         </div>
                     )}
-
-                    {!isLoading && results.length > 0 && (
-                        <>
-                            {results.slice(0, 5).map((item) => (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() =>
-                                        handleSelect(
-                                            item.url ||
-                                                `/${portal}/search?q=${encodeURIComponent(query)}`,
-                                        )
-                                    }
+                    {!isLoading &&
+                        results.slice(0, 5).map((item) => (
+                            <button
+                                key={`${item.type}-${item.id}`}
+                                type="button"
+                                onClick={() => handleSelect(item.url)}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    width: "100%",
+                                    padding: "10px 16px",
+                                    border: "none",
+                                    borderBottom: "1px solid var(--color-border)",
+                                    backgroundColor: "transparent",
+                                    cursor: "pointer",
+                                    fontFamily: "inherit",
+                                    textAlign: "left",
+                                    fontSize: "13px",
+                                    color: "var(--color-text)",
+                                }}
+                            >
+                                <span
                                     style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        width: "100%",
-                                        padding: "10px 16px",
-                                        border: "none",
-                                        borderBottom: "1px solid var(--color-border)",
-                                        backgroundColor: "transparent",
-                                        cursor: "pointer",
-                                        fontFamily: "inherit",
-                                        textAlign: "left",
-                                        fontSize: "13px",
-                                        color: "var(--color-text)",
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor =
-                                            "var(--color-bg-secondary)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = "transparent";
+                                        flex: 1,
+                                        minWidth: 0,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
                                     }}
                                 >
-                                    <span
-                                        style={{
-                                            flex: 1,
-                                            minWidth: 0,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            whiteSpace: "nowrap",
-                                        }}
-                                    >
-                                        {item.title}
-                                    </span>
-                                    <span
-                                        style={{
-                                            fontSize: "10px",
-                                            fontWeight: 600,
-                                            textTransform: "uppercase",
-                                            letterSpacing: "0.05em",
-                                            padding: "2px 6px",
-                                            borderRadius: "3px",
-                                            backgroundColor: "var(--color-bg-secondary)",
-                                            color: "var(--color-text-secondary)",
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        {item.type}
-                                    </span>
-                                    {item.portal && item.portal !== portal && (
-                                        <span
-                                            style={{
-                                                fontSize: "10px",
-                                                fontWeight: 600,
-                                                textTransform: "uppercase",
-                                                letterSpacing: "0.05em",
-                                                padding: "2px 6px",
-                                                borderRadius: "3px",
-                                                backgroundColor: "var(--color-primary-light)",
-                                                color: "var(--color-primary)",
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            {item.portal}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
-                        </>
-                    )}
+                                    {item.title}
+                                </span>
+                                <Badge variant="secondary">{item.type}</Badge>
+                            </button>
+                        ))}
                 </div>
             )}
         </div>
     );
 }
 
-function getPortalCookie(): string | null {
-    if (typeof document === "undefined") return null;
-    const match = document.cookie.match(/(?:^|;\s*)portal=([^;]*)/);
-    return match?.[1] ?? null;
-}
-
 function PortalLayoutContent({ children }: { children: ReactNode }) {
-    const { data: session, status } = useSession();
+    const { user, status } = useAuthSession();
+    const portal = usePortal();
+    const { data: workspace } = useWorkspace();
     const params = useParams();
     const pathname = usePathname();
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const tNav = useTranslations("nav");
+    const tCommon = useTranslations("common");
+    const tProd = useTranslations("productivity");
 
-    const urlPortal = params?.portal as string;
-    const portal = getPortalCookie();
-    const isPortalValid = portal === "developers" || portal === "stuco";
+    const { data: prefs } = useQuery<{ widgets: string[]; theme: string; density: string }>({
+        queryKey: [portal, "prefs"],
+        queryFn: () =>
+            fetchJson<{ widgets: string[]; theme: string; density: string }>("/api/me/prefs"),
+        enabled: portal !== "" && status === "authenticated",
+    });
 
     useEffect(() => {
-        if (!isPortalValid) {
+        if (!prefs) return;
+        const theme =
+            prefs.theme === "system"
+                ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                    ? "dark"
+                    : "light"
+                : prefs.theme;
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.density = prefs.density;
+    }, [prefs]);
+
+    const prefsMutation = useMutation({
+        mutationFn: (body: { theme?: string; density?: string }) =>
+            fetchJson<{ widgets: string[]; theme: string; density: string }>("/api/me/prefs", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            }),
+        onSuccess: (next) => {
+            queryClient.setQueryData([portal, "prefs"], next);
+        },
+    });
+
+    const dark = prefs?.theme === "dark";
+    function toggleTheme() {
+        prefsMutation.mutate({ theme: dark ? "light" : "dark" });
+    }
+    function toggleDensity() {
+        prefsMutation.mutate({ density: prefs?.density === "compact" ? "comfortable" : "compact" });
+    }
+
+    const isPortalValid = portal !== "";
+    const displayName = workspace?.name ?? portal;
+
+    useEffect(() => {
+        const cookiePortal =
+            typeof document === "undefined"
+                ? ""
+                : (document.cookie.match(/(?:^|;\s*)portal=([^;]*)/)?.[1]?.trim() ?? "");
+        if (cookiePortal === "") {
             router.replace("/");
         }
-    }, [isPortalValid, router]);
+    }, [router, pathname]);
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -320,20 +371,22 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
     }, [status, router]);
 
     useEffect(() => {
-        if (urlPortal && portal && urlPortal !== portal) {
+        const urlPortal = params?.portal;
+        if (typeof urlPortal === "string" && urlPortal !== "" && urlPortal !== portal) {
             document.cookie = `portal=${urlPortal}; path=/; SameSite=Lax`;
         }
-    }, [urlPortal, portal]);
+    }, [params, portal]);
 
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
+    const handleSignOut = useCallback(async () => {
+        try {
+            await fetch("/api/auth/logout", { method: "POST" });
+        } catch {
+            void 0;
+        }
+        router.push("/login");
+    }, [router]);
 
-    const handleSignOut = useCallback(() => {
-        signOut({ callbackUrl: "/" });
-    }, []);
-
-    const closeSidebar = useCallback(() => {
-        setSidebarOpen(false);
-    }, []);
+    const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
     if (status === "loading" || !isPortalValid) {
         return (
@@ -347,10 +400,51 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                     fontSize: "14px",
                 }}
             >
-                Loading...
+                {tCommon("loading")}...
             </div>
         );
     }
+
+    const settings = workspace?.settings ?? {};
+    const visibleItems = NAV_ITEMS.filter((item) => settings[item.key] !== false);
+    const visibleExtra = EXTRA_NAV.filter((item) => settings[item.module] !== false);
+    const showShowcase = user?.role !== "member" && settings["showcase"] !== false;
+
+    function renderNavLink(
+        item: { key: string; path: string; icon: typeof LayoutDashboard },
+        onNavigate?: () => void,
+    ) {
+        const Icon = item.icon;
+        const href = `/${portal}${item.path}`;
+        const isActive = pathname === href;
+        return (
+            <Link
+                key={item.path}
+                href={href}
+                onClick={onNavigate}
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "14px",
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? "var(--color-primary)" : "var(--color-text)",
+                    backgroundColor: isActive ? "var(--color-primary-light)" : "transparent",
+                    textDecoration: "none",
+                    marginBottom: "2px",
+                    minHeight: "40px",
+                }}
+            >
+                <Icon size={18} style={{ flexShrink: 0 }} />
+                <span>{tNav(item.key)}</span>
+            </Link>
+        );
+    }
+
+    const showcaseHref = `/${portal}/showcase-admin`;
+    const showcaseActive = pathname === showcaseHref;
 
     return (
         <div
@@ -361,6 +455,8 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                 backgroundColor: "var(--color-bg)",
             }}
         >
+            <Toaster />
+            <CommandPalette />
             <aside
                 className="hidden md:flex"
                 style={{
@@ -386,71 +482,15 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                             letterSpacing: "0.05em",
                         }}
                     >
-                        {portalName}
+                        {displayName}
                     </p>
                 </div>
-
-                <nav
-                    style={{
-                        flex: 1,
-                        overflowY: "auto",
-                        padding: "8px",
-                    }}
-                >
-                    {NAV_ITEMS.map((item) => {
-                        const Icon = item.icon;
-                        const href = `/${portal}${item.path}`;
-                        const isActive = pathname === href;
-
-                        return (
-                            <a
-                                key={item.path}
-                                href={href}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    router.push(href);
-                                }}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "10px",
-                                    padding: "10px 12px",
-                                    borderRadius: "var(--radius-sm)",
-                                    fontSize: "14px",
-                                    fontWeight: isActive ? 600 : 400,
-                                    color: isActive ? "var(--color-primary)" : "var(--color-text)",
-                                    backgroundColor: isActive
-                                        ? "var(--color-primary-light)"
-                                        : "transparent",
-                                    textDecoration: "none",
-                                    transition: "background-color 100ms ease",
-                                    marginBottom: "2px",
-                                    minHeight: "40px",
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isActive) {
-                                        e.currentTarget.style.backgroundColor =
-                                            "var(--color-bg-secondary)";
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isActive) {
-                                        e.currentTarget.style.backgroundColor = "transparent";
-                                    }
-                                }}
-                            >
-                                <Icon size={18} style={{ flexShrink: 0 }} />
-                                <span>{item.label}</span>
-                            </a>
-                        );
-                    })}
-                    {session?.user?.role !== "member" && (
-                        <a
-                            href={`/${portal}/showcase-admin`}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                router.push(`/${portal}/showcase-admin`);
-                            }}
+                <nav style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+                    {visibleItems.map((item) => renderNavLink(item))}
+                    {visibleExtra.map((item) => renderNavLink(item))}
+                    {showShowcase && (
+                        <Link
+                            href={showcaseHref}
                             style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -458,32 +498,21 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                                 padding: "10px 12px",
                                 borderRadius: "var(--radius-sm)",
                                 fontSize: "14px",
-                                fontWeight: 400,
-                                color:
-                                    pathname === `/${portal}/showcase-admin`
-                                        ? "var(--color-primary)"
-                                        : "var(--color-text)",
-                                backgroundColor:
-                                    pathname === `/${portal}/showcase-admin`
-                                        ? "var(--color-primary-light)"
-                                        : "transparent",
+                                fontWeight: showcaseActive ? 600 : 400,
+                                color: showcaseActive
+                                    ? "var(--color-primary)"
+                                    : "var(--color-text)",
+                                backgroundColor: showcaseActive
+                                    ? "var(--color-primary-light)"
+                                    : "transparent",
                                 textDecoration: "none",
                                 marginBottom: "2px",
                                 minHeight: "40px",
                             }}
-                            onMouseEnter={(e) => {
-                                if (pathname !== `/${portal}/showcase-admin`)
-                                    e.currentTarget.style.backgroundColor =
-                                        "var(--color-bg-secondary)";
-                            }}
-                            onMouseLeave={(e) => {
-                                if (pathname !== `/${portal}/showcase-admin`)
-                                    e.currentTarget.style.backgroundColor = "transparent";
-                            }}
                         >
                             <Eye size={18} style={{ flexShrink: 0 }} />
-                            <span>Showcase</span>
-                        </a>
+                            <span>{tNav("showcase")}</span>
+                        </Link>
                     )}
                 </nav>
             </aside>
@@ -502,26 +531,16 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                     }}
                 >
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             className="flex md:hidden"
                             onClick={() => setSidebarOpen(true)}
                             aria-label="Open navigation menu"
-                            style={{
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "40px",
-                                height: "40px",
-                                border: "none",
-                                borderRadius: "var(--radius-sm)",
-                                backgroundColor: "transparent",
-                                cursor: "pointer",
-                                color: "var(--color-text)",
-                            }}
                         >
                             <Menu size={20} />
-                        </button>
-
+                        </Button>
                         <span
                             style={{
                                 fontSize: "16px",
@@ -529,88 +548,63 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                                 color: "var(--color-text)",
                             }}
                         >
-                            {portalName}
+                            {displayName}
                         </span>
                     </div>
-
-                    <SearchDropdown portal={portal} router={router} />
-
+                    <SearchDropdown portal={portal} />
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        {session?.user?.name && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleTheme}
+                            aria-label={tProd("theme")}
+                        >
+                            {dark ? <Sun size={16} /> : <Moon size={16} />}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleDensity}
+                            aria-label={tProd("density")}
+                        >
+                            <List size={16} />
+                        </Button>
+                        {user?.name && (
                             <span
                                 className="hidden sm:inline"
-                                style={{
-                                    fontSize: "14px",
-                                    color: "var(--color-text-secondary)",
-                                }}
+                                style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}
                             >
-                                {session.user.name}
+                                {user.name}
                             </span>
                         )}
-
-                        {session?.user?.image && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                                src={session.user.image}
-                                alt={session.user.name ?? "User avatar"}
-                                style={{
-                                    width: "32px",
-                                    height: "32px",
-                                    borderRadius: "50%",
-                                    objectFit: "cover",
-                                }}
-                            />
-                        )}
-
-                        <button
+                        <Avatar style={{ width: "32px", height: "32px" }}>
+                            {user?.image && (
+                                <AvatarImage src={user.image} alt={user.name ?? "User avatar"} />
+                            )}
+                            <AvatarFallback>
+                                {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
+                            </AvatarFallback>
+                        </Avatar>
+                        <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={handleSignOut}
-                            aria-label="Sign out"
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "6px",
-                                padding: "8px 12px",
-                                border: "1px solid var(--color-border)",
-                                borderRadius: "var(--radius-sm)",
-                                backgroundColor: "transparent",
-                                cursor: "pointer",
-                                color: "var(--color-text-secondary)",
-                                fontSize: "13px",
-                                fontWeight: 500,
-                                fontFamily: "inherit",
-                                transition: "background-color 100ms ease, color 100ms ease",
-                                minHeight: "36px",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "var(--color-bg-secondary)";
-                                e.currentTarget.style.color = "var(--color-destructive)";
-                                e.currentTarget.style.borderColor = "var(--color-destructive)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "transparent";
-                                e.currentTarget.style.color = "var(--color-text-secondary)";
-                                e.currentTarget.style.borderColor = "var(--color-border)";
-                            }}
+                            aria-label={tCommon("signOut")}
                         >
                             <LogOut size={15} />
-                            <span className="hidden sm:inline">Sign Out</span>
-                        </button>
+                            <span className="hidden sm:inline">{tCommon("signOut")}</span>
+                        </Button>
                     </div>
                 </header>
-
+                <AnnouncementBanner />
                 <main style={{ flex: 1, overflowY: "auto", padding: "24px" }}>{children}</main>
             </div>
 
             {sidebarOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        zIndex: 50,
-                    }}
-                >
+                <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
                     <div
                         onClick={closeSidebar}
                         style={{
@@ -619,7 +613,6 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                             backgroundColor: "rgba(0, 0, 0, 0.3)",
                         }}
                     />
-
                     <aside
                         style={{
                             position: "absolute",
@@ -631,7 +624,6 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                             display: "flex",
                             flexDirection: "column",
                             zIndex: 10,
-                            animation: "slideIn 200ms ease-out",
                         }}
                     >
                         <div
@@ -652,9 +644,9 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                                         margin: 0,
                                     }}
                                 >
-                                    {portalName}
+                                    {displayName}
                                 </h2>
-                                {session?.user?.email && (
+                                {user?.email && (
                                     <p
                                         style={{
                                             fontSize: "12px",
@@ -662,89 +654,50 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                                             margin: "4px 0 0",
                                         }}
                                     >
-                                        {session.user.email}
+                                        {user.email}
                                     </p>
                                 )}
                             </div>
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
+                                size="icon"
                                 onClick={closeSidebar}
-                                aria-label="Close navigation menu"
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    width: "40px",
-                                    height: "40px",
-                                    border: "none",
-                                    borderRadius: "var(--radius-sm)",
-                                    backgroundColor: "transparent",
-                                    cursor: "pointer",
-                                    color: "var(--color-text)",
-                                }}
+                                aria-label={tCommon("close")}
                             >
                                 <X size={20} />
-                            </button>
+                            </Button>
                         </div>
-
-                        <nav
-                            style={{
-                                flex: 1,
-                                overflowY: "auto",
-                                padding: "8px",
-                            }}
-                        >
-                            {NAV_ITEMS.map((item) => {
-                                const Icon = item.icon;
-                                const href = `/${portal}${item.path}`;
-                                const isActive = pathname === href;
-
-                                return (
-                                    <a
-                                        key={item.path}
-                                        href={href}
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            router.push(href);
-                                            closeSidebar();
-                                        }}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "10px",
-                                            padding: "12px 12px",
-                                            borderRadius: "var(--radius-sm)",
-                                            fontSize: "14px",
-                                            fontWeight: isActive ? 600 : 400,
-                                            color: isActive
-                                                ? "var(--color-primary)"
-                                                : "var(--color-text)",
-                                            backgroundColor: isActive
-                                                ? "var(--color-primary-light)"
-                                                : "transparent",
-                                            textDecoration: "none",
-                                            transition: "background-color 100ms ease",
-                                            marginBottom: "2px",
-                                            minHeight: "48px",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isActive) {
-                                                e.currentTarget.style.backgroundColor =
-                                                    "var(--color-bg-secondary)";
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isActive) {
-                                                e.currentTarget.style.backgroundColor =
-                                                    "transparent";
-                                            }
-                                        }}
-                                    >
-                                        <Icon size={18} style={{ flexShrink: 0 }} />
-                                        <span>{item.label}</span>
-                                    </a>
-                                );
-                            })}
+                        <nav style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+                            {visibleItems.map((item) => renderNavLink(item, closeSidebar))}
+                            {visibleExtra.map((item) => renderNavLink(item, closeSidebar))}
+                            {showShowcase && (
+                                <Link
+                                    href={showcaseHref}
+                                    onClick={closeSidebar}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "10px",
+                                        padding: "12px",
+                                        borderRadius: "var(--radius-sm)",
+                                        fontSize: "14px",
+                                        fontWeight: showcaseActive ? 600 : 400,
+                                        color: showcaseActive
+                                            ? "var(--color-primary)"
+                                            : "var(--color-text)",
+                                        backgroundColor: showcaseActive
+                                            ? "var(--color-primary-light)"
+                                            : "transparent",
+                                        textDecoration: "none",
+                                        marginBottom: "2px",
+                                        minHeight: "48px",
+                                    }}
+                                >
+                                    <Eye size={18} style={{ flexShrink: 0 }} />
+                                    <span>{tNav("showcase")}</span>
+                                </Link>
+                            )}
                         </nav>
                     </aside>
                 </div>
@@ -755,8 +708,8 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
     return (
-        <SessionProvider>
+        <AuthSessionProvider>
             <PortalLayoutContent>{children}</PortalLayoutContent>
-        </SessionProvider>
+        </AuthSessionProvider>
     );
 }

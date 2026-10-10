@@ -1,23 +1,36 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
+import { toast } from "sonner";
+import { fetchJson, fetchPage } from "@/lib/api-client";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Eye, EyeOff, Trash2, Plus, GripVertical, Image, Megaphone, Star } from "lucide-react";
-import { usePageTitle } from "@/hooks/usePageTitle";
+import { ArrowDown, ArrowUp, Pencil, Plus } from "lucide-react";
 
 interface ShowcaseItem {
     id: string;
-    type: "event_feature" | "announcement" | "gallery_image";
+    type: string;
     title: string;
     description: string | null;
     imageUrl: string | null;
@@ -26,36 +39,42 @@ interface ShowcaseItem {
     isActive: boolean;
 }
 
-const TAB_CONFIG = [
-    { value: "event_feature", label: "Featured Events", icon: Star },
-    { value: "announcement", label: "Announcements", icon: Megaphone },
-    { value: "gallery_image", label: "Gallery", icon: Image },
-];
+const TYPES = ["event_feature", "announcement", "gallery_image"];
 
 export default function ShowcaseAdminPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Showcase Admin | ${portalName}`);
-    const { data: session } = useSession();
-    const role = session?.user?.role;
-    const isOfficer = role === "admin" || role === "officer";
+    const { data: workspace } = useWorkspace();
+    const { user } = useAuthSession();
+    const t = useTranslations("showcase");
+    const tc = useTranslations("common");
+    const te = useTranslations("errors");
+    usePageTitle(`${t("manageShowcase")} | ${workspace?.name ?? portal}`);
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState("event_feature");
+
+    const canManage = user?.permissions.includes("manage_showcase") ?? false;
+    const isAdmin = user?.role === "admin";
+
+    const [activeTab, setActiveTab] = useState(TYPES[0]);
     const [showForm, setShowForm] = useState(false);
+    const [editing, setEditing] = useState<ShowcaseItem | null>(null);
     const [formTitle, setFormTitle] = useState("");
     const [formDescription, setFormDescription] = useState("");
     const [formImageUrl, setFormImageUrl] = useState("");
     const [formLinkUrl, setFormLinkUrl] = useState("");
-    const [draggedId, setDraggedId] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [uploading, setUploading] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<ShowcaseItem | null>(null);
 
-    const { data: items, isLoading } = useQuery<ShowcaseItem[]>({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: [portal, "showcase"],
-        queryFn: () => fetchJson(`/api/showcase`),
+        queryFn: () => fetchPage<ShowcaseItem>(`/api/showcase?limit=100`),
+        enabled: portal !== "",
     });
 
-    const showcaseItems = items ?? [];
+    useEffect(() => {
+        if (isError) toast.error(te("internal"));
+    }, [isError, te]);
+
+    const sorted = [...(data?.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+    const filtered = sorted.filter((item) => item.type === activeTab);
 
     const createMutation = useMutation({
         mutationFn: (body: {
@@ -72,251 +91,198 @@ export default function ShowcaseAdminPage() {
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "showcase"] });
-            setShowForm(false);
-            setFormTitle("");
-            setFormDescription("");
-            setFormImageUrl("");
-            setFormLinkUrl("");
+            closeForm();
+            toast.success(t("title"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
-    const toggleActive = useMutation({
-        mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+    const updateMutation = useMutation({
+        mutationFn: ({
+            id,
+            body,
+        }: {
+            id: string;
+            body: {
+                title?: string;
+                description?: string | null;
+                imageUrl?: string | null;
+                linkUrl?: string | null;
+                isActive?: boolean;
+            };
+        }) =>
             fetchJson(`/api/showcase/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ isActive: !isActive }),
+                body: JSON.stringify(body),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "showcase"] });
+            closeForm();
+            toast.success(t("title"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
-    const deleteItem = useMutation({
-        mutationFn: (id: string) => fetchJson(`/api/showcase/${id}`, { method: "DELETE" }),
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson(`/api/showcase/${id}${isAdmin ? "?permanent=true" : ""}`, {
+                method: "DELETE",
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "showcase"] });
+            setDeleteTarget(null);
+            toast.success(tc("delete"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
     const reorderMutation = useMutation({
-        mutationFn: (body: { id: string; sortOrder: number }[]) =>
+        mutationFn: (items: { id: string; sortOrder: number }[]) =>
             fetchJson(`/api/showcase/reorder`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ items: body }),
+                body: JSON.stringify({ items }),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "showcase"] });
         },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
     });
 
-    function handleCreate() {
-        if (!formTitle.trim()) return;
-        createMutation.mutate({
-            type: activeTab,
-            title: formTitle.trim(),
-            description: formDescription.trim() || undefined,
-            imageUrl: formImageUrl.trim() || undefined,
-            linkUrl: formLinkUrl.trim() || undefined,
-        });
+    function closeForm() {
+        setShowForm(false);
+        setEditing(null);
+        setFormTitle("");
+        setFormDescription("");
+        setFormImageUrl("");
+        setFormLinkUrl("");
     }
 
-    async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploading(true);
-        try {
-            const form = new FormData();
-            form.append("file", file);
-            const res = await fetch(`/api/files?entityType=showcase`, {
-                method: "POST",
-                body: form,
+    function openCreate() {
+        setEditing(null);
+        setFormTitle("");
+        setFormDescription("");
+        setFormImageUrl("");
+        setFormLinkUrl("");
+        setShowForm(true);
+    }
+
+    function openEdit(item: ShowcaseItem) {
+        setEditing(item);
+        setFormTitle(item.title);
+        setFormDescription(item.description ?? "");
+        setFormImageUrl(item.imageUrl ?? "");
+        setFormLinkUrl(item.linkUrl ?? "");
+        setShowForm(true);
+    }
+
+    function handleSave() {
+        if (!formTitle.trim()) return;
+        const body = {
+            title: formTitle.trim(),
+            description: formDescription.trim() ? formDescription.trim() : null,
+            imageUrl: formImageUrl.trim() ? formImageUrl.trim() : null,
+            linkUrl: formLinkUrl.trim() ? formLinkUrl.trim() : null,
+        };
+        if (editing) {
+            updateMutation.mutate({ id: editing.id, body });
+        } else {
+            createMutation.mutate({
+                type: activeTab,
+                title: body.title,
+                description: body.description ?? undefined,
+                imageUrl: body.imageUrl ?? undefined,
+                linkUrl: body.linkUrl ?? undefined,
             });
-            const json = await res.json();
-            const fileId = json.data?.id;
-            if (fileId) setFormImageUrl(`/api/files/download/${fileId}`);
-        } catch {
-            // ignore upload errors
-        } finally {
-            setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = "";
         }
     }
 
-    function handleDragStart(id: string) {
-        setDraggedId(id);
+    function move(item: ShowcaseItem, direction: -1 | 1) {
+        const idx = sorted.findIndex((s) => s.id === item.id);
+        const other = sorted[idx + direction];
+        if (!other) return;
+        const orders = new Map(sorted.map((s) => [s.id, s.sortOrder]));
+        orders.set(item.id, other.sortOrder);
+        orders.set(other.id, item.sortOrder);
+        reorderMutation.mutate(sorted.map((s) => ({ id: s.id, sortOrder: orders.get(s.id) ?? 0 })));
     }
 
-    function handleDragOver(e: React.DragEvent, targetId: string) {
-        e.preventDefault();
-        if (!draggedId || draggedId === targetId) return;
-        const filtered = showcaseItems.filter((i) => i.type === activeTab);
-        const fromIdx = filtered.findIndex((i) => i.id === draggedId);
-        const toIdx = filtered.findIndex((i) => i.id === targetId);
-        if (fromIdx === -1 || toIdx === -1) return;
-        const reordered = [...filtered];
-        const [moved] = reordered.splice(fromIdx, 1);
-        reordered.splice(toIdx, 0, moved);
-        reorderMutation.mutate(reordered.map((item, idx) => ({ id: item.id, sortOrder: idx })));
-        setDraggedId(null);
+    function typeLabel(type: string): string {
+        if (type === "event_feature") return t("itemTypeEventFeature");
+        if (type === "announcement") return t("itemTypeAnnouncement");
+        return t("itemTypeGalleryImage");
     }
 
-    const filteredItems = showcaseItems.filter((i) => i.type === activeTab);
-
-    if (!isOfficer) {
+    if (!canManage) {
         return (
-            <div
-                style={{
-                    textAlign: "center",
-                    padding: "64px 24px",
-                    color: "var(--color-text-secondary)",
-                    fontSize: "14px",
-                }}
-            >
-                <p style={{ margin: 0 }}>You do not have permission to manage the showcase.</p>
-            </div>
-        );
-    }
-
-    return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                }}
-            >
-                <div>
-                    <h1
-                        style={{
-                            fontSize: "20px",
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            margin: 0,
-                        }}
-                    >
-                        Showcase Admin
-                    </h1>
+            <Card>
+                <CardContent style={{ padding: "64px 24px", textAlign: "center" }}>
                     <p
                         style={{
                             fontSize: "14px",
                             color: "var(--color-text-secondary)",
-                            margin: "4px 0 0",
+                            margin: 0,
                         }}
                     >
-                        Manage the public showcase content
+                        {te("forbidden")}
                     </p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                }}
+            >
+                <h1
+                    style={{
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        margin: 0,
+                        color: "var(--color-text)",
+                    }}
+                >
+                    {t("manageShowcase")}
+                </h1>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <Button variant="outline" size="sm" onClick={() => refetch()}>
+                        {tc("retry")}
+                    </Button>
+                    <Button size="sm" onClick={openCreate}>
+                        <Plus size={16} />
+                        <span>{t("addItem")}</span>
+                    </Button>
                 </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: "16px",
-                        flexWrap: "wrap",
-                        gap: "12px",
-                    }}
-                >
-                    <TabsList>
-                        {TAB_CONFIG.map((tab) => {
-                            const Icon = tab.icon;
-                            return (
-                                <TabsTrigger key={tab.value} value={tab.value}>
-                                    <Icon size={14} />
-                                    <span>{tab.label}</span>
-                                </TabsTrigger>
-                            );
-                        })}
-                    </TabsList>
-                    <Button
-                        onClick={() => setShowForm(!showForm)}
-                        variant={showForm ? "outline" : "default"}
-                    >
-                        <Plus size={16} />
-                        <span>{showForm ? "Cancel" : "Add Item"}</span>
-                    </Button>
-                </div>
+                <TabsList>
+                    {TYPES.map((type) => (
+                        <TabsTrigger key={type} value={type}>
+                            {typeLabel(type)}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
 
-                {showForm && (
-                    <Card style={{ marginBottom: "16px" }}>
-                        <CardContent style={{ padding: "20px" }}>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "12px",
-                                }}
-                            >
-                                <Input
-                                    placeholder="Title"
-                                    value={formTitle}
-                                    onChange={(e) => setFormTitle(e.target.value)}
-                                />
-                                <Textarea
-                                    placeholder="Description"
-                                    value={formDescription}
-                                    onChange={(e) => setFormDescription(e.target.value)}
-                                    rows={2}
-                                />
-                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                    <Input
-                                        placeholder="Image URL (optional)"
-                                        value={formImageUrl}
-                                        onChange={(e) => setFormImageUrl(e.target.value)}
-                                        style={{ flex: 1 }}
-                                    />
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        style={{ display: "none" }}
-                                        onChange={handleImageUpload}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={uploading}
-                                        style={{
-                                            padding: "10px 14px",
-                                            border: "1px solid var(--color-border)",
-                                            borderRadius: "5px",
-                                            backgroundColor: "var(--color-bg)",
-                                            cursor: "pointer",
-                                            fontSize: "13px",
-                                            fontFamily: "inherit",
-                                            color: "var(--color-text)",
-                                            whiteSpace: "nowrap",
-                                            opacity: uploading ? 0.5 : 1,
-                                        }}
-                                    >
-                                        {uploading ? "Uploading..." : "Upload Image"}
-                                    </button>
-                                </div>
-                                <Input
-                                    placeholder="Link URL (optional)"
-                                    value={formLinkUrl}
-                                    onChange={(e) => setFormLinkUrl(e.target.value)}
-                                />
-                                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                                    <Button
-                                        onClick={handleCreate}
-                                        disabled={!formTitle.trim() || createMutation.isPending}
-                                    >
-                                        {createMutation.isPending ? "Adding..." : "Add"}
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {TAB_CONFIG.map((tab) => (
-                    <TabsContent key={tab.value} value={tab.value}>
+                {TYPES.map((type) => (
+                    <TabsContent key={type} value={type}>
                         {isLoading ? (
                             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                                 {Array.from({ length: 3 }).map((_, i) => (
@@ -330,7 +296,7 @@ export default function ShowcaseAdminPage() {
                                     />
                                 ))}
                             </div>
-                        ) : filteredItems.length === 0 ? (
+                        ) : filtered.length === 0 ? (
                             <Card>
                                 <CardContent
                                     style={{
@@ -340,143 +306,180 @@ export default function ShowcaseAdminPage() {
                                         fontSize: "14px",
                                     }}
                                 >
-                                    <p style={{ margin: 0 }}>
-                                        No items yet. Click &quot;Add Item&quot; to get started.
-                                    </p>
+                                    {t("noItems")}
                                 </CardContent>
                             </Card>
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                {filteredItems.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        draggable
-                                        onDragStart={() => handleDragStart(item.id)}
-                                        onDragOver={(e) => handleDragOver(e, item.id)}
-                                        onDragEnd={() => setDraggedId(null)}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "12px",
-                                            padding: "12px 16px",
-                                            border: "1px solid var(--color-border)",
-                                            borderRadius: "5px",
-                                            backgroundColor: "var(--color-bg)",
-                                            opacity: draggedId === item.id ? 0.5 : 1,
-                                            cursor: "grab",
-                                        }}
-                                    >
-                                        <GripVertical
-                                            size={18}
+                                {filtered.map((item) => (
+                                    <Card key={item.id}>
+                                        <CardContent
                                             style={{
-                                                color: "var(--color-text-secondary)",
-                                                flexShrink: 0,
-                                                cursor: "grab",
+                                                padding: "12px 16px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "12px",
                                             }}
-                                        />
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "8px",
-                                                    marginBottom: "2px",
-                                                }}
-                                            >
-                                                <span
+                                        >
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div
                                                     style={{
-                                                        fontSize: "14px",
-                                                        fontWeight: 600,
-                                                        color: "var(--color-text)",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        flexWrap: "wrap",
                                                     }}
                                                 >
-                                                    {item.title}
-                                                </span>
-                                                {!item.isActive && (
-                                                    <Badge
-                                                        variant="outline"
-                                                        style={{ fontSize: "11px" }}
+                                                    <span
+                                                        style={{
+                                                            fontSize: "14px",
+                                                            fontWeight: 600,
+                                                            color: "var(--color-text)",
+                                                        }}
                                                     >
-                                                        Hidden
-                                                    </Badge>
+                                                        {item.title}
+                                                    </span>
+                                                    {item.isActive && (
+                                                        <Badge variant="secondary">
+                                                            {t("isActive")}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                {item.description && (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "13px",
+                                                            color: "var(--color-text-secondary)",
+                                                            margin: "2px 0 0",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            whiteSpace: "nowrap",
+                                                        }}
+                                                    >
+                                                        {item.description}
+                                                    </p>
                                                 )}
                                             </div>
-                                            {item.description && (
-                                                <p
-                                                    style={{
-                                                        fontSize: "13px",
-                                                        color: "var(--color-text-secondary)",
-                                                        margin: 0,
-                                                        overflow: "hidden",
-                                                        textOverflow: "ellipsis",
-                                                        whiteSpace: "nowrap",
-                                                    }}
-                                                >
-                                                    {item.description}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                toggleActive.mutate({
-                                                    id: item.id,
-                                                    isActive: item.isActive,
-                                                })
-                                            }
-                                            title={item.isActive ? "Hide" : "Show"}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "36px",
-                                                height: "36px",
-                                                border: "1px solid var(--color-border)",
-                                                borderRadius: "5px",
-                                                backgroundColor: "transparent",
-                                                cursor: "pointer",
-                                                color: item.isActive
-                                                    ? "var(--color-success)"
-                                                    : "var(--color-text-secondary)",
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            {item.isActive ? (
-                                                <Eye size={16} />
-                                            ) : (
-                                                <EyeOff size={16} />
-                                            )}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (confirm("Delete this item?"))
-                                                    deleteItem.mutate(item.id);
-                                            }}
-                                            title="Delete"
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "36px",
-                                                height: "36px",
-                                                border: "1px solid var(--color-border)",
-                                                borderRadius: "5px",
-                                                backgroundColor: "transparent",
-                                                cursor: "pointer",
-                                                color: "var(--color-destructive)",
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
+                                            <Switch
+                                                checked={item.isActive}
+                                                disabled={updateMutation.isPending}
+                                                onCheckedChange={(checked) =>
+                                                    updateMutation.mutate({
+                                                        id: item.id,
+                                                        body: { isActive: checked },
+                                                    })
+                                                }
+                                            />
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={reorderMutation.isPending}
+                                                onClick={() => move(item, -1)}
+                                            >
+                                                <ArrowUp size={14} />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={reorderMutation.isPending}
+                                                onClick={() => move(item, 1)}
+                                            >
+                                                <ArrowDown size={14} />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => openEdit(item)}
+                                            >
+                                                <Pencil size={14} />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => setDeleteTarget(item)}
+                                            >
+                                                {tc("delete")}
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
                                 ))}
                             </div>
                         )}
                     </TabsContent>
                 ))}
             </Tabs>
+
+            <Dialog
+                open={showForm}
+                onOpenChange={(open) => {
+                    if (!open) closeForm();
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{editing ? tc("edit") : t("addItem")}</DialogTitle>
+                        <DialogDescription>
+                            {t("itemType")}: {typeLabel(editing?.type ?? activeTab)}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tc("title")}
+                            value={formTitle}
+                            onChange={(e) => setFormTitle(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tc("description")}
+                            value={formDescription}
+                            onChange={(e) => setFormDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <Input
+                            placeholder={t("imageUrl")}
+                            value={formImageUrl}
+                            onChange={(e) => setFormImageUrl(e.target.value)}
+                        />
+                        <Input
+                            placeholder={t("linkUrl")}
+                            value={formLinkUrl}
+                            onChange={(e) => setFormLinkUrl(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={closeForm}>
+                            {tc("cancel")}
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            disabled={
+                                !formTitle.trim() ||
+                                createMutation.isPending ||
+                                updateMutation.isPending
+                            }
+                        >
+                            {createMutation.isPending || updateMutation.isPending
+                                ? tc("saving")
+                                : tc("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteTarget(null);
+                }}
+                title={tc("delete")}
+                description={deleteTarget?.title}
+                confirmLabel={isAdmin ? tc("deleteForever") : tc("delete")}
+                destructive
+                requireTypedText={isAdmin}
+                typingChallenge={deleteTarget?.title ?? ""}
+                onConfirm={() => {
+                    if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+                }}
+            />
         </div>
     );
 }

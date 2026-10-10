@@ -117,6 +117,10 @@ const grid: React.CSSProperties = {
     gap: "16px",
 };
 
+function setPortalCookie(slug: string): void {
+    document.cookie = `portal=${slug}; path=/; SameSite=Lax`;
+}
+
 export function ShowcaseView({
     portals,
     data,
@@ -139,11 +143,6 @@ export function ShowcaseView({
     const visible = filter === "all" ? events : events.filter((e) => e.portal === filter);
     const portalName = (slug: string) => portals.find((p) => p.slug === slug)?.name ?? slug;
 
-    function signIn(slug: string) {
-        document.cookie = `portal=${slug}; path=/; SameSite=Lax`;
-        router.push("/login");
-    }
-
     return (
         <div style={container}>
             <div style={heroSection}>
@@ -154,7 +153,10 @@ export function ShowcaseView({
                         <button
                             key={p.slug}
                             type="button"
-                            onClick={() => signIn(p.slug)}
+                            onClick={() => {
+                                setPortalCookie(p.slug);
+                                router.push("/login");
+                            }}
                             style={{
                                 display: "inline-flex",
                                 alignItems: "center",

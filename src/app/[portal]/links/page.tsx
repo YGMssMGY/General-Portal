@@ -1,175 +1,161 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { fetchJson, fetchPage } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Link2, Plus, ExternalLink, Trash2 } from "lucide-react";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { LinkPreview } from "@/components/LinkPreview";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 
-interface LinkData {
+interface LinkItem {
     id: string;
     title: string;
     url: string;
-    category: string;
     description: string | null;
-    createdBy: { id: string; name: string | null };
+    category: string | null;
     createdAt: string;
+    uploadedBy: { id: string; name: string | null; image: string | null } | null;
+    createdBy: { id: string; name: string | null } | null;
 }
 
-const CATEGORIES = ["Google Drive", "Teams", "Other"] as const;
+function errorMessage(e: unknown, fallback: string): string {
+    return e instanceof Error ? e.message : fallback;
+}
 
 export default function LinksPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Links | ${portalName}`);
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
+    const { user } = useAuthSession();
+    const { data: workspace } = useWorkspace();
+    const t = useTranslations("links");
+    const tC = useTranslations("common");
+    const tE = useTranslations("errors");
     const queryClient = useQueryClient();
-    const [showForm, setShowForm] = useState(false);
-    const [newTitle, setNewTitle] = useState("");
-    const [newUrl, setNewUrl] = useState("");
-    const [newCategory, setNewCategory] = useState("Google Drive");
-    const [newDescription, setNewDescription] = useState("");
+    const locale = user?.locale || undefined;
+    const wsName = workspace?.name ?? portal;
+    usePageTitle(`${t("title")} | ${wsName}`);
+    const isAdmin = user?.role === "admin";
 
-    const { data, isLoading, isError } = useQuery<LinkData[]>({
-        queryKey: [portal, "links"],
-        queryFn: () => fetchJson<LinkData[]>(`/api/links`),
+    const [input, setInput] = useState("");
+    const [query, setQuery] = useState("");
+    const [createOpen, setCreateOpen] = useState(false);
+    const [title, setTitle] = useState("");
+    const [url, setUrl] = useState("");
+    const [category, setCategory] = useState("");
+    const [description, setDescription] = useState("");
+    const [deleteTarget, setDeleteTarget] = useState<LinkItem | null>(null);
+    const [permanentTarget, setPermanentTarget] = useState<LinkItem | null>(null);
+
+    const { data: firstPage, isLoading } = useQuery({
+        queryKey: [portal, "links", query],
+        queryFn: () =>
+            fetchPage<LinkItem>(
+                query.trim().length === 0
+                    ? "/api/links"
+                    : `/api/links?q=${encodeURIComponent(query.trim())}`,
+            ),
+        enabled: portal !== "",
     });
+    const [extra, setExtra] = useState<LinkItem[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [moreLoading, setMoreLoading] = useState(false);
+    const [prevFirstPage, setPrevFirstPage] = useState(firstPage);
+    if (firstPage !== prevFirstPage) {
+        setPrevFirstPage(firstPage);
+        setExtra([]);
+        setNextCursor(firstPage?.nextCursor ?? null);
+    }
+    const links = [...(firstPage?.items ?? []), ...extra];
 
-    const createMutation = useMutation({
-        mutationFn: (body: { title: string; url: string; category: string; description: string }) =>
-            fetchJson<LinkData>(`/api/links`, {
+    async function loadMore() {
+        if (!nextCursor || moreLoading) return;
+        setMoreLoading(true);
+        try {
+            const base =
+                query.trim().length === 0
+                    ? "/api/links"
+                    : `/api/links?q=${encodeURIComponent(query.trim())}`;
+            const page = await fetchPage<LinkItem>(
+                `${base}${base.includes("?") ? "&" : "?"}cursor=${encodeURIComponent(nextCursor)}`,
+            );
+            setExtra((prev) => [...prev, ...page.items]);
+            setNextCursor(page.nextCursor);
+        } catch (e) {
+            toast.error(errorMessage(e, tE("internal")));
+        } finally {
+            setMoreLoading(false);
+        }
+    }
+
+    const createLink = useMutation({
+        mutationFn: (body: {
+            title: string;
+            url: string;
+            description?: string | null;
+            category?: string | null;
+        }) =>
+            fetchJson<LinkItem>("/api/links", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "links"] });
-            setShowForm(false);
-            setNewTitle("");
-            setNewUrl("");
-            setNewCategory("Google Drive");
-            setNewDescription("");
+            setCreateOpen(false);
+            setTitle("");
+            setUrl("");
+            setCategory("");
+            setDescription("");
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
         },
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => fetchJson(`/api/links/${id}`, { method: "DELETE" }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: [portal, "links"] }),
+    const deleteLink = useMutation({
+        mutationFn: ({ id, permanent }: { id: string; permanent: boolean }) =>
+            fetchJson<{ deleted: boolean }>(
+                permanent ? `/api/links/${id}?permanent=true` : `/api/links/${id}`,
+                { method: "DELETE" },
+            ),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "links"] });
+            setDeleteTarget(null);
+            setPermanentTarget(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, tE("internal")));
+        },
     });
 
-    if (isLoading) {
-        return (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                    }}
-                >
-                    <div>
-                        <h1
-                            style={{
-                                fontSize: "20px",
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                                margin: 0,
-                            }}
-                        >
-                            Links
-                        </h1>
-                        <p
-                            style={{
-                                fontSize: "14px",
-                                color: "var(--color-text-secondary)",
-                                margin: "4px 0 0",
-                            }}
-                        >
-                            Shared links repository
-                        </p>
-                    </div>
-                </div>
-                {Array.from({ length: 3 }).map((_, i) => (
-                    <Card key={i}>
-                        <CardContent style={{ padding: "20px" }}>
-                            <Skeleton
-                                style={{
-                                    width: "40%",
-                                    height: "16px",
-                                    borderRadius: "5px",
-                                    marginBottom: "8px",
-                                }}
-                            />
-                            <Skeleton
-                                style={{
-                                    width: "60%",
-                                    height: "14px",
-                                    borderRadius: "5px",
-                                }}
-                            />
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        );
-    }
-
-    if (isError || !data) {
-        return (
-            <div style={{ textAlign: "center", padding: "48px 24px" }}>
-                <p
-                    style={{
-                        fontSize: "14px",
-                        color: "var(--color-destructive)",
-                        margin: 0,
-                    }}
-                >
-                    Failed to load links.
-                </p>
-            </div>
-        );
-    }
-
-    const links = data ?? [];
-
-    const grouped: Record<string, LinkData[]> = {};
-    for (const link of links) {
-        const cat = link.category || "Other";
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(link);
-    }
-
     function handleCreate() {
-        if (!newTitle.trim() || !newUrl.trim()) return;
-        createMutation.mutate({
-            title: newTitle.trim(),
-            url: newUrl.trim(),
-            category: newCategory,
-            description: newDescription.trim(),
+        if (!title.trim() || !url.trim()) {
+            toast.error(tE("validationFailed"));
+            return;
+        }
+        createLink.mutate({
+            title: title.trim(),
+            url: url.trim(),
+            description: description.trim() || null,
+            category: category.trim() || null,
         });
     }
-
-    const categoryColors: Record<string, { bg: string; text: string }> = {
-        "Google Drive": { bg: "rgba(52, 168, 83, 0.1)", text: "#34a853" },
-        Teams: { bg: "rgba(98, 100, 167, 0.1)", text: "#6264a7" },
-        Other: { bg: "rgba(15, 98, 254, 0.1)", text: "var(--color-primary)" },
-    };
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -178,6 +164,8 @@ export default function LinksPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
+                    gap: "12px",
+                    flexWrap: "wrap",
                 }}
             >
                 <div>
@@ -189,7 +177,7 @@ export default function LinksPage() {
                             margin: 0,
                         }}
                     >
-                        Links
+                        {t("title")}
                     </h1>
                     <p
                         style={{
@@ -198,232 +186,247 @@ export default function LinksPage() {
                             margin: "4px 0 0",
                         }}
                     >
-                        Shared links repository
+                        {wsName}
                     </p>
                 </div>
-                <Button onClick={() => setShowForm(!showForm)}>
-                    <Plus size={16} />
-                    <span>Add Link</span>
-                </Button>
+                <Button onClick={() => setCreateOpen(true)}>{t("new")}</Button>
             </div>
 
-            {showForm && (
-                <Card>
-                    <CardContent style={{ padding: "20px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                            <h3
-                                style={{
-                                    fontSize: "15px",
-                                    fontWeight: 600,
-                                    color: "var(--color-text)",
-                                    margin: 0,
-                                }}
-                            >
-                                New Link
-                            </h3>
-                            <Input
-                                placeholder="Link title"
-                                value={newTitle}
-                                onChange={(e) => setNewTitle(e.target.value)}
-                            />
-                            <Input
-                                placeholder="URL (https://...)"
-                                value={newUrl}
-                                onChange={(e) => setNewUrl(e.target.value)}
-                            />
-                            <Select value={newCategory} onValueChange={setNewCategory}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {CATEGORIES.map((cat) => (
-                                        <SelectItem key={cat} value={cat}>
-                                            {cat}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Textarea
-                                placeholder="Description (optional)"
-                                value={newDescription}
-                                onChange={(e) => setNewDescription(e.target.value)}
-                                rows={2}
-                            />
-                            <div style={{ display: "flex", gap: "8px" }}>
-                                <Button
-                                    onClick={handleCreate}
-                                    disabled={
-                                        !newTitle.trim() ||
-                                        !newUrl.trim() ||
-                                        createMutation.isPending
-                                    }
-                                >
-                                    {createMutation.isPending ? "Saving..." : "Save"}
-                                </Button>
-                                <Button variant="outline" onClick={() => setShowForm(false)}>
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    setQuery(input);
+                }}
+                style={{ display: "flex", gap: "8px", maxWidth: "480px" }}
+            >
+                <Input
+                    placeholder={tC("search")}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                />
+                <Button type="submit" variant="outline">
+                    {tC("search")}
+                </Button>
+                {query.length > 0 && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            setInput("");
+                            setQuery("");
+                        }}
+                    >
+                        {tC("reset")}
+                    </Button>
+                )}
+            </form>
 
-            {Object.keys(grouped).length === 0 ? (
+            {isLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                </div>
+            ) : links.length === 0 ? (
                 <Card>
                     <CardContent style={{ padding: "40px 20px", textAlign: "center" }}>
-                        <Link2
-                            size={32}
-                            style={{ color: "var(--color-text-secondary)", marginBottom: "12px" }}
-                        />
                         <p
                             style={{
                                 fontSize: "14px",
-                                fontWeight: 600,
-                                color: "var(--color-text)",
-                                margin: "0 0 4px",
-                            }}
-                        >
-                            No links yet
-                        </p>
-                        <p
-                            style={{
-                                fontSize: "13px",
                                 color: "var(--color-text-secondary)",
                                 margin: 0,
                             }}
                         >
-                            Add the first link for your organization.
+                            {t("noLinks")}
                         </p>
                     </CardContent>
                 </Card>
             ) : (
-                Object.entries(grouped).map(([category, catLinks]) => {
-                    const colors = categoryColors[category] ?? categoryColors.Other;
-                    return (
-                        <div key={category}>
-                            <div
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {links.map((link) => (
+                        <Card key={link.id}>
+                            <CardContent
                                 style={{
+                                    padding: "12px 16px",
                                     display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "8px",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    gap: "12px",
                                 }}
                             >
-                                <span
+                                <div style={{ minWidth: 0 }}>
+                                    <a
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            fontSize: "14px",
+                                            fontWeight: 600,
+                                            color: "var(--color-primary)",
+                                            textDecoration: "none",
+                                        }}
+                                    >
+                                        {link.title}
+                                    </a>
+                                    <p
+                                        style={{
+                                            fontSize: "12px",
+                                            color: "var(--color-text-secondary)",
+                                            margin: "2px 0 0",
+                                        }}
+                                    >
+                                        {t("url")}: {link.url}
+                                    </p>
+                                    {link.description && (
+                                        <p
+                                            style={{
+                                                fontSize: "13px",
+                                                color: "var(--color-text)",
+                                                margin: "4px 0 0",
+                                            }}
+                                        >
+                                            {link.description}
+                                        </p>
+                                    )}
+                                    <p
+                                        style={{
+                                            fontSize: "11px",
+                                            color: "var(--color-text-secondary)",
+                                            margin: "4px 0 0",
+                                        }}
+                                    >
+                                        {link.createdBy?.name ??
+                                            link.uploadedBy?.name ??
+                                            tC("unknown")}
+                                        {` · ${new Date(link.createdAt).toLocaleString(locale)}`}
+                                    </p>
+                                </div>
+                                <div
                                     style={{
-                                        padding: "2px 8px",
-                                        borderRadius: "5px",
-                                        fontSize: "12px",
-                                        fontWeight: 600,
-                                        background: colors.bg,
-                                        color: colors.text,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        flexShrink: 0,
                                     }}
                                 >
-                                    {category}
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: "12px",
-                                        color: "var(--color-text-secondary)",
-                                    }}
-                                >
-                                    {catLinks.length} link{catLinks.length !== 1 ? "s" : ""}
-                                </span>
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                {catLinks.map((link) => (
-                                    <Card key={link.id}>
-                                        <CardContent style={{ padding: "16px 20px" }}>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "flex-start",
-                                                    justifyContent: "space-between",
-                                                    gap: "12px",
-                                                }}
-                                            >
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <a
-                                                        href={link.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{
-                                                            fontSize: "14px",
-                                                            fontWeight: 600,
-                                                            color: "var(--color-primary)",
-                                                            textDecoration: "none",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            gap: "6px",
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.textDecoration =
-                                                                "underline";
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.textDecoration =
-                                                                "none";
-                                                        }}
-                                                    >
-                                                        {link.title}
-                                                        <ExternalLink size={12} />
-                                                    </a>
-                                                    {link.description && (
-                                                        <p
-                                                            style={{
-                                                                fontSize: "13px",
-                                                                color: "var(--color-text-secondary)",
-                                                                margin: "4px 0 0",
-                                                            }}
-                                                        >
-                                                            {link.description}
-                                                        </p>
-                                                    )}
-                                                    <LinkPreview url={link.url} />
-                                                    <p
-                                                        style={{
-                                                            fontSize: "11px",
-                                                            color: "var(--color-text-secondary)",
-                                                            margin: "6px 0 0",
-                                                        }}
-                                                    >
-                                                        Added by {link.createdBy?.name ?? "Unknown"}
-                                                    </p>
-                                                </div>
-                                                {isAdmin && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (confirm("Delete this link?"))
-                                                                deleteMutation.mutate(link.id);
-                                                        }}
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            width: "32px",
-                                                            height: "32px",
-                                                            border: "1px solid var(--color-destructive)",
-                                                            borderRadius: "5px",
-                                                            background: "var(--color-bg)",
-                                                            cursor: "pointer",
-                                                            color: "var(--color-destructive)",
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                })
+                                    {link.category && (
+                                        <Badge variant="outline">
+                                            {t("category")}: {link.category}
+                                        </Badge>
+                                    )}
+                                    <a
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            fontSize: "13px",
+                                            fontWeight: 600,
+                                            color: "var(--color-primary)",
+                                            textDecoration: "none",
+                                        }}
+                                    >
+                                        {t("openLink")}
+                                    </a>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setDeleteTarget(link)}
+                                    >
+                                        {tC("delete")}
+                                    </Button>
+                                    {isAdmin && (
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => setPermanentTarget(link)}
+                                        >
+                                            {tC("deleteForever")}
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                    {nextCursor && (
+                        <Button variant="outline" onClick={loadMore} disabled={moreLoading}>
+                            {moreLoading ? tC("loading") : tC("showMore")}
+                        </Button>
+                    )}
+                </div>
             )}
+
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("new")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tC("title")}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                        <Input
+                            placeholder={t("url")}
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            inputMode="url"
+                        />
+                        <Input
+                            placeholder={t("category")}
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tC("description")}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={2}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                            {tC("cancel")}
+                        </Button>
+                        <Button
+                            onClick={handleCreate}
+                            disabled={!title.trim() || !url.trim() || createLink.isPending}
+                        >
+                            {tC("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteTarget(null);
+                }}
+                title={tC("delete")}
+                description={deleteTarget?.title}
+                confirmLabel={tC("delete")}
+                destructive
+                onConfirm={() => {
+                    if (deleteTarget) deleteLink.mutate({ id: deleteTarget.id, permanent: false });
+                }}
+            />
+            <ConfirmDialog
+                open={permanentTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setPermanentTarget(null);
+                }}
+                title={tC("deleteForever")}
+                description={permanentTarget?.title}
+                confirmLabel={tC("deleteForever")}
+                destructive
+                requireTypedText
+                typingChallenge={permanentTarget?.title ?? tC("deleteForever")}
+                onConfirm={() => {
+                    if (permanentTarget)
+                        deleteLink.mutate({ id: permanentTarget.id, permanent: true });
+                }}
+            />
         </div>
     );
 }

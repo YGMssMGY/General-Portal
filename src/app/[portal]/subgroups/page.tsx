@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
+import { toast } from "sonner";
+import { fetchJson, fetchPage } from "@/lib/api-client";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Dialog,
@@ -18,8 +24,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { Users, Plus, LogIn, Palette } from "lucide-react";
-import { usePageTitle } from "@/hooks/usePageTitle";
+import { Users, Plus } from "lucide-react";
 
 interface Subgroup {
     id: string;
@@ -30,36 +35,55 @@ interface Subgroup {
     isMember: boolean;
 }
 
-const PRESET_COLORS = [
-    "#0f62fe",
-    "#da1e28",
-    "#24a148",
-    "#f1c21b",
-    "#8a3ffc",
-    "#ff7eb6",
-    "#6f6f6f",
-    "#161616",
-];
+const PAGE_SIZE = 20;
 
-export default function SubgroupsHubPage() {
+const PRESET_COLORS = ["#0f62fe", "#da1e28", "#24a148", "#f1c21b", "#6f6f6f", "#161616"];
+
+export default function SubgroupsPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Subgroups | ${portalName}`);
-    const { data: session } = useSession();
-    const role = session?.user?.role;
-    const isOfficer = role === "admin" || role === "officer";
+    const { data: workspace } = useWorkspace();
+    const { user } = useAuthSession();
+    const t = useTranslations("subgroups");
+    const tB = useTranslations("broadcast");
+    const tc = useTranslations("common");
+    const te = useTranslations("errors");
+    usePageTitle(`${t("title")} | ${workspace?.name ?? portal}`);
     const queryClient = useQueryClient();
-    const [showCreate, setShowCreate] = useState(false);
-    const [newName, setNewName] = useState("");
-    const [newDescription, setNewDescription] = useState("");
-    const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
 
-    const { data: subgroups, isLoading } = useQuery<Subgroup[]>({
-        queryKey: [portal, "subgroups"],
-        queryFn: () => fetchJson(`/api/subgroups`),
+    const canManage = user?.permissions.includes("manage_subgroups") ?? false;
+
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [items, setItems] = useState<Subgroup[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [appliedKey, setAppliedKey] = useState("");
+    const [showCreate, setShowCreate] = useState(false);
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+    const [color, setColor] = useState(PRESET_COLORS[0]);
+    const [broadcastTarget, setBroadcastTarget] = useState<Subgroup | null>(null);
+    const [broadcastTitle, setBroadcastTitle] = useState("");
+    const [broadcastBody, setBroadcastBody] = useState("");
+    const [broadcastLink, setBroadcastLink] = useState("");
+
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: [portal, "subgroups", cursor ?? ""],
+        queryFn: () =>
+            fetchPage<Subgroup>(
+                `/api/subgroups?limit=${PAGE_SIZE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+            ),
+        enabled: portal !== "",
     });
 
-    const subgroupList = subgroups ?? [];
+    const key = cursor ?? "";
+    if (data && appliedKey !== key) {
+        setAppliedKey(key);
+        setNextCursor(data.nextCursor);
+        setItems((prev) => (cursor ? [...prev, ...data.items] : data.items));
+    }
+
+    useEffect(() => {
+        if (isError) toast.error(te("internal"));
+    }, [isError, te]);
 
     const createMutation = useMutation({
         mutationFn: (body: { name: string; description?: string; color?: string }) =>
@@ -70,123 +94,104 @@ export default function SubgroupsHubPage() {
             }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [portal, "subgroups"] });
+            setCursor(null);
             setShowCreate(false);
-            setNewName("");
-            setNewDescription("");
-            setNewColor(PRESET_COLORS[0]);
+            setName("");
+            setDescription("");
+            setColor(PRESET_COLORS[0]);
+            toast.success(t("title"));
         },
-    });
-
-    const joinMutation = useMutation({
-        mutationFn: (subgroupId: string) =>
-            fetchJson(`/api/subgroups/${subgroupId}/members`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userIds: [session?.user?.id] }),
-            }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [portal, "subgroups"] });
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
     function handleCreate() {
-        if (!newName.trim()) return;
+        if (!name.trim()) return;
         createMutation.mutate({
-            name: newName.trim(),
-            description: newDescription.trim() || undefined,
-            color: newColor,
+            name: name.trim(),
+            description: description.trim() || undefined,
+            color,
+        });
+    }
+
+    const broadcastMutation = useMutation({
+        mutationFn: (body: { id: string; title: string; body: string; link?: string }) =>
+            fetchJson<{ sent: number }>(`/api/subgroups/${body.id}/broadcast`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: body.title,
+                    body: body.body,
+                    link: body.link || undefined,
+                }),
+            }),
+        onSuccess: (data) => {
+            setBroadcastTarget(null);
+            setBroadcastTitle("");
+            setBroadcastBody("");
+            setBroadcastLink("");
+            toast.success(tB("sent", { count: data.sent }));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
+
+    function handleBroadcast() {
+        if (!broadcastTarget || !broadcastTitle.trim() || !broadcastBody.trim()) return;
+        broadcastMutation.mutate({
+            id: broadcastTarget.id,
+            title: broadcastTitle.trim(),
+            body: broadcastBody.trim(),
+            link: broadcastLink.trim() || undefined,
         });
     }
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div
                 style={{
                     display: "flex",
-                    justifyContent: "space-between",
                     alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "12px",
                 }}
             >
-                <div>
-                    <h1
-                        style={{
-                            fontSize: "20px",
-                            fontWeight: 700,
-                            color: "var(--color-text)",
-                            margin: 0,
-                        }}
-                    >
-                        Subgroups
-                    </h1>
-                    <p
-                        style={{
-                            fontSize: "14px",
-                            color: "var(--color-text-secondary)",
-                            margin: "4px 0 0",
-                        }}
-                    >
-                        Smaller teams within the organization
-                    </p>
-                </div>
-                {isOfficer && (
-                    <Button onClick={() => setShowCreate(true)}>
-                        <Plus size={16} />
-                        <span>Create Subgroup</span>
-                    </Button>
-                )}
-            </div>
-
-            {isLoading ? (
-                <div
+                <h1
                     style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                        gap: "16px",
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        margin: 0,
+                        color: "var(--color-text)",
                     }}
                 >
+                    {t("title")}
+                </h1>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <Button variant="outline" size="sm" onClick={() => refetch()}>
+                        {tc("retry")}
+                    </Button>
+                    {canManage && (
+                        <Button size="sm" onClick={() => setShowCreate(true)}>
+                            <Plus size={16} />
+                            <span>{t("new")}</span>
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {isLoading && items.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {Array.from({ length: 4 }).map((_, i) => (
-                        <Card key={i}>
-                            <CardContent style={{ padding: "20px" }}>
-                                <div style={{ display: "flex", gap: "12px" }}>
-                                    <Skeleton
-                                        style={{
-                                            width: "4px",
-                                            height: "80px",
-                                            borderRadius: "5px",
-                                            flexShrink: 0,
-                                        }}
-                                    />
-                                    <div style={{ flex: 1 }}>
-                                        <Skeleton
-                                            style={{
-                                                width: "60%",
-                                                height: "16px",
-                                                borderRadius: "5px",
-                                                marginBottom: "8px",
-                                            }}
-                                        />
-                                        <Skeleton
-                                            style={{
-                                                width: "80%",
-                                                height: "14px",
-                                                borderRadius: "5px",
-                                                marginBottom: "8px",
-                                            }}
-                                        />
-                                        <Skeleton
-                                            style={{
-                                                width: "40%",
-                                                height: "14px",
-                                                borderRadius: "5px",
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <Skeleton
+                            key={i}
+                            style={{ width: "100%", height: "120px", borderRadius: "5px" }}
+                        />
                     ))}
                 </div>
-            ) : subgroupList.length === 0 ? (
+            ) : items.length === 0 ? (
                 <Card>
                     <CardContent
                         style={{
@@ -196,40 +201,15 @@ export default function SubgroupsHubPage() {
                         }}
                     >
                         <Users size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                        <p
-                            style={{
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                color: "var(--color-text)",
-                                margin: "0 0 4px",
-                            }}
-                        >
-                            No subgroups yet
-                        </p>
-                        <p style={{ fontSize: "13px", margin: 0 }}>
-                            {isOfficer
-                                ? "Create a subgroup to organize your team."
-                                : "Ask an officer to create a subgroup."}
-                        </p>
+                        <p style={{ fontSize: "14px", margin: 0 }}>{t("noSubgroups")}</p>
                     </CardContent>
                 </Card>
             ) : (
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                        gap: "16px",
-                    }}
-                >
-                    {subgroupList.map((group) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {items.map((group) => (
                         <Card key={group.id}>
                             <CardContent style={{ padding: 0 }}>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        minHeight: "100px",
-                                    }}
-                                >
+                                <div style={{ display: "flex", minHeight: "100px" }}>
                                     <div
                                         style={{
                                             width: "5px",
@@ -264,10 +244,6 @@ export default function SubgroupsHubPage() {
                                                         fontSize: "13px",
                                                         color: "var(--color-text-secondary)",
                                                         margin: "4px 0 0",
-                                                        display: "-webkit-box",
-                                                        WebkitLineClamp: 2,
-                                                        WebkitBoxOrient: "vertical",
-                                                        overflow: "hidden",
                                                     }}
                                                 >
                                                     {group.description}
@@ -280,6 +256,8 @@ export default function SubgroupsHubPage() {
                                                 alignItems: "center",
                                                 justifyContent: "space-between",
                                                 marginTop: "auto",
+                                                gap: "8px",
+                                                flexWrap: "wrap",
                                             }}
                                         >
                                             <span
@@ -292,38 +270,33 @@ export default function SubgroupsHubPage() {
                                                 }}
                                             >
                                                 <Users size={14} />
-                                                {group._count.members} member
-                                                {group._count.members !== 1 ? "s" : ""}
+                                                {group._count.members} {t("members")}
                                             </span>
-                                            <a
-                                                href={`/${portal}/subgroups/${group.id}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    if (!group.isMember) {
-                                                        joinMutation.mutate(group.id);
-                                                    }
-                                                    window.location.href = `/${portal}/subgroups/${group.id}`;
-                                                }}
+                                            <span
                                                 style={{
-                                                    display: "inline-flex",
+                                                    display: "flex",
                                                     alignItems: "center",
-                                                    gap: "6px",
-                                                    padding: "8px 16px",
-                                                    borderRadius: "5px",
-                                                    fontSize: "13px",
-                                                    fontWeight: 600,
-                                                    fontFamily: "inherit",
-                                                    cursor: "pointer",
-                                                    border: "none",
-                                                    backgroundColor: "var(--color-primary)",
-                                                    color: "#fff",
-                                                    textDecoration: "none",
-                                                    minHeight: "36px",
+                                                    gap: "8px",
                                                 }}
                                             >
-                                                <LogIn size={14} />
-                                                <span>Enter</span>
-                                            </a>
+                                                {group.isMember && (
+                                                    <Badge variant="secondary">
+                                                        {t("members")}
+                                                    </Badge>
+                                                )}
+                                                {canManage && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setBroadcastTarget(group)}
+                                                    >
+                                                        {tB("send")}
+                                                    </Button>
+                                                )}
+                                                <Link href={`/${portal}/subgroups/${group.id}`}>
+                                                    <Button size="sm">{t("join")}</Button>
+                                                </Link>
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -332,123 +305,113 @@ export default function SubgroupsHubPage() {
                     ))}
                 </div>
             )}
+            {nextCursor && (
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                    <Button variant="outline" onClick={() => setCursor(nextCursor)}>
+                        {tc("showMore")}
+                    </Button>
+                </div>
+            )}
 
             <Dialog open={showCreate} onOpenChange={setShowCreate}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create Subgroup</DialogTitle>
-                        <DialogDescription>
-                            Create a new subgroup within the organization.
-                        </DialogDescription>
+                        <DialogTitle>{t("new")}</DialogTitle>
+                        <DialogDescription>{t("title")}</DialogDescription>
                     </DialogHeader>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Name
-                            </label>
-                            <Input
-                                placeholder="e.g. Website Redesign"
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Description
-                            </label>
-                            <Textarea
-                                placeholder="Describe the subgroup's purpose"
-                                value={newDescription}
-                                onChange={(e) => setNewDescription(e.target.value)}
-                                rows={3}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                style={{
-                                    fontSize: "13px",
-                                    fontWeight: 500,
-                                    color: "var(--color-text)",
-                                    display: "block",
-                                    marginBottom: "6px",
-                                }}
-                            >
-                                Color
-                            </label>
-                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                {PRESET_COLORS.map((c) => (
-                                    <button
-                                        key={c}
-                                        type="button"
-                                        onClick={() => setNewColor(c)}
-                                        style={{
-                                            width: "32px",
-                                            height: "32px",
-                                            borderRadius: "5px",
-                                            border:
-                                                newColor === c
-                                                    ? "3px solid var(--color-text)"
-                                                    : "2px solid var(--color-border)",
-                                            backgroundColor: c,
-                                            cursor: "pointer",
-                                            padding: 0,
-                                        }}
-                                    />
-                                ))}
-                                <div
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tc("name")}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tc("description")}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            {PRESET_COLORS.map((c) => (
+                                <button
+                                    key={c}
+                                    type="button"
+                                    aria-label={c}
+                                    onClick={() => setColor(c)}
                                     style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                        marginLeft: "8px",
+                                        width: "32px",
+                                        height: "32px",
+                                        borderRadius: "5px",
+                                        border:
+                                            color === c
+                                                ? "3px solid var(--color-text)"
+                                                : "2px solid var(--color-border)",
+                                        backgroundColor: c,
+                                        cursor: "pointer",
+                                        padding: 0,
                                     }}
-                                >
-                                    <Palette
-                                        size={14}
-                                        style={{ color: "var(--color-text-secondary)" }}
-                                    />
-                                    <Input
-                                        type="color"
-                                        value={newColor}
-                                        onChange={(e) => setNewColor(e.target.value)}
-                                        style={{
-                                            width: "48px",
-                                            height: "32px",
-                                            padding: "2px",
-                                            border: "1px solid var(--color-border)",
-                                            borderRadius: "5px",
-                                            cursor: "pointer",
-                                        }}
-                                    />
-                                </div>
-                            </div>
+                                />
+                            ))}
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowCreate(false)}>
-                            Cancel
+                            {tc("cancel")}
                         </Button>
                         <Button
                             onClick={handleCreate}
-                            disabled={!newName.trim() || createMutation.isPending}
+                            disabled={!name.trim() || createMutation.isPending}
                         >
-                            {createMutation.isPending ? "Creating..." : "Create"}
+                            {createMutation.isPending ? tc("saving") : tc("create")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={broadcastTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setBroadcastTarget(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {tB("dialogTitle")}: {broadcastTarget?.name}
+                        </DialogTitle>
+                        <DialogDescription>{tB("dialogHint")}</DialogDescription>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tB("titleLabel")}
+                            value={broadcastTitle}
+                            onChange={(e) => setBroadcastTitle(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tB("bodyLabel")}
+                            value={broadcastBody}
+                            onChange={(e) => setBroadcastBody(e.target.value)}
+                            rows={4}
+                        />
+                        <Input
+                            placeholder={tB("linkLabel")}
+                            value={broadcastLink}
+                            onChange={(e) => setBroadcastLink(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setBroadcastTarget(null)}>
+                            {tc("cancel")}
+                        </Button>
+                        <Button
+                            onClick={handleBroadcast}
+                            disabled={
+                                !broadcastTitle.trim() ||
+                                !broadcastBody.trim() ||
+                                broadcastMutation.isPending
+                            }
+                        >
+                            {broadcastMutation.isPending ? tc("saving") : tB("send")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -1,164 +1,282 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/api-client";
-import { Plus, MapPin, Clock, Users, Calendar, Trash2, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { fetchJson, fetchPage } from "@/lib/api-client";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useAuthSession } from "@/components/AuthSessionProvider";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Calendar, Clock, MapPin, Plus, Users } from "lucide-react";
 
-type RsvpStatus = "accepted" | "maybe" | "declined" | null;
+type RsvpValue = "accepted" | "declined" | "maybe";
 
 interface Meeting {
     id: string;
     title: string;
-    description: string;
+    description: string | null;
     startTime: string;
-    endTime: string;
-    location: string;
+    endTime: string | null;
+    location: string | null;
     status: "scheduled" | "ongoing" | "completed" | "cancelled";
     rsvpCount: number;
-    myRsvp: RsvpStatus | null;
+    myRsvp: RsvpValue | null;
 }
 
-const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: "14px",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-sm)",
-    backgroundColor: "var(--color-bg)",
-    color: "var(--color-text)",
-    fontFamily: "inherit",
-    outline: "none",
-};
+interface RsvpRow {
+    id: string;
+    status: string;
+    user: { id: string; name: string | null; email: string };
+}
 
-const labelStyle: React.CSSProperties = {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "var(--color-text)",
-    marginBottom: "4px",
-    display: "block",
-};
+interface AgendaItem {
+    id: string;
+    title: string;
+    description: string | null;
+    position: number;
+    status: string;
+    createdAt: string;
+}
 
-const btnBase: React.CSSProperties = {
-    padding: "8px 16px",
-    borderRadius: "var(--radius-sm)",
-    border: "none",
-    fontSize: "13px",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    minHeight: "36px",
-    transition: "background-color 100ms ease",
-};
-
-const statusColors: Record<string, string> = {
-    scheduled: "var(--color-primary)",
-    ongoing: "var(--color-warning)",
-    completed: "var(--color-text-secondary)",
-    cancelled: "var(--color-destructive)",
-};
+const PAGE_SIZE = 20;
 
 export default function MeetingsPage() {
     const portal = usePortal();
-    const portalName = portal === "developers" ? "Developers' Club" : "Student Council";
-    usePageTitle(`Meetings | ${portalName}`);
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
-    const qc = useQueryClient();
-    const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({
-        title: "",
-        description: "",
-        startTime: "",
-        endTime: "",
-        location: "",
-    });
-    const [showRsvps, setShowRsvps] = useState<Record<string, boolean>>({});
-    const [rsvpList, setRsvpList] = useState<
-        Record<
-            string,
-            {
-                id: string;
-                status: string;
-                user: { id: string; name: string | null; email: string };
-            }[]
-        >
-    >({});
+    const { data: workspace } = useWorkspace();
+    const { user } = useAuthSession();
+    const t = useTranslations("meetings");
+    const tAgenda = useTranslations("agenda");
+    const tc = useTranslations("common");
+    const te = useTranslations("errors");
+    usePageTitle(`${t("title")} | ${workspace?.name ?? portal}`);
+    const queryClient = useQueryClient();
 
-    async function toggleRsvps(meetingId: string) {
-        if (rsvpList[meetingId]) {
-            setShowRsvps((p) => ({ ...p, [meetingId]: !p[meetingId] }));
-            return;
-        }
-        try {
-            const data = await fetchJson<
-                {
-                    id: string;
-                    status: string;
-                    user: { id: string; name: string | null; email: string };
-                }[]
-            >(`/api/meetings/${meetingId}/rsvps`);
-            setRsvpList((p) => ({ ...p, [meetingId]: data }));
-            setShowRsvps((p) => ({ ...p, [meetingId]: true }));
-        } catch {}
+    const canManage = user?.permissions.includes("manage_meetings") ?? false;
+    const isAdmin = user?.role === "admin";
+
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [items, setItems] = useState<Meeting[]>([]);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [appliedKey, setAppliedKey] = useState("");
+    const [showForm, setShowForm] = useState(false);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
+    const [location, setLocation] = useState("");
+    const [openRsvps, setOpenRsvps] = useState<string | null>(null);
+    const [rsvpRows, setRsvpRows] = useState<Record<string, RsvpRow[]>>({});
+    const [openAgenda, setOpenAgenda] = useState<string | null>(null);
+    const [agendaRows, setAgendaRows] = useState<Record<string, AgendaItem[]>>({});
+    const [newAgendaTitle, setNewAgendaTitle] = useState("");
+    const [deleteTarget, setDeleteTarget] = useState<Meeting | null>(null);
+
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: [portal, "meetings", cursor ?? ""],
+        queryFn: () =>
+            fetchPage<Meeting>(
+                `/api/meetings?limit=${PAGE_SIZE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+            ),
+        enabled: portal !== "",
+    });
+
+    const key = cursor ?? "";
+    if (data && appliedKey !== key) {
+        setAppliedKey(key);
+        setNextCursor(data.nextCursor);
+        setItems((prev) => (cursor ? [...prev, ...data.items] : data.items));
     }
 
-    const { data: meetings, isLoading } = useQuery<Meeting[]>({
-        queryKey: [portal, "meetings"],
-        queryFn: () => fetchJson(`/api/meetings`),
-    });
-
     const createMutation = useMutation({
-        mutationFn: (data: typeof form) =>
+        mutationFn: (body: {
+            title: string;
+            description?: string;
+            startTime: string;
+            endTime?: string;
+            location?: string;
+        }) =>
             fetchJson(`/api/meetings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
+                body: JSON.stringify(body),
             }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "meetings"] });
+            queryClient.invalidateQueries({ queryKey: [portal, "meetings"] });
+            setCursor(null);
             setShowForm(false);
-            setForm({ title: "", description: "", startTime: "", endTime: "", location: "" });
+            setTitle("");
+            setDescription("");
+            setStartTime("");
+            setEndTime("");
+            setLocation("");
+            toast.success(t("title"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
     const rsvpMutation = useMutation({
-        mutationFn: ({ id, status }: { id: string; status: RsvpStatus }) =>
+        mutationFn: ({ id, status }: { id: string; status: RsvpValue | null }) =>
             fetchJson(`/api/meetings/${id}/rsvp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status }),
             }),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: [portal, "meetings"] });
+            queryClient.invalidateQueries({ queryKey: [portal, "meetings"] });
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
         },
     });
 
-    const deleteMeeting = useMutation({
-        mutationFn: (id: string) => fetchJson(`/api/meetings/${id}`, { method: "DELETE" }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: [portal, "meetings"] }),
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson(`/api/meetings/${id}${isAdmin ? "?permanent=true" : ""}`, {
+                method: "DELETE",
+            }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "meetings"] });
+            setCursor(null);
+            setDeleteTarget(null);
+            toast.success(tc("delete"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
     });
 
-    if (isLoading) {
-        return (
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "14px" }}>Loading...</div>
-        );
+    async function toggleRsvps(meetingId: string) {
+        if (openRsvps === meetingId) {
+            setOpenRsvps(null);
+            return;
+        }
+        setOpenRsvps(meetingId);
+        if (!rsvpRows[meetingId]) {
+            try {
+                const page = await fetchPage<RsvpRow>(`/api/meetings/${meetingId}/rsvps`);
+                setRsvpRows((prev) => ({ ...prev, [meetingId]: page.items }));
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : te("internal"));
+            }
+        }
     }
 
-    const meetingList = meetings ?? [];
-    const now = new Date();
+    async function toggleAgenda(meetingId: string) {
+        if (openAgenda === meetingId) {
+            setOpenAgenda(null);
+            return;
+        }
+        setOpenAgenda(meetingId);
+        try {
+            const items = await fetchJson<AgendaItem[]>(`/api/meetings/${meetingId}/agenda`);
+            setAgendaRows((prev) => ({ ...prev, [meetingId]: items }));
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        }
+    }
+
+    const addAgendaMutation = useMutation({
+        mutationFn: ({ meetingId, title }: { meetingId: string; title: string }) =>
+            fetchJson<AgendaItem>(`/api/meetings/${meetingId}/agenda`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title }),
+            }),
+        onSuccess: (created, vars) => {
+            setAgendaRows((prev) => ({
+                ...prev,
+                [vars.meetingId]: [...(prev[vars.meetingId] ?? []), created],
+            }));
+            setNewAgendaTitle("");
+            toast.success(tAgenda("add"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
+
+    const cycleAgendaMutation = useMutation({
+        mutationFn: ({ id, status }: { id: string; meetingId: string; status: string }) =>
+            fetchJson<AgendaItem>(`/api/agenda/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status }),
+            }),
+        onSuccess: (updated, vars) => {
+            setAgendaRows((prev) => ({
+                ...prev,
+                [vars.meetingId]: (prev[vars.meetingId] ?? []).map((a) =>
+                    a.id === updated.id ? updated : a,
+                ),
+            }));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
+
+    function agendaStatusLabel(status: string): string {
+        if (status === "discussed") return tAgenda("discussed");
+        if (status === "skipped") return tAgenda("skipped");
+        return tAgenda("open");
+    }
+
+    function nextAgendaStatus(status: string): string {
+        if (status === "open") return "discussed";
+        if (status === "discussed") return "skipped";
+        return "open";
+    }
+
+    function handleCreate() {
+        if (!title.trim() || !startTime) return;
+        createMutation.mutate({
+            title: title.trim(),
+            description: description.trim() || undefined,
+            startTime,
+            endTime: endTime || undefined,
+            location: location.trim() || undefined,
+        });
+    }
+
+    const statusLabel: Record<Meeting["status"], string> = {
+        scheduled: t("statusScheduled"),
+        ongoing: t("statusOngoing"),
+        completed: t("statusCompleted"),
+        cancelled: t("statusCancelled"),
+    };
+
+    const rsvpOptions: { label: string; value: RsvpValue }[] = [
+        { label: t("rsvpGoing"), value: "accepted" },
+        { label: t("rsvpMaybe"), value: "maybe" },
+        { label: t("rsvpNotGoing"), value: "declined" },
+    ];
 
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div
                 style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: "20px",
                     flexWrap: "wrap",
                     gap: "12px",
                 }}
@@ -171,197 +289,74 @@ export default function MeetingsPage() {
                         color: "var(--color-text)",
                     }}
                 >
-                    Meetings
+                    {t("title")}
                 </h1>
-                <button
-                    type="button"
-                    onClick={() => setShowForm(true)}
-                    style={{ ...btnBase, backgroundColor: "var(--color-primary)", color: "#fff" }}
-                    onMouseEnter={(e) =>
-                        (e.currentTarget.style.backgroundColor = "var(--color-primary-hover)")
-                    }
-                    onMouseLeave={(e) =>
-                        (e.currentTarget.style.backgroundColor = "var(--color-primary)")
-                    }
-                >
-                    <Plus size={16} /> New Meeting
-                </button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <Button variant="outline" size="sm" onClick={() => refetch()}>
+                        {tc("retry")}
+                    </Button>
+                    {canManage && (
+                        <Button size="sm" onClick={() => setShowForm(true)}>
+                            <Plus size={16} />
+                            <span>{t("new")}</span>
+                        </Button>
+                    )}
+                </div>
             </div>
 
-            {showForm && (
-                <div
-                    style={{
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "16px",
-                        marginBottom: "20px",
-                        backgroundColor: "var(--color-bg-secondary)",
-                    }}
-                >
-                    <h3
+            {isLoading && items.length === 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton
+                            key={i}
+                            style={{ width: "100%", height: "120px", borderRadius: "5px" }}
+                        />
+                    ))}
+                </div>
+            ) : isError ? (
+                <Card>
+                    <CardContent style={{ padding: "32px", textAlign: "center" }}>
+                        <p
+                            style={{
+                                fontSize: "14px",
+                                color: "var(--color-destructive)",
+                                margin: 0,
+                            }}
+                        >
+                            {te("internal")}
+                        </p>
+                        <div style={{ marginTop: "12px" }}>
+                            <Button variant="outline" size="sm" onClick={() => refetch()}>
+                                {tc("retry")}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : items.length === 0 ? (
+                <Card>
+                    <CardContent
                         style={{
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            margin: "0 0 12px",
-                            color: "var(--color-text)",
+                            padding: "48px 24px",
+                            textAlign: "center",
+                            color: "var(--color-text-secondary)",
                         }}
                     >
-                        Create Meeting
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <div>
-                            <label style={labelStyle}>Title</label>
-                            <input
-                                style={inputStyle}
-                                value={form.title}
-                                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Description</label>
-                            <textarea
-                                style={{ ...inputStyle, minHeight: "60px", resize: "vertical" }}
-                                value={form.description}
-                                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                            />
-                        </div>
-                        <div
-                            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}
-                        >
-                            <div>
-                                <label style={labelStyle}>Start Time</label>
-                                <input
-                                    type="datetime-local"
-                                    style={inputStyle}
-                                    value={form.startTime}
-                                    onChange={(e) =>
-                                        setForm({ ...form, startTime: e.target.value })
-                                    }
-                                />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>End Time</label>
-                                <input
-                                    type="datetime-local"
-                                    style={inputStyle}
-                                    value={form.endTime}
-                                    onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Location</label>
-                            <input
-                                style={inputStyle}
-                                value={form.location}
-                                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                            />
-                        </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <button
-                                type="button"
-                                onClick={() => createMutation.mutate(form)}
-                                disabled={
-                                    !form.title || !form.startTime || createMutation.isPending
-                                }
-                                style={{
-                                    ...btnBase,
-                                    backgroundColor: "var(--color-primary)",
-                                    color: "#fff",
-                                    opacity:
-                                        !form.title || !form.startTime || createMutation.isPending
-                                            ? 0.5
-                                            : 1,
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!createMutation.isPending)
-                                        e.currentTarget.style.backgroundColor =
-                                            "var(--color-primary-hover)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = "var(--color-primary)";
-                                }}
-                            >
-                                {createMutation.isPending ? "Saving..." : "Save"}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowForm(false)}
-                                style={{
-                                    ...btnBase,
-                                    backgroundColor: "transparent",
-                                    color: "var(--color-text-secondary)",
-                                    border: "1px solid var(--color-border)",
-                                }}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {meetingList.length === 0 ? (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: "48px 16px",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "14px",
-                    }}
-                >
-                    <Calendar size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
-                    <p style={{ margin: 0 }}>No meetings scheduled.</p>
-                </div>
+                        <Calendar size={32} style={{ marginBottom: "12px", opacity: 0.5 }} />
+                        <p style={{ fontSize: "14px", margin: 0 }}>{t("noMeetings")}</p>
+                    </CardContent>
+                </Card>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {meetingList.map((meeting) => {
-                        const isPast = new Date(meeting.endTime || meeting.startTime) < now;
-                        const rsvpOptions: {
-                            label: string;
-                            value: RsvpStatus;
-                            color: string;
-                            activeColor: string;
-                        }[] = [
-                            {
-                                label: "Accept",
-                                value: "accepted",
-                                color: "var(--color-text-secondary)",
-                                activeColor: "var(--color-success)",
-                            },
-                            {
-                                label: "Maybe",
-                                value: "maybe",
-                                color: "var(--color-text-secondary)",
-                                activeColor: "var(--color-warning)",
-                            },
-                            {
-                                label: "Decline",
-                                value: "declined",
-                                color: "var(--color-text-secondary)",
-                                activeColor: "var(--color-destructive)",
-                            },
-                        ];
-
-                        return (
-                            <div
-                                key={meeting.id}
-                                style={{
-                                    border: "1px solid var(--color-border)",
-                                    borderRadius: "var(--radius-sm)",
-                                    padding: "16px",
-                                    backgroundColor: "var(--color-bg)",
-                                    opacity: isPast ? 0.6 : 1,
-                                    transition: "opacity 100ms ease",
-                                }}
-                            >
+                    {items.map((meeting) => (
+                        <Card key={meeting.id}>
+                            <CardContent style={{ padding: "16px" }}>
                                 <div
                                     style={{
                                         display: "flex",
                                         justifyContent: "space-between",
                                         alignItems: "flex-start",
-                                        flexWrap: "wrap",
                                         gap: "8px",
+                                        flexWrap: "wrap",
                                     }}
                                 >
                                     <div style={{ flex: 1, minWidth: "200px" }}>
@@ -370,7 +365,7 @@ export default function MeetingsPage() {
                                                 display: "flex",
                                                 alignItems: "center",
                                                 gap: "8px",
-                                                marginBottom: "4px",
+                                                flexWrap: "wrap",
                                             }}
                                         >
                                             <h3
@@ -383,39 +378,17 @@ export default function MeetingsPage() {
                                             >
                                                 {meeting.title}
                                             </h3>
-                                            <span
-                                                style={{
-                                                    padding: "2px 6px",
-                                                    borderRadius: "var(--radius-sm)",
-                                                    fontSize: "11px",
-                                                    fontWeight: 600,
-                                                    color:
-                                                        statusColors[meeting.status] ??
-                                                        "var(--color-text-secondary)",
-                                                    backgroundColor: "var(--color-bg-secondary)",
-                                                    textTransform: "capitalize",
-                                                }}
-                                            >
-                                                {meeting.status}
-                                            </span>
-                                            {isPast && (
-                                                <span
-                                                    style={{
-                                                        fontSize: "11px",
-                                                        color: "var(--color-text-secondary)",
-                                                        fontStyle: "italic",
-                                                    }}
-                                                >
-                                                    Past
-                                                </span>
-                                            )}
+                                            <Badge variant="secondary">
+                                                {statusLabel[meeting.status]}
+                                            </Badge>
                                         </div>
                                         {meeting.description && (
                                             <p
                                                 style={{
                                                     fontSize: "13px",
                                                     color: "var(--color-text-secondary)",
-                                                    margin: "0 0 8px",
+                                                    margin: "6px 0 0",
+                                                    whiteSpace: "pre-wrap",
                                                 }}
                                             >
                                                 {meeting.description}
@@ -428,6 +401,7 @@ export default function MeetingsPage() {
                                                 flexWrap: "wrap",
                                                 fontSize: "13px",
                                                 color: "var(--color-text-secondary)",
+                                                marginTop: "8px",
                                             }}
                                         >
                                             <span
@@ -461,172 +435,298 @@ export default function MeetingsPage() {
                                                     gap: "4px",
                                                 }}
                                             >
-                                                <Users size={14} /> {meeting.rsvpCount} RSVPs
+                                                <Users size={14} /> {meeting.rsvpCount} {t("rsvps")}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ marginTop: "12px", display: "flex", gap: "6px" }}>
+                                <div
+                                    style={{
+                                        marginTop: "12px",
+                                        display: "flex",
+                                        gap: "6px",
+                                        flexWrap: "wrap",
+                                    }}
+                                >
                                     {rsvpOptions.map((opt) => {
-                                        const isSelected = meeting.myRsvp === opt.value;
+                                        const selected = meeting.myRsvp === opt.value;
                                         return (
-                                            <button
+                                            <Button
                                                 key={opt.value}
-                                                type="button"
+                                                size="sm"
+                                                variant={selected ? "default" : "outline"}
+                                                disabled={rsvpMutation.isPending}
                                                 onClick={() =>
                                                     rsvpMutation.mutate({
                                                         id: meeting.id,
-                                                        status: isSelected ? null : opt.value,
+                                                        status: selected ? null : opt.value,
                                                     })
                                                 }
-                                                disabled={rsvpMutation.isPending || isPast}
-                                                style={{
-                                                    ...btnBase,
-                                                    padding: "6px 12px",
-                                                    fontSize: "12px",
-                                                    backgroundColor: isSelected
-                                                        ? opt.activeColor
-                                                        : "transparent",
-                                                    color: isSelected ? "#fff" : opt.color,
-                                                    border: `1px solid ${isSelected ? opt.activeColor : "var(--color-border)"}`,
-                                                    opacity: isPast ? 0.5 : 1,
-                                                }}
                                             >
                                                 {opt.label}
-                                            </button>
+                                            </Button>
                                         );
                                     })}
-                                    {isAdmin && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (confirm("Delete this meeting?"))
-                                                    deleteMeeting.mutate(meeting.id);
-                                            }}
-                                            style={{
-                                                ...btnBase,
-                                                padding: "6px 12px",
-                                                fontSize: "12px",
-                                                backgroundColor: "transparent",
-                                                color: "var(--color-destructive)",
-                                                border: "1px solid var(--color-destructive)",
-                                                marginLeft: "auto",
-                                            }}
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => toggleRsvps(meeting.id)}
+                                    >
+                                        {t("rsvps")} ({meeting.rsvpCount})
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => toggleAgenda(meeting.id)}
+                                    >
+                                        {tAgenda("title")}
+                                    </Button>
+                                    {canManage && (
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            style={{ marginLeft: "auto" }}
+                                            onClick={() => setDeleteTarget(meeting)}
                                         >
-                                            <Trash2 size={14} style={{ marginRight: "4px" }} />{" "}
-                                            Delete
-                                        </button>
+                                            {tc("delete")}
+                                        </Button>
                                     )}
                                 </div>
-
-                                {isAdmin && (
-                                    <div style={{ marginTop: "12px" }}>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleRsvps(meeting.id);
-                                            }}
-                                            style={{
-                                                ...btnBase,
-                                                padding: "6px 12px",
-                                                fontSize: "12px",
-                                                backgroundColor: "transparent",
-                                                color: "var(--color-primary)",
-                                                border: "1px solid var(--color-border)",
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: "6px",
-                                            }}
-                                        >
-                                            {showRsvps[meeting.id] ? (
-                                                <EyeOff size={14} />
-                                            ) : (
-                                                <Eye size={14} />
-                                            )}
-                                            {showRsvps[meeting.id]
-                                                ? "Hide RSVPs"
-                                                : `View RSVPs (${meeting.rsvpCount})`}
-                                        </button>
-
-                                        {showRsvps[meeting.id] && rsvpList[meeting.id] && (
-                                            <div
+                                {openAgenda === meeting.id && (
+                                    <div
+                                        style={{
+                                            marginTop: "12px",
+                                            border: "1px solid var(--color-border)",
+                                            borderRadius: "5px",
+                                            padding: "8px 12px",
+                                            backgroundColor: "var(--color-bg-secondary)",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "6px",
+                                        }}
+                                    >
+                                        {(agendaRows[meeting.id] ?? []).length === 0 ? (
+                                            <p
                                                 style={{
-                                                    marginTop: "8px",
-                                                    border: "1px solid var(--color-border)",
-                                                    borderRadius: "5px",
-                                                    padding: "8px",
-                                                    backgroundColor: "var(--color-bg-secondary)",
+                                                    margin: 0,
+                                                    fontSize: "12px",
+                                                    color: "var(--color-text-secondary)",
                                                 }}
                                             >
-                                                {rsvpList[meeting.id].length === 0 ? (
-                                                    <p
+                                                {tAgenda("empty")}
+                                            </p>
+                                        ) : (
+                                            (agendaRows[meeting.id] ?? []).map((a) => (
+                                                <div
+                                                    key={a.id}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        fontSize: "13px",
+                                                    }}
+                                                >
+                                                    <span
                                                         style={{
-                                                            margin: 0,
-                                                            fontSize: "12px",
-                                                            color: "var(--color-text-secondary)",
+                                                            fontWeight: 500,
+                                                            color: "var(--color-text)",
+                                                            flex: 1,
                                                         }}
                                                     >
-                                                        No RSVPs yet.
-                                                    </p>
-                                                ) : (
-                                                    rsvpList[meeting.id].map((r) => (
-                                                        <div
-                                                            key={r.id}
-                                                            style={{
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                gap: "8px",
-                                                                padding: "6px 0",
-                                                                borderBottom:
-                                                                    "1px solid var(--color-border)",
-                                                                fontSize: "13px",
-                                                            }}
+                                                        {a.title}
+                                                    </span>
+                                                    {canManage ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            disabled={cycleAgendaMutation.isPending}
+                                                            onClick={() =>
+                                                                cycleAgendaMutation.mutate({
+                                                                    id: a.id,
+                                                                    meetingId: meeting.id,
+                                                                    status: nextAgendaStatus(
+                                                                        a.status,
+                                                                    ),
+                                                                })
+                                                            }
                                                         >
-                                                            <span
-                                                                style={{
-                                                                    fontWeight: 500,
-                                                                    color: "var(--color-text)",
-                                                                    flex: 1,
-                                                                }}
-                                                            >
-                                                                {r.user.name || r.user.email}
-                                                            </span>
-                                                            <span
-                                                                style={{
-                                                                    padding: "2px 6px",
-                                                                    borderRadius: "5px",
-                                                                    fontSize: "11px",
-                                                                    fontWeight: 600,
-                                                                    color:
-                                                                        r.status === "accepted"
-                                                                            ? "var(--color-success)"
-                                                                            : r.status === "maybe"
-                                                                              ? "var(--color-warning)"
-                                                                              : "var(--color-destructive)",
-                                                                    backgroundColor:
-                                                                        r.status === "accepted"
-                                                                            ? "#e8f5e9"
-                                                                            : r.status === "maybe"
-                                                                              ? "#fff8e1"
-                                                                              : "#fff5f5",
-                                                                }}
-                                                            >
-                                                                {r.status}
-                                                            </span>
-                                                        </div>
-                                                    ))
-                                                )}
+                                                            {agendaStatusLabel(a.status)}
+                                                        </Button>
+                                                    ) : (
+                                                        <Badge variant="outline">
+                                                            {agendaStatusLabel(a.status)}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                        {canManage && (
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    gap: "8px",
+                                                    marginTop: "4px",
+                                                }}
+                                            >
+                                                <Input
+                                                    placeholder={tAgenda("placeholder")}
+                                                    value={
+                                                        openAgenda === meeting.id
+                                                            ? newAgendaTitle
+                                                            : ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setNewAgendaTitle(e.target.value)
+                                                    }
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    disabled={
+                                                        !newAgendaTitle.trim() ||
+                                                        addAgendaMutation.isPending
+                                                    }
+                                                    onClick={() =>
+                                                        addAgendaMutation.mutate({
+                                                            meetingId: meeting.id,
+                                                            title: newAgendaTitle.trim(),
+                                                        })
+                                                    }
+                                                >
+                                                    {tAgenda("add")}
+                                                </Button>
                                             </div>
                                         )}
                                     </div>
                                 )}
-                            </div>
-                        );
-                    })}
+                                {openRsvps === meeting.id && (
+                                    <div
+                                        style={{
+                                            marginTop: "12px",
+                                            border: "1px solid var(--color-border)",
+                                            borderRadius: "5px",
+                                            padding: "8px 12px",
+                                            backgroundColor: "var(--color-bg-secondary)",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "6px",
+                                        }}
+                                    >
+                                        {(rsvpRows[meeting.id] ?? []).length === 0 ? (
+                                            <p
+                                                style={{
+                                                    margin: 0,
+                                                    fontSize: "12px",
+                                                    color: "var(--color-text-secondary)",
+                                                }}
+                                            >
+                                                {t("noMeetings")}
+                                            </p>
+                                        ) : (
+                                            (rsvpRows[meeting.id] ?? []).map((r) => (
+                                                <div
+                                                    key={r.id}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        fontSize: "13px",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            fontWeight: 500,
+                                                            color: "var(--color-text)",
+                                                            flex: 1,
+                                                        }}
+                                                    >
+                                                        {r.user.name || r.user.email}
+                                                    </span>
+                                                    <Badge variant="outline">{r.status}</Badge>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))}
+                    {nextCursor && (
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                            <Button variant="outline" onClick={() => setCursor(nextCursor)}>
+                                {tc("showMore")}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
+
+            <Dialog open={showForm} onOpenChange={setShowForm}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t("new")}</DialogTitle>
+                        <DialogDescription>{t("title")}</DialogDescription>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input
+                            placeholder={tc("title")}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                        />
+                        <Textarea
+                            placeholder={tc("description")}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Input
+                                type="datetime-local"
+                                aria-label={t("startsAt")}
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
+                            />
+                            <Input
+                                type="datetime-local"
+                                aria-label={t("endsAt")}
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
+                            />
+                        </div>
+                        <Input
+                            placeholder={t("location")}
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowForm(false)}>
+                            {tc("cancel")}
+                        </Button>
+                        <Button
+                            onClick={handleCreate}
+                            disabled={!title.trim() || !startTime || createMutation.isPending}
+                        >
+                            {createMutation.isPending ? tc("saving") : tc("save")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteTarget(null);
+                }}
+                title={tc("delete")}
+                description={deleteTarget?.title}
+                confirmLabel={isAdmin ? tc("deleteForever") : tc("delete")}
+                destructive
+                requireTypedText={isAdmin}
+                typingChallenge={deleteTarget?.title ?? ""}
+                onConfirm={() => {
+                    if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+                }}
+            />
         </div>
     );
 }
