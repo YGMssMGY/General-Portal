@@ -12,14 +12,14 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Check out repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
             - name: Review dependencies
               id: review
               continue-on-error: true
               uses: actions/dependency-review-action@v4
             - name: Install dependencies
               if: steps.review.outcome == 'failure'
-              uses: pnpm/action-setup@v4
+              uses: pnpm/action-setup@v6
             - name: Audit dependencies
               if: steps.review.outcome == 'failure'
               run: pnpm install --frozen-lockfile && pnpm audit --audit-level high
