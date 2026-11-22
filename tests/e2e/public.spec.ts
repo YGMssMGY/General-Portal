@@ -32,3 +32,20 @@ for (const [path, contentType] of publicAssets) {
         expect(response.headers()["content-type"]).toContain(contentType);
     });
 }
+
+for (const path of [
+    "/features",
+    "/compare",
+    "/use-cases/clubs",
+    "/changelog",
+    "/roadmap",
+    "/security",
+    "/about",
+    "/docs",
+    "/demo",
+]) {
+    test(`${path} is reachable without a session`, async ({ request }) => {
+        const response = await request.get(path, { maxRedirects: 0 });
+        expect(response.status(), path).toBe(200);
+    });
+}
