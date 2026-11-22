@@ -7,7 +7,7 @@ TODO(rename): `basis-auth` is the current provider id and is subject to change. 
 Flow providers (redirect via `GET /api/auth/login/[provider]`, return via `/api/auth/callback/[provider]`):
 
 | Provider | Required env | Flow |
-|---|---|---|
+| --- | --- | --- |
 | `microsoft-entra-id` | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` (+ `MICROSOFT_TENANT_ID`, default `common`) | OIDC discovery on `login.microsoftonline.com/<tenant>/v2.0`, PKCE S256, UserInfo identity |
 | `basis-auth` | all five `BASIS_*` vars (issuer, client id, client secret, redirect URI, resource) | OIDC with RFC 8707 `resource`, PKCE S256, UserInfo-first identity; see rules below |
 | `google` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OIDC discovery on `accounts.google.com` |
@@ -18,7 +18,7 @@ Flow providers (redirect via `GET /api/auth/login/[provider]`, return via `/api/
 Form and device providers:
 
 | Provider | Required env | Routes |
-|---|---|---|
+| --- | --- | --- |
 | `password` (credentials) | none | `POST /api/auth/password/login`, reset request/confirm with OTP mail, `PUT /api/account/password` |
 | `email-otp` | `SMTP_HOST`, `SMTP_FROM` | `POST /api/auth/otp/request` (`purpose: login` or `magic-link`), verify, consume |
 | `passkey` | none (rpId and origin derive from base URL) | register-options, register-verify, login-options, login-verify under `/api/auth/passkey/` |

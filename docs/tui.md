@@ -14,7 +14,8 @@ Run with `pnpm tui`. Ink plus `ink-text-input`, menu in `src/tui/App.tsx`. Opera
 ## Screens
 
 | Screen | File | What it does |
-|---|---|---|
+| --- | --- | --- |
+| Actions | `screens/Actions.tsx` | Filterable palette over all 41 registered operator commands: pick an action, enter JSON params, run it through the shared engine; destructive commands show a preview and require the typed slug or email |
 | Sites | `screens/Sites.tsx` | List portals from `DATABASE_URL_*` env with database sizes |
 | Add site | `screens/AddSite.tsx` | Wizard: slug, name, category, seed pack (`deployments/seed-packs/`), providers (the 10 schema ids), domains; creates the database, then expects migrate plus seed |
 | Remove site | `screens/RemoveSite.tsx` | Impact preview (row counts for users, workspaces, roles, memberships, tasks, events, proposals, transactions, audit_logs, attachments, sessions, plus `pg_database_size`), verified backup, typed slug, drop; YAML edit stays manual |
@@ -26,3 +27,11 @@ Run with `pnpm tui`. Ink plus `ink-text-input`, menu in `src/tui/App.tsx`. Opera
 | Danger | `screens/Danger.tsx` | Typed-confirmation zone: revoke all sessions for a portal, disable a user by email, hand off to the RemoveSite drop flow |
 
 DB helpers live in `src/tui/lib/tui-db.ts` (`pgDump`, `pgRestore`, `pendingMigrations`, `tableRowCounts`, `runTsx`, identifier guards). `.env` is loaded via `loadDotEnv` on start; pools close on exit.
+
+## Shared operator registry
+
+The Actions palette is not a separate command implementation. It reads `describeAll()` from `src/ops/registry.ts` and calls `executeAction` in `src/ops/engine.ts` directly with `source: "tui"` and all four scopes; the HTTP operator API calls the same registry and engine behind `POST /api/ops/run`. Adding an action in `src/ops/actions/` makes it available in both places, with the same zod validation, two-phase typed confirmation, and `.tui-audit.log` entry. The per-domain screens above remain as focused shortcuts.
+
+## Remote operation without SSH
+
+The TUI is local and interactive (TTY only). For a remote deployment, use the operator API over HTTPS instead: `curl`, PowerShell `irm`, or the checked-in `cli/gp.sh` / `cli/gp.ps1` wrappers with `GP_URL` and `GP_TOKEN`. These call the same 41 actions; no SSH server or remote shell is needed. Production requests require `X-Forwarded-Proto: https`, and the optional `OPS_ALLOWED_IPS` allowlist limits which source addresses may call. See `docs/api.md` for the request shape and `docs/deployment.md` for token setup.
