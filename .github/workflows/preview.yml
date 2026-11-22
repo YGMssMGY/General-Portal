@@ -71,7 +71,7 @@ jobs:
                   name: preview-${{ github.event.number }}
                   path: preview-summary.txt
             - name: Comment preview slug
-              uses: actions/github-script@v7
+              uses: actions/github-script@v9
               with:
                   script: |
                       await github.rest.issues.createComment({
