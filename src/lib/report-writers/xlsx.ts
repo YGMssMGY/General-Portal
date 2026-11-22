@@ -34,7 +34,7 @@ function buildZip(entries: ZipEntry[]): Buffer {
     let offset = 0;
     for (const entry of entries) {
         const name = Buffer.from(entry.name, "utf8");
-        const compressed = deflateRawSync(entry.data, { level: 9 });
+        const compressed = deflateRawSync(entry.data, { level: 6 });
         const crc = crc32(entry.data);
         const local = Buffer.alloc(30);
         local.writeUInt32LE(0x04034b50, 0);

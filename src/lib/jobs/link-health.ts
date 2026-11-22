@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Job, PgBoss } from "pg-boss";
 import { getDb, type PortalDb } from "@/db/client";
 import { linkItems, workspaces } from "@/db/schema";
@@ -8,6 +8,9 @@ import { fetchSafe } from "@/lib/ssrf";
 
 export const LINK_HEALTH_QUEUE = "link-health";
 export const LINK_HEALTH_CRON = "0 4 * * 0";
+
+const CHECK_CONCURRENCY = 8;
+type CheckStatus = "ok" | "broken" | "blocked";
 
 export interface LinkHealthData {
     portal?: string;
@@ -52,21 +55,42 @@ async function linkHealthPortal(slug: string): Promise<void> {
         limit: 200,
         columns: { id: true, url: true },
     });
-    let okCount = 0;
-    let brokenCount = 0;
-    let blockedCount = 0;
-    for (const item of items) {
-        const status = await checkUrl(item.url);
-        if (status === "ok") okCount += 1;
-        else if (status === "broken") brokenCount += 1;
-        else blockedCount += 1;
-        if (persist) {
+    const results: Array<{ id: string; status: CheckStatus }> = [];
+    for (let i = 0; i < items.length; i += CHECK_CONCURRENCY) {
+        const chunk = items.slice(i, i + CHECK_CONCURRENCY);
+        const checked = await Promise.all(
+            chunk.map(async (item) => {
+                let status: CheckStatus;
+                try {
+                    status = await checkUrl(item.url);
+                } catch (err) {
+                    logger.warn({ err, portal: slug, url: item.url }, "link health check failed");
+                    status = "broken";
+                }
+                return { id: item.id, status };
+            }),
+        );
+        results.push(...checked);
+    }
+    const byStatus: Record<CheckStatus, string[]> = { ok: [], broken: [], blocked: [] };
+    for (const r of results) byStatus[r.status].push(r.id);
+    const okCount = byStatus.ok.length;
+    const brokenCount = byStatus.broken.length;
+    const blockedCount = byStatus.blocked.length;
+    if (persist) {
+        for (const status of ["ok", "broken", "blocked"] as const) {
+            const ids = byStatus[status];
+            if (ids.length === 0) continue;
             try {
-                await db.execute(
-                    sql`UPDATE "link_items" SET "lastCheckedAt" = NOW(), "checkStatus" = ${status} WHERE "id" = ${item.id}`,
-                );
+                await db
+                    .update(linkItems)
+                    .set({ lastCheckedAt: new Date(), checkStatus: status })
+                    .where(and(eq(linkItems.workspaceId, ws.id), inArray(linkItems.id, ids)));
             } catch (err) {
-                logger.error({ err, portal: slug }, "link health update failed");
+                logger.error(
+                    { err, portal: slug, status, count: ids.length },
+                    "link health update failed",
+                );
             }
         }
     }
