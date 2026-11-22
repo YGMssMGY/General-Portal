@@ -28,7 +28,7 @@ flowchart LR
     Reconcile --> DB[(Per-workspace PostgreSQL)]
     Browser[Browser web app] --> Proxy[Reverse proxy: TLS]
     Client[curl / irm / cli wrappers] --> Proxy
-    Proxy --> Node[Next.js: middleware + routes + operator API]
+    Proxy --> Node[Next.js: proxy + routes + operator API]
     Node --> DB
     Node --> Boss[pg-boss queues + rate_buckets]
     TUI[Ink TUI: pnpm tui] --> Engine[Ops engine]
@@ -164,7 +164,7 @@ src/
   lib/deployment/       # index, schema, reconcile (deployment.yaml authority)
   ops/                  # Shared operator registry: actions/, engine.ts, registry.ts, lib/
   config/index.ts       # Typed env accessor (only sanctioned process.env reader)
-  middleware.ts         # Nonce CSP, origin CSRF, rate limits, locale, auth gate
+  proxy.ts              # Nonce CSP, origin CSRF, rate limits, locale, auth gate
   i18n/routing.ts       # 5 locales, as-needed prefix, en-US default
   tui/                  # Ink console: App + screens/ (including Actions) + lib/
   lib/seo.ts            # Site URL helper for metadata and JSON-LD

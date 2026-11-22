@@ -138,7 +138,7 @@ function pass(request: NextRequest): NextResponse {
     return applySecurity(res, request, nonce);
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
     const nonce = makeNonce();
     const limited = checkRateLimit(request);
     if (limited) return applySecurity(limited, request, nonce);

@@ -60,7 +60,7 @@ Link preview (`GET /api/link-preview`) and the link-health worker use `fetchSafe
 
 ## Rate limits
 
-In-memory buckets in middleware: 100/min global per IP plus path, 10/min for `/api/auth/*`, `/api/link-preview`, `/api/search`, 60s window, `Retry-After` on 429. These buckets live in process memory: a restart resets them, and limits do not coordinate across instances.
+In-memory buckets in the proxy: 100/min global per IP plus path, 10/min for `/api/auth/*`, `/api/link-preview`, `/api/search`, 60s window, `Retry-After` on 429. These buckets live in process memory: a restart resets them, and limits do not coordinate across instances.
 
 Sensitive routes add a shared, Postgres-backed token bucket: `consumeRateLimit` (`src/lib/rate-limit.ts`) atomically updates the `rate_buckets` table over a 60-second window. `sensitiveLimitCheck` (`src/lib/rate-limit-guard.ts`) applies it to password login, OTP requests, and `/api/ops/run` with a limit of `max(60, RATE_LIMIT_MAX)`. It coordinates across instances and survives restarts; a database error fails open rather than blocking sign-in.
 

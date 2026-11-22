@@ -24,12 +24,12 @@ One PostgreSQL database per site (`src/db/client.ts`). The connection URL comes 
 
 ## Request flow
 
-1. `src/middleware.ts`: per-request nonce, CSP and hardening headers, in-memory rate limit (10/min for `/api/auth/*`, `/api/link-preview`, `/api/search`; 100/min elsewhere, keyed by IP plus path), locale detection (`NEXT_LOCALE` cookie, `Accept-Language`, `BASE_FALLBACK` map), then the auth gate.
+1. `src/proxy.ts`: per-request nonce, CSP and hardening headers, in-memory rate limit (10/min for `/api/auth/*`, `/api/link-preview`, `/api/search`; 100/min elsewhere, keyed by IP plus path), locale detection (`NEXT_LOCALE` cookie, `Accept-Language`, `BASE_FALLBACK` map), then the auth gate.
 2. Public paths pass through: `/`, `/login`, `/showcase`, `/api/auth/*`, `/api/public/*`, `/api/health`.
 3. Other `/api/*` routes require a `gp_session` cookie or `Authorization: Bearer`; pages redirect to `/login?callbackUrl=`.
 4. Route handlers call `requireTenant(request, { permission?, anyOf?, module?, allowToken?, scope? })`, scope every query by `workspaceId`, filter `deletedAt IS NULL`, and return the envelope.
 
-Sensitive routes (`/api/auth/password/login`, `/api/auth/otp/request`, `/api/ops/run`) add a Postgres-backed token bucket through `consumeRateLimit` (`src/lib/rate-limit.ts`, the `rate_buckets` table, 60-second window). It coordinates across instances and survives restarts, unlike the middleware buckets.
+Sensitive routes (`/api/auth/password/login`, `/api/auth/otp/request`, `/api/ops/run`) add a Postgres-backed token bucket through `consumeRateLimit` (`src/lib/rate-limit.ts`, the `rate_buckets` table, 60-second window). It coordinates across instances and survives restarts, unlike the proxy buckets.
 
 ## Responses
 

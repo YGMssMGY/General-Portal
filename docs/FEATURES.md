@@ -132,7 +132,7 @@ Deployment modes: bare Node (authoritative), Docker Compose, dev container/Codes
 | Scoped API tokens (`manage_api_tokens`) | `src/app/[portal]/api-tokens/page.tsx`, `src/app/api/api-tokens/*` | None |
 | Webhooks with HMAC `X-Portal-Signature` and deliveries | `src/lib/webhooks.ts`, `src/app/api/webhooks/*` | None |
 | Webhook replay UI | `src/app/[portal]/webhooks/page.tsx`, `src/app/api/webhooks/[id]/replay/route.ts` | None |
-| Nonce CSP, origin CSRF checks, rate limits, locale, auth gate | `src/middleware.ts` | `security:check` |
+| Nonce CSP, origin CSRF checks, rate limits, locale, auth gate | `src/proxy.ts` | `security:check` |
 | DNS-pinned SSRF guards with redirect revalidation | `src/lib/ssrf.ts` | `test:unit` (SSRF blocking) |
 | Magic-byte upload sniffing | `src/lib/uploads.ts` | `test:unit` (upload sniffing) |
 | Postgres-backed rate limits | `src/lib/rate-limit.ts`, `src/lib/rate-limit-guard.ts` | None |
