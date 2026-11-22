@@ -55,6 +55,13 @@ interface AgendaItem {
     createdAt: string;
 }
 
+interface Minute {
+    id: string;
+    content: string;
+    createdAt: string;
+    createdBy: { id: string; name: string | null; email: string } | null;
+}
+
 const PAGE_SIZE = 20;
 
 export default function MeetingsPage() {
@@ -70,6 +77,9 @@ export default function MeetingsPage() {
 
     const canManage = user?.permissions.includes("manage_meetings") ?? false;
     const isAdmin = user?.role === "admin";
+    const minutesEnabled = workspace?.features.includes("meeting_minutes") ?? false;
+    const canManageMinutes =
+        minutesEnabled && (user?.permissions.includes("manage_minutes") ?? false);
 
     const [cursor, setCursor] = useState<string | null>(null);
     const [items, setItems] = useState<Meeting[]>([]);
@@ -86,6 +96,10 @@ export default function MeetingsPage() {
     const [openAgenda, setOpenAgenda] = useState<string | null>(null);
     const [agendaRows, setAgendaRows] = useState<Record<string, AgendaItem[]>>({});
     const [newAgendaTitle, setNewAgendaTitle] = useState("");
+    const [openMinutes, setOpenMinutes] = useState<string | null>(null);
+    const [minutesRows, setMinutesRows] = useState<Record<string, Minute[]>>({});
+    const [newMinuteContent, setNewMinuteContent] = useState("");
+    const [newActionTitles, setNewActionTitles] = useState<Record<string, string>>({});
     const [deleteTarget, setDeleteTarget] = useState<Meeting | null>(null);
 
     const { data, isLoading, isError, refetch } = useQuery({
@@ -193,6 +207,59 @@ export default function MeetingsPage() {
             toast.error(err instanceof Error ? err.message : te("internal"));
         }
     }
+
+    async function toggleMinutes(meetingId: string) {
+        if (openMinutes === meetingId) {
+            setOpenMinutes(null);
+            return;
+        }
+        setOpenMinutes(meetingId);
+        if (!minutesRows[meetingId]) {
+            try {
+                const rows = await fetchJson<Minute[]>(`/api/meetings/${meetingId}/minutes`);
+                setMinutesRows((prev) => ({ ...prev, [meetingId]: rows }));
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : te("internal"));
+            }
+        }
+    }
+
+    const addMinuteMutation = useMutation({
+        mutationFn: ({ meetingId, content }: { meetingId: string; content: string }) =>
+            fetchJson<Minute>(`/api/meetings/${meetingId}/minutes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content }),
+            }),
+        onSuccess: (created, vars) => {
+            setMinutesRows((prev) => ({
+                ...prev,
+                [vars.meetingId]: [...(prev[vars.meetingId] ?? []), created],
+            }));
+            setNewMinuteContent("");
+            toast.success(t("minutesSaved"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
+
+    const addActionItemMutation = useMutation({
+        mutationFn: ({ minuteId, title }: { minuteId: string; title: string }) =>
+            fetchJson(`/api/minutes/${minuteId}/action-items`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title }),
+            }),
+        onSuccess: (_created, vars) => {
+            setNewActionTitles((prev) => ({ ...prev, [vars.minuteId]: "" }));
+            queryClient.invalidateQueries({ queryKey: [portal, "tasks"] });
+            toast.success(t("createActionItem"));
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
 
     const addAgendaMutation = useMutation({
         mutationFn: ({ meetingId, title }: { meetingId: string; title: string }) =>
@@ -481,6 +548,15 @@ export default function MeetingsPage() {
                                     >
                                         {tAgenda("title")}
                                     </Button>
+                                    {minutesEnabled && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => toggleMinutes(meeting.id)}
+                                        >
+                                            {t("minutes")}
+                                        </Button>
+                                    )}
                                     {canManage && (
                                         <Button
                                             size="sm"
@@ -595,6 +671,154 @@ export default function MeetingsPage() {
                                                     {tAgenda("add")}
                                                 </Button>
                                             </div>
+                                        )}
+                                    </div>
+                                )}
+                                {openMinutes === meeting.id && minutesEnabled && (
+                                    <div
+                                        style={{
+                                            marginTop: "12px",
+                                            border: "1px solid var(--color-border)",
+                                            borderRadius: "5px",
+                                            padding: "8px 12px",
+                                            backgroundColor: "var(--color-bg-secondary)",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "8px",
+                                        }}
+                                    >
+                                        {(minutesRows[meeting.id] ?? []).length === 0 ? (
+                                            <p
+                                                style={{
+                                                    margin: 0,
+                                                    fontSize: "12px",
+                                                    color: "var(--color-text-secondary)",
+                                                }}
+                                            >
+                                                {t("noMinutes")}
+                                            </p>
+                                        ) : (
+                                            (minutesRows[meeting.id] ?? []).map((minute) => (
+                                                <div
+                                                    key={minute.id}
+                                                    style={{
+                                                        borderBottom:
+                                                            "1px solid var(--color-border)",
+                                                        paddingBottom: "8px",
+                                                    }}
+                                                >
+                                                    <p
+                                                        style={{
+                                                            margin: "0 0 4px",
+                                                            fontSize: "13px",
+                                                            whiteSpace: "pre-wrap",
+                                                        }}
+                                                    >
+                                                        {minute.content}
+                                                    </p>
+                                                    <p
+                                                        style={{
+                                                            margin: 0,
+                                                            fontSize: "11px",
+                                                            color: "var(--color-text-secondary)",
+                                                        }}
+                                                    >
+                                                        {minute.createdBy?.name ??
+                                                            minute.createdBy?.email ??
+                                                            tc("unknown")}
+                                                    </p>
+                                                    {canManageMinutes && (
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                gap: "8px",
+                                                                marginTop: "6px",
+                                                            }}
+                                                        >
+                                                            <Input
+                                                                placeholder={t("createActionItem")}
+                                                                value={
+                                                                    newActionTitles[minute.id] ?? ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setNewActionTitles((prev) => ({
+                                                                        ...prev,
+                                                                        [minute.id]: e.target.value,
+                                                                    }))
+                                                                }
+                                                            />
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                disabled={
+                                                                    !(
+                                                                        newActionTitles[
+                                                                            minute.id
+                                                                        ] ?? ""
+                                                                    ).trim() ||
+                                                                    addActionItemMutation.isPending
+                                                                }
+                                                                onClick={() =>
+                                                                    addActionItemMutation.mutate({
+                                                                        minuteId: minute.id,
+                                                                        title: (
+                                                                            newActionTitles[
+                                                                                minute.id
+                                                                            ] ?? ""
+                                                                        ).trim(),
+                                                                    })
+                                                                }
+                                                            >
+                                                                {tc("create")}
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                        {canManageMinutes && (
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    gap: "8px",
+                                                    marginTop: "4px",
+                                                }}
+                                            >
+                                                <Textarea
+                                                    placeholder={t("addMinutes")}
+                                                    value={newMinuteContent}
+                                                    onChange={(e) =>
+                                                        setNewMinuteContent(e.target.value)
+                                                    }
+                                                    rows={2}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    disabled={
+                                                        !newMinuteContent.trim() ||
+                                                        addMinuteMutation.isPending
+                                                    }
+                                                    onClick={() =>
+                                                        addMinuteMutation.mutate({
+                                                            meetingId: meeting.id,
+                                                            content: newMinuteContent.trim(),
+                                                        })
+                                                    }
+                                                >
+                                                    {tc("save")}
+                                                </Button>
+                                            </div>
+                                        )}
+                                        {!canManageMinutes && (
+                                            <p
+                                                style={{
+                                                    margin: 0,
+                                                    fontSize: "11px",
+                                                    color: "var(--color-text-secondary)",
+                                                }}
+                                            >
+                                                {t("minutesHint")}
+                                            </p>
                                         )}
                                     </div>
                                 )}

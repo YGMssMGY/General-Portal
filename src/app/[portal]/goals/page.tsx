@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { fetchJson, fetchPage } from "@/lib/api-client";
 import { useAuthSession } from "@/components/AuthSessionProvider";
+import EntityComments from "@/components/EntityComments";
 import { usePortal } from "@/hooks/usePortal";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -449,6 +450,7 @@ export default function GoalsPage() {
                                             />
                                         ))}
                                     </div>
+                                    <EntityComments entityType="goal" entityId={g.id} />
                                 </CardContent>
                             </Card>
                         );

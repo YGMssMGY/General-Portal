@@ -80,16 +80,21 @@ export async function GET(request: NextRequest) {
         ]);
 
         const totalUnread = grouped.reduce((sum, g) => sum + g.n, 0);
+        const byType = new Map<string, PreviewItem[]>();
+        for (const item of items) {
+            const mapped: PreviewItem = {
+                id: item.id,
+                title: item.title,
+                createdAt: item.createdAt.toISOString(),
+            };
+            const existing = byType.get(item.type);
+            if (existing) existing.push(mapped);
+            else byType.set(item.type, [mapped]);
+        }
         const groups: PreviewGroup[] = grouped.map((g) => ({
             label: g.label,
             count: g.n,
-            items: items
-                .filter((item) => item.type === g.label)
-                .map((item) => ({
-                    id: item.id,
-                    title: item.title,
-                    createdAt: item.createdAt.toISOString(),
-                })),
+            items: byType.get(g.label) ?? [],
         }));
 
         const period = digest === "weekly" ? "the last 7 days" : "the last 24 hours";

@@ -145,7 +145,7 @@ const NAV_KEY_BY_PATH: Record<string, string> = {
     "/budget": "budget",
     "/calendar": "calendar",
     "/cooperation": "cooperation",
-    "/partnerships": "partnerships",
+    "/purchase-requests": "purchaseRequests",
     "/dashboard": "dashboard",
     "/my-work": "myWork",
     "/onboarding": "onboarding",

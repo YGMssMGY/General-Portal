@@ -53,12 +53,9 @@
         "restoreDeleted": "Restore deleted items",
         "trash": "Trash",
         "permanentlyDelete": "Permanently delete",
-        "dangerZone": "Danger zone"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "The shared workspace for student organizations",
-        "description": "General Portal is a multi-tenant collaboration platform for school clubs and student organizations. It brings proposals, tasks, events, finance, volunteering, and member management together in one secure place."
+        "dangerZone": "Danger zone",
+        "breadcrumb": "Breadcrumb",
+        "viewInFinance": "Open in Finance"
     },
     "landing": {
         "title": "General Portal",
@@ -110,7 +107,8 @@
         "approvals": "Approvals",
         "import": "Data import",
         "usage": "Usage",
-        "digestPreview": "Digest preview"
+        "digestPreview": "Digest preview",
+        "purchaseRequests": "Purchase Requests"
     },
     "auth": {
         "signIn": "Sign In",
@@ -153,7 +151,8 @@
         "resetPassword": "Reset password",
         "resetSuccess": "Your password was reset. Please sign in.",
         "backToSignIn": "Back to sign in",
-        "passwordTooShort": "Use at least 12 characters."
+        "passwordTooShort": "Use at least 12 characters.",
+        "unavailable": "Sign-in is unavailable right now"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -204,7 +203,10 @@
         "dueToday": "Due Today",
         "deleteConfirm": "Are you sure you want to delete this task?",
         "markDone": "Mark as Done",
-        "markTodo": "Mark as To Do"
+        "markTodo": "Mark as To Do",
+        "sendComment": "Send comment",
+        "occurrences": "Upcoming occurrences",
+        "noOccurrences": "No occurrences in this window."
     },
     "events": {
         "title": "Events",
@@ -427,7 +429,8 @@
         "statusScheduled": "Scheduled",
         "statusOngoing": "In Progress",
         "statusCompleted": "Completed",
-        "statusCancelled": "Cancelled"
+        "statusCancelled": "Cancelled",
+        "noMinutes": "No minutes recorded yet."
     },
     "members": {
         "title": "Members",
@@ -702,20 +705,6 @@
         "noTokens": "No API tokens yet.",
         "tokenShownOnce": "This token is shown only once."
     },
-    "audit": {
-        "title": "Audit Log",
-        "action": "Action",
-        "entityType": "Entity Type",
-        "entityId": "Entity ID",
-        "performedBy": "Performed By",
-        "timestamp": "Timestamp",
-        "ipAddress": "IP Address",
-        "noLogs": "No audit logs yet.",
-        "export": "Export",
-        "verifyIntegrity": "Verify Integrity",
-        "integrityOk": "Integrity verified.",
-        "integrityFailed": "Integrity check failed."
-    },
     "sessions": {
         "title": "My Sessions",
         "device": "Device",
@@ -857,40 +846,6 @@
         "conflict": "This action conflicts with existing data.",
         "moduleDisabled": "This module is disabled for this workspace."
     },
-    "validation": {
-        "required": "This field is required.",
-        "tooShort": "Must be at least {min} characters.",
-        "tooLong": "Must be at most {max} characters.",
-        "invalidEmail": "Enter a valid email address.",
-        "invalidUrl": "Enter a valid URL.",
-        "invalidDate": "Enter a valid date.",
-        "invalidNumber": "Enter a valid number.",
-        "mustBePositive": "Must be greater than zero.",
-        "invalidOption": "Select a valid option."
-    },
-    "tui": {
-        "title": "Terminal",
-        "mainMenu": "Main Menu",
-        "sites": "Sites",
-        "addSite": "Add Site",
-        "removeSite": "Remove Site",
-        "migrate": "Migrate",
-        "backup": "Back Up",
-        "jobs": "Jobs",
-        "health": "Health",
-        "logs": "Logs",
-        "danger": "Danger",
-        "quit": "Quit",
-        "selectOption": "Select an option",
-        "confirmDeletion": "Confirm Deletion",
-        "typeSlugToConfirm": "Type {slug} to confirm",
-        "backupCreated": "Backup created.",
-        "siteAdded": "Site added.",
-        "siteRemoved": "Site removed.",
-        "migrationComplete": "Migration complete.",
-        "yes": "Yes",
-        "no": "No"
-    },
     "productivity": {
         "blocked": "Blocked",
         "blockedBy": "Blocked by {title}",
@@ -950,7 +905,11 @@
         "invalidJson": "Filters must be a valid JSON object.",
         "sharedWithYou": "Shared with you",
         "filtersJson": "Filters (JSON)",
-        "apply": "Apply"
+        "apply": "Apply",
+        "share": "Share",
+        "revoke": "Revoke",
+        "shareLink": "Share link",
+        "revoked": "Share link revoked."
     },
     "marketing": {
         "useCases": {
@@ -1096,7 +1055,9 @@
                 "i18n": "Internationalization",
                 "tui": "Operator console",
                 "api": "API reference",
-                "runbook": "Runbook"
+                "runbook": "Runbook",
+                "sdk": "SDK guide",
+                "features": "Features guide"
             },
             "apiTitle": "API references",
             "publicApi": "Public API description",
@@ -1132,6 +1093,18 @@
                     }
                 }
             }
+        },
+        "compare": {
+            "title": "Why General Portal",
+            "subtitle": "One workspace, every part of running your organization.",
+            "selfHostedTitle": "Self-hosted by design",
+            "selfHostedBody": "You own the deployment, the data and the branding. No external service is required."
+        },
+        "features": {
+            "title": "Built for the whole organization",
+            "subtitle": "Everything your team needs, in one place.",
+            "modulesTitle": "Modules that work together",
+            "modulesBody": "Projects, events, finance and communication share one permission model and one audit trail."
         }
     },
     "myWork": {
@@ -1400,5 +1373,32 @@
         "totalUnread": "{total} unread notifications",
         "groupsHeading": "Included groups",
         "openPreferences": "Open notification preferences"
+    },
+    "comments": {
+        "title": "Comments",
+        "empty": "No comments yet.",
+        "placeholder": "Write a comment",
+        "add": "Add"
+    },
+    "linkPreview": {
+        "loading": "Loading preview",
+        "alt": "Link preview"
+    },
+    "sidebar": {
+        "toggle": "Toggle sidebar",
+        "expand": "Expand sidebar",
+        "collapse": "Collapse sidebar",
+        "displaysMobile": "Show on mobile",
+        "language": "Language"
+    },
+    "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "previousAria": "Go to previous page",
+        "nextAria": "Go to next page",
+        "morePages": "More pages"
+    },
+    "commandPalette": {
+        "title": "Command palette"
     }
 }

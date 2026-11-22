@@ -50,22 +50,6 @@ function parseTerminology(
     return { ok: false };
 }
 
-const FALLBACK_MODULES = [
-    "proposals",
-    "tasks",
-    "events",
-    "messages",
-    "finance",
-    "volunteers",
-    "members",
-    "files",
-    "meetings",
-    "activity",
-    "search",
-    "notifications",
-    "budget",
-];
-
 export default function SettingsPage() {
     const portal = usePortal();
     const { data: workspace } = useWorkspace();
@@ -78,7 +62,7 @@ export default function SettingsPage() {
     const queryClient = useQueryClient();
 
     const canEdit = user?.permissions.includes("manage_settings") ?? false;
-    const moduleList = workspace?.modules ? [...workspace.modules].sort() : FALLBACK_MODULES;
+    const moduleList = [...(workspace?.modules ?? [])].sort();
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
