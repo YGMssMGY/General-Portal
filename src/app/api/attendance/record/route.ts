@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { attendance, events, meetings } from "@/db/schema";
 import { ApiError, clientIp, handleRouteError, ok, parseBody } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
 
@@ -51,28 +52,39 @@ export async function POST(request: NextRequest) {
             if (!event) throw new ApiError("Event not found", 404);
         }
 
-        const target = hasMeeting
-            ? and(
-                  eq(attendance.workspaceId, t.workspaceId),
-                  eq(attendance.userId, body.userId),
-                  eq(attendance.meetingId, body.meetingId!),
-              )
-            : and(
-                  eq(attendance.workspaceId, t.workspaceId),
-                  eq(attendance.userId, body.userId),
-                  eq(attendance.eventId, body.eventId!),
-              );
-        const existing = await t.db.query.attendance.findFirst({ where: target });
-
         const values = {
             status: body.status,
             checkedInAt: body.status === "present" || body.status === "late" ? new Date() : null,
         };
-        const sideEffect = {
+        const conflictTarget = hasMeeting
+            ? [attendance.workspaceId, attendance.userId, attendance.meetingId]
+            : [attendance.workspaceId, attendance.userId, attendance.eventId];
+        const conflictWhere = hasMeeting
+            ? sql`${attendance.meetingId} IS NOT NULL`
+            : sql`${attendance.eventId} IS NOT NULL`;
+        const id = randomUUID();
+        const [row] = await t.db
+            .insert(attendance)
+            .values({
+                id,
+                workspaceId: t.workspaceId,
+                meetingId: body.meetingId ?? null,
+                eventId: body.eventId ?? null,
+                userId: body.userId,
+                ...values,
+            })
+            .onConflictDoUpdate({
+                target: conflictTarget,
+                targetWhere: conflictWhere,
+                set: values,
+            })
+            .returning();
+        await emitSideEffects(t.db, {
             workspaceId: t.workspaceId,
             userId: t.userId,
             action: "record_attendance",
             entityType: "attendance",
+            entityId: row.id,
             metadata: {
                 meetingId: body.meetingId ?? null,
                 eventId: body.eventId ?? null,
@@ -80,37 +92,9 @@ export async function POST(request: NextRequest) {
                 status: body.status,
             },
             ipAddress: clientIp(request),
-        };
+        }).catch((err) => logger.error({ err }, "Record-attendance side effects failed"));
 
-        if (existing) {
-            const [[updated]] = await Promise.all([
-                t.db
-                    .update(attendance)
-                    .set(values)
-                    .where(eq(attendance.id, existing.id))
-                    .returning(),
-                emitSideEffects(t.db, { ...sideEffect, entityId: existing.id }),
-            ]);
-            return ok(updated);
-        }
-
-        const id = randomUUID();
-        const [[created]] = await Promise.all([
-            t.db
-                .insert(attendance)
-                .values({
-                    id,
-                    workspaceId: t.workspaceId,
-                    meetingId: body.meetingId ?? null,
-                    eventId: body.eventId ?? null,
-                    userId: body.userId,
-                    ...values,
-                })
-                .returning(),
-            emitSideEffects(t.db, { ...sideEffect, entityId: id }),
-        ]);
-
-        return ok(created, 201);
+        return ok(row, row.id === id ? 201 : 200);
     } catch (e) {
         return handleRouteError("POST /api/attendance/record", e);
     }

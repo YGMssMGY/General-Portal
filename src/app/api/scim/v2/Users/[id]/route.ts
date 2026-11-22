@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { config } from "@/config";
 import { getDb, type PortalDb } from "@/db/client";
 import { memberships, users, workspaces } from "@/db/schema";
@@ -174,7 +174,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         await ctx.db
             .update(users)
             .set({ ...patch, updatedAt: new Date() })
-            .where(eq(users.id, id));
+            .where(
+                and(
+                    eq(users.id, id),
+                    inArray(
+                        users.id,
+                        ctx.db
+                            .select({ userId: memberships.userId })
+                            .from(memberships)
+                            .where(eq(memberships.workspaceId, ctx.workspaceId)),
+                    ),
+                ),
+            );
         const updated = await ctx.db.query.users.findFirst({ where: eq(users.id, id) });
         if (!updated) return scimError(404, td("notFound", "User not found."));
         return NextResponse.json(toScimUser(updated));

@@ -37,7 +37,7 @@ async function scopedAllocation(t: Awaited<ReturnType<typeof requireTenant>>, id
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const t = await requireTenant(request, { module: "budget" });
+        const t = await requireTenant(request, { permission: "view_reports", module: "budget" });
         const { id } = await params;
         requireUuid(id);
 

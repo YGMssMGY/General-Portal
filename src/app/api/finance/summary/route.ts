@@ -6,7 +6,7 @@ import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "finance" });
+        const t = await requireTenant(request, { permission: "view_reports", module: "finance" });
 
         const groups = await t.db
             .select({

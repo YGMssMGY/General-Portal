@@ -1,8 +1,8 @@
-import { createHmac } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import type { Job, PgBoss } from "pg-boss";
 import { getDb } from "@/db/client";
 import { webhooks } from "@/db/schema";
+import { postWebhook } from "@/lib/webhooks";
 import { getBoss } from "./boss";
 
 export const WEBHOOK_QUEUE = "webhook-deliver";
@@ -22,18 +22,8 @@ async function handle(jobs: Job<WebhookJobData>[]): Promise<void> {
         const hook = await db.query.webhooks.findFirst({ where: eq(webhooks.id, webhookId) });
         if (!hook || !hook.active) continue;
         const body = JSON.stringify({ event, payload, portal });
-        const headers: Record<string, string> = { "content-type": "application/json" };
-        if (hook.secret)
-            headers["X-Portal-Signature"] = createHmac("sha256", hook.secret)
-                .update(body)
-                .digest("hex");
-        const res = await fetch(hook.url, {
-            method: "POST",
-            headers,
-            body,
-            signal: AbortSignal.timeout(10000),
-        });
-        if (!res.ok) throw new Error(`webhook ${webhookId} responded with ${res.status}`);
+        const result = await postWebhook(hook.url, body, hook.secret);
+        if (!result.ok) throw new Error(`webhook ${webhookId} responded with ${result.status}`);
     }
 }
 

@@ -83,13 +83,7 @@ export async function parseBody<T>(
     return parsed.data;
 }
 
-export function clientIp(request: NextRequest): string {
-    return (
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        request.headers.get("x-real-ip") ||
-        "unknown"
-    );
-}
+export { clientIp } from "./client-ip";
 
 export function isUuid(v: string): boolean {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -134,8 +128,10 @@ export function decodeCursorValues(cursor: string | null): Array<string | number
     if (!cursor) return null;
     try {
         const v = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown;
-        if (!Array.isArray(v) || v.length < 2) return null;
-        return v as Array<string | number>;
+        if (!Array.isArray(v) || v.length !== 2) return null;
+        if (typeof v[0] !== "string" || Number.isNaN(new Date(v[0]).getTime())) return null;
+        if (!isUuid(String(v[1]))) return null;
+        return [v[0], v[1]];
     } catch {
         return null;
     }

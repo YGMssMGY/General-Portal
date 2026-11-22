@@ -26,7 +26,7 @@ type CreateDueInput = z.infer<typeof createDueSchema>;
 
 export async function GET(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "finance" });
+        const t = await requireTenant(request, { permission: "view_reports", module: "finance" });
         const { limit, cursor } = parsePagination(new URL(request.url).searchParams);
         const canManage = t.permissions.includes("manage_dues");
         const conds = [eq(memberDues.workspaceId, t.workspaceId)];

@@ -14,6 +14,7 @@ import {
     requireUuid,
 } from "@/lib/api";
 import { writeAuditLog } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
@@ -139,17 +140,21 @@ export async function POST(request: NextRequest) {
                 .values({ workspaceId: t.workspaceId, userId: userRow.id, roleId: roleRow.id });
         }
 
-        await writeAuditLog(
-            {
-                workspaceId: t.workspaceId,
-                userId: t.userId,
-                action: "create_user",
-                entityType: "user",
-                entityId: userRow.id,
-                metadata: { email, role: roleRow.name },
-            },
-            t.db,
-        );
+        try {
+            await writeAuditLog(
+                {
+                    workspaceId: t.workspaceId,
+                    userId: t.userId,
+                    action: "create_user",
+                    entityType: "user",
+                    entityId: userRow.id,
+                    metadata: { email, role: roleRow.name },
+                },
+                t.db,
+            );
+        } catch (err) {
+            logger.error({ err }, "audit write failed after user creation");
+        }
 
         return ok(
             {
