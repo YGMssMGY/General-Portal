@@ -1,34 +1,8 @@
-import { lookup } from "node:dns/promises";
 import type { NextRequest } from "next/server";
 import * as cheerio from "cheerio";
 import { ApiError, fail, handleRouteError, ok } from "@/lib/api";
+import { fetchSafe } from "@/lib/ssrf";
 import { requireTenant } from "@/lib/tenant";
-
-const MAX_BYTES = 2 * 1024 * 1024;
-
-function stripMapped(ip: string): string {
-    return ip.startsWith("::ffff:") ? ip.slice("::ffff:".length) : ip;
-}
-
-function isBlockedIp(raw: string): boolean {
-    const ip = stripMapped(raw);
-    if (ip.includes(":")) {
-        const lower = ip.toLowerCase();
-        if (lower === "::1" || lower === "::") return true;
-        if (/^fe[89ab]/i.test(lower)) return true;
-        if (/^f[cd]/i.test(lower)) return true;
-        if (/^ff/i.test(lower)) return true;
-        return false;
-    }
-    const parts = ip.split(".");
-    if (parts.length !== 4 || parts.some((p) => !/^\d+$/.test(p))) return true;
-    const [a, b] = parts.map(Number);
-    if (a === 0 || a === 127 || a === 10) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 169 && b === 254) return true;
-    return false;
-}
 
 function resolveImage(src: string | undefined, base: URL): string | null {
     if (!src) return null;
@@ -58,34 +32,17 @@ export async function GET(request: NextRequest) {
             throw new ApiError("Only http/https URLs are allowed", 400);
         }
 
-        let resolved: Array<{ address: string }>;
-        try {
-            resolved = await lookup(target.hostname, { all: true });
-        } catch {
-            return fail("Failed to fetch URL", 502);
-        }
-        if (resolved.length === 0 || resolved.some((r) => isBlockedIp(r.address))) {
-            throw new ApiError("Blocked", 400);
-        }
-
-        let html: string;
-        try {
-            const res = await fetch(target.toString(), {
-                signal: AbortSignal.timeout(10_000),
-                headers: { "User-Agent": "General-Portal/1.0 LinkPreview" },
-            });
-            if (!res.ok) return fail("Failed to fetch URL", 502);
-            const contentLength = res.headers.get("content-length");
-            if (contentLength && Number(contentLength) > MAX_BYTES)
-                return fail("Failed to fetch URL", 502);
-            html = await res.text();
-            if (html.length > MAX_BYTES) return fail("Failed to fetch URL", 502);
-        } catch (e) {
-            if (e instanceof ApiError) throw e;
+        const result = await fetchSafe(target.toString(), {
+            method: "GET",
+            timeoutMs: 10_000,
+            maxBytes: 2 * 1024 * 1024,
+        });
+        if (result.blocked) throw new ApiError("Blocked", 400);
+        if (!result.ok || result.status < 200 || result.status >= 400) {
             return fail("Failed to fetch URL", 502);
         }
 
-        const $ = cheerio.load(html);
+        const $ = cheerio.load(result.text);
         const title =
             $('meta[property="og:title"]').attr("content") ||
             $('meta[name="twitter:title"]').attr("content") ||

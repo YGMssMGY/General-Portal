@@ -1,40 +1,16 @@
-import { lookup } from "node:dns/promises";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Job, PgBoss } from "pg-boss";
 import { getDb, type PortalDb } from "@/db/client";
 import { linkItems, workspaces } from "@/db/schema";
 import { listPortals } from "@/lib/deployment";
 import { logger } from "@/lib/logger";
+import { fetchSafe } from "@/lib/ssrf";
 
 export const LINK_HEALTH_QUEUE = "link-health";
 export const LINK_HEALTH_CRON = "0 4 * * 0";
 
 export interface LinkHealthData {
     portal?: string;
-}
-
-function stripMapped(ip: string): string {
-    return ip.startsWith("::ffff:") ? ip.slice("::ffff:".length) : ip;
-}
-
-function isBlockedIp(raw: string): boolean {
-    const ip = stripMapped(raw);
-    if (ip.includes(":")) {
-        const lower = ip.toLowerCase();
-        if (lower === "::1" || lower === "::") return true;
-        if (/^fe[89ab]/i.test(lower)) return true;
-        if (/^f[cd]/i.test(lower)) return true;
-        if (/^ff/i.test(lower)) return true;
-        return false;
-    }
-    const parts = ip.split(".");
-    if (parts.length !== 4 || parts.some((p) => !/^\d+$/.test(p))) return true;
-    const [a, b] = parts.map(Number);
-    if (a === 0 || a === 127 || a === 10) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 169 && b === 254) return true;
-    return false;
 }
 
 async function columnsPersistable(db: PortalDb): Promise<boolean> {
@@ -57,24 +33,9 @@ async function checkUrl(raw: string): Promise<"ok" | "broken" | "blocked"> {
         return "broken";
     }
     if (target.protocol !== "http:" && target.protocol !== "https:") return "blocked";
-    try {
-        const resolved = await lookup(target.hostname, { all: true });
-        if (resolved.length === 0 || resolved.some((r) => isBlockedIp(r.address))) {
-            return "blocked";
-        }
-    } catch {
-        return "broken";
-    }
-    try {
-        const res = await fetch(target.toString(), {
-            method: "HEAD",
-            signal: AbortSignal.timeout(10_000),
-            headers: { "User-Agent": "General-Portal/1.0 LinkHealth" },
-        });
-        return res.ok ? "ok" : "broken";
-    } catch {
-        return "broken";
-    }
+    const result = await fetchSafe(target.toString(), { method: "HEAD", timeoutMs: 10_000 });
+    if (result.blocked) return "blocked";
+    return result.ok ? "ok" : "broken";
 }
 
 async function linkHealthPortal(slug: string): Promise<void> {

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { attachments } from "@/db/schema";
@@ -17,6 +17,7 @@ import {
 } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 import { emitSideEffects } from "@/lib/side-effects";
+import { fileKindMatchesMime, sniffFileKind, streamFileToDisk } from "@/lib/uploads";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME_PREFIXES = ["image/", "application/pdf", "text/plain"];
@@ -114,41 +115,49 @@ export async function POST(request: NextRequest) {
             throw new ApiError("File type not allowed", 400);
         }
 
+        const sniffed = sniffFileKind(new Uint8Array(await file.slice(0, 512).arrayBuffer()));
+        if (!sniffed || !fileKindMatchesMime(sniffed, file.type)) {
+            throw new ApiError("File type not allowed", 400);
+        }
+
         const ext = (file.name.split(".").pop() || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
         const storedName = `${randomUUID()}${ext ? `.${ext}` : ""}`;
         const dir = join(config.uploadsDir, t.portal);
         await mkdir(dir, { recursive: true });
+        const targetPath = join(dir, storedName);
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        await writeFile(join(dir, storedName), buffer);
-        const sha256 = createHash("sha256").update(buffer).digest("hex");
+        try {
+            const streamed = await streamFileToDisk(file, targetPath, MAX_FILE_SIZE);
+            const [attachment] = await t.db
+                .insert(attachments)
+                .values({
+                    workspaceId: t.workspaceId,
+                    entityType,
+                    entityId: "",
+                    fileName: file.name,
+                    fileSize: streamed.size,
+                    mimeType: file.type,
+                    storagePath: join(t.portal, storedName),
+                    sha256: streamed.sha256,
+                    uploadedById: t.userId,
+                })
+                .returning();
 
-        const [attachment] = await t.db
-            .insert(attachments)
-            .values({
+            await emitSideEffects(t.db, {
                 workspaceId: t.workspaceId,
-                entityType,
-                entityId: "",
-                fileName: file.name,
-                fileSize: file.size,
-                mimeType: file.type,
-                storagePath: join(t.portal, storedName),
-                sha256,
-                uploadedById: t.userId,
-            })
-            .returning();
+                userId: t.userId,
+                action: "created",
+                entityType: "attachment",
+                entityId: attachment.id,
+                metadata: { fileName: attachment.fileName, entityType },
+                ipAddress: clientIp(request),
+            });
 
-        await emitSideEffects(t.db, {
-            workspaceId: t.workspaceId,
-            userId: t.userId,
-            action: "created",
-            entityType: "attachment",
-            entityId: attachment.id,
-            metadata: { fileName: attachment.fileName, entityType },
-            ipAddress: clientIp(request),
-        });
-
-        return ok(attachment, 201);
+            return ok(attachment, 201);
+        } catch (e) {
+            await unlink(targetPath).catch(() => {});
+            throw e;
+        }
     } catch (e) {
         return handleRouteError("POST /api/files", e);
     }
