@@ -15,6 +15,7 @@ export async function register() {
             const { registerWebhookJobs } = await import("@/lib/jobs/webhooks");
             const { registerRetentionJobs } = await import("@/lib/jobs/retention");
             const { registerLinkHealthJobs } = await import("@/lib/jobs/link-health");
+            const { registerBackupJobs } = await import("@/lib/jobs/backups");
             const boss = await getBoss();
             await registerNudgeJobs(boss);
             await registerDigestJobs(boss);
@@ -22,6 +23,7 @@ export async function register() {
             await registerWebhookJobs(boss);
             await registerRetentionJobs(boss);
             await registerLinkHealthJobs(boss);
+            await registerBackupJobs(boss);
         } catch (err) {
             const { logger } = await import("@/lib/logger");
             logger.error({ err }, "background jobs failed to start");

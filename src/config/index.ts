@@ -39,6 +39,8 @@ export const config = {
     opsToken: opt("OPS_API_TOKEN"),
     opsSecret: opt("OPS_SECRET", opt("AUTH_SECRET", "")),
     opsAllowedIps: opt("OPS_ALLOWED_IPS"),
+    scimToken: opt("SCIM_TOKEN"),
+    backupKey: opt("BACKUP_ENCRYPTION_KEY"),
     entra: {
         clientId: opt("MICROSOFT_CLIENT_ID"),
         clientSecret: opt("MICROSOFT_CLIENT_SECRET"),
