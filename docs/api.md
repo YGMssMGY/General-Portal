@@ -12,22 +12,72 @@ Keyset over `(createdAt, id)`: pass the last `X-Next-Cursor` as `?cursor=`; empt
 
 ## Error codes
 
-| Status | Meaning |
-|---|---|
-| 400 | Validation, bad UUID, invalid JSON body (`<path>: <message>` from `parseBody`) |
-| 401 | Missing/invalid session or token |
-| 403 | Missing permission, missing scope, or disabled module |
-| 404 | Unknown workspace, portal, provider, or row |
-| 429 | Rate limited (`Retry-After` seconds) |
-| 503 | Provider unavailable (generic message, no env names) |
-| 500 | `Internal server error`, always generic |
+| Status | Meaning                                                                        |
+| ------ | ------------------------------------------------------------------------------ |
+| 400    | Validation, bad UUID, invalid JSON body (`<path>: <message>` from `parseBody`) |
+| 401    | Missing/invalid session or token                                               |
+| 403    | Missing permission, missing scope, or disabled module                          |
+| 404    | Unknown workspace, portal, provider, or row                                    |
+| 429    | Rate limited (`Retry-After` seconds)                                           |
+| 503    | Provider unavailable (generic message, no env names)                           |
+| 500    | `Internal server error`, always generic                                        |
+
+## Operator API
+
+Discovery endpoints need no token and reveal no secrets: `GET /api/ops` (capability directory with ready-to-run `curl` and `irm` examples), `GET /api/ops/openapi.json`, `GET /api/ops/manifest.json` (agent tool definitions), and `GET /api/ops/health` (configuration booleans and portal count only). Portal API callers are unaffected by this surface.
+
+Execution is `POST /api/ops/run` with `Authorization: Bearer <operator-token>`; HTTPS is required in production, and `OPS_ALLOWED_IPS` may restrict the source. The JSON body is:
+
+```json
+{
+    "action": "site.health",
+    "params": {},
+    "confirmationToken": "optional",
+    "typedValue": "optional",
+    "yes": false,
+    "idempotencyKey": "optional"
+}
+```
+
+`action` is required; `params` defaults to `{}` and is validated by the action's zod schema. `idempotencyKey` may instead be sent as the `Idempotency-Key` header. Tokens are either the bootstrap `OPS_API_TOKEN` (all scopes) or a short-lived HMAC token issued by `ops.token` (60-86400 second TTL, signed with `OPS_SECRET`). Scopes are `ops:read`, `ops:deploy`, `ops:backup`, and `ops:danger`; each action declares the scopes it needs.
+
+Success returns the standard envelope with `X-Action` and `X-Duration-Ms` headers. A destructive action returns `409` on the first call with `confirmationToken`, `preview`, `expiresAt` (five minutes), and `hint`; repeat with that token and `typedValue` equal to the target slug or email (or `yes: true`). An `idempotencyKey` replays the cached result for ten minutes. Every run, denial, and confirmation appends to `.tui-audit.log`.
+
+| Status | Meaning                                                                    |
+| ------ | -------------------------------------------------------------------------- |
+| 400    | Invalid body, parameter validation, or confirmation mismatch               |
+| 401    | Missing or invalid operator token                                          |
+| 403    | Insufficient scope, non-HTTPS production request, or source IP not allowed |
+| 404    | Unknown action                                                             |
+| 409    | Confirmation required; token and preview in the body                       |
+| 429    | Rate limited by the Postgres-backed guard                                  |
+| 500    | Action failed (`ACTION_FAILED`)                                            |
+
+### Action groups
+
+There are 41 actions in the shared registry (`src/ops/registry.ts`). The same actions back the TUI Actions palette and this API.
+
+| Group | Actions |
+| --- | --- |
+| site (7) | `site.list`, `site.show`, `site.config`, `site.health`, `site.add`, `site.remove`, `site.clone` |
+| migrate (4) | `migrate.status`, `migrate.plan`, `migrate.apply`, `migrate.check` |
+| backup and dr (5) | `backup.create`, `backup.list`, `backup.verify`, `backup.restore`, `dr.drill` |
+| job (5) | `job.list`, `job.status`, `job.publish`, `job.retry`, `job.resume` |
+| ops (4) | `ops.token`, `ops.whoami`, `ops.explain`, `ops.status` |
+| config (4) | `config.check`, `config.init`, `config.diff`, `config.doctor` |
+| user (5) | `user.list`, `user.role`, `user.disable`, `user.sessions`, `user.revoke-all` |
+| data (2) | `data.i18n-missing`, `data.export` |
+| system (2) | `log.tail`, `bench` |
+| danger (3) | `danger.drop-database` (alias of `site.remove`), `danger.revoke-sessions` (alias of `user.revoke-all`), `danger.disable-user` |
+
+`dr.drill` restores the newest backup into a scratch database, compares row counts against the live database, then drops the scratch; it never touches live data. `ops.explain` returns any action's params, scopes, confirmation rule, and example commands. The `config.*` actions run `scripts/config.ts`. `ops.status` reports configuration flags without values. Destructive actions (`site.remove`, `backup.restore`, `user.revoke-all`, and the `danger.*` aliases) require typed confirmation.
 
 ## Endpoint catalogue
 
 Grouped by domain. Permission is the `requireTenant` gate; reads need membership plus the module flag. `sess` means any authed session.
 
 | Domain | Method + path | Gate |
-|---|---|---|
+| --- | --- | --- |
 | account | `PUT /api/account/password`, `GET/DELETE /api/account/sessions` | sess |
 | activity | `GET /api/activity` | sess |
 | admin | `GET/POST /api/admin/users` | `manage_users` |
