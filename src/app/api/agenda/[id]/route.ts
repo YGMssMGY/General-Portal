@@ -23,9 +23,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const id = requireUuid((await params).id);
         const existing = await t.db.query.agendaItems.findFirst({
             where: eq(agendaItems.id, id),
-            with: { meeting: true },
+            with: { meeting: { columns: { workspaceId: true, deletedAt: true } } },
         });
-        if (!existing || !existing.meeting || existing.meeting.workspaceId !== t.workspaceId) {
+        if (
+            !existing ||
+            !existing.meeting ||
+            existing.meeting.workspaceId !== t.workspaceId ||
+            existing.meeting.deletedAt
+        ) {
             throw new ApiError("Agenda item not found", 404);
         }
         const body = await parseBody<UpdateItemInput>(updateItemSchema as never, request);
@@ -68,9 +73,16 @@ export async function DELETE(
         const existing = await t.db.query.agendaItems.findFirst({
             where: eq(agendaItems.id, id),
             columns: { id: true, title: true },
-            with: { meeting: { columns: { id: true, workspaceId: true, title: true } } },
+            with: {
+                meeting: { columns: { id: true, workspaceId: true, title: true, deletedAt: true } },
+            },
         });
-        if (!existing || !existing.meeting || existing.meeting.workspaceId !== t.workspaceId) {
+        if (
+            !existing ||
+            !existing.meeting ||
+            existing.meeting.workspaceId !== t.workspaceId ||
+            existing.meeting.deletedAt
+        ) {
             throw new ApiError("Agenda item not found", 404);
         }
         await Promise.all([

@@ -1,12 +1,24 @@
 # General Portal
 
-[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE) [![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](https://nodejs.org/) [![pnpm](https://img.shields.io/badge/pnpm-10.x-ff4f8b.svg)](https://pnpm.io/) [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169e1.svg)](https://www.postgresql.org/)
+[![CI](https://github.com/YGMssMGY/General-Portal/actions/workflows/ci.yml/badge.svg)](https://github.com/YGMssMGY/General-Portal/actions/workflows/ci.yml) [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE) [![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](https://nodejs.org/) [![pnpm](https://img.shields.io/badge/pnpm-10.x-ff4f8b.svg)](https://pnpm.io/) [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169e1.svg)](https://www.postgresql.org/)
 
 > General Portal — the self-hosted workspace OS. One deployment, isolated databases per workspace, 40+ modules, nine sign-in providers, your branding. Configured in YAML, operated from a TUI/CLI.
 
 One Node.js deployment serves many independent portals. `deployment.yaml` declares each workspace's modules, navigation, branding, terminology, feature flags, limits, and sign-in providers. Every workspace gets its own PostgreSQL database, and a session for one workspace cannot read another. Operators configure the system in YAML and run it from an Ink terminal console or an HTTPS operator API reachable with `curl`, PowerShell `irm`, or thin wrappers — no SSH required.
 
 License: GPL-3.0-or-later (see `LICENSE`).
+
+## Screenshots
+
+Real workspace screens from a migrated deployment with seeded demo data. The full 54-image gallery is in [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md).
+
+| Dashboard | Tasks | Finance |
+| --- | --- | --- |
+| ![Dashboard](docs/screenshots/15-dashboard.png) | ![Tasks](docs/screenshots/16-tasks.png) | ![Finance](docs/screenshots/21-finance.png) |
+
+| Events | Analytics | Public site |
+| --- | --- | --- |
+| ![Events](docs/screenshots/17-events.png) | ![Analytics](docs/screenshots/34-analytics.png) | ![Landing](docs/screenshots/01-landing.png) |
 
 ## Architecture
 
@@ -124,6 +136,8 @@ Every script in `package.json`:
 | `db:push` | `drizzle-kit push` | Push schema directly (dev only) |
 | `db:studio` | `drizzle-kit studio` | Open Drizzle Studio |
 | `db:seed` | `tsx scripts/seed.ts` | Seed a portal (`<slug> [packFile] [--set-password e=p]`) |
+| `db:seed:demo` | `tsx scripts/seed-demo.ts` | Idempotent realistic demo data for both portals (~127 rows each) |
+| `screenshots` | `tsx scripts/screenshots.ts` | 54 sequential low-impact headless screenshots into `docs/screenshots/` |
 | `config:check` | `tsx scripts/config.ts check` | Validate YAML, DB env vars, seed packs; exits 1 on failure |
 | `config:init` | `tsx scripts/config.ts init` | Write `deployment.example.local.yaml`; never overwrites or edits `deployment.yaml` |
 | `config:diff` | `tsx scripts/config.ts diff` | Compare YAML name, description, and logo with live workspace rows |
@@ -246,6 +260,7 @@ GPL-3.0-or-later. See `LICENSE` at the repo root.
 - `docs/sdk.md` — typed fetch client, authentication, pagination, and errors
 - `docs/runbook.md` — operations, config doctor, operator tokens, DR drills, health, recovery
 - `docs/FEATURES.md` — auditable feature completeness manifest
+- `docs/SCREENSHOTS.md` — 54-image gallery of the public site and workspace modules
 
 ## Contributing
 

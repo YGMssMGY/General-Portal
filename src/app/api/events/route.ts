@@ -83,7 +83,9 @@ export async function GET(request: NextRequest) {
             with: {
                 createdBy: { columns: { id: true, name: true, email: true, image: true } },
                 approvedBy: { columns: { id: true, name: true, email: true, image: true } },
-                annualPlan: { columns: { id: true, name: true, academicYear: true } },
+                annualPlan: {
+                    columns: { id: true, name: true, academicYear: true, deletedAt: true },
+                },
             },
         });
 
@@ -93,7 +95,13 @@ export async function GET(request: NextRequest) {
             const last = rows[rows.length - 1];
             if (last) nextCursor = encodeCursorValues([last.startDate.toISOString(), last.id]);
         }
-        const res = ok(rows);
+        const res = ok(
+            rows.map((r) => {
+                if (!r.annualPlan) return r;
+                const { deletedAt, ...annualPlan } = r.annualPlan;
+                return { ...r, annualPlan: deletedAt ? null : annualPlan };
+            }),
+        );
         res.headers.set("X-Next-Cursor", nextCursor ?? "");
         return res;
     } catch (e) {

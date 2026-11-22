@@ -63,9 +63,9 @@ async function assertEntity(
     if (entityType === "message") {
         const row = await t.db.query.messages.findFirst({
             where: eq(messages.id, entityId),
-            with: { thread: { columns: { workspaceId: true } } },
+            with: { thread: { columns: { workspaceId: true, deletedAt: true } } },
         });
-        if (!row || row.thread.workspaceId !== t.workspaceId) {
+        if (!row || row.thread.workspaceId !== t.workspaceId || row.thread.deletedAt) {
             throw new ApiError("Message not found", 404);
         }
         return;
