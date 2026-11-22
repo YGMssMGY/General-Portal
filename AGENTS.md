@@ -36,7 +36,7 @@ Providers: `microsoft-entra-id`, `basis-auth`, `oidc`, `saml`, `google`, `github
 
 ## Verification
 
-`pnpm verify` (oxfmt check plus lint plus typecheck plus build) before commit. Smoke (`SMOKE_EMAIL`, `SMOKE_PASSWORD`, seeded admin, live server) and E2E (`workers: 1`, setup/public/portal projects) need a live server plus migrated and seeded databases; they stay manual and CI-only.
+`pnpm verify` (oxfmt check plus lint, typecheck, build, unit tests, i18n, SEO, and security checks) before commit. Smoke (`SMOKE_EMAIL`, `SMOKE_PASSWORD`, seeded admin, live server) and E2E (`workers: 1`, setup/public/features/portal projects) need a live server plus migrated and seeded databases; they stay manual and CI-only.
 
 ## Never commit
 
@@ -44,4 +44,4 @@ Providers: `microsoft-entra-id`, `basis-auth`, `oidc`, `saml`, `google`, `github
 
 ## Docs map
 
-`docs/architecture.md`, `docs/deployment.md`, `docs/auth.md`, `docs/security.md`, `docs/i18n.md`, `docs/tui.md`, `docs/api.md`, `docs/runbook.md`. Keep docs tight and factual; verify every command, path, and env var exists before referencing it.
+`docs/architecture.md`, `docs/deployment.md`, `docs/auth.md`, `docs/security.md`, `docs/i18n.md`, `docs/tui.md`, `docs/api.md`, `docs/sdk.md`, `docs/runbook.md`, `docs/FEATURES.md`. Keep docs tight and factual; verify every command, path, and env var exists before referencing it.

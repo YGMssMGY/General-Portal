@@ -74,9 +74,9 @@ Knowledge:
 Platform:
 
 - `deployment.yaml` drives modules, nav, branding (validated `#rrggbb` primary, radius clamped to 0-32 px and injected as inline CSS variables), terminology (`useTerm()`), features, and limits
-- `pnpm tui`: Ink operator console with sites, migrate, backup, jobs, health, logs, danger, and a filterable Actions palette over the shared 41-action registry
+- `pnpm tui`: Ink operator console with sites, migrate, backup, jobs, health, logs, danger, and a filterable Actions palette over the shared 46-action registry
 - Operator API: `GET /api/ops` capability directory, `POST /api/ops/run`, `GET /api/ops/openapi.json`, `/api/ops/manifest.json`, `/api/ops/health`; scoped Bearer tokens; two-phase typed confirmations; zero-install via `curl` or `irm`
-- pg-boss queues: `nudge`, `digest`, `report-generate`, `webhook-deliver`, `retention`, `link-health`
+- pg-boss queues: `nudge`, `digest`, `report-generate`, `webhook-deliver`, `retention`, `link-health`, `scheduled-backup`
 - Webhooks with HMAC `X-Portal-Signature` plus scoped API tokens (`manage_api_tokens`)
 - OpenAPI description at `GET /api/public/openapi.json`
 - Append-only audit log with sha256 hash chain plus `verifyAuditChain`; operator runs append to `.tui-audit.log`
@@ -118,7 +118,7 @@ Every script in `package.json`:
 | `i18n:check` | `node scripts/checks.cjs i18n` | Five-locale key parity (missing and extra keys) |
 | `seo:check` | `node scripts/checks.cjs seo` | SEO files, landing metadata, no self-fetch |
 | `security:check` | `node scripts/checks.cjs security` | Static scan for banned patterns |
-| `perf:check` | `node scripts/checks.cjs perf` | Static performance-pattern scan |
+| `perf:check` | `node scripts/checks.cjs perf` | `EXPLAIN ANALYZE` on indexed queries via `MIGRATE_URL`; skips when unset |
 | `db:generate` | `drizzle-kit generate` | Generate SQL migration from `src/db/schema.ts` |
 | `db:migrate` | `tsx scripts/migrate.ts` | Apply pending migrations (`MIGRATE_URL` or argv) |
 | `db:push` | `drizzle-kit push` | Push schema directly (dev only) |
@@ -131,7 +131,7 @@ Every script in `package.json`:
 | `tui` | `tsx src/tui/index.tsx` | Operator console (TTY only) |
 | `smoke` | `tsx scripts/smoke.ts` | Live-server smoke suite (`SMOKE_EMAIL`, `SMOKE_PASSWORD`) |
 | `test:e2e` | `playwright test` | Playwright suite, workers: 1 |
-| `verify` | `bash scripts/verify.sh` | oxfmt check + lint + typecheck + build |
+| `verify` | `bash scripts/verify.sh` | oxfmt check + lint + typecheck + build + unit tests + i18n + SEO + security checks |
 
 `config:check`, `config:diff`, and `config:doctor` are also available as operator actions (`config.check`, `config.diff`, `config.doctor`). See `docs/deployment.md`.
 
@@ -184,7 +184,7 @@ Magic link is a purpose of `email-otp` (`purpose: magic-link`), not a tenth prov
 
 ## Operator API and CLI
 
-The same 41 registered actions drive the local TUI Actions palette and the remote operator API. Discovery endpoints (`GET /api/ops`, `/api/ops/openapi.json`, `/api/ops/manifest.json`, `/api/ops/health`) carry no secrets. Execution uses `POST /api/ops/run` with a Bearer operator token; HTTPS is required in production. No SSH is used anywhere.
+The same 46 registered actions drive the local TUI Actions palette and the remote operator API. Discovery endpoints (`GET /api/ops`, `/api/ops/openapi.json`, `/api/ops/manifest.json`, `/api/ops/health`) carry no secrets. Execution uses `POST /api/ops/run` with a Bearer operator token; HTTPS is required in production. No SSH is used anywhere.
 
 Scopes are `ops:read`, `ops:deploy`, `ops:backup`, and `ops:danger`. The bootstrap token `OPS_API_TOKEN` carries all four scopes. Mint narrower, short-lived tokens with the `ops.token` action (requires `ops:danger`); `OPS_SECRET` signs issued tokens and confirmation tokens and falls back to `AUTH_SECRET` when unset. Optional `OPS_ALLOWED_IPS` restricts source IPs. Destructive actions return `409` on the first call with a `confirmationToken`, a preview, and a five-minute expiry; repeat with that token and `typedValue` equal to the target slug or email. Supply `idempotencyKey` (or the `Idempotency-Key` header) for safe retries within ten minutes. Every run, including denials, appends to `.tui-audit.log`.
 
@@ -212,7 +212,7 @@ irm -Method Post -Uri "$env:GP_URL/api/ops/run" `
     -Body '{"action":"site.health","params":{}}'
 ```
 
-For repeated use, the checked-in wrappers `cli/gp.sh` and `cli/gp.ps1` read the same `GP_URL` and `GP_TOKEN` and support `list`, `explain`, `run`, or any action id with a JSON params object. The action groups are site, migrate, backup (+ `dr.drill`), job, ops, config, user, data, system, and danger. Full list, request shape, status codes, and examples are in `docs/api.md`; remote operation is in `docs/tui.md`.
+For repeated use, the checked-in wrappers `cli/gp.sh` and `cli/gp.ps1` read the same `GP_URL` and `GP_TOKEN` and support `list`, `explain`, `run`, or any action id with a JSON params object. The action groups are site, migrate, backup (+ `dr.drill`), job, ops, config, user, data, system, webhook, and danger. Full list, request shape, status codes, and examples are in `docs/api.md`; remote operation is in `docs/tui.md`.
 
 ## i18n
 
@@ -243,6 +243,7 @@ GPL-3.0-or-later. See `LICENSE` at the repo root.
 - `docs/i18n.md` — locales, key workflow, review status
 - `docs/tui.md` — operator console screens, Actions palette, safety rails, remote operation
 - `docs/api.md` — envelope, pagination, endpoint catalogue, operator API, webhooks
+- `docs/sdk.md` — typed fetch client, authentication, pagination, and errors
 - `docs/runbook.md` — operations, config doctor, operator tokens, DR drills, health, recovery
 - `docs/FEATURES.md` — auditable feature completeness manifest
 
@@ -260,4 +261,4 @@ Start with the issue templates in `.github/ISSUE_TEMPLATE/` and the checklist in
 
 ## Security
 
-Report vulnerabilities privately to the deployment operator with portal slug, route, and timestamp; never include session or operator tokens. The threat model, controls, and operator/agent API guidance are in `docs/security.md`.
+Report vulnerabilities privately through GitHub Security Advisories for this repository (see `SECURITY.md`); do not open a public issue. Include the portal slug, route, and timestamp; never include session or operator tokens. The threat model, controls, and operator/agent API guidance are in `docs/security.md`.

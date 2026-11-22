@@ -9,7 +9,7 @@ This manifest is an audit of the working tree on branch `feat/general-workspace-
 | API route families | 61 (179 `route.ts` files) | `src/app/api/**/route.ts` |
 | Portal pages | 55 (plus 13 public site pages; 68 `page.tsx` total) | `src/app/[portal]/**/page.tsx` |
 | Operator actions | 46 | `listActions()` in `src/ops/registry.ts` |
-| Locales and keys | 5 locales, 1,178 keys each | `pnpm i18n:check` |
+| Locales and keys | 5 locales, 1,172 keys each | `pnpm i18n:check` |
 | CI workflows | 11 | `.github/workflows/*.yml` |
 | Deployment modes | 6 | `docs/deployment.md` |
 | Background queues | 7 | `src/lib/jobs/*.ts` |
@@ -186,7 +186,7 @@ Deployment modes: bare Node (authoritative), Docker Compose, dev container/Codes
 | Typed SDK client | `src/lib/sdk/client.ts`, `docs/sdk.md` | `pnpm typecheck` |
 | Machine-readable API descriptions | `src/app/api/ops/openapi.json/route.ts`, `src/app/api/public/openapi.json/route.ts` | `seo:check` |
 | Unit suite (cursor codec, permissions, recurrence, uploads, SSRF, JSON-LD, ops engine) | `tests/unit/core.test.ts` | `test:unit` |
-| E2E projects: setup, public, ops, a11y, portal | `tests/e2e/*.spec.ts`, `tests/e2e/auth.setup.ts`, `playwright.config.ts` | `test:e2e` |
+| E2E projects: setup, public, ops, a11y, features, portal | `tests/e2e/*.spec.ts`, `tests/e2e/auth.setup.ts`, `playwright.config.ts` | `test:e2e` |
 | Accessibility E2E with axe | `tests/e2e/a11y.spec.ts` | `test:e2e` |
 | Docs set (architecture, deployment, auth, security, i18n, tui, api, runbook, sdk) | `docs/*.md` | Manual review |
 | Community standards, issue and PR templates, dependabot, labeler | `.github/ISSUE_TEMPLATE/*`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/dependabot.yml`, `.github/CODEOWNERS` | `labeler.yml` |
@@ -237,12 +237,12 @@ Deployment modes: bare Node (authoritative), Docker Compose, dev container/Codes
 | --- | --- |
 | `pnpm verify` | Runs `oxfmt --check`, ESLint, `tsc --noEmit`, `next build`, unit tests, i18n, SEO, and security checks. Static only; no server or database. |
 | `pnpm test:unit` | Vitest: cursor codec, permission grants, recurrence, upload sniffing, SSRF blocking, JSON-LD escaping, operator confirmation and unknown actions. |
-| `pnpm i18n:check` | Reports missing and extra keys across `en-US`, `zh-CN`, `de-DE`, `fr-FR`, `es-ES`; currently 1,178 keys per locale. |
+| `pnpm i18n:check` | Reports missing and extra keys across `en-US`, `zh-CN`, `de-DE`, `fr-FR`, `es-ES`; currently 1,172 keys per locale. |
 | `pnpm seo:check` | Checks sitemap, robots, manifest, OG and Twitter images, JSON-LD helper, landing metadata, and absence of landing self-fetch. |
 | `pnpm security:check` | Static scan of `src/` and `scripts/` for `dangerouslySetInnerHTML`, `eval`, `new Function`, and `sql.raw`. |
 | `pnpm perf:check` | Runs `EXPLAIN ANALYZE` on workspace and task queries against `MIGRATE_URL`; skips when unset. Fails on sequential scans. |
 | `pnpm smoke` | Live-server suite using a seeded admin (`SMOKE_EMAIL`, `SMOKE_PASSWORD`), including cross-portal isolation. Requires a running server and migrated, seeded databases. |
-| `pnpm test:e2e` | Playwright projects `setup`, `public`, `ops`, `a11y`, `portal` with `workers: 1`; needs a live server plus seeded databases. |
+| `pnpm test:e2e` | Playwright projects `setup`, `public`, `ops`, `a11y`, `features`, `portal` with `workers: 1`; needs a live server plus seeded databases. |
 
 ## Known deployment prerequisites
 

@@ -1,7 +1,21 @@
+import { createHmac } from "node:crypto";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const token = process.env.OPS_API_TOKEN ?? "local-ops-token-for-verification";
 const headers = { Authorization: `Bearer ${token}`, "X-Forwarded-Proto": "https" };
+
+function scopedReadToken(): string {
+    const secret = process.env.OPS_SECRET || process.env.AUTH_SECRET || "";
+    const payload = Buffer.from(
+        JSON.stringify({
+            sub: "e2e-readonly",
+            scopes: ["ops:read"],
+            exp: Math.floor(Date.now() / 1000) + 3600,
+        }),
+    ).toString("base64url");
+    const signature = createHmac("sha256", secret).update(payload).digest("base64url");
+    return `${payload}.${signature}`;
+}
 
 async function run(request: APIRequestContext, body: unknown) {
     return request.post("/api/ops/run", { headers, data: body });
@@ -44,4 +58,22 @@ test("Destructive actions require a typed confirmation", async ({ request }) => 
         typedValue: "wrong-slug",
     });
     expect(mismatch.status()).toBe(400);
+});
+
+test("Scoped read-only tokens cannot deploy", async ({ request }) => {
+    const scopedHeaders = {
+        Authorization: `Bearer ${scopedReadToken()}`,
+        "X-Forwarded-Proto": "https",
+    };
+    const read = await request.post("/api/ops/run", {
+        headers: scopedHeaders,
+        data: { action: "site.list", params: {} },
+    });
+    expect(read.status()).toBe(200);
+
+    const deploy = await request.post("/api/ops/run", {
+        headers: scopedHeaders,
+        data: { action: "site.add", params: {} },
+    });
+    expect(deploy.status()).toBe(403);
 });

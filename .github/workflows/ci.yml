@@ -36,3 +36,15 @@ jobs:
               run: pnpm typecheck
             - name: Build
               run: pnpm build
+            - name: Unit tests
+              run: pnpm test:unit
+            - name: Locale parity
+              run: pnpm i18n:check
+            - name: SEO checks
+              run: pnpm seo:check
+            - name: Security checks
+              run: pnpm security:check
+            - name: Placeholder marker checks
+              run: node scripts/checks.cjs placeholders
+            - name: Navigation path checks
+              run: node scripts/checks.cjs nav

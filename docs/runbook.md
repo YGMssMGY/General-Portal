@@ -2,7 +2,7 @@
 
 ## Common ops
 
-- Restart: restart the Node process. This resets in-memory rate-limit buckets, re-runs deployment reconcile, and restarts pg-boss (`nudge`, `digest`, `report-generate`, `webhook-deliver`, `retention`, `link-health`).
+- Restart: restart the Node process. This resets in-memory rate-limit buckets, re-runs deployment reconcile, and restarts pg-boss (`nudge`, `digest`, `report-generate`, `webhook-deliver`, `retention`, `link-health`, `scheduled-backup`).
 - Reseed: `pnpm exec tsx scripts/seed.ts <slug> [packFile]`; idempotent, safe to re-run; add `--set-password <email>=<password>` to set a local credential.
 - Rotate secret: set a new `AUTH_SECRET`, then revoke sessions (account page plus TUI Danger) so old tokens cannot linger.
 - Revoke sessions: per user via `DELETE /api/account/sessions` on the account page; per portal via the TUI Danger screen (revokes all non-revoked sessions, typed confirmation, audit-logged); disable a user to block re-login.

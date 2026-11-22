@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require("node:fs");
 const path = require("node:path");
+const YAML = require("yaml");
 
 const root = path.resolve(__dirname, "..");
 const mode = process.argv[2] ?? "all";
@@ -99,6 +100,65 @@ function securityCheck() {
     return violations === 0;
 }
 
+function placeholderCheck() {
+    const banned = [
+        { re: /\b(TODO|FIXME|HACK)\b/, name: "placeholder marker" },
+        { re: /\b(not implemented|coming soon)\b/i, name: "unimplemented copy" },
+    ];
+    const rootSrc = path.join(root, "src");
+    let violations = 0;
+    function walk(dir) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name)) {
+                const lines = fs.readFileSync(full, "utf8").split(/\r?\n/);
+                lines.forEach((line, index) => {
+                    for (const item of banned) {
+                        if (item.re.test(line)) {
+                            violations += 1;
+                            console.error(
+                                `FAIL ${path.relative(root, full)}:${index + 1}: ${item.name}`,
+                            );
+                        }
+                    }
+                });
+            }
+        }
+    }
+    walk(rootSrc);
+    console.log(
+        violations === 0 ? "PASS no placeholder markers in src" : `FAIL ${violations} markers`,
+    );
+    return violations === 0;
+}
+
+function navPathsCheck() {
+    const doc = YAML.parse(fs.readFileSync(path.join(root, "deployment.yaml"), "utf8"));
+    const portals = Array.isArray(doc?.portals) ? doc.portals : [];
+    const virtualPaths = new Set(["/partnerships", "/accounts"]);
+    let missing = 0;
+    let checked = 0;
+    for (const portal of portals) {
+        for (const item of Array.isArray(portal?.nav) ? portal.nav : []) {
+            const navPath = item?.path;
+            if (typeof navPath !== "string" || !navPath.startsWith("/")) continue;
+            if (virtualPaths.has(navPath)) continue;
+            checked += 1;
+            const segments = navPath.split("/").filter(Boolean);
+            const page = path.join(root, "src", "app", "[portal]", ...segments, "page.tsx");
+            const exists = fs.existsSync(page);
+            console.log(`${exists ? "PASS" : "FAIL"} nav path ${navPath}`);
+            if (!exists) missing += 1;
+        }
+    }
+    if (checked === 0) {
+        console.error("FAIL no nav paths found in deployment.yaml");
+        return false;
+    }
+    return missing === 0;
+}
+
 function perfCheck() {
     const url = process.env.MIGRATE_URL;
     if (!url) {
@@ -138,6 +198,8 @@ const checks = {
     i18n: i18nCheck,
     seo: seoCheck,
     security: securityCheck,
+    placeholders: placeholderCheck,
+    nav: navPathsCheck,
 };
 let allOk = true;
 if (mode === "all") {
