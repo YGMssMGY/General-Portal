@@ -29,9 +29,9 @@ jobs:
         env:
             DATABASE_URL_DEVELOPERS: ${{ vars.DATABASE_URL_DEVELOPERS || secrets.DATABASE_URL_DEVELOPERS || 'postgres://postgres@localhost:5432/developers' }}
             DATABASE_URL_STUCO: ${{ vars.DATABASE_URL_STUCO || secrets.DATABASE_URL_STUCO || 'postgres://postgres@localhost:5432/stuco' }}
-            AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-            SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
-            SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+            AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'ci-test-auth-secret-not-for-production' }}
+            SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL || 'richard.jiang@basischina.com' }}
+            SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD || 'CiSmokeTest12345' }}
             E2E_PORTAL: ${{ vars.E2E_PORTAL || 'developers' }}
             AUTH_PROVIDERS_DEVELOPERS: google
             GOOGLE_CLIENT_ID: e2e-client-id

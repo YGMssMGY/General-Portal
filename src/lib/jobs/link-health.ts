@@ -104,12 +104,16 @@ async function handle(jobs: Job<LinkHealthData>[]): Promise<void> {
     for (const job of jobs) {
         const only = job.data?.portal;
         const slugs = only ? [only] : listPortals().map((p) => p.slug);
-        for (const slug of slugs) {
-            try {
-                await linkHealthPortal(slug);
-            } catch (err) {
-                logger.error({ err, portal: slug }, "link health failed");
-            }
+        for (let i = 0; i < slugs.length; i += 4) {
+            await Promise.all(
+                slugs.slice(i, i + 4).map(async (slug) => {
+                    try {
+                        await linkHealthPortal(slug);
+                    } catch (err) {
+                        logger.error({ err, portal: slug }, "link health failed");
+                    }
+                }),
+            );
         }
     }
 }

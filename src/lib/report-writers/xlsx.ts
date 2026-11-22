@@ -1,7 +1,6 @@
 import { deflateRawSync } from "node:zlib";
 
 export type XlsxValue = string | number | null;
-export type XlsxRow = Record<string, XlsxValue>;
 
 const crcTable: Uint32Array = (() => {
     const table = new Uint32Array(256);
@@ -115,37 +114,37 @@ function cellText(value: XlsxValue): string {
     return typeof value === "number" ? String(value) : value;
 }
 
-export function writeXlsx(rows: XlsxRow[], sheetName: string): Buffer {
-    const headers: string[] = [];
+function toValue(value: unknown): XlsxValue {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number") return value;
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
+}
+
+export function writeXlsx(header: string[], rows: unknown[][], sheetName: string): Buffer {
+    const widths = header.map((h) => Math.min(50, Math.max(8, h.length + 2)));
     for (const row of rows) {
-        for (const key of Object.keys(row)) {
-            if (!headers.includes(key)) headers.push(key);
+        for (let i = 0; i < header.length; i++) {
+            const length = cellText(toValue(row[i])).length + 2;
+            if (length > widths[i]!) widths[i] = Math.min(50, Math.max(8, length));
         }
     }
-    const widths = headers.map((header) => {
-        let longest = header.length;
-        for (const row of rows) {
-            const length = cellText(row[header] ?? null).length;
-            if (length > longest) longest = length;
-        }
-        return Math.min(50, Math.max(8, longest + 2));
-    });
     const title = cleanSheetName(sheetName);
     const cols =
-        headers.length === 0
+        header.length === 0
             ? ""
-            : `<cols>${headers.map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i]}" customWidth="1"/>`).join("")}</cols>`;
-    const headerCells = headers
+            : `<cols>${header.map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i]}" customWidth="1"/>`).join("")}</cols>`;
+    const headerCells = header
         .map(
-            (header, i) =>
-                `<c r="${columnName(i)}1" s="1" t="inlineStr"><is><t>${escapeXml(header)}</t></is></c>`,
+            (text, i) =>
+                `<c r="${columnName(i)}1" s="1" t="inlineStr"><is><t>${escapeXml(text)}</t></is></c>`,
         )
         .join("");
     const bodyRows = rows
         .map((row, r) => {
-            const cells = headers
-                .map((header, i) => {
-                    const value: XlsxValue = row[header] ?? null;
+            const cells = header
+                .map((_, i) => {
+                    const value = toValue(row[i]);
                     const ref = `${columnName(i)}${r + 2}`;
                     if (value === null) return `<c r="${ref}"/>`;
                     if (typeof value === "number" && Number.isFinite(value)) {
@@ -160,7 +159,7 @@ export function writeXlsx(rows: XlsxRow[], sheetName: string): Buffer {
     const sheet = Buffer.from(
         `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
             `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-            `${cols}<sheetData>${headers.length === 0 ? "" : `<row r="1">${headerCells}</row>`}${bodyRows}</sheetData></worksheet>`,
+            `${cols}<sheetData>${header.length === 0 ? "" : `<row r="1">${headerCells}</row>`}${bodyRows}</sheetData></worksheet>`,
         "utf8",
     );
     const workbook = Buffer.from(

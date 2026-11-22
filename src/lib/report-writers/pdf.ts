@@ -30,14 +30,21 @@ function cellString(value: PdfValue): string {
     return typeof value === "number" ? String(value) : value;
 }
 
+function toValue(value: unknown): PdfValue {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number") return value;
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
+}
+
 function fixed(n: number): string {
     return (Math.round(n * 100) / 100).toString();
 }
 
-export function writePdf(title: string, headers: string[], rows: Array<PdfValue[]>): Buffer {
+export function writePdf(title: string, headers: string[], rows: unknown[][]): Buffer {
     const cleanHeaders = headers.map((h) => pdfEscape(h));
     const cleanRows = rows.map((row) =>
-        headers.map((_, i) => pdfEscape(cellString(row[i] ?? null))),
+        headers.map((_, i) => pdfEscape(cellString(toValue(row[i])))),
     );
     const cleanTitle = pdfEscape(title);
     const usableWidth = PAGE_WIDTH - MARGIN * 2;

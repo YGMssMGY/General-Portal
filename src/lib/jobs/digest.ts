@@ -54,9 +54,10 @@ async function digestPortal(slug: string): Promise<void> {
         ),
         columns: { id: true, name: true, email: true },
     });
+    const byId = new Map(people.map((p) => [p.id, p]));
     const lines = pending
         .map((u) => {
-            const person = people.find((p) => p.id === u.userId);
+            const person = byId.get(u.userId);
             return { to: person?.email ?? "", name: person?.name ?? "member", n: u.n };
         })
         .filter((l) => l.to.length > 0);
@@ -75,12 +76,20 @@ async function digestPortal(slug: string): Promise<void> {
         auth: config.smtp.user ? { user: config.smtp.user, pass: config.smtp.pass } : undefined,
     });
     const from = config.smtp.from || config.smtp.user;
-    for (const l of lines) {
+    const send = async (l: (typeof lines)[number]) => {
         const plural = l.n === 1 ? "" : "s";
         const subject = `Your notification digest: ${l.n} unread notification${plural}`;
         const text = `Dear ${l.name},\n\nYou have ${l.n} unread notification${plural} in the ${slug} workspace. Please sign in to review them.\n\n${config.baseUrl}\n\nRegards,\nGeneral Portal`;
         const html = `<p>Dear ${escapeHtml(l.name)},</p><p>You have <strong>${l.n}</strong> unread notification${plural} in the ${escapeHtml(slug)} workspace. Please sign in to review them.</p><p><a href="${escapeHtml(config.baseUrl)}">${escapeHtml(config.baseUrl)}</a></p><p>Regards,<br/>General Portal</p>`;
         await transport.sendMail({ from, to: l.to, subject, text, html });
+    };
+    for (let i = 0; i < lines.length; i += 10) {
+        const results = await Promise.allSettled(lines.slice(i, i + 10).map(send));
+        for (const result of results) {
+            if (result.status === "rejected") {
+                logger.error({ err: result.reason, portal: slug }, "digest send failed");
+            }
+        }
     }
     logger.info({ portal: slug, recipients: lines.length, total }, "digest sent");
 }
@@ -89,12 +98,16 @@ async function handle(jobs: Job<DigestData>[]): Promise<void> {
     for (const job of jobs) {
         const only = job.data?.portal;
         const slugs = only ? [only] : listPortals().map((p) => p.slug);
-        for (const slug of slugs) {
-            try {
-                await digestPortal(slug);
-            } catch (err) {
-                logger.error({ err, portal: slug }, "digest failed");
-            }
+        for (let i = 0; i < slugs.length; i += 4) {
+            await Promise.all(
+                slugs.slice(i, i + 4).map(async (slug) => {
+                    try {
+                        await digestPortal(slug);
+                    } catch (err) {
+                        logger.error({ err, portal: slug }, "digest failed");
+                    }
+                }),
+            );
         }
     }
 }
