@@ -322,11 +322,7 @@ async function main(): Promise<void> {
             body: JSON.stringify({ email: EMAIL, password: `${PASSWORD}-wrong` }),
             redirect: "manual",
         });
-        check(
-            "wrong-password login returns 401",
-            wrongPassword.status === 401,
-            `status=${wrongPassword.status}`,
-        );
+        check("wrong-password login returns 401", wrongPassword.status === 401, "expected 401");
 
         const csrf = await authed("/api/tasks", first.slug, firstSession, {
             method: "POST",
