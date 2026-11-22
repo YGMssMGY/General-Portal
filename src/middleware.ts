@@ -156,6 +156,15 @@ export function middleware(request: NextRequest): NextResponse {
         path === "/" ||
         path === "/login" ||
         path === "/showcase" ||
+        path === "/features" ||
+        path === "/compare" ||
+        path === "/changelog" ||
+        path === "/roadmap" ||
+        path === "/security" ||
+        path === "/about" ||
+        path === "/docs" ||
+        path === "/demo" ||
+        path.startsWith("/use-cases") ||
         path.startsWith("/api/auth/") ||
         path.startsWith("/api/public/") ||
         path === "/api/health" ||
