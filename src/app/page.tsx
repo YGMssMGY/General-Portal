@@ -1,24 +1,49 @@
-import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
+import { getDb } from "@/db/client";
+import { workspaces } from "@/db/schema";
+import { listPortals } from "@/lib/deployment";
 import { PortalGrid, type PublicPortal } from "./PortalGrid";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
-export const metadata = { title: "General Portal" };
+const SITE_DESCRIPTION =
+    "A unified workspace platform for clubs, councils, and communities to collaborate, organize events, and manage their operations.";
 
-async function getPortals(): Promise<PublicPortal[] | null> {
-    const h = await headers();
-    const proto = h.get("x-forwarded-proto") ?? "http";
-    const host = h.get("host") ?? "localhost:3000";
-    const res = await fetch(`${proto}://${host}/api/public/portals`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { success: boolean; data?: PublicPortal[] };
-    return json.success ? (json.data ?? []) : null;
-}
+export const metadata = {
+    title: "General Portal",
+    description: SITE_DESCRIPTION,
+    openGraph: {
+        title: "General Portal",
+        description: SITE_DESCRIPTION,
+        type: "website",
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "General Portal",
+        description: SITE_DESCRIPTION,
+    },
+    alternates: { canonical: "/" },
+    robots: { index: true, follow: true },
+};
 
 export default async function HomePage() {
     const t = await getTranslations("landing");
-    const portals = await getPortals();
+    const rows = await Promise.all(
+        listPortals().map(async ({ slug }) => {
+            try {
+                return await getDb(slug).query.workspaces.findFirst({
+                    where: eq(workspaces.slug, slug),
+                    columns: { slug: true, name: true, description: true, logoUrl: true },
+                });
+            } catch {
+                return null;
+            }
+        }),
+    );
+    const portals: PublicPortal[] | null = rows.filter(
+        (row): row is NonNullable<typeof row> => row !== null,
+    );
 
     return (
         <div

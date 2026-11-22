@@ -99,7 +99,10 @@
         "dues": "Beiträge",
         "assets": "Vermögen",
         "kudos": "Kudos",
-        "customFields": "Benutzerdefinierte Felder"
+        "customFields": "Benutzerdefinierte Felder",
+        "search": "Suche",
+        "budget": "Budget",
+        "partnerships": "Partnerschaften"
     },
     "auth": {
         "signIn": "Anmelden",
