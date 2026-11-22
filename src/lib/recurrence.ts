@@ -75,6 +75,32 @@ export function expandRecurrence(task: RecurrentTask, start: Date, end: Date): D
     const out: Date[] = [];
     let cur = anchor;
     let generated = 0;
+    if (cur < start) {
+        let skipped: number;
+        if (rule.freq === "monthly") {
+            skipped = 0;
+            while (cur < start) {
+                cur = advance(cur, rule.freq, rule.interval);
+                skipped += 1;
+            }
+        } else {
+            const daysPerStep = rule.freq === "daily" ? 1 : 7;
+            skipped = Math.max(
+                0,
+                Math.floor(
+                    (start.getTime() - cur.getTime()) / (86_400_000 * daysPerStep * rule.interval),
+                ),
+            );
+            const jumped = new Date(cur.getTime());
+            jumped.setDate(jumped.getDate() + skipped * daysPerStep * rule.interval);
+            cur = jumped;
+            while (cur < start) {
+                cur = advance(cur, rule.freq, rule.interval);
+                skipped += 1;
+            }
+        }
+        generated = skipped;
+    }
     while (cur <= end && out.length < 366) {
         if (until && cur > until) break;
         if (rule.count !== undefined && generated >= rule.count) break;

@@ -39,6 +39,23 @@ const entitySchema = z.object({
 });
 type EntityInput = z.infer<typeof entitySchema>;
 
+async function mapWithConcurrency<T, R>(
+    items: readonly T[],
+    limit: number,
+    fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+    const out = new Array<R>(items.length);
+    let next = 0;
+    async function worker() {
+        while (next < items.length) {
+            const i = next++;
+            out[i] = await fn(items[i]!);
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+    return out;
+}
+
 export interface TrashItem {
     entityType: TrashEntity;
     id: string;
@@ -606,10 +623,10 @@ export async function GET(request: NextRequest) {
         if (cursorRaw && (before === null || Number.isNaN(before.getTime()))) {
             throw new ApiError("Invalid cursor", 400);
         }
-        const merged: TrashItem[] = [];
-        for (const entity of entities) {
-            merged.push(...(await listEntity(t.db, t.workspaceId, entity, before, 20)));
-        }
+        const lists = await mapWithConcurrency(entities, 6, (entity) =>
+            listEntity(t.db, t.workspaceId, entity, before, 20),
+        );
+        const merged: TrashItem[] = lists.flat();
         merged.sort((a, b) => (a.deletedAt < b.deletedAt ? 1 : -1));
         const items = merged.slice(0, 50);
         const nextCursor = items.length > 0 ? items[items.length - 1].deletedAt : null;
