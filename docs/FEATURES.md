@@ -6,8 +6,8 @@ This manifest is an audit of the working tree on branch `feat/general-workspace-
 
 | Metric | Count | Source of truth |
 | --- | --- | --- |
-| API route families | 61 (179 `route.ts` files) | `src/app/api/**/route.ts` |
-| Portal pages | 55 (plus 13 public site pages; 68 `page.tsx` total) | `src/app/[portal]/**/page.tsx` |
+| API route families | 61 (180 `route.ts` files) | `src/app/api/**/route.ts` |
+| Portal pages | 57 (plus 13 public site pages; 70 `page.tsx` total) | `src/app/[portal]/**/page.tsx` |
 | Operator actions | 46 | `listActions()` in `src/ops/registry.ts` |
 | Locales and keys | 5 locales, 1,172 keys each | `pnpm i18n:check` |
 | CI workflows | 11 | `.github/workflows/*.yml` |

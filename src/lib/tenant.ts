@@ -45,7 +45,9 @@ function sha256Hex(v: string): string {
 }
 
 export function resolvePortalSlug(request: NextRequest): string {
-    const fallback = listPortalSlugs()[0] ?? "developers";
+    const configured = listPortalSlugs();
+    if (configured.length === 0) throw new ApiError("No workspaces configured", 503);
+    const fallback = configured[0];
     const hinted = getCookie(request, config.portalCookie) ?? fallback;
     const slug = normalizeSlug(hinted) ?? fallback;
     if (!isKnownPortal(slug)) throw new ApiError("Unknown workspace", 404);
