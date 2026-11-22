@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { fetchJson } from "@/lib/api-client";
 import { AuthSessionProvider, useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
@@ -105,6 +106,20 @@ function WebhooksContent() {
             }),
         onSuccess: (r) => setTestResult(r.ok ? t("testSuccess") : String(r.status)),
         onError: (e) => setTestResult(e instanceof Error ? e.message : String(e)),
+    });
+
+    const replayMutation = useMutation({
+        mutationFn: (hook: Webhook) =>
+            fetchJson<{ queued: boolean; event: string }>(`/api/webhooks/${hook.id}/replay`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    event: hook.events[0] ?? "webhook.replay",
+                    payload: { webhookId: hook.id, name: hook.name, replay: true },
+                }),
+            }),
+        onSuccess: (r) => toast.success(t("replaySuccess", { event: r.event })),
+        onError: (e) => toast.error(e instanceof Error ? e.message : t("replayFailed")),
     });
 
     if (!canManage) {
@@ -238,6 +253,24 @@ function WebhooksContent() {
                             >
                                 {h.active ? t("active") : t("inactive")}
                             </span>
+                            <button
+                                type="button"
+                                onClick={() => replayMutation.mutate(h)}
+                                disabled={replayMutation.isPending}
+                                style={{
+                                    padding: "8px 16px",
+                                    borderRadius: "var(--radius-sm)",
+                                    border: "1px solid var(--color-border)",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    fontFamily: "inherit",
+                                    backgroundColor: "transparent",
+                                    color: "var(--color-text)",
+                                }}
+                            >
+                                {t("replay")}
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => testMutation.mutate(h.id)}
