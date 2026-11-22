@@ -43,7 +43,6 @@ portals:
               purchase_requests,
               calendar,
               search,
-              accounts,
               budget,
               my_work,
               onboarding,
@@ -143,7 +142,7 @@ portals:
             label: Notifications
             icon: bell
             module: notifications
-          - path: /partnerships
+          - path: /cooperation
             label: Partnerships
             icon: handshake
             module: partnerships
@@ -159,10 +158,6 @@ portals:
             label: Search
             icon: search
             module: search
-          - path: /accounts
-            label: Accounts
-            icon: wallet
-            module: accounts
           - path: /budget
             label: Budget
             icon: piggy-bank
@@ -213,7 +208,6 @@ portals:
               purchase_requests,
               calendar,
               search,
-              accounts,
               budget,
               my_work,
               onboarding,
@@ -313,7 +307,7 @@ portals:
             label: Notifications
             icon: bell
             module: notifications
-          - path: /partnerships
+          - path: /cooperation
             label: Partnerships
             icon: handshake
             module: partnerships
@@ -329,10 +323,6 @@ portals:
             label: Search
             icon: search
             module: search
-          - path: /accounts
-            label: Accounts
-            icon: wallet
-            module: accounts
           - path: /budget
             label: Budget
             icon: piggy-bank

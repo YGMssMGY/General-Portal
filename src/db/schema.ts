@@ -12,7 +12,7 @@ import {
     uuid,
     varchar,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { desc, relations, sql } from "drizzle-orm";
 
 export const roleEnum = pgEnum("Role", ["admin", "officer", "member"]);
 export const proposalStatusEnum = pgEnum("ProposalStatus", ["pending", "approved", "rejected"]);
@@ -114,7 +114,13 @@ export const comments = pgTable(
         deletedAt: deletedAt(),
     },
     (t) => [
-        index("comments_ws_entity_idx").on(t.workspaceId, t.entityType, t.entityId),
+        index("comments_ws_entity_idx").on(
+            t.workspaceId,
+            t.entityType,
+            t.entityId,
+            desc(t.createdAt),
+            desc(t.id),
+        ),
         index("comments_user_idx").on(t.userId),
     ],
 );
@@ -181,6 +187,9 @@ export const subgroups = pgTable(
     (t) => [
         uniqueIndex("subgroups_ws_name_uidx").on(t.workspaceId, t.name),
         index("subgroups_ws_idx").on(t.workspaceId),
+        index("subgroups_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -225,6 +234,9 @@ export const proposals = pgTable(
         index("proposals_ws_idx").on(t.workspaceId),
         index("proposals_ws_status_idx").on(t.workspaceId, t.status),
         index("proposals_ws_created_idx").on(t.workspaceId, t.createdAt),
+        index("proposals_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -284,6 +296,12 @@ export const tasks = pgTable(
         index("tasks_ws_created_idx").on(t.workspaceId, t.createdAt),
         index("tasks_meeting_idx").on(t.meetingId),
         index("tasks_subgroup_idx").on(t.subgroupId),
+        index("tasks_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
+        index("tasks_active_idx")
+            .on(t.workspaceId, t.createdAt)
+            .where(sql`${t.deletedAt} IS NULL`),
     ],
 );
 
@@ -374,6 +392,12 @@ export const events = pgTable(
         index("events_approval_idx").on(t.approvalStatus),
         index("events_ws_created_idx").on(t.workspaceId, t.createdAt),
         index("events_plan_idx").on(t.annualPlanId),
+        index("events_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
+        index("events_active_idx")
+            .on(t.workspaceId, t.startDate)
+            .where(sql`${t.deletedAt} IS NULL`),
     ],
 );
 
@@ -399,6 +423,9 @@ export const meetings = pgTable(
         index("meetings_ws_idx").on(t.workspaceId),
         index("meetings_ws_start_idx").on(t.workspaceId, t.startTime),
         index("meetings_ws_created_idx").on(t.workspaceId, t.createdAt),
+        index("meetings_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -464,6 +491,12 @@ export const attendance = pgTable(
         index("attendance_meeting_idx").on(t.meetingId),
         index("attendance_event_idx").on(t.eventId),
         index("attendance_user_idx").on(t.workspaceId, t.userId),
+        uniqueIndex("attendance_ws_user_meeting_uidx")
+            .on(t.workspaceId, t.userId, t.meetingId)
+            .where(sql`${t.meetingId} IS NOT NULL`),
+        uniqueIndex("attendance_ws_user_event_uidx")
+            .on(t.workspaceId, t.userId, t.eventId)
+            .where(sql`${t.eventId} IS NOT NULL`),
     ],
 );
 
@@ -484,6 +517,9 @@ export const messageThreads = pgTable(
         index("message_threads_ws_idx").on(t.workspaceId),
         index("message_threads_ws_updated_idx").on(t.workspaceId, t.updatedAt),
         index("message_threads_sub_idx").on(t.subgroupId),
+        index("message_threads_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -613,6 +649,9 @@ export const purchaseRequests = pgTable(
         index("purchase_requests_ws_idx").on(t.workspaceId),
         index("purchase_requests_ws_status_idx").on(t.workspaceId, t.status),
         index("purchase_requests_ws_created_idx").on(t.workspaceId, t.createdAt),
+        index("purchase_requests_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -643,6 +682,9 @@ export const cooperationRequests = pgTable(
         index("cooperation_requests_ws_idx").on(t.workspaceId),
         index("cooperation_requests_ws_status_idx").on(t.workspaceId, t.status),
         index("cooperation_requests_ws_created_idx").on(t.workspaceId, t.createdAt),
+        index("cooperation_requests_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -708,6 +750,7 @@ export const notifications = pgTable(
         index("notifications_ws_user_read_idx").on(t.workspaceId, t.userId, t.read),
         index("notifications_user_read_created_idx").on(t.userId, t.read, t.createdAt),
         index("notifications_ws_idx").on(t.workspaceId),
+        index("notifications_ws_user_created_idx").on(t.workspaceId, t.userId, t.createdAt, t.id),
     ],
 );
 
@@ -816,6 +859,9 @@ export const attachments = pgTable(
         index("attachments_ws_idx").on(t.workspaceId),
         index("attachments_entity_idx").on(t.entityType, t.entityId),
         index("attachments_ws_created_idx").on(t.workspaceId, t.createdAt),
+        index("attachments_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -841,6 +887,9 @@ export const linkItems = pgTable(
         index("link_items_ws_idx").on(t.workspaceId),
         index("link_items_ws_created_idx").on(t.workspaceId, t.createdAt),
         index("link_items_ws_category_idx").on(t.workspaceId, t.category),
+        index("link_items_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -888,6 +937,9 @@ export const showcaseItems = pgTable(
         index("showcase_items_ws_idx").on(t.workspaceId),
         index("showcase_items_ws_active_idx").on(t.workspaceId, t.isActive),
         index("showcase_items_ws_sort_idx").on(t.workspaceId, t.isActive, t.sortOrder),
+        index("showcase_items_deleted_idx")
+            .on(t.workspaceId, t.deletedAt)
+            .where(sql`${t.deletedAt} IS NOT NULL`),
     ],
 );
 
@@ -1184,11 +1236,15 @@ export const passkeys = pgTable(
     ],
 );
 
-export const rateBuckets = pgTable("rate_buckets", {
-    key: text("key").primaryKey(),
-    tokens: integer("tokens").notNull(),
-    updatedAt: ts("updatedAt"),
-});
+export const rateBuckets = pgTable(
+    "rate_buckets",
+    {
+        key: text("key").primaryKey(),
+        tokens: integer("tokens").notNull(),
+        updatedAt: ts("updatedAt"),
+    },
+    (t) => [index("rate_buckets_updated_at_idx").on(t.updatedAt)],
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
     memberships: many(memberships),
