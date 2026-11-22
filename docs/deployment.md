@@ -204,6 +204,14 @@ helm install general-portal ./helm/general-portal \
 
 Set `ingress.enabled=true` with the appropriate host, class, and TLS Secret to expose the service. Uploads use `emptyDir` until `uploads.existingClaim` is set; that data is lost when the pod is replaced. Run migrations and seeding against each database before expecting portal data.
 
-### Single-database mode (planned, not implemented)
+### Single-database mode
 
-`DATABASE_URL_SINGLE` is planned to map every portal slug to one Postgres database. It requires application support in the configuration loader, deployment reconciliation, and the migration and seed tooling; none of that support exists in this repository today. Setting the variable now has no effect. Continue to provide one `DATABASE_URL_<SLUG>` per portal, including in Docker Compose and Helm.
+Set `DATABASE_URL_SINGLE` to map every portal in `deployment.yaml` to one Postgres database. `config.singleDbModeEnabled` is true whenever the variable is non-empty; `portalDbUrl()` then returns that URL for each configured slug while pools stay cached per slug (each portal still has its own pool against the same database). `listPortalSlugs()` includes the configured slugs so jobs, TUI, and operator actions keep working, and `isKnownPortal()` accepts only configured slugs. Boot reconcile is insert-only and gives every configured portal a workspace row and system roles in that shared database; workspace scoping still comes from `workspaceId`.
+
+Create the one database, run `MIGRATE_URL=<single-url> pnpm db:migrate` once, then seed each configured slug with `pnpm exec tsx scripts/seed.ts <slug> <packFile>`. A per-portal `DATABASE_URL_<SLUG>` still overrides the single URL for that slug, which is how per-PR previews work. Leave `DATABASE_URL_SINGLE` unset to keep one database per portal; Docker Compose and Helm values continue to provide one URL per portal by default.
+
+### PR preview sites
+
+`.github/workflows/preview.yml` runs on PR open, synchronize, and reopen. It starts an ephemeral Postgres service, sets `PREVIEW_SLUG=pr-<number>` and `PREVIEW_DB_URL` to that service, then runs `pnpm exec tsx scripts/preview.ts`. The script creates the database through the admin connection, applies migrations with `MIGRATE_URL`, derives a seed pack from `deployments/presets/general.yaml`, seeds the preview slug through `scripts/seed.ts` using `DATABASE_URL_<SLUG>`, and prints the slug and health URL. It never edits `deployment.yaml`.
+
+The workflow exports the same `DATABASE_URL_<SLUG>` to the started server, polls `GET /api/health`, uploads a summary artifact, and comments the slug on the PR. The credentials in the file are fixed local CI values, not secrets.

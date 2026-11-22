@@ -30,6 +30,8 @@ export const config = {
     deploymentFile: opt("DEPLOYMENT_FILE", "deployment.yaml"),
     uploadsDir: opt("UPLOADS_DIR", "./uploads"),
     bossUrl: opt("PG_BOSS_URL"),
+    singleDbUrl: opt("DATABASE_URL_SINGLE"),
+    singleDbModeEnabled: opt("DATABASE_URL_SINGLE") !== "",
     poolMax: Math.max(2, Number(opt("PG_POOL_MAX", "10")) || 10),
     sessionCookie: "gp_session",
     portalCookie: "portal",

@@ -982,6 +982,7 @@ export const savedViews = pgTable(
         name: text("name").notNull(),
         filters: jsonb("filters").$type<Record<string, unknown>>().notNull().default({}),
         isShared: boolean("isShared").notNull().default(false),
+        shareVersion: integer("shareVersion").notNull().default(0),
         position: integer("position").notNull().default(0),
         createdAt: ts("createdAt"),
     },
