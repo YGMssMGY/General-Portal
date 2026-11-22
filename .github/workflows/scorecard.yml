@@ -22,7 +22,7 @@ jobs:
             - name: Check out repository
               uses: actions/checkout@v4
             - name: Run Scorecard
-              uses: ossf/scorecard-action@v2
+              uses: ossf/scorecard-action@v2.0.6
               with:
                   results_file: results.sarif
                   results_format: sarif
