@@ -106,7 +106,11 @@
         "myWork": "My Work",
         "onboarding": "Setup",
         "invitations": "Invitations",
-        "analytics": "Analytics"
+        "analytics": "Analytics",
+        "approvals": "Approvals",
+        "import": "Data import",
+        "usage": "Usage",
+        "digestPreview": "Digest preview"
     },
     "auth": {
         "signIn": "Sign In",
@@ -679,7 +683,10 @@
         "noWebhooks": "No webhooks yet.",
         "testWebhook": "Test Webhook",
         "testSuccess": "Test delivered successfully.",
-        "noSecret": "No secret configured."
+        "noSecret": "No secret configured.",
+        "replay": "Replay",
+        "replaySuccess": "Replay queued for {event}.",
+        "replayFailed": "Replay failed"
     },
     "apiTokens": {
         "title": "API Tokens",
@@ -1311,5 +1318,87 @@
         "notFound": "Not found",
         "conflict": "Conflict",
         "internal": "Internal error"
+    },
+    "usage": {
+        "title": "Usage and quotas",
+        "subtitle": "Current resource consumption for this workspace",
+        "storage": "File storage",
+        "storageUsed": "{used} of {limit}",
+        "percentUsed": "{percent}% used",
+        "seats": "Members",
+        "noLimit": "No limit configured",
+        "activeSessions": "Active sessions",
+        "pendingInvitations": "Pending invitations",
+        "activeTokens": "Active API tokens",
+        "alerts": "Alerts",
+        "noAlerts": "No quota alerts",
+        "requestsPerMinute": "{count} requests per minute",
+        "auditRetentionDays": "{count} days of audit history"
+    },
+    "slaInbox": {
+        "title": "Approval Inbox",
+        "filterMine": "Mine",
+        "filterOverdue": "Overdue",
+        "empty": "No pending approvals",
+        "overdue": "Overdue",
+        "dueSoon": "Due soon",
+        "onTrack": "On track",
+        "noDueDate": "No due date",
+        "dueAt": "Due {date}",
+        "stage": "Stage {n}",
+        "assignedTo": "Assigned to {name}",
+        "commentOptional": "Optional comment",
+        "approve": "Approve",
+        "reject": "Reject",
+        "approveSuccess": "Approval granted",
+        "rejectSuccess": "Approval rejected",
+        "typeEvent": "Event",
+        "typeProposal": "Proposal",
+        "typeTask": "Task",
+        "typeMeeting": "Meeting",
+        "typeOther": "Other"
+    },
+    "sharedView": {
+        "invalidLink": "This shared view link is invalid or expired.",
+        "filters": "Saved filters",
+        "backToList": "Back to views"
+    },
+    "dataImport": {
+        "title": "Data import",
+        "description": "Import up to 500 rows from a CSV file.",
+        "entityType": "Entity type",
+        "entityTask": "Tasks",
+        "entityMember": "Members",
+        "entityTransaction": "Transactions",
+        "fileLabel": "CSV file",
+        "fileHint": "Maximum 2 MB. UTF-8 text with a header row.",
+        "upload": "Import file",
+        "success": "Import completed",
+        "preview": "Preview",
+        "noPreview": "No rows to preview",
+        "result": "Result",
+        "inserted": "Inserted",
+        "failed": "Failed",
+        "row": "Row",
+        "reason": "Reason"
+    },
+    "digestPreview": {
+        "title": "Digest preview",
+        "channel": "Channel",
+        "generate": "Generate preview",
+        "total": "Unread notifications",
+        "sample": "Sample text",
+        "empty": "Nothing to include in this digest",
+        "description": "Choose a channel and preview the email or in-app digest.",
+        "channelEmail": "Email",
+        "channelInApp": "In-app",
+        "digest": "Digest frequency",
+        "digestNever": "Never",
+        "digestDaily": "Daily",
+        "digestWeekly": "Weekly",
+        "sampleHeading": "Sample output",
+        "totalUnread": "{total} unread notifications",
+        "groupsHeading": "Included groups",
+        "openPreferences": "Open notification preferences"
     }
 }

@@ -106,7 +106,11 @@
         "myWork": "Mon travail",
         "onboarding": "Configuration",
         "invitations": "Invitations",
-        "analytics": "Analyses"
+        "analytics": "Analyses",
+        "approvals": "Validations",
+        "import": "Import de données",
+        "usage": "Utilisation",
+        "digestPreview": "Aperçu du résumé"
     },
     "auth": {
         "signIn": "Connexion",
@@ -679,7 +683,10 @@
         "noWebhooks": "Aucun crochet Web pour le moment.",
         "testWebhook": "Tester le crochet Web",
         "testSuccess": "Test transmis avec succès.",
-        "noSecret": "Aucune clé secrète configurée."
+        "noSecret": "Aucune clé secrète configurée.",
+        "replay": "Rejouer",
+        "replaySuccess": "Rejeu mis en file pour {event}.",
+        "replayFailed": "Le rejeu a échoué"
     },
     "apiTokens": {
         "title": "Jetons API",
@@ -1311,5 +1318,87 @@
         "notFound": "Introuvable",
         "conflict": "Conflit",
         "internal": "Erreur interne"
+    },
+    "usage": {
+        "title": "Utilisation et quotas",
+        "subtitle": "Consommation actuelle de cet espace",
+        "storage": "Stockage de fichiers",
+        "storageUsed": "{used} sur {limit}",
+        "percentUsed": "{percent}% utilisés",
+        "seats": "Membres",
+        "noLimit": "Aucune limite configurée",
+        "activeSessions": "Sessions actives",
+        "pendingInvitations": "Invitations en attente",
+        "activeTokens": "Jetons API actifs",
+        "alerts": "Alertes",
+        "noAlerts": "Aucune alerte de quota",
+        "requestsPerMinute": "{count} requêtes par minute",
+        "auditRetentionDays": "{count} jours d'historique d'audit"
+    },
+    "slaInbox": {
+        "title": "Boîte de validation",
+        "filterMine": "Les miennes",
+        "filterOverdue": "En retard",
+        "empty": "Aucune validation en attente",
+        "overdue": "En retard",
+        "dueSoon": "Bientôt dû",
+        "onTrack": "À temps",
+        "noDueDate": "Aucune échéance",
+        "dueAt": "Échéance le {date}",
+        "stage": "Étape {n}",
+        "assignedTo": "Assignée à {name}",
+        "commentOptional": "Commentaire facultatif",
+        "approve": "Approuver",
+        "reject": "Rejeter",
+        "approveSuccess": "Validation accordée",
+        "rejectSuccess": "Validation refusée",
+        "typeEvent": "Événement",
+        "typeProposal": "Proposition",
+        "typeTask": "Tâche",
+        "typeMeeting": "Réunion",
+        "typeOther": "Autre"
+    },
+    "sharedView": {
+        "invalidLink": "Ce lien est invalide ou expiré.",
+        "filters": "Filtres enregistrés",
+        "backToList": "Retour aux vues"
+    },
+    "dataImport": {
+        "title": "Import de données",
+        "description": "Importez jusqu'à 500 lignes depuis un fichier CSV.",
+        "entityType": "Type d'entité",
+        "entityTask": "Tâches",
+        "entityMember": "Membres",
+        "entityTransaction": "Transactions",
+        "fileLabel": "Fichier CSV",
+        "fileHint": "2 Mo maximum, texte UTF-8 avec en-tête.",
+        "upload": "Importer le fichier",
+        "success": "Import terminé",
+        "preview": "Aperçu",
+        "noPreview": "Aucune ligne à prévisualiser",
+        "result": "Résultat",
+        "inserted": "Insérées",
+        "failed": "Échouées",
+        "row": "Ligne",
+        "reason": "Raison"
+    },
+    "digestPreview": {
+        "title": "Aperçu du résumé",
+        "channel": "Canal",
+        "generate": "Générer l'aperçu",
+        "total": "Notifications non lues",
+        "sample": "Texte d'exemple",
+        "empty": "Rien à inclure dans ce résumé",
+        "description": "Choisissez un canal et prévisualisez le résumé.",
+        "channelEmail": "E-mail",
+        "channelInApp": "Dans l'application",
+        "digest": "Fréquence du résumé",
+        "digestNever": "Jamais",
+        "digestDaily": "Quotidien",
+        "digestWeekly": "Hebdomadaire",
+        "sampleHeading": "Exemple de sortie",
+        "totalUnread": "{total} notifications non lues",
+        "groupsHeading": "Groupes inclus",
+        "openPreferences": "Ouvrir les préférences de notification"
     }
 }

@@ -106,7 +106,11 @@
         "myWork": "Meine Arbeit",
         "onboarding": "Einrichtung",
         "invitations": "Einladungen",
-        "analytics": "Analysen"
+        "analytics": "Analysen",
+        "approvals": "Freigaben",
+        "import": "Datenimport",
+        "usage": "Nutzung",
+        "digestPreview": "Zusammenfassungsvorschau"
     },
     "auth": {
         "signIn": "Anmelden",
@@ -679,7 +683,10 @@
         "noWebhooks": "Noch keine Webhooks.",
         "testWebhook": "Webhook testen",
         "testSuccess": "Test erfolgreich zugestellt.",
-        "noSecret": "Kein Signaturschlüssel konfiguriert."
+        "noSecret": "Kein Signaturschlüssel konfiguriert.",
+        "replay": "Erneut senden",
+        "replaySuccess": "Erneutes Senden für {event} vorgemerkt.",
+        "replayFailed": "Erneutes Senden fehlgeschlagen"
     },
     "apiTokens": {
         "title": "API-Token",
@@ -1311,5 +1318,87 @@
         "notFound": "Nicht gefunden",
         "conflict": "Konflikt",
         "internal": "Interner Fehler"
+    },
+    "usage": {
+        "title": "Nutzung und Kontingente",
+        "subtitle": "Aktueller Ressourcenverbrauch dieses Arbeitsbereichs",
+        "storage": "Dateispeicher",
+        "storageUsed": "{used} von {limit}",
+        "percentUsed": "{percent}% belegt",
+        "seats": "Mitglieder",
+        "noLimit": "Kein Limit konfiguriert",
+        "activeSessions": "Aktive Sitzungen",
+        "pendingInvitations": "Offene Einladungen",
+        "activeTokens": "Aktive API-Tokens",
+        "alerts": "Warnungen",
+        "noAlerts": "Keine Kontingentwarnungen",
+        "requestsPerMinute": "{count} Anfragen pro Minute",
+        "auditRetentionDays": "{count} Tage Prüfverlauf"
+    },
+    "slaInbox": {
+        "title": "Freigabenpostfach",
+        "filterMine": "Meine",
+        "filterOverdue": "Überfällig",
+        "empty": "Keine offenen Freigaben",
+        "overdue": "Überfällig",
+        "dueSoon": "Bald fällig",
+        "onTrack": "Im Plan",
+        "noDueDate": "Kein Fälligkeitsdatum",
+        "dueAt": "Fällig am {date}",
+        "stage": "Phase {n}",
+        "assignedTo": "Zugewiesen an {name}",
+        "commentOptional": "Optionaler Kommentar",
+        "approve": "Genehmigen",
+        "reject": "Ablehnen",
+        "approveSuccess": "Freigabe erteilt",
+        "rejectSuccess": "Freigabe abgelehnt",
+        "typeEvent": "Veranstaltung",
+        "typeProposal": "Antrag",
+        "typeTask": "Aufgabe",
+        "typeMeeting": "Besprechung",
+        "typeOther": "Sonstiges"
+    },
+    "sharedView": {
+        "invalidLink": "Dieser Link ist ungültig oder abgelaufen.",
+        "filters": "Gespeicherte Filter",
+        "backToList": "Zurück zu den Ansichten"
+    },
+    "dataImport": {
+        "title": "Datenimport",
+        "description": "Importieren Sie bis zu 500 Zeilen aus einer CSV-Datei.",
+        "entityType": "Entitätstyp",
+        "entityTask": "Aufgaben",
+        "entityMember": "Mitglieder",
+        "entityTransaction": "Transaktionen",
+        "fileLabel": "CSV-Datei",
+        "fileHint": "Maximal 2 MB, UTF-8-Text mit Kopfzeile.",
+        "upload": "Datei importieren",
+        "success": "Import abgeschlossen",
+        "preview": "Vorschau",
+        "noPreview": "Keine Zeilen zur Vorschau",
+        "result": "Ergebnis",
+        "inserted": "Eingefügt",
+        "failed": "Fehlgeschlagen",
+        "row": "Zeile",
+        "reason": "Grund"
+    },
+    "digestPreview": {
+        "title": "Zusammenfassungsvorschau",
+        "channel": "Kanal",
+        "generate": "Vorschau erzeugen",
+        "total": "Ungelesene Benachrichtigungen",
+        "sample": "Beispieltext",
+        "empty": "Nichts für diese Zusammenfassung",
+        "description": "Wählen Sie einen Kanal und sehen Sie die Zusammenfassung.",
+        "channelEmail": "E-Mail",
+        "channelInApp": "In der App",
+        "digest": "Zusammenfassungsintervall",
+        "digestNever": "Nie",
+        "digestDaily": "Täglich",
+        "digestWeekly": "Wöchentlich",
+        "sampleHeading": "Beispielausgabe",
+        "totalUnread": "{total} ungelesene Benachrichtigungen",
+        "groupsHeading": "Enthaltene Gruppen",
+        "openPreferences": "Benachrichtigungseinstellungen öffnen"
     }
 }
