@@ -3,8 +3,8 @@ import { test, expect } from "@playwright/test";
 test("Landing Page Lists Both Seeded Portals", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "General Portal" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Developers Club/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Student Council/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Developers Club/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Student Council/ })).toBeVisible();
 });
 
 test("Login Page Shows A Heading And The Configured Providers", async ({ page }) => {

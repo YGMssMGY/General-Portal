@@ -19,6 +19,7 @@ export default defineConfig({
     projects: [
         { name: "setup", testMatch: /auth\.setup\.ts/ },
         { name: "public", testMatch: /public\.spec\.ts/ },
+        { name: "ops", testMatch: /ops\.spec\.ts/ },
         {
             name: "portal",
             testMatch: /portal\.spec\.ts/,
