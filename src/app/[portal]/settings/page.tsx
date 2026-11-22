@@ -25,7 +25,7 @@ interface SettingsRecord {
     settings: Record<string, boolean>;
 }
 
-const MODULES = [
+const FALLBACK_MODULES = [
     "proposals",
     "tasks",
     "events",
@@ -53,6 +53,7 @@ export default function SettingsPage() {
     const queryClient = useQueryClient();
 
     const canEdit = user?.permissions.includes("manage_settings") ?? false;
+    const moduleList = workspace?.modules ? [...workspace.modules].sort() : FALLBACK_MODULES;
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -272,7 +273,7 @@ export default function SettingsPage() {
                         {t("modules")}
                     </h3>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                        {MODULES.map((key) => (
+                        {moduleList.map((key) => (
                             <div
                                 key={key}
                                 style={{

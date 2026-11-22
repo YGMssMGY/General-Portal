@@ -128,5 +128,5 @@ pre {
 }
 
 [data-density="compact"] main {
-    padding: 12px;
+    padding: var(--density-pad);
 }

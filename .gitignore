@@ -156,6 +156,10 @@ blob-report/
 # Internal operator notes. Never commit.
 PORTING_GUIDE.md
 
+# Generated operator config and audit output
+deployment.example.local.yaml
+.ops-audit.log
+
 # Server TUI runtime data. Never commit.
 .backups/
 .tui-audit.log

@@ -99,7 +99,10 @@
         "dues": "Cotisations",
         "assets": "Actifs",
         "kudos": "Kudos",
-        "customFields": "Champs personnalisés"
+        "customFields": "Champs personnalisés",
+        "search": "Recherche",
+        "budget": "Budget",
+        "partnerships": "Partenariats"
     },
     "auth": {
         "signIn": "Connexion",

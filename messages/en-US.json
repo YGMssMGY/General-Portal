@@ -99,7 +99,10 @@
         "dues": "Dues",
         "assets": "Assets",
         "kudos": "Kudos",
-        "customFields": "Custom Fields"
+        "customFields": "Custom Fields",
+        "search": "Search",
+        "budget": "Budget",
+        "partnerships": "Partnerships"
     },
     "auth": {
         "signIn": "Sign In",

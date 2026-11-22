@@ -99,7 +99,10 @@
         "dues": "Cuotas",
         "assets": "Activos",
         "kudos": "Kudos",
-        "customFields": "Campos personalizados"
+        "customFields": "Campos personalizados",
+        "search": "Búsqueda",
+        "budget": "Presupuesto",
+        "partnerships": "Asociaciones"
     },
     "auth": {
         "signIn": "Iniciar sesión",

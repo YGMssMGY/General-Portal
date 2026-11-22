@@ -99,7 +99,10 @@
         "dues": "会费",
         "assets": "资产",
         "kudos": "表彰",
-        "customFields": "自定义字段"
+        "customFields": "自定义字段",
+        "search": "搜索",
+        "budget": "预算",
+        "partnerships": "合作关系"
     },
     "auth": {
         "signIn": "登录",
