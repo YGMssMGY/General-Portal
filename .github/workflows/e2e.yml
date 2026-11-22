@@ -33,6 +33,8 @@ jobs:
             SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL || 'zhiyu.jiang90454-bisz@basischina.com' }}
             SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD || 'CiSmokeTest12345' }}
             E2E_PORTAL: ${{ vars.E2E_PORTAL || 'developers' }}
+            RATE_LIMIT_MAX: "10000"
+            OPS_ADMIN_TOKEN: ci-ops-admin-token
             AUTH_PROVIDERS_DEVELOPERS: google
             GOOGLE_CLIENT_ID: e2e-client-id
             GOOGLE_CLIENT_SECRET: e2e-client-secret
