@@ -20,7 +20,7 @@ jobs:
             security-events: write
         steps:
             - name: Check out repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
             - name: Run Scorecard
               uses: ossf/scorecard-action@v2.6.0
               with:
