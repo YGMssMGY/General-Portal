@@ -133,3 +133,77 @@ There is no `--dry-run` flag on `scripts/migrate.ts` (usage: `tsx scripts/migrat
 2. Re-run migrate per database to close any schema gap.
 3. Reseed only if a portal database is empty (seed never overwrites user content, but empty-only keeps the intent explicit).
 4. Restart Node and confirm `/api/health` plus one authed read per portal.
+
+## Deployment modes
+
+Bare Node is the authoritative runtime. The container, dev container, and Helm options package the same application and do not change its behavior.
+
+### Bare Node (authoritative)
+
+1. Install Node >= 22.12 and pnpm 10.20.0 (`corepack enable && corepack prepare pnpm@10.20.0 --activate`), plus PostgreSQL 14+ and the `pg_dump` and `pg_restore` binaries used by the TUI Backup screen.
+2. Run `pnpm install --frozen-lockfile`.
+3. Copy `.env.example` to `.env`, set one `DATABASE_URL_<SLUG>` per portal, set `AUTH_SECRET`, and point `APP_BASE_URL` at the public origin. Keep `.env` out of version control.
+4. Create each database, run `MIGRATE_URL=<url> pnpm db:migrate` per portal, then seed with `pnpm exec tsx scripts/seed.ts <slug>`.
+5. Run `pnpm build` followed by `pnpm start`. `PORT` defaults to 3000. Boot reconcile inserts missing workspaces and system roles, and pg-boss starts its queues; reconcile never updates or deletes existing rows.
+6. Terminate TLS at the reverse proxy and confirm `GET /api/health`.
+
+### Docker Compose
+
+`Dockerfile` is a three-stage build: dependencies, build, and production runner. It installs with `pnpm install --frozen-lockfile`, prunes development dependencies, runs as the unprivileged `node` user, and bakes no secrets into the image. The runner health check calls `/api/health` with Node's built-in `fetch`, so no `curl` is required in the image.
+
+`compose.yaml` starts the app on port 3000 and a local PostgreSQL 18 database. It loads `.env.docker.example` through `env_file`; replace the placeholder values locally before starting, or point `env_file` at a private file excluded from version control. The database host is `db`, so the example URLs use that name. A named `uploads` volume is mounted at `/app/uploads`, and database data lives in a named volume. The database port is published only on `127.0.0.1:5432` so migrations can run from the host.
+
+PostgreSQL creates only `POSTGRES_DB` on first boot. Create the second portal database explicitly:
+
+```sh
+docker compose up -d --build
+docker compose exec db psql -U general -d postgres -c "CREATE DATABASE general_portal_stuco;"
+MIGRATE_URL=postgresql://general:general@127.0.0.1:5432/general_portal_dev pnpm db:migrate
+MIGRATE_URL=postgresql://general:general@127.0.0.1:5432/general_portal_stuco pnpm db:migrate
+pnpm exec tsx scripts/seed.ts developers
+pnpm exec tsx scripts/seed.ts stuco
+docker compose exec app node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>{console.log(r.status);process.exit(r.ok?0:1)})"
+```
+
+Migrations run from the host because `tsx` is a development dependency and is pruned from the production image. The database credentials in `compose.yaml` and `.env.docker.example` are for local use only; replace them before any shared deployment.
+
+### Dev container and Codespaces
+
+`.devcontainer/devcontainer.json` uses the Node 22 Bookworm TypeScript image, adds the pnpm 10.20.0 and PostgreSQL client features, forwards port 3000, and runs `corepack enable && pnpm install --frozen-lockfile` on create. Open the repository in a dev container or a Codespace, copy `.env.example` to `.env`, provide database URLs reachable from the container, then run `pnpm build && pnpm start`. The dev container does not start PostgreSQL by itself.
+
+### Helm
+
+The chart in `helm/general-portal` deploys one replica with non-root pod and container security contexts, readiness and liveness probes on `/api/health`, a ClusterIP Service on port 80 targeting 3000, and an optional Ingress. `config` supplies `PORT`, `APP_BASE_URL`, `PG_POOL_MAX`, and `UPLOADS_DIR` through a ConfigMap. `databases.<slug>`, `authSecret`, `opsApiToken`, and `opsSecret` are base64-encoded into a generated Secret; set `existingSecret` instead to consume a Secret you manage. No credentials ship in `values.yaml`.
+
+| Value | Default | Purpose |
+| --- | --- | --- |
+| `replicaCount` | `1` | Deployment replicas |
+| `image.repository` / `image.tag` | `general-portal` / chart appVersion | Image reference |
+| `image.pullPolicy` | `IfNotPresent` | Pull policy |
+| `service.type` / `service.port` / `service.targetPort` | `ClusterIP` / `80` / `3000` | Service exposure |
+| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | `false` / empty / one example host / empty | Ingress routing |
+| `config.port` / `config.baseUrl` / `config.pgPoolMax` / `config.uploadsDir` | `3000` / `http://localhost:3000` / `10` / `/app/uploads` | ConfigMap values |
+| `databases` / `authSecret` / `opsApiToken` / `opsSecret` | empty | Secret values |
+| `existingSecret` | empty | Name of a pre-created Secret; disables the generated Secret |
+| `uploads.existingClaim` | empty | PVC for uploads; an `emptyDir` is used otherwise |
+| `podSecurityContext` / `securityContext` | non-root, no privilege escalation | Container hardening |
+| `resources` / `nodeSelector` / `tolerations` / `affinity` | empty | Scheduling and limits |
+
+Example with a pre-created Secret:
+
+```sh
+kubectl create secret generic general-portal-secrets \
+  --from-literal=DATABASE_URL_DEVELOPERS='postgresql://...' \
+  --from-literal=DATABASE_URL_STUCO='postgresql://...' \
+  --from-literal=AUTH_SECRET='...'
+helm install general-portal ./helm/general-portal \
+  --set existingSecret=general-portal-secrets \
+  --set config.baseUrl=https://portal.example.com \
+  --set uploads.existingClaim=general-portal-uploads
+```
+
+Set `ingress.enabled=true` with the appropriate host, class, and TLS Secret to expose the service. Uploads use `emptyDir` until `uploads.existingClaim` is set; that data is lost when the pod is replaced. Run migrations and seeding against each database before expecting portal data.
+
+### Single-database mode (planned, not implemented)
+
+`DATABASE_URL_SINGLE` is planned to map every portal slug to one Postgres database. It requires application support in the configuration loader, deployment reconciliation, and the migration and seed tooling; none of that support exists in this repository today. Setting the variable now has no effect. Continue to provide one `DATABASE_URL_<SLUG>` per portal, including in Docker Compose and Helm.
