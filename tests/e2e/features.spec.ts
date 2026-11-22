@@ -250,23 +250,22 @@ test("Member sessions cannot replay webhooks or read finance trends", async ({
     browser,
     baseURL,
 }) => {
-    const invitedEmail = `e2e-member-${Date.now().toString(36)}@basischina.com`;
-    const invitation = await page.request.post("/api/invitations", {
-        data: { email: invitedEmail, roleName: "member" },
+    const memberEmail = `e2e-member-${Date.now().toString(36)}@basischina.com`;
+    const memberPassword = "MemberPass123!";
+    const created = await page.request.post("/api/admin/users", {
+        data: { email: memberEmail, name: "E2E Member", role: "member", password: memberPassword },
     });
-    expect(invitation.status()).toBe(201);
-    const invitationBody = (await invitation.json()) as { data?: { token?: string } };
-    const token = invitationBody.data?.token;
-    expect(token).toBeTruthy();
+    expect(created.status()).toBe(200);
 
     const context = await browser.newContext({ baseURL });
     try {
         const host = new URL(baseURL ?? "http://localhost:3000").hostname;
         await context.addCookies([{ name: "portal", value: PORTAL, domain: host, path: "/" }]);
-        const accepted = await context.request.post("/api/auth/invitation/accept", {
-            data: { token, name: "E2E Member", password: "MemberPass123!" },
+        const login = await context.request.post("/api/auth/password/login", {
+            headers: { "x-forwarded-for": RATE_LIMIT_IP },
+            data: { email: memberEmail, password: memberPassword },
         });
-        expect(accepted.status()).toBe(200);
+        expect(login.status()).toBe(200);
 
         const replay = await context.request.post(
             "/api/webhooks/00000000-0000-0000-0000-000000000000/replay",

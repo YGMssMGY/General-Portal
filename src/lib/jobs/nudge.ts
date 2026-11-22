@@ -109,6 +109,7 @@ async function nudgePortal(slug: string): Promise<void> {
         .filter((m) => m.role && (m.role.name === "officer" || m.role.name === "admin"))
         .map((m) => m.userId)
         .slice(0, 100);
+    const overdueByOfficer = new Map<string, number>();
     for (const t of staleTasks) {
         if (!t.assigneeId) continue;
         rows.push({
@@ -121,15 +122,18 @@ async function nudgePortal(slug: string): Promise<void> {
         });
         for (const officerId of officers) {
             if (officerId === t.assigneeId) continue;
-            rows.push({
-                workspaceId: ws.id,
-                userId: officerId,
-                title: `Overdue task needs attention: ${t.title}`,
-                body: "A task assigned in your workspace is more than 48 hours overdue.",
-                type: "overdue",
-                link: "/tasks",
-            });
+            overdueByOfficer.set(officerId, (overdueByOfficer.get(officerId) ?? 0) + 1);
         }
+    }
+    for (const [officerId, n] of overdueByOfficer) {
+        rows.push({
+            workspaceId: ws.id,
+            userId: officerId,
+            title: `${n} overdue task${n === 1 ? "" : "s"} need attention`,
+            body: "Tasks assigned in your workspace are more than 48 hours overdue. Please review them.",
+            type: "overdue",
+            link: "/tasks",
+        });
     }
     let reminders = 0;
     for (const slot of slots) {
@@ -148,19 +152,23 @@ async function nudgePortal(slug: string): Promise<void> {
         if (reminders >= 200) break;
     }
     if (rows.length === 0) return;
-    await db.insert(notifications).values(rows);
+    await db.insert(notifications).values(rows.slice(0, 200));
 }
 
 async function handle(jobs: Job<NudgeData>[]): Promise<void> {
     for (const job of jobs) {
         const only = job.data?.portal;
         const slugs = only ? [only] : listPortals().map((p) => p.slug);
-        for (const slug of slugs) {
-            try {
-                await nudgePortal(slug);
-            } catch (err) {
-                logger.error({ err, portal: slug }, "nudge failed");
-            }
+        for (let i = 0; i < slugs.length; i += 4) {
+            await Promise.all(
+                slugs.slice(i, i + 4).map(async (slug) => {
+                    try {
+                        await nudgePortal(slug);
+                    } catch (err) {
+                        logger.error({ err, portal: slug }, "nudge failed");
+                    }
+                }),
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { createWriteStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { and, desc, eq, gte, isNull, lte } from "drizzle-orm";
 import type { Job, PgBoss } from "pg-boss";
@@ -6,8 +6,8 @@ import { config } from "@/config";
 import { getDb, type PortalDb } from "@/db/client";
 import { activityFeed, attendance, reports, transactions } from "@/db/schema";
 import { logger } from "@/lib/logger";
-import { writePdf, type PdfValue } from "@/lib/report-writers/pdf";
-import { writeXlsx, type XlsxValue } from "@/lib/report-writers/xlsx";
+import { writePdf } from "@/lib/report-writers/pdf";
+import { writeXlsx } from "@/lib/report-writers/xlsx";
 import { getBoss } from "./boss";
 
 export const REPORT_QUEUE = "report-generate";
@@ -22,8 +22,29 @@ function cell(v: unknown): string {
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, `""`)}"` : s;
 }
 
-function toCsv(header: string[], rows: unknown[][]): string {
-    return `${[header.join(","), ...rows.map((r) => r.map(cell).join(","))].join("\n")}\n`;
+async function writeCsv(file: string, header: string[], rows: unknown[][]): Promise<void> {
+    const stream = createWriteStream(file, { encoding: "utf8" });
+    await new Promise<void>((resolve, reject) => {
+        stream.on("error", reject);
+        stream.on("finish", resolve);
+        stream.write(`${header.join(",")}\n`);
+        let i = 0;
+        const pump = () => {
+            while (i < rows.length) {
+                const end = Math.min(i + 500, rows.length);
+                let text = "";
+                for (; i < end; i++) {
+                    text += `${rows[i]!.map(cell).join(",")}\n`;
+                }
+                if (!stream.write(text)) {
+                    stream.once("drain", pump);
+                    return;
+                }
+            }
+            stream.end();
+        };
+        pump();
+    });
 }
 
 interface ReportData {
@@ -133,20 +154,6 @@ async function attendanceData(
     };
 }
 
-function toXlsxValue(value: unknown): XlsxValue {
-    if (value === null || value === undefined) return null;
-    if (typeof value === "number") return value;
-    if (value instanceof Date) return value.toISOString();
-    return String(value);
-}
-
-function toPdfValue(value: unknown): PdfValue {
-    if (value === null || value === undefined) return null;
-    if (typeof value === "number") return value;
-    if (value instanceof Date) return value.toISOString();
-    return String(value);
-}
-
 async function fail(db: PortalDb, reportId: string, reason: string): Promise<void> {
     await db.update(reports).set({ status: "failed" }).where(eq(reports.id, reportId));
     logger.error({ reportId, reason }, "report generation failed");
@@ -181,40 +188,32 @@ async function handle(jobs: Job<ReportJobData>[]): Promise<void> {
                 await fs.mkdir(path.join(config.uploadsDir, "reports", portal), {
                     recursive: true,
                 });
-                await fs.writeFile(
-                    path.join(config.uploadsDir, storagePath),
-                    toCsv(data.header, data.rows),
-                    "utf8",
-                );
+                await writeCsv(path.join(config.uploadsDir, storagePath), data.header, data.rows);
                 await db
                     .update(reports)
                     .set({ status: "complete", storagePath })
                     .where(eq(reports.id, reportId));
             } else if (row.format === "xlsx") {
-                const records = data.rows.map((cells) =>
-                    Object.fromEntries(data.header.map((key, i) => [key, toXlsxValue(cells[i])])),
-                );
                 const storagePath = path.join("reports", portal, `${reportId}.xlsx`);
                 await fs.mkdir(path.join(config.uploadsDir, "reports", portal), {
                     recursive: true,
                 });
                 await fs.writeFile(
                     path.join(config.uploadsDir, storagePath),
-                    writeXlsx(records, row.type),
+                    writeXlsx(data.header, data.rows, row.type),
                 );
                 await db
                     .update(reports)
                     .set({ status: "complete", storagePath })
                     .where(eq(reports.id, reportId));
             } else if (row.format === "pdf") {
-                const body = data.rows.map((cells) => cells.map(toPdfValue));
                 const storagePath = path.join("reports", portal, `${reportId}.pdf`);
                 await fs.mkdir(path.join(config.uploadsDir, "reports", portal), {
                     recursive: true,
                 });
                 await fs.writeFile(
                     path.join(config.uploadsDir, storagePath),
-                    writePdf(`${row.type} report`, data.header, body),
+                    writePdf(`${row.type} report`, data.header, data.rows),
                 );
                 await db
                     .update(reports)
