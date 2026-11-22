@@ -10,6 +10,7 @@ import { isProviderAllowed, unavailable } from "@/lib/auth/providers";
 import { checkRateLimit, rateKey } from "@/lib/auth/rate-limit";
 import { AccessDenied, createSessionForUser, sessionJsonResponse } from "@/lib/auth/session";
 import { resolvePortalSlug } from "@/lib/tenant";
+import { sensitiveLimitCheck } from "@/lib/rate-limit-guard";
 
 const emailSchema = z.string().trim().min(3).max(320).toLowerCase().pipe(z.email());
 
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
         const body = await parseBody(loginSchema, request);
         const portal = resolvePortalSlug(request);
         checkRateLimit(rateKey(clientIp(request), "password"));
+        const limited = await sensitiveLimitCheck(request, "password-login");
+        if (limited) return fail("Too many requests", 429);
         if (!isProviderAllowed(portal, "password")) throw new ApiError(unavailable, 503);
         const db = getDb(portal);
         const user = await db.query.users.findFirst({ where: eq(users.email, body.email) });

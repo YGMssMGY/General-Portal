@@ -73,8 +73,12 @@ function checkRateLimit(request: NextRequest): NextResponse | null {
     const slot = buckets.get(key);
     if (!slot || now >= slot.reset) {
         buckets.set(key, { count: 1, reset: now + 60_000 });
-        if (buckets.size > 10000) {
+        if (buckets.size > 5000) {
             for (const [k, v] of buckets) if (v.reset <= now) buckets.delete(k);
+            for (const k of buckets.keys()) {
+                if (buckets.size < 4000) break;
+                buckets.delete(k);
+            }
         }
         return null;
     }
@@ -87,6 +91,28 @@ function checkRateLimit(request: NextRequest): NextResponse | null {
     }
     slot.count += 1;
     return null;
+}
+
+function csrfBlocked(request: NextRequest): boolean {
+    const path = request.nextUrl.pathname;
+    if (!path.startsWith("/api/")) return false;
+    if (
+        path.startsWith("/api/auth/callback/") ||
+        path === "/api/auth/bcallback" ||
+        path.startsWith("/api/auth/saml/")
+    ) {
+        return false;
+    }
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method.toUpperCase())) return false;
+    if (!request.cookies.get(appConfig.sessionCookie)?.value) return false;
+    if (request.headers.get("authorization")?.startsWith("Bearer ")) return false;
+    const origin = request.headers.get("origin");
+    if (!origin) return false;
+    try {
+        return new URL(origin).host !== request.nextUrl.host;
+    } catch {
+        return true;
+    }
 }
 
 function detectLocale(request: NextRequest): string {
@@ -122,6 +148,14 @@ export function middleware(request: NextRequest): NextResponse {
     const limited = checkRateLimit(request);
     if (limited) return applySecurity(limited, request, nonce);
 
+    if (csrfBlocked(request)) {
+        return applySecurity(
+            NextResponse.json({ success: false as const, error: "Forbidden" }, { status: 403 }),
+            request,
+            nonce,
+        );
+    }
+
     const path = request.nextUrl.pathname;
     if (
         path === "/" ||
@@ -129,7 +163,11 @@ export function middleware(request: NextRequest): NextResponse {
         path === "/showcase" ||
         path.startsWith("/api/auth/") ||
         path.startsWith("/api/public/") ||
-        path === "/api/health"
+        path === "/api/health" ||
+        path === "/api/ops" ||
+        path === "/api/ops/health" ||
+        path === "/api/ops/openapi.json" ||
+        path === "/api/ops/manifest.json"
     ) {
         return pass(request);
     }

@@ -1138,6 +1138,12 @@ export const passkeys = pgTable(
     ],
 );
 
+export const rateBuckets = pgTable("rate_buckets", {
+    key: text("key").primaryKey(),
+    tokens: integer("tokens").notNull(),
+    updatedAt: ts("updatedAt"),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
     memberships: many(memberships),
     createdTasks: many(tasks, { relationName: "taskCreator" }),
