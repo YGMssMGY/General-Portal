@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { and, eq, ilike, isNull, or } from "drizzle-orm";
 import { events, meetings, memberships, proposals, tasks, users } from "@/db/schema";
-import { handleRouteError, ok } from "@/lib/api";
+import { fail, handleRouteError, ok } from "@/lib/api";
+import { sensitiveLimitCheck } from "@/lib/rate-limit-guard";
 import { requireTenant } from "@/lib/tenant";
 
 function escapeLike(s: string): string {
@@ -11,6 +12,9 @@ function escapeLike(s: string): string {
 export async function GET(request: NextRequest) {
     try {
         const t = await requireTenant(request, {});
+        if (await sensitiveLimitCheck(request, "search")) {
+            return fail("Too many requests", 429);
+        }
         const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
         if (!q) return ok({ results: [], total: 0 });
 

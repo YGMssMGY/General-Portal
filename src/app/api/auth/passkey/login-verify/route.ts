@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import {
     verifyAuthenticationResponse,
@@ -21,6 +21,29 @@ const verifySchema = z.object({
     response: z.custom<AuthenticationResponseJSON>((v) => typeof v === "object" && v !== null),
 });
 
+async function mapPortals<T>(
+    slugs: string[],
+    fn: (db: PortalDb, slug: string) => Promise<T>,
+): Promise<Array<{ db: PortalDb; slug: string; value: T } | null>> {
+    const out: Array<{ db: PortalDb; slug: string; value: T } | null> = [];
+    for (let i = 0; i < slugs.length; i += 8) {
+        const chunk = slugs.slice(i, i + 8);
+        out.push(
+            ...(await Promise.all(
+                chunk.map(async (slug) => {
+                    try {
+                        const db = getDb(slug);
+                        return { db, slug, value: await fn(db, slug) };
+                    } catch {
+                        return null;
+                    }
+                }),
+            )),
+        );
+    }
+    return out;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const body = await parseBody(verifySchema, request);
@@ -31,25 +54,18 @@ export async function POST(request: NextRequest) {
         const slugs = hint
             ? [hint, ...listPortalSlugs().filter((s) => s !== hint)]
             : listPortalSlugs();
-        for (const slug of slugs) {
-            let db: PortalDb;
-            try {
-                db = getDb(slug);
-            } catch {
-                continue;
-            }
-            let stored;
-            try {
-                const rows = await db.query.passkeys.findMany({
-                    where: eq(passkeys.credentialId, credentialId),
-                    with: { user: true },
-                    limit: 1,
-                });
-                stored = rows[0];
-            } catch {
-                continue;
-            }
+        const candidates = await mapPortals(slugs, (db) =>
+            db.query.passkeys.findMany({
+                where: eq(passkeys.credentialId, credentialId),
+                with: { user: true },
+                limit: 1,
+            }),
+        );
+        for (const candidate of candidates) {
+            const stored = candidate?.value[0];
             if (!stored || !stored.user) continue;
+            const db = candidate.db;
+            const slug = candidate.slug;
             if (body.email && stored.user.email.toLowerCase() !== body.email)
                 return fail("Invalid credential", 400);
             let pending;
@@ -61,6 +77,7 @@ export async function POST(request: NextRequest) {
                         and(
                             eq(authPending.provider, "passkey-login"),
                             eq(authPending.state, body.state),
+                            or(isNull(authPending.portal), eq(authPending.portal, slug)),
                         ),
                     )
                     .limit(1);
@@ -70,6 +87,7 @@ export async function POST(request: NextRequest) {
                     where: and(
                         eq(authPending.provider, "passkey-login"),
                         eq(authPending.email, stored.user.email),
+                        or(isNull(authPending.portal), eq(authPending.portal, slug)),
                         gt(authPending.expiresAt, new Date()),
                     ),
                     orderBy: [desc(authPending.createdAt)],

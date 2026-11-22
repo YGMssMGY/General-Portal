@@ -1144,7 +1144,8 @@
         "invite": "Envoyer l'invitation",
         "tokenTitle": "Lien d'invitation",
         "tokenNotice": "Copiez ce lien maintenant. Il ne sera plus affiché.",
-        "copyToken": "Copier le lien"
+        "copyToken": "Copier le lien",
+        "emailedNotice": "Le lien d’invitation a été envoyé par e-mail au destinataire."
     },
     "onboarding": {
         "title": "Configurer votre espace",

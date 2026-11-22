@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { and, count, desc, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
+import { config } from "@/config";
 import { invitations } from "@/db/schema";
 import {
     ApiError,
@@ -13,6 +14,7 @@ import {
     parseBody,
     parsePagination,
 } from "@/lib/api";
+import { sendAuthMail } from "@/lib/auth/email";
 import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant, sha256Hex } from "@/lib/tenant";
 
@@ -121,7 +123,24 @@ export async function POST(request: NextRequest) {
             entityId: row.id,
             metadata: { email: body.email, roleName: body.roleName },
         });
-        return ok({ token, id: row.id, expiresAt: row.expiresAt }, 201);
+        const selfInvite = (t.user.email ?? "").trim().toLowerCase() === body.email;
+        if (!selfInvite && config.smtp.host.trim() !== "" && config.smtp.from.trim() !== "") {
+            await sendAuthMail(
+                body.email,
+                "Invitation to General Portal",
+                `You have been invited with the ${body.roleName} role.\n\n` +
+                    `Invitation token: ${token}\n\nIt expires in ${body.expiresInDays} days.`,
+            );
+        }
+        return ok(
+            {
+                ...(selfInvite ? { token } : {}),
+                id: row.id,
+                email: body.email,
+                expiresAt: row.expiresAt,
+            },
+            201,
+        );
     } catch (e) {
         return handleRouteError("POST /api/invitations", e);
     }

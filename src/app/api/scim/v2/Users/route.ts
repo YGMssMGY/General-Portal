@@ -1,87 +1,31 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
-import { config } from "@/config";
-import { getDb, type PortalDb } from "@/db/client";
-import { memberships, roles, users, workspaces } from "@/db/schema";
+import { memberships, roles, users } from "@/db/schema";
 import { ApiError } from "@/lib/api";
 import { hashPassword } from "@/lib/auth/passwords";
-import { resolvePortalSlug } from "@/lib/tenant";
+import {
+    authorize,
+    LIST_SCHEMA,
+    scimAudit,
+    scimError,
+    toScimUser,
+    type Detail,
+    workspaceContext,
+} from "../../shared";
 
-const USER_SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:User";
-const LIST_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:ListResponse";
-const ERROR_SCHEMA = "urn:ietf:params:scim:api:messages:2.0:Error";
 const USERNAME_FILTER = /^userName\s+eq\s+"([^"]+)"$/i;
-
-type Detail = (key: string, fallback: string) => string;
-
-function scimError(status: number, detail: string, scimType?: string) {
-    return NextResponse.json(
-        {
-            schemas: [ERROR_SCHEMA],
-            detail,
-            status: String(status),
-            ...(scimType ? { scimType } : {}),
-        },
-        { status },
-    );
-}
-
-function tokenMatches(presented: string): boolean {
-    const a = createHash("sha256").update(presented).digest();
-    const b = createHash("sha256").update(config.scimToken).digest();
-    return timingSafeEqual(a, b);
-}
-
-function authorize(request: NextRequest, td: Detail): NextResponse | null {
-    if (!config.scimToken) {
-        return scimError(501, td("notConfigured", "Service is not configured."));
-    }
-    const match = /^Bearer\s+(.+)$/.exec((request.headers.get("authorization") ?? "").trim());
-    const presented = match?.[1]?.trim() ?? "";
-    if (!presented || !tokenMatches(presented)) {
-        return scimError(401, td("unauthorized", "Invalid or missing bearer token."));
-    }
-    return null;
-}
-
-async function workspaceContext(
-    request: NextRequest,
-    td: Detail,
-): Promise<{ db: PortalDb; workspaceId: string } | NextResponse> {
-    const slug = resolvePortalSlug(request);
-    const db = getDb(slug);
-    const workspace = await db.query.workspaces.findFirst({ where: eq(workspaces.slug, slug) });
-    if (!workspace) return scimError(404, td("notFound", "Workspace not found."));
-    return { db, workspaceId: workspace.id };
-}
-
-function toScimUser(user: typeof users.$inferSelect) {
-    const parts = (user.name ?? "").trim().split(/\s+/).filter(Boolean);
-    const givenName = parts.shift() ?? "";
-    const familyName = parts.join(" ");
-    return {
-        schemas: [USER_SCHEMA],
-        id: user.id,
-        userName: user.email,
-        active: !user.disabled,
-        displayName: user.name ?? user.email,
-        ...(user.name ? { name: { givenName, familyName, formatted: user.name } } : {}),
-        emails: [{ value: user.email, primary: true }],
-        meta: { resourceType: "User" },
-    };
-}
 
 export async function GET(request: NextRequest) {
     const t = await getTranslations("scim");
     const td: Detail = (key, fallback) => (t.has(key) ? t(key) : fallback);
-    const denied = authorize(request, td);
-    if (denied) return denied;
+    const auth = authorize(request, td);
+    if (auth instanceof NextResponse) return auth;
     try {
-        const ctx = await workspaceContext(request, td);
+        const ctx = await workspaceContext(auth.slug, td);
         if (ctx instanceof NextResponse) return ctx;
         const { db, workspaceId } = ctx;
         const params = new URL(request.url).searchParams;
@@ -138,10 +82,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     const t = await getTranslations("scim");
     const td: Detail = (key, fallback) => (t.has(key) ? t(key) : fallback);
-    const denied = authorize(request, td);
-    if (denied) return denied;
+    const auth = authorize(request, td);
+    if (auth instanceof NextResponse) return auth;
     try {
-        const ctx = await workspaceContext(request, td);
+        const ctx = await workspaceContext(auth.slug, td);
         if (ctx instanceof NextResponse) return ctx;
         const { db, workspaceId } = ctx;
         let body: unknown;
@@ -176,34 +120,50 @@ export async function POST(request: NextRequest) {
         const familyName =
             typeof rawName.familyName === "string" ? rawName.familyName.trim().slice(0, 100) : "";
         const fullName = [givenName, familyName].filter(Boolean).join(" ") || null;
-
-        const existing = await db
-            .select({ id: users.id })
-            .from(users)
-            .innerJoin(memberships, eq(memberships.userId, users.id))
-            .where(and(eq(users.email, email), eq(memberships.workspaceId, workspaceId)))
-            .limit(1);
-        if (existing[0]) {
+        const passwordHash = await hashPassword(randomBytes(48).toString("base64url"));
+        const result = await db.transaction(async (tx) => {
+            const existing = await tx
+                .select({ id: users.id })
+                .from(users)
+                .innerJoin(memberships, eq(memberships.userId, users.id))
+                .where(and(eq(users.email, email), eq(memberships.workspaceId, workspaceId)))
+                .limit(1);
+            if (existing[0]) return { status: "conflict" as const, user: null };
+            const inserted = await tx
+                .insert(users)
+                .values({ email, name: fullName, passwordHash, disabled: !active })
+                .returning();
+            const created = inserted[0];
+            if (!created) return { status: "error" as const, user: null };
+            const memberRole = await tx.query.roles.findFirst({
+                where: and(eq(roles.workspaceId, workspaceId), eq(roles.name, "member")),
+            });
+            await tx.insert(memberships).values({
+                workspaceId,
+                userId: created.id,
+                roleId: memberRole?.id ?? null,
+            });
+            return { status: "created" as const, user: created };
+        });
+        if (result.status === "conflict") {
             return scimError(
                 409,
                 td("conflict", "A user with this userName already exists."),
                 "uniqueness",
             );
         }
-        const passwordHash = await hashPassword(randomBytes(48).toString("base64url"));
-        const inserted = await db
-            .insert(users)
-            .values({ email, name: fullName, passwordHash, disabled: !active })
-            .returning();
-        const user = inserted[0];
-        if (!user) return scimError(500, td("internal", "Internal server error."));
-        const memberRole = await db.query.roles.findFirst({
-            where: and(eq(roles.workspaceId, workspaceId), eq(roles.name, "member")),
-        });
-        await db.insert(memberships).values({
+        if (result.status !== "created" || !result.user) {
+            return scimError(500, td("internal", "Internal server error."));
+        }
+        const user = result.user;
+        await scimAudit({
+            db,
             workspaceId,
-            userId: user.id,
-            roleId: memberRole?.id ?? null,
+            request,
+            action: "scim.create_user",
+            entityType: "user",
+            entityId: user.id,
+            metadata: { email, roleName: "member", active },
         });
         return NextResponse.json(toScimUser(user), {
             status: 201,

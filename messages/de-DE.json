@@ -1144,7 +1144,8 @@
         "invite": "Einladung senden",
         "tokenTitle": "Einladungslink",
         "tokenNotice": "Kopieren Sie diesen Link jetzt. Er wird nicht erneut angezeigt.",
-        "copyToken": "Link kopieren"
+        "copyToken": "Link kopieren",
+        "emailedNotice": "Der Einladungslink wurde dem Eingeladenen per E-Mail gesendet."
     },
     "onboarding": {
         "title": "Arbeitsbereich einrichten",

@@ -1144,7 +1144,8 @@
         "invite": "发送邀请",
         "tokenTitle": "邀请链接",
         "tokenNotice": "立即复制此链接，之后将不再显示。",
-        "copyToken": "复制链接"
+        "copyToken": "复制链接",
+        "emailedNotice": "邀请链接已通过邮件发送给受邀人。"
     },
     "onboarding": {
         "title": "设置你的工作空间",

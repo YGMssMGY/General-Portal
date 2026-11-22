@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
                     and(
                         eq(emailOtps.email, body.email),
                         eq(emailOtps.purpose, body.purpose),
+                        or(isNull(emailOtps.portal), eq(emailOtps.portal, portal)),
                         isNull(emailOtps.consumedAt),
                     ),
                 );

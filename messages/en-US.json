@@ -1144,7 +1144,8 @@
         "invite": "Send invitation",
         "tokenTitle": "Invitation link",
         "tokenNotice": "Copy this link now. It will not be shown again.",
-        "copyToken": "Copy link"
+        "copyToken": "Copy link",
+        "emailedNotice": "The invitation link was sent to the invitee by email."
     },
     "onboarding": {
         "title": "Set up your workspace",

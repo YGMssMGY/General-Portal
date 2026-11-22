@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { getDb, listPortalSlugs, type PortalDb } from "@/db/client";
 import { emailOtps } from "@/db/schema";
@@ -13,6 +13,29 @@ import {
 } from "@/lib/auth/session";
 import { sha256Hex } from "@/lib/tenant";
 
+async function mapPortals<T>(
+    slugs: string[],
+    fn: (db: PortalDb, slug: string) => Promise<T>,
+): Promise<Array<{ db: PortalDb; slug: string; value: T } | null>> {
+    const out: Array<{ db: PortalDb; slug: string; value: T } | null> = [];
+    for (let i = 0; i < slugs.length; i += 8) {
+        const chunk = slugs.slice(i, i + 8);
+        out.push(
+            ...(await Promise.all(
+                chunk.map(async (slug) => {
+                    try {
+                        const db = getDb(slug);
+                        return { db, slug, value: await fn(db, slug) };
+                    } catch {
+                        return null;
+                    }
+                }),
+            )),
+        );
+    }
+    return out;
+}
+
 export async function GET(request: NextRequest) {
     try {
         const token = new URL(request.url).searchParams.get("token");
@@ -22,29 +45,22 @@ export async function GET(request: NextRequest) {
         const slugs = hint
             ? [hint, ...listPortalSlugs().filter((s) => s !== hint)]
             : listPortalSlugs();
-        for (const slug of slugs) {
-            let db: PortalDb;
-            try {
-                db = getDb(slug);
-            } catch {
-                continue;
-            }
-            let row;
-            try {
-                const rows = await db.query.emailOtps.findMany({
-                    where: and(
-                        eq(emailOtps.codeHash, digest),
-                        eq(emailOtps.purpose, "magic-link"),
-                        isNull(emailOtps.consumedAt),
-                        gt(emailOtps.expiresAt, new Date()),
-                    ),
-                    limit: 1,
-                });
-                row = rows[0];
-            } catch {
-                continue;
-            }
+        const candidates = await mapPortals(slugs, (db, slug) =>
+            db.query.emailOtps.findMany({
+                where: and(
+                    eq(emailOtps.codeHash, digest),
+                    eq(emailOtps.purpose, "magic-link"),
+                    or(isNull(emailOtps.portal), eq(emailOtps.portal, slug)),
+                    isNull(emailOtps.consumedAt),
+                    gt(emailOtps.expiresAt, new Date()),
+                ),
+                limit: 1,
+            }),
+        );
+        for (const candidate of candidates) {
+            const row = candidate?.value[0];
             if (!row) continue;
+            const db = candidate.db;
             await db
                 .update(emailOtps)
                 .set({ consumedAt: new Date() })
