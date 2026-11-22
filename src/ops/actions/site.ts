@@ -44,9 +44,9 @@ async function mapLimited<T, R>(
 function yamlBlock(p: ReturnType<typeof getPortal>): string {
     return [
         `    - slug: ${p.slug}`,
-        `      name: "${p.name.replace(/"/g, '\\"')}"`,
+        `      name: ${JSON.stringify(p.name)}`,
         `      category: ${p.category}`,
-        `      description: "${p.description.replace(/"/g, '\\"')}"`,
+        `      description: ${JSON.stringify(p.description)}`,
         "      branding:",
         `          logo: ${p.branding.logo}`,
         `          favicon: ${p.branding.favicon}`,

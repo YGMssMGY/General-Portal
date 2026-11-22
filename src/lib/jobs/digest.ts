@@ -17,7 +17,12 @@ export interface DigestData {
 }
 
 function escapeHtml(v: string): string {
-    return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return v
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 async function digestPortal(slug: string): Promise<void> {

@@ -236,7 +236,7 @@ export async function sealDumpIfConfigured(
 }
 
 function shellQuote(s: string): string {
-    return `"${s.replace(/"/g, '\\"')}"`;
+    return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\$/g, "\\$").replace(/`/g, "\\`")}"`;
 }
 
 export async function runBin(
