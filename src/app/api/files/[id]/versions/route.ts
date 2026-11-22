@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
 import { mkdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { attachmentVersions, attachments } from "@/db/schema";
 import { config } from "@/config";
 import { ApiError, clientIp, handleRouteError, ok, requireUuid } from "@/lib/api";
@@ -73,16 +73,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         try {
             const streamed = await streamFileToDisk(file, targetPath, MAX_FILE_SIZE);
-            const top = await t.db.query.attachmentVersions.findMany({
-                where: eq(attachmentVersions.attachmentId, id),
-                orderBy: [desc(attachmentVersions.version)],
-                limit: 1,
-                columns: { version: true },
-            });
-            const version = (top[0]?.version ?? 0) + 1;
             const storagePath = join(t.portal, storedName);
-            const [[created]] = await Promise.all([
-                t.db
+            const result = await t.db.transaction(async (tx) => {
+                await tx.execute(sql`
+                    SELECT "id" FROM "attachments"
+                    WHERE "id" = ${id} AND "workspaceId" = ${t.workspaceId} AND "deletedAt" IS NULL
+                    FOR UPDATE
+                `);
+                const top = await tx.query.attachmentVersions.findMany({
+                    where: eq(attachmentVersions.attachmentId, id),
+                    orderBy: [desc(attachmentVersions.version)],
+                    limit: 1,
+                    columns: { version: true },
+                });
+                const version = (top[0]?.version ?? 0) + 1;
+                const [created] = await tx
                     .insert(attachmentVersions)
                     .values({
                         attachmentId: id,
@@ -92,22 +97,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                         sha256: streamed.sha256,
                         createdById: t.userId,
                     })
-                    .returning(),
-                t.db
+                    .returning();
+                await tx
                     .update(attachments)
                     .set({ storagePath, fileSize: streamed.size, sha256: streamed.sha256 })
-                    .where(eq(attachments.id, id)),
-                emitSideEffects(t.db, {
-                    workspaceId: t.workspaceId,
-                    userId: t.userId,
-                    action: "versioned",
-                    entityType: "attachment",
-                    entityId: id,
-                    metadata: { fileName: attachment.fileName, version },
-                    ipAddress: clientIp(request),
-                }),
-            ]);
-            return ok(created, 201);
+                    .where(eq(attachments.id, id));
+                return { created, version };
+            });
+            await emitSideEffects(t.db, {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "versioned",
+                entityType: "attachment",
+                entityId: id,
+                metadata: { fileName: attachment.fileName, version: result.version },
+                ipAddress: clientIp(request),
+            });
+            return ok(result.created, 201);
         } catch (e) {
             await unlink(targetPath).catch(() => {});
             throw e;

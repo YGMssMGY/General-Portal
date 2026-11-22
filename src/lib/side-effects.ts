@@ -63,17 +63,18 @@ export async function emitSideEffects(
             logger.error({ err: result.reason, action }, "side effect failed");
         }
     }
-    workspaceSlug(db, workspaceId)
-        .then((slug) => {
-            if (!slug) return undefined;
-            return import("@/lib/jobs/webhooks").then(({ publishWebhook }) =>
-                publishWebhook(slug, workspaceId, `${entityType}.${action}`, {
-                    entityType,
-                    entityId: entityId ?? null,
-                    action,
-                    metadata: metadata ?? {},
-                }),
-            );
-        })
-        .catch((err) => logger.debug({ err }, "webhook fan-out skipped"));
+    try {
+        const slug = await workspaceSlug(db, workspaceId);
+        if (slug) {
+            const { publishWebhook } = await import("@/lib/jobs/webhooks");
+            await publishWebhook(slug, workspaceId, `${entityType}.${action}`, {
+                entityType,
+                entityId: entityId ?? null,
+                action,
+                metadata: metadata ?? {},
+            });
+        }
+    } catch (err) {
+        logger.error({ err, workspaceId, action }, "webhook fan-out failed");
+    }
 }

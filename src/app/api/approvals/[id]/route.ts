@@ -73,54 +73,54 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const body = await parseBody<DecisionInput>(decisionSchema as never, request);
         const now = new Date();
+        const ipAddress = clientIp(request);
+        const verdict = body.decision;
 
-        if (body.decision === "rejected") {
-            const [[updated]] = await Promise.all([
-                t.db
-                    .update(approvals)
-                    .set({ status: "rejected", comment: body.comment ?? null, decidedAt: now })
-                    .where(eq(approvals.id, id))
-                    .returning(),
-                markEntity(t.db, t.workspaceId, approval.entityType, approval.entityId, "rejected"),
-                emitSideEffects(t.db, {
+        const result = await t.db.transaction(async (tx) => {
+            const [updated] = await tx
+                .update(approvals)
+                .set({ status: verdict, comment: body.comment ?? null, decidedAt: now })
+                .where(and(eq(approvals.id, id), eq(approvals.status, "pending")))
+                .returning();
+            if (!updated) throw new ApiError("Approval already decided", 400);
+
+            if (verdict === "rejected") {
+                await markEntity(
+                    tx,
+                    t.workspaceId,
+                    approval.entityType,
+                    approval.entityId,
+                    verdict,
+                );
+                await emitSideEffects(tx, {
                     workspaceId: t.workspaceId,
                     userId: t.userId,
                     action: "reject",
                     entityType: "approval",
                     entityId: id,
                     metadata: { entityType: approval.entityType, entityId: approval.entityId },
-                    ipAddress: clientIp(request),
-                }),
-            ]);
-            return ok(updated);
-        }
+                    ipAddress,
+                });
+                return { updated };
+            }
 
-        const stages = (approval.workflow?.stages ?? []) as Stage[];
-        const nextIndex = approval.stageIndex + 1;
-        if (approval.workflow && nextIndex < stages.length) {
-            const next = stages[nextIndex];
-            const approverId = await resolveStageApprover(t.db, t.workspaceId, next);
-            const nextId = randomUUID();
-            const [[updated]] = await Promise.all([
-                t.db
-                    .update(approvals)
-                    .set({ status: "approved", comment: body.comment ?? null, decidedAt: now })
-                    .where(eq(approvals.id, id))
-                    .returning(),
-                t.db
-                    .insert(approvals)
-                    .values({
-                        id: nextId,
-                        workspaceId: t.workspaceId,
-                        workflowId: approval.workflowId,
-                        entityType: approval.entityType,
-                        entityId: approval.entityId,
-                        stageIndex: nextIndex,
-                        approverId,
-                        dueAt: stageDueAt(next),
-                    })
-                    .returning(),
-                emitSideEffects(t.db, {
+            const stages = (approval.workflow?.stages ?? []) as Stage[];
+            const nextIndex = approval.stageIndex + 1;
+            if (approval.workflow && nextIndex < stages.length) {
+                const next = stages[nextIndex];
+                const approverId = await resolveStageApprover(tx, t.workspaceId, next);
+                const nextId = randomUUID();
+                await tx.insert(approvals).values({
+                    id: nextId,
+                    workspaceId: t.workspaceId,
+                    workflowId: approval.workflowId,
+                    entityType: approval.entityType,
+                    entityId: approval.entityId,
+                    stageIndex: nextIndex,
+                    approverId,
+                    dueAt: stageDueAt(next),
+                });
+                await emitSideEffects(tx, {
                     workspaceId: t.workspaceId,
                     userId: t.userId,
                     action: "approve",
@@ -131,20 +131,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                         entityId: approval.entityId,
                         advancedTo: nextIndex,
                     },
-                    ipAddress: clientIp(request),
-                }),
-            ]);
-            return ok({ ...updated, nextApprovalId: nextId });
-        }
+                    ipAddress,
+                });
+                return { updated, nextApprovalId: nextId };
+            }
 
-        const [[updated]] = await Promise.all([
-            t.db
-                .update(approvals)
-                .set({ status: "approved", comment: body.comment ?? null, decidedAt: now })
-                .where(eq(approvals.id, id))
-                .returning(),
-            markEntity(t.db, t.workspaceId, approval.entityType, approval.entityId, "approved"),
-            emitSideEffects(t.db, {
+            await markEntity(tx, t.workspaceId, approval.entityType, approval.entityId, verdict);
+            await emitSideEffects(tx, {
                 workspaceId: t.workspaceId,
                 userId: t.userId,
                 action: "approve",
@@ -155,10 +148,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     entityId: approval.entityId,
                     completed: true,
                 },
-                ipAddress: clientIp(request),
-            }),
-        ]);
-        return ok(updated);
+                ipAddress,
+            });
+            return { updated };
+        });
+
+        return result.nextApprovalId
+            ? ok({ ...result.updated, nextApprovalId: result.nextApprovalId })
+            : ok(result.updated);
     } catch (e) {
         return handleRouteError("POST /api/approvals/[id]", e);
     }

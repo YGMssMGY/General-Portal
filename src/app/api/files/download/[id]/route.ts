@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import type { NextRequest } from "next/server";
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
                     eq(attachmentVersions.version, version),
                 ),
                 columns: { storagePath: true, fileSize: true },
+                orderBy: [desc(attachmentVersions.version)],
                 limit: 1,
             });
             const match = rows[0];

@@ -235,10 +235,19 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        let inserted = 0;
         await t.db.transaction(async (tx) => {
-            if (taskValues.length > 0) await tx.insert(tasks).values(taskValues);
-            if (transactionValues.length > 0)
-                await tx.insert(transactions).values(transactionValues);
+            if (taskValues.length > 0) {
+                const rows = await tx.insert(tasks).values(taskValues).returning({ id: tasks.id });
+                inserted += rows.length;
+            }
+            if (transactionValues.length > 0) {
+                const rows = await tx
+                    .insert(transactions)
+                    .values(transactionValues)
+                    .returning({ id: transactions.id });
+                inserted += rows.length;
+            }
             if (memberValues.length > 0) {
                 const unique = [...new Map(memberValues.map((m) => [m.email, m])).values()];
                 const upserted = await tx
@@ -254,12 +263,16 @@ export async function POST(request: NextRequest) {
                     const userId = idByEmail.get(m.email);
                     return userId ? [{ workspaceId: t.workspaceId, userId, roleId: m.roleId }] : [];
                 });
-                if (membershipValues.length > 0)
-                    await tx.insert(memberships).values(membershipValues).onConflictDoNothing();
+                if (membershipValues.length > 0) {
+                    const rows = await tx
+                        .insert(memberships)
+                        .values(membershipValues)
+                        .onConflictDoNothing()
+                        .returning({ id: memberships.id });
+                    inserted += rows.length;
+                }
             }
         });
-
-        const inserted = taskValues.length + transactionValues.length + memberValues.length;
         await emitSideEffects(t.db, {
             workspaceId: t.workspaceId,
             userId: t.userId,
