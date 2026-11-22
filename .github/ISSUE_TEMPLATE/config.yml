@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+    - name: Questions and discussions
+      url: https://github.com/YGMssMGY/General-Portal/discussions
+      about: Ask questions and share ideas with the community.
+    - name: Security vulnerability
+      url: https://github.com/YGMssMGY/General-Portal/blob/main/SECURITY.md
+      about: Report security vulnerabilities privately using the process in SECURITY.md. Do not open a public issue.
