@@ -45,12 +45,32 @@ portals:
               search,
               accounts,
               budget,
+              my_work,
+              onboarding,
+              invitations,
+              analytics,
           ]
       nav:
           - path: /dashboard
             label: Dashboard
             icon: layout-dashboard
             module: dashboard
+          - path: /my-work
+            label: My Work
+            icon: clipboard-list
+            module: my_work
+          - path: /onboarding
+            label: Setup
+            icon: settings
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: users
+            module: invitations
+          - path: /analytics
+            label: Analytics
+            icon: activity
+            module: analytics
           - path: /proposals
             label: Proposals
             icon: file-text
@@ -175,12 +195,32 @@ portals:
               search,
               accounts,
               budget,
+              my_work,
+              onboarding,
+              invitations,
+              analytics,
           ]
       nav:
           - path: /dashboard
             label: Dashboard
             icon: layout-dashboard
             module: dashboard
+          - path: /my-work
+            label: My Work
+            icon: clipboard-list
+            module: my_work
+          - path: /onboarding
+            label: Setup
+            icon: settings
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: users
+            module: invitations
+          - path: /analytics
+            label: Analytics
+            icon: activity
+            module: analytics
           - path: /proposals
             label: Proposals
             icon: file-text

@@ -12,8 +12,10 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -71,6 +73,10 @@ function formatSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isPreviewable(mimeType: string): boolean {
+    return mimeType === "image/png" || mimeType === "image/jpeg" || mimeType === "application/pdf";
+}
+
 export default function FilesPage() {
     const portal = usePortal();
     const { user } = useAuthSession();
@@ -92,6 +98,10 @@ export default function FilesPage() {
     const [historyTarget, setHistoryTarget] = useState<FileItem | null>(null);
     const [versionCounts, setVersionCounts] = useState<Record<string, number>>({});
     const [versionUploading, setVersionUploading] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [previewTarget, setPreviewTarget] = useState<FileItem | null>(null);
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+    const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const versionInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,6 +118,7 @@ export default function FilesPage() {
         setPrevFirstPage(firstPage);
         setExtra([]);
         setNextCursor(firstPage?.nextCursor ?? null);
+        setSelectedIds(new Set());
     }
     const files = [...(firstPage?.items ?? []), ...extra];
 
@@ -177,6 +188,27 @@ export default function FilesPage() {
             queryClient.invalidateQueries({ queryKey: [portal, "files"] });
             setDeleteTarget(null);
             setPermanentTarget(null);
+        },
+        onError: (e) => {
+            toast.error(errorMessage(e, t("deleteFailed")));
+        },
+    });
+
+    const bulkDelete = useMutation({
+        mutationFn: ({ permanent }: { permanent: boolean }) =>
+            Promise.all(
+                [...selectedIds].map((id) =>
+                    fetchJson<{ deleted: boolean }>(
+                        permanent ? `/api/files/${id}?permanent=true` : `/api/files/${id}`,
+                        { method: "DELETE" },
+                    ),
+                ),
+            ),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "files"] });
+            setSelectedIds(new Set());
+            setBulkDeleteOpen(false);
+            setBulkPermanentOpen(false);
         },
         onError: (e) => {
             toast.error(errorMessage(e, t("deleteFailed")));
@@ -272,6 +304,49 @@ export default function FilesPage() {
                 </Select>
             </div>
 
+            {files.length > 0 && (
+                <div
+                    style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}
+                >
+                    <Checkbox
+                        id="files-select-all"
+                        checked={files.every((f) => selectedIds.has(f.id))}
+                        onCheckedChange={(checked) =>
+                            setSelectedIds(
+                                checked === true ? new Set(files.map((f) => f.id)) : new Set(),
+                            )
+                        }
+                        aria-label={t("selectAll")}
+                    />
+                    <Label
+                        htmlFor="files-select-all"
+                        style={{ fontSize: "13px", marginRight: "8px" }}
+                    >
+                        {t("selectAll")}
+                    </Label>
+                    {selectedIds.size > 0 && (
+                        <>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setBulkDeleteOpen(true)}
+                            >
+                                {t("bulkDelete")} ({selectedIds.size})
+                            </Button>
+                            {isAdmin && (
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => setBulkPermanentOpen(true)}
+                                >
+                                    {t("bulkDeleteForever")} ({selectedIds.size})
+                                </Button>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
+
             {isLoading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -305,7 +380,19 @@ export default function FilesPage() {
                                     gap: "12px",
                                 }}
                             >
-                                <div style={{ minWidth: 0 }}>
+                                <Checkbox
+                                    checked={selectedIds.has(f.id)}
+                                    onCheckedChange={(checked) =>
+                                        setSelectedIds((prev) => {
+                                            const next = new Set(prev);
+                                            if (checked === true) next.add(f.id);
+                                            else next.delete(f.id);
+                                            return next;
+                                        })
+                                    }
+                                    aria-label={f.fileName}
+                                />
+                                <div style={{ minWidth: 0, flex: 1 }}>
                                     <p
                                         style={{
                                             fontSize: "14px",
@@ -344,6 +431,15 @@ export default function FilesPage() {
                                         <Badge variant="secondary">
                                             {tV("version")} {versionCounts[f.id]}
                                         </Badge>
+                                    )}
+                                    {isPreviewable(f.mimeType) && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setPreviewTarget(f)}
+                                        >
+                                            {t("preview")}
+                                        </Button>
                                     )}
                                     <a
                                         href={`/api/files/download/${f.id}`}
@@ -391,6 +487,59 @@ export default function FilesPage() {
                     )}
                 </div>
             )}
+
+            <Dialog
+                open={previewTarget !== null}
+                onOpenChange={(open) => {
+                    if (!open) setPreviewTarget(null);
+                }}
+            >
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>{previewTarget?.fileName}</DialogTitle>
+                    </DialogHeader>
+                    {previewTarget?.mimeType === "application/pdf" ? (
+                        <iframe
+                            src={`/api/files/download/${previewTarget.id}`}
+                            title={previewTarget.fileName}
+                            sandbox="allow-scripts"
+                            style={{
+                                width: "100%",
+                                height: "70vh",
+                                border: "1px solid var(--color-border)",
+                            }}
+                        />
+                    ) : previewTarget ? (
+                        <>
+                            {/* eslint-disable-next-line @next/next/no-img-element -- preview is auth-scoped and must not pass through next/image optimizer */}
+                            <img
+                                src={`/api/files/download/${previewTarget.id}`}
+                                alt={previewTarget.fileName}
+                                style={{ maxWidth: "100%", maxHeight: "70vh", margin: "0 auto" }}
+                            />
+                        </>
+                    ) : null}
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={bulkDeleteOpen}
+                onOpenChange={setBulkDeleteOpen}
+                title={t("bulkDelete")}
+                confirmLabel={t("bulkDelete")}
+                destructive
+                onConfirm={() => bulkDelete.mutate({ permanent: false })}
+            />
+            <ConfirmDialog
+                open={bulkPermanentOpen}
+                onOpenChange={setBulkPermanentOpen}
+                title={t("bulkDeleteForever")}
+                confirmLabel={tC("deleteForever")}
+                destructive
+                requireTypedText
+                typingChallenge={tC("deleteForever")}
+                onConfirm={() => bulkDelete.mutate({ permanent: true })}
+            />
 
             <ConfirmDialog
                 open={deleteTarget !== null}

@@ -102,7 +102,11 @@
         "customFields": "自定义字段",
         "search": "搜索",
         "budget": "预算",
-        "partnerships": "合作关系"
+        "partnerships": "合作关系",
+        "myWork": "我的工作",
+        "onboarding": "设置",
+        "invitations": "邀请",
+        "analytics": "分析"
     },
     "auth": {
         "signIn": "登录",
@@ -486,7 +490,11 @@
         "uploadFailed": "上传失败。",
         "deleteFailed": "删除失败。",
         "downloading": "下载中",
-        "storagePath": "存储路径"
+        "storagePath": "存储路径",
+        "preview": "预览",
+        "selectAll": "全选",
+        "bulkDelete": "删除所选",
+        "bulkDeleteForever": "永久删除所选"
     },
     "links": {
         "title": "链接",
@@ -572,7 +580,10 @@
         "moduleDisabled": "模块已禁用",
         "terminology": "术语",
         "terminologyHint": "重命名模块，以符合贵组织的惯用名称。",
-        "reset": "重置"
+        "reset": "重置",
+        "radius": "圆角",
+        "preview": "预览",
+        "invalidTerminology": "术语必须是文本值的 JSON 对象。"
     },
     "search": {
         "title": "搜索",
@@ -931,6 +942,248 @@
         "noViews": "暂无已保存视图",
         "invalidJson": "筛选条件必须是有效的 JSON 对象。",
         "sharedWithYou": "与您共享",
-        "filtersJson": "筛选条件 (JSON)"
+        "filtersJson": "筛选条件 (JSON)",
+        "apply": "应用"
+    },
+    "marketing": {
+        "useCases": {
+            "title": "选择你的工作空间",
+            "subtitle": "一个平台，为各类组织量身打造。",
+            "clubs": {
+                "title": "社团与学生组织",
+                "description": "在一个地方管理项目、活动、预算与选举。"
+            },
+            "firms": {
+                "title": "小型企业与团队",
+                "description": "审批、文件、财务与客户工作，不再工具泛滥。"
+            },
+            "agencies": {
+                "title": "机构与大型组织",
+                "description": "十到五十个隔离工作空间，集中治理。"
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "你会得到",
+            "clubs": {
+                "title": "为社团打造",
+                "intro": "从招新到年度规划，一切都在同一工作空间。",
+                "benefits": {
+                    "1": "每个工作空间独立数据库",
+                    "2": "九种登录方式",
+                    "3": "YAML 驱动配置",
+                    "4": "开箱即用五种语言"
+                }
+            },
+            "firms": {
+                "title": "为团队打造",
+                "intro": "让决策、支出与交付物既可审计又高效。",
+                "benefits": {
+                    "1": "40 多个内置模块",
+                    "2": "基于权限的访问控制",
+                    "3": "防篡改审计日志",
+                    "4": "流式验证的文件上传"
+                }
+            },
+            "agencies": {
+                "title": "为机构打造",
+                "intro": "隔离每个客户，同时保持单一部署与统一审计。",
+                "benefits": {
+                    "1": "每次部署十到五十个工作空间",
+                    "2": "每个工作空间可视化品牌",
+                    "3": "定时加密备份",
+                    "4": "面向智能体的运维 API"
+                }
+            }
+        },
+        "links": {
+            "label": "探索",
+            "features": "功能",
+            "demo": "在线演示"
+        },
+        "changelog": {
+            "title": "更新日志",
+            "empty": "暂无更新日志。"
+        },
+        "roadmap": {
+            "title": "路线图",
+            "subtitle": "接下来要发布的内容。",
+            "columns": {
+                "now": "现在",
+                "next": "下一步",
+                "later": "以后",
+                "done": "已完成"
+            },
+            "items": {
+                "presets": "工作空间预设",
+                "demo": "只读演示模式",
+                "sdk": "类型化 SDK 与 CLI",
+                "analytics": "分析中心",
+                "backups": "定时加密备份",
+                "scim": "SCIM 配置",
+                "presence": "在线状态",
+                "badges": "参与徽章"
+            }
+        },
+        "security": {
+            "title": "安全",
+            "subtitle": "General Portal 如何保护你的数据。",
+            "topics": {
+                "transport": {
+                    "title": "传输",
+                    "body": "生产环境强制 HTTPS、HSTS、基于 nonce 的 CSP 与安全头。"
+                },
+                "authn": {
+                    "title": "身份认证",
+                    "body": "不透明会话支持轮换与即时撤销，并提供九种登录方式与通行密钥。"
+                },
+                "authz": {
+                    "title": "授权",
+                    "body": "每个路由都要求租户上下文；每次变更都检查权限与对象归属。"
+                },
+                "uploads": {
+                    "title": "上传",
+                    "body": "魔数嗅探、流式大小限制、校验和与仅附件下载。"
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "不可信 URL 解析到已验证 IP，固定连接并重新验证每次重定向。"
+                },
+                "rateLimits": {
+                    "title": "速率限制",
+                    "body": "共享的 Postgres 令牌桶跨实例保护敏感端点。"
+                },
+                "audit": {
+                    "title": "审计",
+                    "body": "仅追加日志，带 SHA-256 哈希链与周期性检查点。"
+                },
+                "supplyChain": {
+                    "title": "供应链",
+                    "body": "锁定依赖文件、依赖审查、CodeQL、Scorecard、SBOM 与签名发布。"
+                }
+            },
+            "reporting": "请通过 GitHub 安全公告私下报告。",
+            "docsLink": "阅读安全指南"
+        },
+        "about": {
+            "tagline": "自托管的工作空间操作系统",
+            "title": "关于 General Portal",
+            "story1": "General Portal 始于两个组织的门户，现已成长为适用于任何团队的通用平台。",
+            "story2": "部署、数据与品牌都由你掌控，无需外部 CDN。",
+            "factsTitle": "事实",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "自托管于你自己的 Postgres",
+                "fonts": "自托管字体，无 CDN"
+            }
+        },
+        "docs": {
+            "title": "文档",
+            "subtitle": "配置、部署与运维工作空间所需的一切。",
+            "guidesTitle": "指南",
+            "guides": {
+                "readme": "README",
+                "architecture": "架构",
+                "deployment": "部署",
+                "auth": "身份认证",
+                "security": "安全",
+                "i18n": "国际化",
+                "tui": "运维控制台",
+                "api": "API 参考",
+                "runbook": "运维手册"
+            },
+            "apiTitle": "API 参考",
+            "publicApi": "公开 API 描述",
+            "operatorApi": "运维 API 描述"
+        },
+        "demo": {
+            "banner": "只读预览。真实工作空间需要登录。",
+            "title": "查看工作空间",
+            "subtitle": "你将获得的模块的静态预览。",
+            "gated": "登录以使用真实工作空间。",
+            "cards": {
+                "tasks": {
+                    "title": "任务",
+                    "rows": {
+                        "1": "准备季度计划",
+                        "2": "审核年度预算",
+                        "3": "发布活动回顾"
+                    }
+                },
+                "proposals": {
+                    "title": "提案",
+                    "rows": {
+                        "1": "新工作坊系列",
+                        "2": "社区合作"
+                    }
+                },
+                "members": {
+                    "title": "成员",
+                    "rows": {
+                        "1": "管理员",
+                        "2": "干事",
+                        "3": "成员"
+                    }
+                }
+            }
+        }
+    },
+    "myWork": {
+        "title": "我的工作",
+        "subtitle": "所有分配给你的工作，一目了然。",
+        "customize": "自定义",
+        "done": "完成",
+        "show": "显示",
+        "hide": "隐藏",
+        "moveUp": "上移",
+        "moveDown": "下移",
+        "widget": {
+            "tasks": "我的任务",
+            "events": "近期活动",
+            "proposals": "待审提案",
+            "approvals": "审批",
+            "dues": "我的会费",
+            "polls": "进行中的投票",
+            "rsvps": "我的报名",
+            "kudos": "最近表彰"
+        }
+    },
+    "invitations": {
+        "title": "邀请",
+        "description": "通过有时效的链接邀请成员加入工作空间。",
+        "forbidden": "你没有管理邀请的权限。",
+        "createInvitation": "创建邀请",
+        "noInvitations": "暂无待处理邀请。",
+        "expiresAt": "到期时间",
+        "revoke": "撤销",
+        "revokeWarning": "撤销此邀请？链接将立即失效。",
+        "role": "角色",
+        "roleAdmin": "管理员",
+        "roleOfficer": "干事",
+        "roleMember": "成员",
+        "expiresInDays": "有效天数",
+        "invite": "发送邀请",
+        "tokenTitle": "邀请链接",
+        "tokenNotice": "立即复制此链接，之后将不再显示。",
+        "copyToken": "复制链接"
+    },
+    "onboarding": {
+        "title": "设置你的工作空间",
+        "description": "四个简单步骤，让团队快速上手。",
+        "progressLabel": "设置进度",
+        "progressCount": "已完成 {completed} / {total}",
+        "done": "已完成",
+        "pending": "待完成",
+        "passwordTitle": "设置管理员密码",
+        "passwordDescription": "使用强密码保护你的账户。",
+        "passwordAction": "打开账户设置",
+        "brandTitle": "设置工作空间品牌",
+        "brandDescription": "添加名称、徽标与主色。",
+        "brandAction": "打开设置",
+        "inviteTitle": "邀请团队成员",
+        "inviteDescription": "邀请同事加入工作空间。",
+        "inviteAction": "打开邀请",
+        "showcaseTitle": "发布展示页",
+        "showcaseDescription": "向公众分享活动与动态。",
+        "showcaseAction": "打开展示管理"
     }
 }

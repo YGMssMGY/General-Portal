@@ -102,7 +102,11 @@
         "customFields": "Custom Fields",
         "search": "Search",
         "budget": "Budget",
-        "partnerships": "Partnerships"
+        "partnerships": "Partnerships",
+        "myWork": "My Work",
+        "onboarding": "Setup",
+        "invitations": "Invitations",
+        "analytics": "Analytics"
     },
     "auth": {
         "signIn": "Sign In",
@@ -486,7 +490,11 @@
         "uploadFailed": "Upload failed.",
         "deleteFailed": "Delete failed.",
         "downloading": "Downloading",
-        "storagePath": "Storage Path"
+        "storagePath": "Storage Path",
+        "preview": "Preview",
+        "selectAll": "Select all",
+        "bulkDelete": "Delete selected",
+        "bulkDeleteForever": "Delete selected permanently"
     },
     "links": {
         "title": "Links",
@@ -572,7 +580,10 @@
         "moduleDisabled": "Module Disabled",
         "terminology": "Terminology",
         "terminologyHint": "Rename modules to match your organization's vocabulary.",
-        "reset": "Reset"
+        "reset": "Reset",
+        "radius": "Corner radius",
+        "preview": "Preview",
+        "invalidTerminology": "Terminology must be a JSON object of text values."
     },
     "search": {
         "title": "Search",
@@ -931,6 +942,248 @@
         "noViews": "No saved views",
         "invalidJson": "Filters must be a valid JSON object.",
         "sharedWithYou": "Shared with you",
-        "filtersJson": "Filters (JSON)"
+        "filtersJson": "Filters (JSON)",
+        "apply": "Apply"
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Choose your workspace",
+            "subtitle": "One platform, purpose-built for every kind of organization.",
+            "clubs": {
+                "title": "Clubs and student organizations",
+                "description": "Run projects, events, budgets and elections in one place."
+            },
+            "firms": {
+                "title": "Small firms and teams",
+                "description": "Approvals, files, finance and client work without tool sprawl."
+            },
+            "agencies": {
+                "title": "Agencies and large organizations",
+                "description": "Ten to fifty isolated workspaces with central governance."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "What you get",
+            "clubs": {
+                "title": "Built for clubs",
+                "intro": "From recruitment to annual planning, everything stays in one workspace.",
+                "benefits": {
+                    "1": "Isolated databases per workspace",
+                    "2": "Nine sign-in providers",
+                    "3": "YAML-driven configuration",
+                    "4": "Five locales out of the box"
+                }
+            },
+            "firms": {
+                "title": "Built for teams",
+                "intro": "Keep decisions, spend and deliverables auditable and fast.",
+                "benefits": {
+                    "1": "40+ built-in modules",
+                    "2": "Permission-based access control",
+                    "3": "Tamper-evident audit log",
+                    "4": "Streamed, verified file uploads"
+                }
+            },
+            "agencies": {
+                "title": "Built for agencies",
+                "intro": "Separate every client while keeping one deployment and one audit trail.",
+                "benefits": {
+                    "1": "Ten to fifty workspaces per deployment",
+                    "2": "Visual branding per workspace",
+                    "3": "Scheduled encrypted backups",
+                    "4": "Operator API for agents"
+                }
+            }
+        },
+        "links": {
+            "label": "Explore",
+            "features": "Features",
+            "demo": "Live demo"
+        },
+        "changelog": {
+            "title": "Changelog",
+            "empty": "No changelog entries yet."
+        },
+        "roadmap": {
+            "title": "Roadmap",
+            "subtitle": "What is shipping next.",
+            "columns": {
+                "now": "Now",
+                "next": "Next",
+                "later": "Later",
+                "done": "Done"
+            },
+            "items": {
+                "presets": "Workspace presets",
+                "demo": "Read-only demo mode",
+                "sdk": "Typed SDK and CLI",
+                "analytics": "Analytics hub",
+                "backups": "Scheduled encrypted backups",
+                "scim": "SCIM provisioning",
+                "presence": "Live presence",
+                "badges": "Participation badges"
+            }
+        },
+        "security": {
+            "title": "Security",
+            "subtitle": "How General Portal protects your data.",
+            "topics": {
+                "transport": {
+                    "title": "Transport",
+                    "body": "HTTPS only in production, HSTS, nonce-based CSP and hardened headers."
+                },
+                "authn": {
+                    "title": "Authentication",
+                    "body": "Opaque sessions with rotation and instant revocation, plus nine providers and passkeys."
+                },
+                "authz": {
+                    "title": "Authorization",
+                    "body": "Every route requires a tenant context; every mutation checks a permission and object ownership."
+                },
+                "uploads": {
+                    "title": "Uploads",
+                    "body": "Magic-byte sniffing, streamed size caps, checksums and attachment-only downloads."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Untrusted URLs resolve to validated IPs, pin the connection and revalidate every redirect."
+                },
+                "rateLimits": {
+                    "title": "Rate limits",
+                    "body": "A shared Postgres token bucket backs sensitive endpoints across instances."
+                },
+                "audit": {
+                    "title": "Audit",
+                    "body": "An append-only log with a SHA-256 hash chain and periodic checkpoints."
+                },
+                "supplyChain": {
+                    "title": "Supply chain",
+                    "body": "Frozen lockfile, dependency review, CodeQL, Scorecard, SBOM and signed releases."
+                }
+            },
+            "reporting": "Report privately through GitHub Security Advisories.",
+            "docsLink": "Read the security guide"
+        },
+        "about": {
+            "tagline": "The self-hosted workspace OS",
+            "title": "About General Portal",
+            "story1": "General Portal started as a portal for two organizations and grew into a general platform for any team.",
+            "story2": "You own the deployment, the data and the branding. No external CDN is required.",
+            "factsTitle": "Facts",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Self-hosted on your own Postgres",
+                "fonts": "Self-hosted fonts, no CDN"
+            }
+        },
+        "docs": {
+            "title": "Documentation",
+            "subtitle": "Everything you need to configure, deploy and operate a workspace.",
+            "guidesTitle": "Guides",
+            "guides": {
+                "readme": "README",
+                "architecture": "Architecture",
+                "deployment": "Deployment",
+                "auth": "Authentication",
+                "security": "Security",
+                "i18n": "Internationalization",
+                "tui": "Operator console",
+                "api": "API reference",
+                "runbook": "Runbook"
+            },
+            "apiTitle": "API references",
+            "publicApi": "Public API description",
+            "operatorApi": "Operator API description"
+        },
+        "demo": {
+            "banner": "Read-only preview. Real workspaces require sign-in.",
+            "title": "See the workspace",
+            "subtitle": "A static preview of the modules you get.",
+            "gated": "Sign in to use the real workspace.",
+            "cards": {
+                "tasks": {
+                    "title": "Tasks",
+                    "rows": {
+                        "1": "Prepare the quarterly plan",
+                        "2": "Review the annual budget",
+                        "3": "Publish the event recap"
+                    }
+                },
+                "proposals": {
+                    "title": "Proposals",
+                    "rows": {
+                        "1": "New workshop series",
+                        "2": "Community partnership"
+                    }
+                },
+                "members": {
+                    "title": "Members",
+                    "rows": {
+                        "1": "Admin",
+                        "2": "Officer",
+                        "3": "Member"
+                    }
+                }
+            }
+        }
+    },
+    "myWork": {
+        "title": "My Work",
+        "subtitle": "Everything assigned to you, in one place.",
+        "customize": "Customize",
+        "done": "Done",
+        "show": "Show",
+        "hide": "Hide",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "widget": {
+            "tasks": "My tasks",
+            "events": "Upcoming events",
+            "proposals": "Pending proposals",
+            "approvals": "Approvals",
+            "dues": "My dues",
+            "polls": "Open polls",
+            "rsvps": "My RSVPs",
+            "kudos": "Recent kudos"
+        }
+    },
+    "invitations": {
+        "title": "Invitations",
+        "description": "Invite people to this workspace with an expiring link.",
+        "forbidden": "You do not have permission to manage invitations.",
+        "createInvitation": "Create invitation",
+        "noInvitations": "No pending invitations.",
+        "expiresAt": "Expires",
+        "revoke": "Revoke",
+        "revokeWarning": "Revoke this invitation? The link will stop working immediately.",
+        "role": "Role",
+        "roleAdmin": "Admin",
+        "roleOfficer": "Officer",
+        "roleMember": "Member",
+        "expiresInDays": "Expires in days",
+        "invite": "Send invitation",
+        "tokenTitle": "Invitation link",
+        "tokenNotice": "Copy this link now. It will not be shown again.",
+        "copyToken": "Copy link"
+    },
+    "onboarding": {
+        "title": "Set up your workspace",
+        "description": "Four quick steps to get your team started.",
+        "progressLabel": "Setup progress",
+        "progressCount": "{completed} of {total} complete",
+        "done": "Done",
+        "pending": "Pending",
+        "passwordTitle": "Set an admin password",
+        "passwordDescription": "Protect your account with a strong password.",
+        "passwordAction": "Open account settings",
+        "brandTitle": "Brand your workspace",
+        "brandDescription": "Add your name, logo and primary color.",
+        "brandAction": "Open settings",
+        "inviteTitle": "Invite your team",
+        "inviteDescription": "Bring your teammates into the workspace.",
+        "inviteAction": "Open invitations",
+        "showcaseTitle": "Publish your showcase",
+        "showcaseDescription": "Share events and updates with the public.",
+        "showcaseAction": "Open showcase admin"
     }
 }
