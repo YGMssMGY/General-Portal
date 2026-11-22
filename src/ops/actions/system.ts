@@ -1,10 +1,12 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { config } from "@/config";
 import { listPortalSlugs, portalDbUrl } from "@/db/client";
-import { runTsx, withClient } from "@/tui/lib/tui-db";
+import { workspaces } from "@/db/schema";
+import { runTsx, sealDumpIfConfigured, withClient } from "@/tui/lib/tui-db";
 import { workspaceIdFor } from "./backup";
 import type { ActionDefinition, OpsContext, OpsScope } from "../types";
 
@@ -226,7 +228,7 @@ export const systemActions: ActionDefinition[] = [
         group: "user",
         summary: "Change a member's role by name",
         scopes: ["ops:deploy"],
-        destructive: false,
+        destructive: true,
         params: z.object({ slug, email, role: z.enum(["admin", "officer", "member"]) }),
         run: async ({ slug, email, role }) => {
             const url = portalDbUrl(slug);
@@ -244,17 +246,18 @@ export const systemActions: ActionDefinition[] = [
     {
         id: "user.disable",
         group: "user",
-        summary: "Disable or enable a user account",
+        summary: "Disable or enable a user account in the target workspace",
         scopes: ["ops:danger"],
-        destructive: false,
+        destructive: true,
         params: z.object({ slug, email, disabled: z.boolean().default(true) }),
         run: async ({ slug, email, disabled }) => {
             const url = portalDbUrl(slug);
-            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const wid = await workspaceIdFor(slug);
+            if (!url || !wid) throw new Error(`Unknown portal: ${slug}`);
             return withClient(url, async (c) => {
                 const r = await c.query(
-                    "UPDATE users SET disabled = $1 WHERE email = $2 RETURNING id",
-                    [disabled, email.toLowerCase()],
+                    'UPDATE users SET disabled = $1 WHERE email = $2 AND id IN (SELECT "userId" FROM memberships WHERE "workspaceId" = $3) RETURNING id',
+                    [disabled, email.toLowerCase(), wid],
                 );
                 return { slug, email, disabled, updated: r.rowCount ?? 0 };
             });
@@ -324,18 +327,19 @@ export const systemActions: ActionDefinition[] = [
     {
         id: "danger.disable-user",
         group: "danger",
-        summary: "Disable a user by email with typed confirmation",
+        summary: "Disable a workspace member by email with typed confirmation",
         scopes: ["ops:danger"],
         destructive: true,
         confirmField: "email",
         params: z.object({ slug, email }),
         run: async ({ slug, email }) => {
             const url = portalDbUrl(slug);
-            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const wid = await workspaceIdFor(slug);
+            if (!url || !wid) throw new Error(`Unknown portal: ${slug}`);
             return withClient(url, async (c) => {
                 const r = await c.query(
-                    "UPDATE users SET disabled = true WHERE email = $1 RETURNING id",
-                    [email.toLowerCase()],
+                    'UPDATE users SET disabled = true WHERE email = $1 AND id IN (SELECT "userId" FROM memberships WHERE "workspaceId" = $2) RETURNING id',
+                    [email.toLowerCase(), wid],
                 );
                 return { slug, email, disabled: (r.rowCount ?? 0) > 0 };
             });
@@ -381,8 +385,17 @@ export const systemActions: ActionDefinition[] = [
             const { backupFilePath, pgDump } = await import("@/tui/lib/tui-db");
             const url = portalDbUrl(slug);
             if (!url) throw new Error(`Unknown portal: ${slug}`);
-            const r = await pgDump(url, backupFilePath(slug, "export"));
-            return { slug, ok: r.ok, bytes: r.bytes };
+            const staged = backupFilePath(slug, "export");
+            const r = await pgDump(url, staged);
+            if (!r.ok) return { slug, ok: false, bytes: r.bytes };
+            const sealed = await sealDumpIfConfigured(staged);
+            return {
+                slug,
+                ok: true,
+                bytes: sealed?.bytes ?? r.bytes,
+                file: sealed?.path ?? staged,
+                encrypted: Boolean(sealed),
+            };
         },
     },
     {
@@ -415,17 +428,36 @@ export const systemActions: ActionDefinition[] = [
         confirmField: "slug",
         params: z.object({ slug, file: z.string().min(1) }),
         run: async ({ slug, file }) => {
-            const { pgRestore } = await import("@/tui/lib/tui-db");
+            const { backupEncryptionKey, decryptDump, pgRestore } =
+                await import("@/tui/lib/tui-db");
+            const { isSingleDbMode } = await import("@/db/client");
+            if (isSingleDbMode()) {
+                throw new Error("Direct database import is disabled in single-database mode");
+            }
             const url = portalDbUrl(slug);
             if (!url) throw new Error(`Unknown portal: ${slug}`);
             const allowed = /^[a-zA-Z0-9_.-]+$/.test(file);
             if (!allowed) throw new Error("Invalid backup filename");
-            const full = path.resolve(process.cwd(), ".backups", slug, file);
-            if (!full.startsWith(path.resolve(process.cwd(), ".backups", slug))) {
+            const base = path.resolve(process.cwd(), ".backups", slug);
+            const full = path.resolve(base, file);
+            if (!full.startsWith(`${base}${path.sep}`)) {
                 throw new Error("Path traversal rejected");
             }
-            const r = await pgRestore(url, full);
-            if (r.code !== 0) throw new Error(`Import failed: ${r.out}`);
+            let target = full;
+            if (file.endsWith(".enc")) {
+                const key = backupEncryptionKey();
+                if (!key)
+                    throw new Error("Encrypted backup requires a valid BACKUP_ENCRYPTION_KEY");
+                const decrypted = await decryptDump(full, key);
+                target = decrypted.path;
+            }
+            try {
+                const r = await pgRestore(url, target);
+                if (r.code !== 0) throw new Error(`Import failed: ${r.out}`);
+            } finally {
+                if (target !== full)
+                    await fs.promises.rm(path.dirname(target), { recursive: true, force: true });
+            }
             return { slug, imported: file };
         },
     },
@@ -508,7 +540,7 @@ export const systemActions: ActionDefinition[] = [
         group: "webhook",
         summary: "Re-publish an event to all active webhooks for a workspace",
         scopes: ["ops:deploy"],
-        destructive: false,
+        destructive: true,
         params: z.object({
             slug,
             event: z.string().min(1).max(80),
@@ -518,20 +550,19 @@ export const systemActions: ActionDefinition[] = [
             const { publishWebhook } = await import("@/lib/jobs/webhooks");
             const { getDb } = await import("@/db/client");
             const db = getDb(slug);
-            const rows = await db.query.workspaces.findMany({
+            const row = await db.query.workspaces.findFirst({
+                where: eq(workspaces.slug, slug),
                 columns: { id: true },
-                limit: 1,
             });
-            const workspaceId = rows[0]?.id;
-            if (!workspaceId) throw new Error(`No workspace for ${slug}`);
-            await publishWebhook(slug, workspaceId, event, payload);
+            if (!row) throw new Error(`No workspace for ${slug}`);
+            await publishWebhook(slug, row.id, event, payload);
             return { slug, event, queued: true };
         },
     },
     {
         id: "cli.completion",
         group: "ops",
-        summary: "Print a shell completion snippet generated from the action registry",
+        summary: "Describe the curl/irm wrapper and print completion for the action registry",
         scopes: ["ops:read"],
         destructive: false,
         params: z.object({ shell: z.enum(["bash", "zsh", "powershell"]) }),
@@ -540,13 +571,22 @@ export const systemActions: ActionDefinition[] = [
             const ids = listActions()
                 .map((a) => a.id)
                 .join(" ");
-            if (shell === "bash") return { script: `complete -W '${ids}' gp` };
-            if (shell === "zsh") return { script: `compdef '_arguments "1: :(${ids})"' gp` };
+            const wrapper = shell === "powershell" ? "cli/gp.ps1" : "cli/gp.sh";
+            const script =
+                shell === "bash"
+                    ? `complete -W '${ids}' ./${wrapper}`
+                    : shell === "zsh"
+                      ? `compdef '_arguments "1: :(${ids})"' ./${wrapper}`
+                      : `Register-ArgumentCompleter -Native -CommandName '${wrapper}' -ScriptBlock { param($wordToComplete) @(${ids
+                            .split(" ")
+                            .map((i) => `'${i}'`)
+                            .join(", ")}) | Where-Object { $_ -like "$wordToComplete*" } }`;
             return {
-                script: `Register-ArgumentCompleter -Native -CommandName gp -ScriptBlock { param($wordToComplete) @(${ids
-                    .split(" ")
-                    .map((i) => `'${i}'`)
-                    .join(", ")}) | Where-Object { $_ -like "$wordToComplete*" } }`,
+                wrapper,
+                transport: shell === "powershell" ? "irm" : "curl",
+                usage: `GP_URL=<url> GP_TOKEN=<token> ${wrapper} <action> '<json>'`,
+                note: "The wrapper posts to POST /api/ops/run; use 'list' or 'explain' for discovery.",
+                script,
             };
         },
     },

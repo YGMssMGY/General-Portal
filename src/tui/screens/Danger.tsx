@@ -4,7 +4,7 @@ import TextInput from "ink-text-input";
 import SelectList from "../components/SelectList.js";
 import { withClient } from "../lib/tui-db.js";
 import { audit } from "../lib/audit-log.js";
-import { listPortalSlugs, portalDbUrl } from "../../db/client.js";
+import { isSingleDbMode, listPortalSlugs, portalDbUrl } from "../../db/client.js";
 
 type Step = "action" | "portal" | "user" | "confirm" | "working" | "done";
 
@@ -39,6 +39,13 @@ export default function Danger({
         setTyped("");
         setEmail("");
         if (selected.startsWith("Drop")) {
+            if (isSingleDbMode()) {
+                setLines([
+                    "Single-DB mode: physical database drops are refused; delete portal data via the trash/admin flows instead.",
+                ]);
+                setStep("done");
+                return;
+            }
             onDropDatabase();
             return;
         }
@@ -64,21 +71,29 @@ export default function Danger({
         }
         try {
             const result = await withClient(url, async (c) => {
+                const ws = await c.query<{ id: string }>(
+                    "SELECT id FROM workspaces WHERE slug = $1 LIMIT 1",
+                    [slug],
+                );
+                const wid = ws.rows[0]?.id;
+                if (!wid) return `No workspace for "${slug}". Nothing was changed.`;
                 if (needsEmail) {
-                    const found = await c.query<{ id: string; disabled: boolean }>(
-                        "SELECT id, disabled FROM users WHERE email = $1 LIMIT 1",
-                        [email],
+                    const found = await c.query<{ id: string }>(
+                        'SELECT u.id FROM users u JOIN memberships m ON m."userId" = u.id WHERE u.email = $1 AND m."workspaceId" = $2 LIMIT 1',
+                        [email.toLowerCase(), wid],
                     );
-                    if (!found.rows[0]) return `User "${email}" not found. Nothing was changed.`;
+                    if (!found.rows[0])
+                        return `User "${email}" is not a member of "${slug}". Nothing was changed.`;
                     await c.query("UPDATE users SET disabled = true WHERE id = $1", [
                         found.rows[0].id,
                     ]);
                     return `User "${email}" is now disabled.`;
                 }
-                const r = await c.query<{ count: string }>(
-                    'UPDATE sessions SET "revokedAt" = now() WHERE "revokedAt" IS NULL RETURNING 1',
+                const r = await c.query(
+                    'UPDATE sessions SET "revokedAt" = now() WHERE "workspaceId" = $1 AND "revokedAt" IS NULL',
+                    [wid],
                 );
-                return `Revoked ${r.rows.length} active sessions for portal "${slug}".`;
+                return `Revoked ${r.rowCount ?? 0} active sessions for portal "${slug}".`;
             });
             setLines([result]);
             audit("danger", `${action} ${targetLabel}`, result);

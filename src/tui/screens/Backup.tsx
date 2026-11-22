@@ -1,17 +1,22 @@
 import { useState } from "react";
+import fsp from "node:fs/promises";
+import path from "node:path";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 import SelectList from "../components/SelectList.js";
 import {
+    backupEncryptionKey,
     backupFilePath,
+    decryptDump,
     formatBytes,
     listBackups,
     pgDump,
     pgRestore,
+    sealDumpIfConfigured,
     type BackupEntry,
 } from "../lib/tui-db.js";
 import { audit } from "../lib/audit-log.js";
-import { listPortalSlugs, portalDbUrl } from "../../db/client.js";
+import { isSingleDbMode, listPortalSlugs, portalDbUrl } from "../../db/client.js";
 
 type Step = "pick" | "actions" | "working" | "list" | "restore-pick" | "restore-confirm" | "done";
 
@@ -58,8 +63,11 @@ export default function Backup({ onBack }: { onBack: () => void }) {
         const outPath = backupFilePath(target, "manual");
         const r = await pgDump(url, outPath);
         if (r.ok) {
-            setLines([`[${target}] backup complete: ${outPath} (${formatBytes(r.bytes)}).`]);
-            audit("backup", target, `ok: ${outPath} (${r.bytes} bytes)`);
+            const sealed = await sealDumpIfConfigured(outPath);
+            const finalPath = sealed?.path ?? outPath;
+            const finalBytes = sealed?.bytes ?? r.bytes;
+            setLines([`[${target}] backup complete: ${finalPath} (${formatBytes(finalBytes)}).`]);
+            audit("backup", target, `ok: ${finalPath} (${finalBytes} bytes)`);
         } else {
             setLines([
                 `[${target}] backup FAILED. No file retained. Output: ${r.out.slice(0, 500)}`,
@@ -78,6 +86,14 @@ export default function Backup({ onBack }: { onBack: () => void }) {
             setStep("done");
             return;
         }
+        if (isSingleDbMode()) {
+            setLines([
+                `[${target}] REFUSED: single-DB mode forbids a full database restore. Use the trash/admin flows instead.`,
+            ]);
+            audit("restore", target, "refused: single-db mode");
+            setStep("done");
+            return;
+        }
         setStep("working");
         setLines(["Verifying a pre-restore backup of the current database..."]);
         const url = portalDbUrl(target);
@@ -86,7 +102,8 @@ export default function Backup({ onBack }: { onBack: () => void }) {
             setStep("done");
             return;
         }
-        const pre = await pgDump(url, backupFilePath(target, "pre-restore"));
+        const prePath = backupFilePath(target, "pre-restore");
+        const pre = await pgDump(url, prePath);
         if (!pre.ok) {
             setLines([
                 `[${target}] REFUSED: pre-restore backup failed. Restore aborted to protect current data. Output: ${pre.out.slice(0, 500)}`,
@@ -95,7 +112,31 @@ export default function Backup({ onBack }: { onBack: () => void }) {
             setStep("done");
             return;
         }
-        const r = await pgRestore(url, entry.abs);
+        await sealDumpIfConfigured(prePath);
+        let restorePath = entry.abs;
+        let cleanup: (() => Promise<void>) | null = null;
+        if (entry.file.endsWith(".enc")) {
+            const key = backupEncryptionKey();
+            if (!key) {
+                setLines([
+                    `[${target}] REFUSED: BACKUP_ENCRYPTION_KEY is required to restore an encrypted backup. Nothing was changed.`,
+                ]);
+                audit("restore", target, "refused: missing encryption key");
+                setStep("done");
+                return;
+            }
+            const decoded = await decryptDump(entry.abs, key);
+            restorePath = decoded.path;
+            cleanup = async () => {
+                await fsp.rm(path.dirname(decoded.path), { recursive: true, force: true });
+            };
+        }
+        let r: { code: number; out: string };
+        try {
+            r = await pgRestore(url, restorePath);
+        } finally {
+            if (cleanup) await cleanup();
+        }
         if (r.code === 0) {
             setLines([
                 `[${target}] restore complete from ${entry.file}.`,

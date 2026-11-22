@@ -5,11 +5,7 @@ export async function GET() {
     const tools = describeAll().map((a) => ({
         name: a.id,
         description: `${a.summary}${a.destructive ? " DESTRUCTIVE — requires typed confirmation." : ""}`,
-        inputSchema: {
-            type: "object",
-            properties: a.params,
-            additionalProperties: false,
-        },
+        inputSchema: a.inputSchema,
         scopes: a.scopes,
         destructive: a.destructive,
         exampleCurl: a.exampleCurl,

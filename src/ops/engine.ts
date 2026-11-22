@@ -12,10 +12,15 @@ function sign(payload: string): string {
     return createHmac("sha256", config.opsSecret).update(payload).digest("base64url");
 }
 
-function makeConfirmation(action: string, paramsHash: string, operator: string): string {
+function makeConfirmation(
+    action: string,
+    paramsHash: string,
+    operator: string,
+    idempotencyKey: string,
+): string {
     const exp = Date.now() + CONFIRM_TTL_MS;
     const payload = Buffer.from(
-        JSON.stringify({ a: action, p: paramsHash, o: operator, e: exp }),
+        JSON.stringify({ a: action, p: paramsHash, o: operator, k: idempotencyKey, e: exp }),
         "utf8",
     ).toString("base64url");
     return `${payload}.${sign(payload)}`;
@@ -26,6 +31,7 @@ function readConfirmation(token: string): {
     action?: string;
     paramsHash?: string;
     operator?: string;
+    idempotencyKey?: string;
     expired?: boolean;
 } {
     const [payload, sig] = token.split(".");
@@ -39,10 +45,17 @@ function readConfirmation(token: string): {
             a: string;
             p: string;
             o: string;
+            k?: string;
             e: number;
         };
         if (data.e < Date.now()) return { ok: false, expired: true };
-        return { ok: true, action: data.a, paramsHash: data.p, operator: data.o };
+        return {
+            ok: true,
+            action: data.a,
+            paramsHash: data.p,
+            operator: data.o,
+            idempotencyKey: data.k ?? "",
+        };
     } catch {
         return { ok: false };
     }
@@ -64,9 +77,9 @@ function cachePrune(): void {
         if (now - v.at > IDEMPOTENCY_TTL_MS) idempotency.delete(k);
     }
     while (idempotency.size > 1000) {
-        const oldest = [...idempotency.entries()].sort((a, b) => a[1].at - b[1].at)[0];
-        if (!oldest) break;
-        idempotency.delete(oldest[0]);
+        const oldest = idempotency.keys().next().value;
+        if (oldest === undefined) break;
+        idempotency.delete(oldest);
     }
 }
 
@@ -78,6 +91,7 @@ export async function executeAction(
     const started = performance.now();
     const action = getAction(actionId);
     if (!action) {
+        opsAudit(ctx, actionId, "", "unknown-action");
         return {
             ok: false,
             status: "error",
@@ -104,6 +118,7 @@ export async function executeAction(
     try {
         input = action.params.parse(rawInput ?? {});
     } catch (e) {
+        opsAudit(ctx, actionId, "", "validation-failed");
         return {
             ok: false,
             status: "error",
@@ -119,13 +134,17 @@ export async function executeAction(
         : null;
     if (idemKey) {
         const cached = idempotency.get(idemKey);
-        if (cached && Date.now() - cached.at < IDEMPOTENCY_TTL_MS) return cached.result;
+        if (cached && Date.now() - cached.at < IDEMPOTENCY_TTL_MS) {
+            opsAudit(ctx, actionId, "", "idempotency-cache-hit");
+            return cached.result;
+        }
     }
 
     const hash = paramsHash(actionId, input);
-    if (action.destructive && !ctx.yes && !ctx.confirmationToken) {
+    const needsConfirmation = action.destructive && (!ctx.yes || Boolean(action.confirmField));
+    if (needsConfirmation && !ctx.confirmationToken) {
         const preview = action.preview ? await action.preview(input as never, ctx) : null;
-        const token = makeConfirmation(actionId, hash, ctx.operatorId);
+        const token = makeConfirmation(actionId, hash, ctx.operatorId, ctx.idempotencyKey ?? "");
         opsAudit(ctx, actionId, JSON.stringify(input), "confirmation-required");
         return {
             ok: false,
@@ -134,7 +153,7 @@ export async function executeAction(
             confirmationToken: token,
             preview,
             expiresAt: new Date(Date.now() + CONFIRM_TTL_MS).toISOString(),
-            hint: "Repeat with confirmationToken and typedValue equal to the target slug or email.",
+            hint: "Repeat with confirmationToken and typedValue equal to the target slug or email, reusing the same idempotencyKey.",
         };
     }
 
@@ -154,7 +173,8 @@ export async function executeAction(
             !parsed.ok ||
             parsed.action !== actionId ||
             parsed.paramsHash !== hash ||
-            parsed.operator !== ctx.operatorId
+            parsed.operator !== ctx.operatorId ||
+            parsed.idempotencyKey !== (ctx.idempotencyKey ?? "")
         ) {
             opsAudit(ctx, actionId, "", "denied: invalid confirmation");
             return {

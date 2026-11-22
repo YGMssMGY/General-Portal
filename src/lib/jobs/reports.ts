@@ -241,7 +241,11 @@ export async function publishReport(
         columns: { id: true },
     });
     if (!row) throw new Error(`report not found: ${reportId}`);
-    return (await getBoss()).send(REPORT_QUEUE, { reportId, portal } satisfies ReportJobData);
+    return (await getBoss()).send(REPORT_QUEUE, { reportId, portal } satisfies ReportJobData, {
+        retryLimit: 3,
+        retryDelay: 5,
+        retryBackoff: true,
+    });
 }
 
 export async function registerReportJobs(boss: PgBoss): Promise<void> {

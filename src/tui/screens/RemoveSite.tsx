@@ -10,11 +10,12 @@ import {
     formatBytes,
     parseDbUrl,
     pgDump,
+    sealDumpIfConfigured,
     tableRowCounts,
     withClient,
 } from "../lib/tui-db.js";
 import { audit } from "../lib/audit-log.js";
-import { listPortalSlugs, portalDbUrl } from "../../db/client.js";
+import { isSingleDbMode, listPortalSlugs, portalDbUrl } from "../../db/client.js";
 
 type Step = "pick" | "impact" | "confirm" | "working" | "done";
 
@@ -82,6 +83,11 @@ export default function RemoveSite({ onBack }: { onBack: () => void }) {
             out.push("Database size: unavailable (database offline).");
         }
         out.push("A verified backup is mandatory before removal. It runs next.");
+        if (isSingleDbMode()) {
+            out.push(
+                "Single-DB mode: physical database drops are refused; delete portal data via the trash/admin flows instead.",
+            );
+        }
         setLines(out);
         setStep("impact");
     }
@@ -92,6 +98,14 @@ export default function RemoveSite({ onBack }: { onBack: () => void }) {
                 `Confirmation did not match "${target}". Removal aborted. Nothing was changed.`,
             ]);
             audit("remove-site", target, "aborted: confirmation mismatch");
+            setStep("done");
+            return;
+        }
+        if (isSingleDbMode()) {
+            setLines([
+                `[${target}] REFUSED: single-DB mode forbids physical database drops. Delete portal data via the trash/admin flows instead.`,
+            ]);
+            audit("remove-site", target, "refused: single-db mode");
             setStep("done");
             return;
         }
@@ -113,8 +127,11 @@ export default function RemoveSite({ onBack }: { onBack: () => void }) {
             setStep("done");
             return;
         }
+        const sealed = await sealDumpIfConfigured(outPath);
+        const backupPath = sealed?.path ?? outPath;
+        const backupBytes = sealed?.bytes ?? backup.bytes;
         const out: string[] = [
-            `[${target}] verified backup: ${outPath} (${formatBytes(backup.bytes)}).`,
+            `[${target}] verified backup: ${backupPath} (${formatBytes(backupBytes)}).`,
             "Dropping database...",
         ];
         setLines(out);
@@ -127,15 +144,15 @@ export default function RemoveSite({ onBack }: { onBack: () => void }) {
                 audit("remove-site", target, "no-op: database missing");
             } else {
                 await dropDatabase(adminUrl, parsed.dbName);
-                out.push(`Database "${parsed.dbName}" dropped. Backup retained at ${outPath}.`);
-                audit("remove-site", target, `ok: dropped, backup at ${outPath}`);
+                out.push(`Database "${parsed.dbName}" dropped. Backup retained at ${backupPath}.`);
+                audit("remove-site", target, `ok: dropped, backup at ${backupPath}`);
             }
             out.push(
                 "Next step: remove the portal block from deployment.yaml manually. This tool never edits deployment.yaml.",
             );
         } catch (e) {
             out.push(
-                `Removal FAILED: ${e instanceof Error ? e.message : String(e)}. Backup retained at ${outPath}.`,
+                `Removal FAILED: ${e instanceof Error ? e.message : String(e)}. Backup retained at ${backupPath}.`,
             );
             audit("remove-site", target, "failed during drop");
         }

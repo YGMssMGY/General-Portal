@@ -15,7 +15,9 @@ export async function register() {
             const { registerWebhookJobs } = await import("@/lib/jobs/webhooks");
             const { registerRetentionJobs } = await import("@/lib/jobs/retention");
             const { registerLinkHealthJobs } = await import("@/lib/jobs/link-health");
-            const { registerBackupJobs } = await import("@/lib/jobs/backups");
+            const { registerBackupJobs, validateBackupEncryptionKey } =
+                await import("@/lib/jobs/backups");
+            validateBackupEncryptionKey();
             const boss = await getBoss();
             await registerNudgeJobs(boss);
             await registerDigestJobs(boss);
