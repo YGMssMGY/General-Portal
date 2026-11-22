@@ -1,9 +1,17 @@
 import { randomBytes } from "node:crypto";
 import { NextRequest } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import { apiTokens } from "@/db/schema";
-import { ApiError, handleRouteError, ok, parseBody } from "@/lib/api";
+import {
+    ApiError,
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
 import { requireTenant, sha256Hex } from "@/lib/tenant";
 
 const createTokenSchema = z.object({
@@ -19,9 +27,19 @@ export async function GET(request: NextRequest) {
             permission: "manage_api_tokens",
             module: "members",
         });
+        const { limit, cursor } = parsePagination(request.nextUrl.searchParams);
+        const vals = decodeCursorValues(cursor);
+        const cursorCond =
+            vals && typeof vals[0] === "string" && typeof vals[1] === "string"
+                ? or(
+                      lt(apiTokens.createdAt, new Date(vals[0])),
+                      and(eq(apiTokens.createdAt, new Date(vals[0])), lt(apiTokens.id, vals[1])),
+                  )
+                : undefined;
         const rows = await t.db.query.apiTokens.findMany({
-            where: eq(apiTokens.workspaceId, t.workspaceId),
-            orderBy: [desc(apiTokens.createdAt)],
+            where: and(eq(apiTokens.workspaceId, t.workspaceId), cursorCond),
+            orderBy: [desc(apiTokens.createdAt), desc(apiTokens.id)],
+            limit: limit + 1,
             columns: {
                 id: true,
                 workspaceId: true,
@@ -33,7 +51,15 @@ export async function GET(request: NextRequest) {
                 createdAt: true,
             },
         });
-        return ok(rows);
+        const items = rows.slice(0, limit);
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last
+                ? encodeCursorValues([last.createdAt.toISOString(), last.id])
+                : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
     } catch (e) {
         return handleRouteError("GET /api/api-tokens", e);
     }

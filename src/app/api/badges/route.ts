@@ -115,20 +115,27 @@ export async function GET(request: NextRequest) {
                 ),
             (async () => {
                 const res = (await t.db.execute(sql`
-                    WITH ranked AS (
-                        SELECT "userId", "score", "computedAt",
-                               row_number() OVER (
-                                   PARTITION BY "period", "periodType"
-                                   ORDER BY "score" DESC, "userId" ASC
-                               ) AS rnk
+                    WITH mine AS (
+                        SELECT "period", "periodType", "score", "computedAt"
                         FROM "participation_scores"
-                        WHERE "workspaceId" = ${t.workspaceId}
+                        WHERE "workspaceId" = ${t.workspaceId} AND "userId" = ${userId}
+                    ),
+                    ranked AS (
+                        SELECT m."computedAt" AS "computedAt",
+                            (
+                                SELECT count(*)::int + 1
+                                FROM "participation_scores" ps
+                                WHERE ps."workspaceId" = ${t.workspaceId}
+                                  AND ps."period" = m."period"
+                                  AND ps."periodType" = m."periodType"
+                                  AND (ps."score" > m."score" OR (ps."score" = m."score" AND ps."userId" < ${userId}))
+                            ) AS rnk
+                        FROM mine m
                     )
                     SELECT
                         least(10, greatest(0, 20 - coalesce(min(rnk), 2147483647)))::int AS value,
                         min(CASE WHEN rnk <= 10 THEN "computedAt" END)::text AS "earnedAt"
                     FROM ranked
-                    WHERE "userId" = ${userId}
                 `)) as unknown as { rows?: Array<{ value: number; earnedAt: string | null }> };
                 return res.rows?.[0];
             })(),
@@ -144,7 +151,9 @@ export async function GET(request: NextRequest) {
             toBadge("top-10", rank?.value ?? 0, rank?.earnedAt ?? null),
         ];
 
-        return ok(badges);
+        const res = ok(badges);
+        res.headers.set("X-Next-Cursor", "");
+        return res;
     } catch (e) {
         return handleRouteError("GET /api/badges", e);
     }

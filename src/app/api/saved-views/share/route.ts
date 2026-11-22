@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import type { NextRequest } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { config } from "@/config";
 import { savedViews } from "@/db/schema";
@@ -70,10 +70,11 @@ export async function POST(request: NextRequest) {
         const t = await requireTenant(request, { module: "members" });
         const body = await parseBody<z.infer<typeof postSchema>>(postSchema as never, request);
         const view = await authorizeView(t, body.id);
-        await t.db
+        const [updated] = await t.db
             .update(savedViews)
-            .set({ shareVersion: view.shareVersion + 1 })
-            .where(and(eq(savedViews.id, view.id), eq(savedViews.workspaceId, t.workspaceId)));
+            .set({ shareVersion: sql`${savedViews.shareVersion} + 1` })
+            .where(and(eq(savedViews.id, view.id), eq(savedViews.workspaceId, t.workspaceId)))
+            .returning({ shareVersion: savedViews.shareVersion });
         return ok(
             buildShare(
                 t.portal,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
                 t.workspaceId,
                 t.userId,
                 REVOKED_EXP,
-                view.shareVersion + 1,
+                updated.shareVersion,
             ),
         );
     } catch (e) {
