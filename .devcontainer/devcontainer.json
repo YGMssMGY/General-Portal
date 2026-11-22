@@ -1,0 +1,30 @@
+{
+    "name": "General Portal",
+    "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+    "features": {
+        "ghcr.io/devcontainers-extra/features/pnpm:2": {
+            "version": "10.20.0"
+        },
+        "ghcr.io/robbert229/devcontainer-features/postgresql-client:1": {}
+    },
+    "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
+    "forwardPorts": [3000],
+    "portsAttributes": {
+        "3000": {
+            "label": "General Portal",
+            "onAutoForward": "notify"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "redhat.vscode-yaml",
+                "ms-azuretools.vscode-docker"
+            ],
+            "settings": {
+                "typescript.tsdk": "node_modules/typescript/lib"
+            }
+        }
+    }
+}
