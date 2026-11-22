@@ -5,6 +5,7 @@ import { handleRouteError } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 
 function escapeCsv(value: string): string {
+    if (/^[=+\-@]/.test(value.trim()) || /^[\t\r]/.test(value)) value = `'${value}`;
     if (value.includes(",") || value.includes('"') || value.includes("\n")) {
         return `"${value.replace(/"/g, '""')}"`;
     }

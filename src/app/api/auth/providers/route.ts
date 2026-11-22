@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { portalProviders } from "@/lib/auth/providers";
-import { getDb, isKnownPortal, normalizeSlug } from "@/db/client";
+import { getDb, isKnownPortal, listPortalSlugs, normalizeSlug } from "@/db/client";
 import { workspaces } from "@/db/schema";
 import { ApiError, handleRouteError, ok } from "@/lib/api";
 
@@ -16,7 +16,9 @@ const FLOW_PROVIDERS = new Set([
 
 export async function GET(request: NextRequest) {
     try {
-        const slug = normalizeSlug(request.nextUrl.searchParams.get("portal") ?? "developers");
+        const slug = normalizeSlug(
+            request.nextUrl.searchParams.get("portal") ?? listPortalSlugs()[0] ?? "",
+        );
         if (!slug) throw new ApiError("Invalid portal", 400);
 
         const providers = portalProviders(slug)

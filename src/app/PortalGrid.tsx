@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Building2 } from "lucide-react";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -16,7 +15,6 @@ export interface PublicPortal {
 
 export function PortalGrid({ portals }: { portals: PublicPortal[] }) {
     const t = useTranslations("landing");
-    const router = useRouter();
     const [hovered, setHovered] = useState<string | null>(null);
     usePageTitle(t("title"));
 
@@ -41,12 +39,11 @@ export function PortalGrid({ portals }: { portals: PublicPortal[] }) {
                 {portals.map((portal) => {
                     const isHovered = hovered === portal.slug;
                     return (
-                        <button
+                        <Link
                             key={portal.slug}
-                            type="button"
+                            href={`/${portal.slug}/dashboard`}
                             onClick={() => {
                                 document.cookie = `portal=${portal.slug}; path=/; SameSite=Lax`;
-                                router.push(`/${portal.slug}/dashboard`);
                             }}
                             onMouseEnter={() => setHovered(portal.slug)}
                             onMouseLeave={() => setHovered(null)}
@@ -117,7 +114,7 @@ export function PortalGrid({ portals }: { portals: PublicPortal[] }) {
                                     {portal.description}
                                 </p>
                             )}
-                        </button>
+                        </Link>
                     );
                 })}
             </div>

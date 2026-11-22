@@ -11,7 +11,10 @@ type RsvpInput = z.infer<typeof rsvpSchema>;
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const t = await requireTenant(request, { module: "meetings" });
+        const t = await requireTenant(request, {
+            permission: "rsvp_meeting",
+            module: "meetings",
+        });
         const { id } = await params;
         requireUuid(id);
 

@@ -35,7 +35,7 @@ function toCents(v: unknown): number {
 
 export async function GET(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "budget" });
+        const t = await requireTenant(request, { permission: "view_reports", module: "budget" });
         const searchParams = new URL(request.url).searchParams;
         const { limit, cursor } = parsePagination(searchParams);
         const fiscalYear = Number(searchParams.get("fiscalYear")) || new Date().getFullYear();

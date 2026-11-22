@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,7 +37,11 @@ import {
     Calendar,
     CalendarDays,
     ClipboardCheck,
+    Check,
     ClipboardList,
+    Gauge,
+    Mail,
+    Upload,
     DollarSign,
     Eye,
     File,
@@ -55,10 +59,12 @@ import {
     MessageSquare,
     Moon,
     Package,
+    PiggyBank,
     Receipt,
     Scale,
     Search,
     Settings,
+    ShoppingCart,
     Sun,
     Target,
     Trash2,
@@ -68,6 +74,7 @@ import {
     UsersRound,
     Video,
     Vote,
+    Wallet,
     Webhook,
     X,
 } from "lucide-react";
@@ -106,24 +113,70 @@ const EXTRA_NAV = [
     { ...customFieldsNav, key: "customFields" },
 ].map((item) => ({ ...item, icon: EXTRA_NAV_ICONS[item.icon] ?? List }));
 
-const NAV_ITEMS = [
-    { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
-    { key: "proposals", path: "/proposals", icon: FileText },
-    { key: "tasks", path: "/tasks", icon: ClipboardList },
-    { key: "calendar", path: "/calendar", icon: CalendarDays },
-    { key: "events", path: "/events", icon: Calendar },
-    { key: "messages", path: "/messages", icon: MessageSquare },
-    { key: "finance", path: "/finance", icon: DollarSign },
-    { key: "volunteers", path: "/volunteers", icon: Users },
-    { key: "members", path: "/members", icon: UserCheck },
-    { key: "files", path: "/files", icon: File },
-    { key: "meetings", path: "/meetings", icon: Video },
-    { key: "activity", path: "/activity", icon: Activity },
-    { key: "subgroups", path: "/subgroups", icon: UsersRound },
-    { key: "settings", path: "/settings", icon: Settings },
-    { key: "cooperation", path: "/cooperation", icon: Handshake },
-    { key: "notifications", path: "/notifications", icon: Bell },
-] as const;
+const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
+    activity: Activity,
+    bell: Bell,
+    check: Check,
+    gauge: Gauge,
+    mail: Mail,
+    upload: Upload,
+    calendar: Calendar,
+    "calendar-days": CalendarDays,
+    "clipboard-list": ClipboardList,
+    "dollar-sign": DollarSign,
+    file: File,
+    "file-text": FileText,
+    handshake: Handshake,
+    "layout-dashboard": LayoutDashboard,
+    "message-square": MessageSquare,
+    "piggy-bank": PiggyBank,
+    search: Search,
+    settings: Settings,
+    "shopping-cart": ShoppingCart,
+    "user-check": UserCheck,
+    users: Users,
+    "users-round": UsersRound,
+    video: Video,
+    wallet: Wallet,
+};
+
+const NAV_KEY_BY_PATH: Record<string, string> = {
+    "/activity": "activity",
+    "/budget": "budget",
+    "/calendar": "calendar",
+    "/cooperation": "cooperation",
+    "/purchase-requests": "purchaseRequests",
+    "/dashboard": "dashboard",
+    "/my-work": "myWork",
+    "/onboarding": "onboarding",
+    "/invitations": "invitations",
+    "/analytics": "analytics",
+    "/approvals": "approvals",
+    "/admin/usage": "usage",
+    "/admin/import": "import",
+    "/notifications/digest-preview": "digestPreview",
+    "/events": "events",
+    "/files": "files",
+    "/finance": "finance",
+    "/meetings": "meetings",
+    "/members": "members",
+    "/messages": "messages",
+    "/notifications": "notifications",
+    "/proposals": "proposals",
+    "/search": "search",
+    "/settings": "settings",
+    "/subgroups": "subgroups",
+    "/tasks": "tasks",
+    "/volunteers": "volunteers",
+};
+
+interface RenderNavItem {
+    key: string;
+    path: string;
+    icon: typeof LayoutDashboard;
+    customLabel?: string;
+    module: string;
+}
 
 interface SearchResultItem {
     id: string;
@@ -406,14 +459,45 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
     }
 
     const settings = workspace?.settings ?? {};
-    const visibleItems = NAV_ITEMS.filter((item) => settings[item.key] !== false);
-    const visibleExtra = EXTRA_NAV.filter((item) => settings[item.module] !== false);
+    const modules = workspace?.modules ?? [];
+    const yamlNav = (workspace?.nav ?? []).map((item) => {
+        const key = NAV_KEY_BY_PATH[item.path];
+        const customLabel = key ? tNav(key) : item.label;
+        return {
+            key: key ?? "",
+            path: item.path,
+            icon: NAV_ICONS[item.icon] ?? List,
+            customLabel,
+            module: item.module,
+        };
+    });
+    const visibleItems = yamlNav.filter(
+        (item) =>
+            settings[item.module] !== false &&
+            (modules.length === 0 || modules.includes(item.module)),
+    );
+    const yamlPaths = new Set((workspace?.nav ?? []).map((item) => item.path));
+    const visibleExtra = EXTRA_NAV.filter(
+        (item) => !yamlPaths.has(item.path) && settings[item.module] !== false,
+    );
     const showShowcase = user?.role !== "member" && settings["showcase"] !== false;
 
-    function renderNavLink(
-        item: { key: string; path: string; icon: typeof LayoutDashboard },
-        onNavigate?: () => void,
-    ) {
+    const primary = workspace?.branding?.primary;
+    const validPrimary = primary && /^#[0-9a-fA-F]{6}$/.test(primary) ? primary : undefined;
+    const rawRadius = workspace?.radius;
+    const radius = typeof rawRadius === "number" ? Math.max(0, Math.min(32, rawRadius)) : undefined;
+    const brandingStyle = {
+        ...(validPrimary ? { "--color-primary": validPrimary } : {}),
+        ...(radius !== undefined
+            ? {
+                  "--radius-sm": `${radius}px`,
+                  "--radius-md": `${radius}px`,
+                  "--radius-lg": `${radius}px`,
+              }
+            : {}),
+    } as CSSProperties;
+
+    function renderNavLink(item: RenderNavItem, onNavigate?: () => void) {
         const Icon = item.icon;
         const href = `/${portal}${item.path}`;
         const isActive = pathname === href;
@@ -438,7 +522,7 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
                 }}
             >
                 <Icon size={18} style={{ flexShrink: 0 }} />
-                <span>{tNav(item.key)}</span>
+                <span>{item.customLabel ?? tNav(item.key)}</span>
             </Link>
         );
     }
@@ -447,261 +531,273 @@ function PortalLayoutContent({ children }: { children: ReactNode }) {
     const showcaseActive = pathname === showcaseHref;
 
     return (
-        <div
-            style={{
-                display: "flex",
-                height: "100dvh",
-                overflow: "hidden",
-                backgroundColor: "var(--color-bg)",
-            }}
-        >
-            <Toaster />
-            <CommandPalette />
-            <aside
-                className="hidden md:flex"
+        <div style={brandingStyle}>
+            <div
                 style={{
-                    width: "240px",
-                    flexShrink: 0,
-                    flexDirection: "column",
-                    borderRight: "1px solid var(--color-border)",
-                    backgroundColor: "var(--color-bg)",
+                    display: "flex",
                     height: "100dvh",
-                    position: "sticky",
-                    top: 0,
                     overflow: "hidden",
+                    backgroundColor: "var(--color-bg)",
                 }}
             >
-                <div style={{ padding: "12px 16px 4px" }}>
-                    <p
-                        style={{
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            color: "var(--color-text-secondary)",
-                            margin: 0,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em",
-                        }}
-                    >
-                        {displayName}
-                    </p>
-                </div>
-                <nav style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-                    {visibleItems.map((item) => renderNavLink(item))}
-                    {visibleExtra.map((item) => renderNavLink(item))}
-                    {showShowcase && (
-                        <Link
-                            href={showcaseHref}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "10px",
-                                padding: "10px 12px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "14px",
-                                fontWeight: showcaseActive ? 600 : 400,
-                                color: showcaseActive
-                                    ? "var(--color-primary)"
-                                    : "var(--color-text)",
-                                backgroundColor: showcaseActive
-                                    ? "var(--color-primary-light)"
-                                    : "transparent",
-                                textDecoration: "none",
-                                marginBottom: "2px",
-                                minHeight: "40px",
-                            }}
-                        >
-                            <Eye size={18} style={{ flexShrink: 0 }} />
-                            <span>{tNav("showcase")}</span>
-                        </Link>
-                    )}
-                </nav>
-            </aside>
-
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-                <header
+                <Toaster />
+                <CommandPalette />
+                <aside
+                    className="hidden md:flex"
                     style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        height: "56px",
-                        padding: "0 16px",
-                        borderBottom: "1px solid var(--color-border)",
-                        backgroundColor: "var(--color-bg)",
+                        width: "240px",
                         flexShrink: 0,
+                        flexDirection: "column",
+                        borderRight: "1px solid var(--color-border)",
+                        backgroundColor: "var(--color-bg)",
+                        height: "100dvh",
+                        position: "sticky",
+                        top: 0,
+                        overflow: "hidden",
                     }}
                 >
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="flex md:hidden"
-                            onClick={() => setSidebarOpen(true)}
-                            aria-label="Open navigation menu"
-                        >
-                            <Menu size={20} />
-                        </Button>
-                        <span
+                    <div style={{ padding: "12px 16px 4px" }}>
+                        <p
                             style={{
-                                fontSize: "16px",
+                                fontSize: "11px",
                                 fontWeight: 600,
-                                color: "var(--color-text)",
+                                color: "var(--color-text-secondary)",
+                                margin: 0,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
                             }}
                         >
                             {displayName}
-                        </span>
+                        </p>
                     </div>
-                    <SearchDropdown portal={portal} />
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleTheme}
-                            aria-label={tProd("theme")}
-                        >
-                            {dark ? <Sun size={16} /> : <Moon size={16} />}
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleDensity}
-                            aria-label={tProd("density")}
-                        >
-                            <List size={16} />
-                        </Button>
-                        {user?.name && (
-                            <span
-                                className="hidden sm:inline"
-                                style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}
+                    <nav style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+                        {visibleItems.map((item) => renderNavLink(item))}
+                        {visibleExtra.map((item) => renderNavLink(item))}
+                        {showShowcase && (
+                            <Link
+                                href={showcaseHref}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "10px",
+                                    padding: "10px 12px",
+                                    borderRadius: "var(--radius-sm)",
+                                    fontSize: "14px",
+                                    fontWeight: showcaseActive ? 600 : 400,
+                                    color: showcaseActive
+                                        ? "var(--color-primary)"
+                                        : "var(--color-text)",
+                                    backgroundColor: showcaseActive
+                                        ? "var(--color-primary-light)"
+                                        : "transparent",
+                                    textDecoration: "none",
+                                    marginBottom: "2px",
+                                    minHeight: "40px",
+                                }}
                             >
-                                {user.name}
-                            </span>
+                                <Eye size={18} style={{ flexShrink: 0 }} />
+                                <span>{tNav("showcase")}</span>
+                            </Link>
                         )}
-                        <Avatar style={{ width: "32px", height: "32px" }}>
-                            {user?.image && (
-                                <AvatarImage src={user.image} alt={user.name ?? "User avatar"} />
-                            )}
-                            <AvatarFallback>
-                                {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
-                            </AvatarFallback>
-                        </Avatar>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleSignOut}
-                            aria-label={tCommon("signOut")}
-                        >
-                            <LogOut size={15} />
-                            <span className="hidden sm:inline">{tCommon("signOut")}</span>
-                        </Button>
-                    </div>
-                </header>
-                <AnnouncementBanner />
-                <main style={{ flex: 1, overflowY: "auto", padding: "24px" }}>{children}</main>
-            </div>
+                    </nav>
+                </aside>
 
-            {sidebarOpen && (
-                <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-                    <div
-                        onClick={closeSidebar}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <header
                         style={{
-                            position: "absolute",
-                            inset: 0,
-                            backgroundColor: "rgba(0, 0, 0, 0.3)",
-                        }}
-                    />
-                    <aside
-                        style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            width: "280px",
-                            height: "100%",
-                            backgroundColor: "var(--color-bg)",
                             display: "flex",
-                            flexDirection: "column",
-                            zIndex: 10,
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            height: "56px",
+                            padding: "0 16px",
+                            borderBottom: "1px solid var(--color-border)",
+                            backgroundColor: "var(--color-bg)",
+                            flexShrink: 0,
                         }}
                     >
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "16px",
-                                borderBottom: "1px solid var(--color-border)",
-                            }}
-                        >
-                            <div>
-                                <h2
-                                    style={{
-                                        fontSize: "14px",
-                                        fontWeight: 700,
-                                        color: "var(--color-text)",
-                                        margin: 0,
-                                    }}
-                                >
-                                    {displayName}
-                                </h2>
-                                {user?.email && (
-                                    <p
-                                        style={{
-                                            fontSize: "12px",
-                                            color: "var(--color-text-secondary)",
-                                            margin: "4px 0 0",
-                                        }}
-                                    >
-                                        {user.email}
-                                    </p>
-                                )}
-                            </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={closeSidebar}
-                                aria-label={tCommon("close")}
+                                className="flex md:hidden"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Open navigation menu"
                             >
-                                <X size={20} />
+                                <Menu size={20} />
                             </Button>
+                            <span
+                                style={{
+                                    fontSize: "16px",
+                                    fontWeight: 600,
+                                    color: "var(--color-text)",
+                                }}
+                            >
+                                {displayName}
+                            </span>
                         </div>
-                        <nav style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-                            {visibleItems.map((item) => renderNavLink(item, closeSidebar))}
-                            {visibleExtra.map((item) => renderNavLink(item, closeSidebar))}
-                            {showShowcase && (
-                                <Link
-                                    href={showcaseHref}
-                                    onClick={closeSidebar}
+                        <SearchDropdown portal={portal} />
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleTheme}
+                                aria-label={tProd("theme")}
+                            >
+                                {dark ? <Sun size={16} /> : <Moon size={16} />}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleDensity}
+                                aria-label={tProd("density")}
+                            >
+                                <List size={16} />
+                            </Button>
+                            {user?.name && (
+                                <span
+                                    className="hidden sm:inline"
                                     style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "10px",
-                                        padding: "12px",
-                                        borderRadius: "var(--radius-sm)",
                                         fontSize: "14px",
-                                        fontWeight: showcaseActive ? 600 : 400,
-                                        color: showcaseActive
-                                            ? "var(--color-primary)"
-                                            : "var(--color-text)",
-                                        backgroundColor: showcaseActive
-                                            ? "var(--color-primary-light)"
-                                            : "transparent",
-                                        textDecoration: "none",
-                                        marginBottom: "2px",
-                                        minHeight: "48px",
+                                        color: "var(--color-text-secondary)",
                                     }}
                                 >
-                                    <Eye size={18} style={{ flexShrink: 0 }} />
-                                    <span>{tNav("showcase")}</span>
-                                </Link>
+                                    {user.name}
+                                </span>
                             )}
-                        </nav>
-                    </aside>
+                            <Avatar style={{ width: "32px", height: "32px" }}>
+                                {user?.image && (
+                                    <AvatarImage
+                                        src={user.image}
+                                        alt={user.name ?? "User avatar"}
+                                    />
+                                )}
+                                <AvatarFallback>
+                                    {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
+                                </AvatarFallback>
+                            </Avatar>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleSignOut}
+                                aria-label={tCommon("signOut")}
+                            >
+                                <LogOut size={15} />
+                                <span className="hidden sm:inline">{tCommon("signOut")}</span>
+                            </Button>
+                        </div>
+                    </header>
+                    <AnnouncementBanner />
+                    <main
+                        style={{ flex: 1, overflowY: "auto", padding: "var(--density-pad, 24px)" }}
+                    >
+                        {children}
+                    </main>
                 </div>
-            )}
+
+                {sidebarOpen && (
+                    <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
+                        <div
+                            onClick={closeSidebar}
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                backgroundColor: "rgba(0, 0, 0, 0.3)",
+                            }}
+                        />
+                        <aside
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "280px",
+                                height: "100%",
+                                backgroundColor: "var(--color-bg)",
+                                display: "flex",
+                                flexDirection: "column",
+                                zIndex: 10,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    padding: "16px",
+                                    borderBottom: "1px solid var(--color-border)",
+                                }}
+                            >
+                                <div>
+                                    <h2
+                                        style={{
+                                            fontSize: "14px",
+                                            fontWeight: 700,
+                                            color: "var(--color-text)",
+                                            margin: 0,
+                                        }}
+                                    >
+                                        {displayName}
+                                    </h2>
+                                    {user?.email && (
+                                        <p
+                                            style={{
+                                                fontSize: "12px",
+                                                color: "var(--color-text-secondary)",
+                                                margin: "4px 0 0",
+                                            }}
+                                        >
+                                            {user.email}
+                                        </p>
+                                    )}
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={closeSidebar}
+                                    aria-label={tCommon("close")}
+                                >
+                                    <X size={20} />
+                                </Button>
+                            </div>
+                            <nav style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+                                {visibleItems.map((item) => renderNavLink(item, closeSidebar))}
+                                {visibleExtra.map((item) => renderNavLink(item, closeSidebar))}
+                                {showShowcase && (
+                                    <Link
+                                        href={showcaseHref}
+                                        onClick={closeSidebar}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "10px",
+                                            padding: "12px",
+                                            borderRadius: "var(--radius-sm)",
+                                            fontSize: "14px",
+                                            fontWeight: showcaseActive ? 600 : 400,
+                                            color: showcaseActive
+                                                ? "var(--color-primary)"
+                                                : "var(--color-text)",
+                                            backgroundColor: showcaseActive
+                                                ? "var(--color-primary-light)"
+                                                : "transparent",
+                                            textDecoration: "none",
+                                            marginBottom: "2px",
+                                            minHeight: "48px",
+                                        }}
+                                    >
+                                        <Eye size={18} style={{ flexShrink: 0 }} />
+                                        <span>{tNav("showcase")}</span>
+                                    </Link>
+                                )}
+                            </nav>
+                        </aside>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

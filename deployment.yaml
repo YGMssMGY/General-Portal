@@ -43,14 +43,53 @@ portals:
               purchase_requests,
               calendar,
               search,
-              accounts,
               budget,
+              my_work,
+              onboarding,
+              invitations,
+              analytics,
+              approvals,
+              data_import,
+              usage,
+              digest_preview,
           ]
       nav:
           - path: /dashboard
             label: Dashboard
             icon: layout-dashboard
             module: dashboard
+          - path: /my-work
+            label: My Work
+            icon: clipboard-list
+            module: my_work
+          - path: /onboarding
+            label: Setup
+            icon: settings
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: users
+            module: invitations
+          - path: /analytics
+            label: Analytics
+            icon: activity
+            module: analytics
+          - path: /approvals
+            label: Approvals
+            icon: check
+            module: approvals
+          - path: /admin/usage
+            label: Usage
+            icon: gauge
+            module: usage
+          - path: /admin/import
+            label: Data import
+            icon: upload
+            module: data_import
+          - path: /notifications/digest-preview
+            label: Digest preview
+            icon: mail
+            module: digest_preview
           - path: /proposals
             label: Proposals
             icon: file-text
@@ -103,7 +142,7 @@ portals:
             label: Notifications
             icon: bell
             module: notifications
-          - path: /partnerships
+          - path: /cooperation
             label: Partnerships
             icon: handshake
             module: partnerships
@@ -119,10 +158,6 @@ portals:
             label: Search
             icon: search
             module: search
-          - path: /accounts
-            label: Accounts
-            icon: wallet
-            module: accounts
           - path: /budget
             label: Budget
             icon: piggy-bank
@@ -173,14 +208,53 @@ portals:
               purchase_requests,
               calendar,
               search,
-              accounts,
               budget,
+              my_work,
+              onboarding,
+              invitations,
+              analytics,
+              approvals,
+              data_import,
+              usage,
+              digest_preview,
           ]
       nav:
           - path: /dashboard
             label: Dashboard
             icon: layout-dashboard
             module: dashboard
+          - path: /my-work
+            label: My Work
+            icon: clipboard-list
+            module: my_work
+          - path: /onboarding
+            label: Setup
+            icon: settings
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: users
+            module: invitations
+          - path: /analytics
+            label: Analytics
+            icon: activity
+            module: analytics
+          - path: /approvals
+            label: Approvals
+            icon: check
+            module: approvals
+          - path: /admin/usage
+            label: Usage
+            icon: gauge
+            module: usage
+          - path: /admin/import
+            label: Data import
+            icon: upload
+            module: data_import
+          - path: /notifications/digest-preview
+            label: Digest preview
+            icon: mail
+            module: digest_preview
           - path: /proposals
             label: Proposals
             icon: file-text
@@ -233,7 +307,7 @@ portals:
             label: Notifications
             icon: bell
             module: notifications
-          - path: /partnerships
+          - path: /cooperation
             label: Partnerships
             icon: handshake
             module: partnerships
@@ -249,10 +323,6 @@ portals:
             label: Search
             icon: search
             module: search
-          - path: /accounts
-            label: Accounts
-            icon: wallet
-            module: accounts
           - path: /budget
             label: Budget
             icon: piggy-bank

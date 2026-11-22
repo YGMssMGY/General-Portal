@@ -131,8 +131,19 @@ export default function NotificationsPage() {
                     )}
                 </div>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <Button variant="outline" size="sm" onClick={() => setUnreadOnly((v) => !v)}>
-                        {unreadOnly ? t("all") : t("unreadOnly")}
+                    <Button
+                        size="sm"
+                        variant={unreadOnly ? "outline" : "default"}
+                        onClick={() => setUnreadOnly(false)}
+                    >
+                        {t("all")}
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={unreadOnly ? "default" : "outline"}
+                        onClick={() => setUnreadOnly(true)}
+                    >
+                        {t("unreadOnly")}
                     </Button>
                     <Button
                         variant="outline"

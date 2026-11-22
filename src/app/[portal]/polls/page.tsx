@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { fetchJson, fetchPage } from "@/lib/api-client";
+import EntityComments from "@/components/EntityComments";
 import { usePortal } from "@/hooks/usePortal";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -244,6 +245,7 @@ function PollCard({ poll }: { poll: PollItem }) {
                         </span>
                     )}
                 </div>
+                <EntityComments entityType="poll" entityId={poll.id} />
             </CardContent>
         </Card>
     );

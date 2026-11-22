@@ -9,8 +9,10 @@ import Jobs from "./screens/Jobs.js";
 import Health from "./screens/Health.js";
 import Logs from "./screens/Logs.js";
 import Danger from "./screens/Danger.js";
+import Actions from "./screens/Actions.js";
 
 type Screen =
+    | "actions"
     | "sites"
     | "add"
     | "remove"
@@ -22,6 +24,7 @@ type Screen =
     | "danger";
 
 const ITEMS: Array<{ key: Screen | "quit"; label: string }> = [
+    { key: "actions", label: "Actions (all operator commands)" },
     { key: "sites", label: "Sites" },
     { key: "add", label: "Add site" },
     { key: "remove", label: "Remove site" },
@@ -80,6 +83,7 @@ export default function App() {
                     ))}
                 </Box>
             )}
+            {screen === "actions" && <Actions onBack={back} />}
             {screen === "sites" && <Sites onBack={back} />}
             {screen === "add" && <AddSite onBack={back} />}
             {screen === "remove" && <RemoveSite onBack={back} />}

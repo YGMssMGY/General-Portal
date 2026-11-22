@@ -4,6 +4,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,21 +26,22 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+function subscribeToViewport(onChange: () => void): () => void {
+    const mql = window.matchMedia(`(max-width: 767px)`);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+}
+
+function getViewportSnapshot(): boolean {
+    return window.innerWidth < 768;
+}
+
+function getServerSnapshot(): boolean {
+    return false;
+}
+
 function useIsMobile() {
-    const [isMobile, setIsMobile] = React.useState<boolean>(() =>
-        typeof window === "undefined" ? false : window.innerWidth < 768,
-    );
-
-    React.useEffect(() => {
-        const mql = window.matchMedia(`(max-width: 767px)`);
-        const onChange = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-        mql.addEventListener("change", onChange);
-        return () => mql.removeEventListener("change", onChange);
-    }, []);
-
-    return isMobile;
+    return React.useSyncExternalStore(subscribeToViewport, getViewportSnapshot, getServerSnapshot);
 }
 
 type SidebarContextProps = {
@@ -180,6 +182,7 @@ const Sidebar = React.forwardRef<
         ref,
     ) => {
         const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+        const t = useTranslations("sidebar");
 
         if (collapsible === "none") {
             return (
@@ -211,8 +214,8 @@ const Sidebar = React.forwardRef<
                         side={side}
                     >
                         <SheetHeader className="sr-only">
-                            <SheetTitle>Sidebar</SheetTitle>
-                            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+                            <SheetTitle>{t("language")}</SheetTitle>
+                            <SheetDescription>{t("displaysMobile")}</SheetDescription>
                         </SheetHeader>
                         <div className="flex h-full w-full flex-col">{children}</div>
                     </SheetContent>
@@ -270,6 +273,7 @@ const SidebarTrigger = React.forwardRef<
     React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
     const { toggleSidebar } = useSidebar();
+    const t = useTranslations("sidebar");
 
     return (
         <Button
@@ -285,7 +289,7 @@ const SidebarTrigger = React.forwardRef<
             {...props}
         >
             <PanelLeft />
-            <span className="sr-only">Toggle Sidebar</span>
+            <span className="sr-only">{t("toggle")}</span>
         </Button>
     );
 });
@@ -294,15 +298,16 @@ SidebarTrigger.displayName = "SidebarTrigger";
 const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
     ({ className, ...props }, ref) => {
         const { toggleSidebar } = useSidebar();
+        const t = useTranslations("sidebar");
 
         return (
             <button
                 ref={ref}
                 data-sidebar="rail"
-                aria-label="Toggle Sidebar"
+                aria-label={t("toggle")}
                 tabIndex={-1}
                 onClick={toggleSidebar}
-                title="Toggle Sidebar"
+                title={t("toggle")}
                 className={cn(
                     "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-[var(--color-border)] group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
                     "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
@@ -724,15 +729,16 @@ const SidebarLanguageContext = React.createContext<SidebarLanguageContextValue>(
 function useSidebarLanguageProvider(
     labels?: Partial<SidebarLanguageContextValue["labels"]>,
 ): SidebarLanguageContextValue {
+    const t = useTranslations("sidebar");
     const value = React.useMemo(
         () => ({
             labels: {
-                expand: labels?.expand ?? "Expand sidebar",
-                collapse: labels?.collapse ?? "Collapse sidebar",
-                toggle: labels?.toggle ?? "Toggle Sidebar",
+                expand: labels?.expand ?? t("expand"),
+                collapse: labels?.collapse ?? t("collapse"),
+                toggle: labels?.toggle ?? t("toggle"),
             },
         }),
-        [labels?.expand, labels?.collapse, labels?.toggle],
+        [labels?.expand, labels?.collapse, labels?.toggle, t],
     );
 
     return value;

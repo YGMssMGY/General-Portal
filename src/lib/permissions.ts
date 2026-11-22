@@ -93,13 +93,6 @@ const OFFICER_PERMISSIONS: Permission[] = [
     "manage_decisions",
     "export_data",
     "manage_announcements",
-    "manage_polls",
-    "manage_goals",
-    "manage_assets",
-    "manage_dues",
-    "manage_decisions",
-    "export_data",
-    "manage_announcements",
     "view_reports",
     "manage_reports",
 ];
@@ -164,6 +157,14 @@ export async function membershipRoleName(
     return r[0]?.name ?? "member";
 }
 
+const permissionSets = new WeakMap<string[], Set<string>>();
+
 export function hasPermission(permissions: string[], permission: Permission): boolean {
-    return permissions.includes(permission);
+    if (permissions.length <= 8) return permissions.includes(permission);
+    let set = permissionSets.get(permissions);
+    if (!set) {
+        set = new Set(permissions);
+        permissionSets.set(permissions, set);
+    }
+    return set.has(permission);
 }

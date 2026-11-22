@@ -212,11 +212,9 @@ export default function SubgroupDetailPage() {
                         {te("notFound")}
                     </p>
                     <div style={{ marginTop: "12px" }}>
-                        <Link href={`/${portal}/subgroups`}>
-                            <Button variant="outline" size="sm">
-                                {tc("back")}
-                            </Button>
-                        </Link>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/${portal}/subgroups`}>{tc("back")}</Link>
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -259,7 +257,7 @@ export default function SubgroupDetailPage() {
                     }}
                 >
                     <div>
-                        <h2
+                        <h1
                             style={{
                                 fontSize: "18px",
                                 fontWeight: 700,
@@ -268,7 +266,7 @@ export default function SubgroupDetailPage() {
                             }}
                         >
                             {subgroup.name}
-                        </h2>
+                        </h1>
                         {subgroup.description && (
                             <p
                                 style={{

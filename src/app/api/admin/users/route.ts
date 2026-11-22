@@ -14,6 +14,8 @@ import {
     requireUuid,
 } from "@/lib/api";
 import { writeAuditLog } from "@/lib/audit";
+import { hashPassword } from "@/lib/auth/passwords";
+import { logger } from "@/lib/logger";
 import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
@@ -80,6 +82,7 @@ const upsertUserSchema = z.object({
     name: z.string().trim().max(200).nullish(),
     role: z.string().trim().max(100).nullish(),
     roleId: z.string().nullish(),
+    password: z.string().min(12).max(256).optional(),
 });
 type UpsertUserInput = z.infer<typeof upsertUserSchema>;
 
@@ -111,7 +114,11 @@ export async function POST(request: NextRequest) {
         if (!userRow) {
             const inserted = await t.db
                 .insert(users)
-                .values({ email, name: body.name?.trim() || null })
+                .values({
+                    email,
+                    name: body.name?.trim() || null,
+                    passwordHash: body.password ? await hashPassword(body.password) : null,
+                })
                 .returning();
             userRow = inserted[0];
             if (!userRow) throw new ApiError("Failed to create user", 500);
@@ -139,17 +146,22 @@ export async function POST(request: NextRequest) {
                 .values({ workspaceId: t.workspaceId, userId: userRow.id, roleId: roleRow.id });
         }
 
-        await writeAuditLog(
-            {
-                workspaceId: t.workspaceId,
-                userId: t.userId,
-                action: "create_user",
-                entityType: "user",
-                entityId: userRow.id,
-                metadata: { email, role: roleRow.name },
-            },
-            t.db,
-        );
+        try {
+            await writeAuditLog(
+                {
+                    workspaceId: t.workspaceId,
+                    userId: t.userId,
+                    action: "create_user",
+                    entityType: "user",
+                    entityId: userRow.id,
+                    metadata: { email, role: roleRow.name },
+                },
+                t.db,
+                true,
+            );
+        } catch (err) {
+            logger.error({ err }, "audit write failed after user creation");
+        }
 
         return ok(
             {

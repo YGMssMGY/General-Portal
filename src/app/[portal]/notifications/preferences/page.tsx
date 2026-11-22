@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fetchJson } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export default function NotificationPreferencesPage() {
     const ts = useTranslations("settings");
     const te = useTranslations("errors");
     const portal = usePortal();
+    const { user } = useAuthSession();
     const queryClient = useQueryClient();
     usePageTitle(`${t("settings")} | ${t("title")}`);
 
@@ -103,6 +105,24 @@ export default function NotificationPreferencesPage() {
 
     const channelLabel = (channel: Channel) =>
         channel === "email" ? t("emailNotifications") : t("inAppNotifications");
+
+    if (user && !user.permissions.includes("manage_notifications")) {
+        return (
+            <Card>
+                <CardContent style={{ padding: "32px", textAlign: "center" }}>
+                    <p
+                        style={{
+                            fontSize: "14px",
+                            color: "var(--color-destructive)",
+                            margin: 0,
+                        }}
+                    >
+                        {te("forbidden")}
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "640px" }}>

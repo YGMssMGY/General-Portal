@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { webhooks } from "@/db/schema";
 import { ApiError, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { isUrlSafe } from "@/lib/ssrf";
 import { requireTenant } from "@/lib/tenant";
 
 const updateWebhookSchema = z.object({
@@ -33,6 +34,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         if (!existing) throw new ApiError("Webhook not found", 404);
         const body = await parseBody<UpdateWebhookInput>(updateWebhookSchema as never, request);
         if (Object.keys(body).length === 0) throw new ApiError("No fields to update", 400);
+        if (body.url !== undefined && !(await isUrlSafe(body.url)))
+            throw new ApiError("Webhook URL is not allowed", 400);
         const updated = await t.db
             .update(webhooks)
             .set(body)

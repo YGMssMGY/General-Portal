@@ -8,7 +8,10 @@ import { postEventToTeams } from "@/lib/teams";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const t = await requireTenant(request, { module: "events" });
+        const t = await requireTenant(request, {
+            permission: "manage_all_events",
+            module: "events",
+        });
         const id = requireUuid((await params).id);
         const event = await t.db.query.events.findFirst({
             where: and(

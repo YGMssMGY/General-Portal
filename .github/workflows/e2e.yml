@@ -1,0 +1,109 @@
+name: E2E
+
+on:
+    pull_request:
+    workflow_dispatch:
+
+concurrency:
+    group: e2e-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+    e2e:
+        name: Smoke and Playwright
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:18
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_DB: postgres
+                    POSTGRES_HOST_AUTH_METHOD: trust
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+            DATABASE_URL_DEVELOPERS: ${{ vars.DATABASE_URL_DEVELOPERS || secrets.DATABASE_URL_DEVELOPERS || 'postgres://postgres@localhost:5432/developers' }}
+            DATABASE_URL_STUCO: ${{ vars.DATABASE_URL_STUCO || secrets.DATABASE_URL_STUCO || 'postgres://postgres@localhost:5432/stuco' }}
+            AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'ci-test-auth-secret-not-for-production' }}
+            SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL || 'richard.jiang@basischina.com' }}
+            SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD || 'CiSmokeTest12345' }}
+            E2E_PORTAL: ${{ vars.E2E_PORTAL || 'developers' }}
+            RATE_LIMIT_MAX: "10000"
+            OPS_ADMIN_TOKEN: ci-ops-admin-token
+            AUTH_PROVIDERS_DEVELOPERS: google
+            GOOGLE_CLIENT_ID: e2e-client-id
+            GOOGLE_CLIENT_SECRET: e2e-client-secret
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+            - name: Set up pnpm
+              uses: pnpm/action-setup@v4
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22.12
+                  cache: pnpm
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Prepare local test databases
+              run: |
+                  psql "postgres://postgres@localhost:5432/postgres" -tc "SELECT 1 FROM pg_database WHERE datname = 'developers'" | grep -q 1 || psql "postgres://postgres@localhost:5432/postgres" -c "CREATE DATABASE developers"
+                  psql "postgres://postgres@localhost:5432/postgres" -tc "SELECT 1 FROM pg_database WHERE datname = 'stuco'" | grep -q 1 || psql "postgres://postgres@localhost:5432/postgres" -c "CREATE DATABASE stuco"
+            - name: Migrate developers database
+              env:
+                  MIGRATE_URL: ${{ env.DATABASE_URL_DEVELOPERS }}
+              run: pnpm exec tsx scripts/migrate.ts
+            - name: Migrate stuco database
+              env:
+                  MIGRATE_URL: ${{ env.DATABASE_URL_STUCO }}
+              run: pnpm exec tsx scripts/migrate.ts
+            - name: Seed developers database
+              run: pnpm exec tsx scripts/seed.ts developers --set-password "${SMOKE_EMAIL}=${SMOKE_PASSWORD}"
+            - name: Seed stuco database
+              run: pnpm exec tsx scripts/seed.ts stuco --set-password "${SMOKE_EMAIL}=${SMOKE_PASSWORD}"
+            - name: Install Playwright browsers
+              run: pnpm exec playwright install --with-deps chromium
+            - name: Build
+              run: pnpm build
+            - name: Verify seeded credentials
+              run: |
+                  if [ -z "${AUTH_SECRET:-}" ] || [ -z "${SMOKE_EMAIL:-}" ] || [ -z "${SMOKE_PASSWORD:-}" ]; then
+                    echo "AUTH_SECRET, SMOKE_EMAIL and SMOKE_PASSWORD must be configured for E2E."
+                    exit 1
+                  fi
+            - name: Start server
+              run: nohup pnpm start > server.log 2>&1 &
+            - name: Wait for health endpoint
+              run: |
+                  for attempt in $(seq 1 60); do
+                    if curl -fsS http://localhost:3000/api/health > /dev/null; then
+                      exit 0
+                    fi
+                    sleep 2
+                  done
+                  echo "Health endpoint did not become ready in time"
+                  cat server.log
+                  exit 1
+            - name: Run smoke test
+              run: pnpm exec tsx scripts/smoke.ts http://localhost:3000
+            - name: Run Playwright tests
+              run: pnpm test:e2e
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-test-results
+                  path: test-results/
+                  if-no-files-found: ignore
+            - name: Upload server log
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: e2e-server-log
+                  path: server.log
+                  if-no-files-found: ignore

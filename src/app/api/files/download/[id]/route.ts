@@ -1,6 +1,6 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { resolve, sep } from "node:path";
 import type { NextRequest } from "next/server";
 import { config } from "@/config";
 import { ApiError, handleRouteError, requireUuid } from "@/lib/api";
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
                     eq(attachmentVersions.version, version),
                 ),
                 columns: { storagePath: true, fileSize: true },
+                orderBy: [desc(attachmentVersions.version)],
                 limit: 1,
             });
             const match = rows[0];
@@ -44,7 +45,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             fileSize = match.fileSize;
         }
 
-        const buffer = await readFile(join(config.uploadsDir, storagePath));
+        const root = resolve(config.uploadsDir);
+        const diskPath = resolve(root, storagePath);
+        if (!diskPath.startsWith(root + sep)) throw new ApiError("Invalid storage path", 400);
+
+        const buffer = await readFile(diskPath);
         const encodedName = encodeURIComponent(file.fileName);
         return new Response(new Uint8Array(buffer), {
             headers: {

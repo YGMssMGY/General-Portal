@@ -251,7 +251,7 @@ export default function MembersPage() {
             setAddEmail("");
             setAddName("");
             setAddRole("member");
-            toast.success("Member added.");
+            toast.success(tC("create"));
         },
         onError: (e) => {
             toast.error(errorMessage(e, tE("internal")));

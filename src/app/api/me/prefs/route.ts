@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
+import { WIDGET_IDS } from "@/components/widgets/widgetCatalog";
 import { handleRouteError, ok, parseBody } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 
-const DEFAULT_WIDGETS = ["tasks", "events", "proposals", "activity", "kudos", "participation"];
+const DEFAULT_WIDGETS: readonly string[] = WIDGET_IDS;
 
 const prefsSchema = z.object({
     widgets: z.array(z.string().trim().min(1).max(64)).max(20).optional(),

@@ -16,6 +16,8 @@ import {
     tasks,
 } from "@/db/schema";
 import { ApiError, handleRouteError, ok, parseBody } from "@/lib/api";
+import { writeAuditLog } from "@/lib/audit";
+import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
 
 const TRASH_ENTITIES = [
@@ -38,6 +40,23 @@ const entitySchema = z.object({
     id: z.string().uuid(),
 });
 type EntityInput = z.infer<typeof entitySchema>;
+
+async function mapWithConcurrency<T, R>(
+    items: readonly T[],
+    limit: number,
+    fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+    const out = new Array<R>(items.length);
+    let next = 0;
+    async function worker() {
+        while (next < items.length) {
+            const i = next++;
+            out[i] = await fn(items[i]!);
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+    return out;
+}
 
 export interface TrashItem {
     entityType: TrashEntity;
@@ -606,10 +625,10 @@ export async function GET(request: NextRequest) {
         if (cursorRaw && (before === null || Number.isNaN(before.getTime()))) {
             throw new ApiError("Invalid cursor", 400);
         }
-        const merged: TrashItem[] = [];
-        for (const entity of entities) {
-            merged.push(...(await listEntity(t.db, t.workspaceId, entity, before, 20)));
-        }
+        const lists = await mapWithConcurrency(entities, 6, (entity) =>
+            listEntity(t.db, t.workspaceId, entity, before, 20),
+        );
+        const merged: TrashItem[] = lists.flat();
         merged.sort((a, b) => (a.deletedAt < b.deletedAt ? 1 : -1));
         const items = merged.slice(0, 50);
         const nextCursor = items.length > 0 ? items[items.length - 1].deletedAt : null;
@@ -632,6 +651,14 @@ export async function POST(request: NextRequest) {
         }
         const restored = await restoreEntity(t.db, t.workspaceId, body.entityType, body.id);
         if (!restored) throw new ApiError("Item not found", 404);
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "restore",
+            entityType: body.entityType,
+            entityId: body.id,
+            metadata: { permanent: true },
+        });
         return ok({ restored: true });
     } catch (e) {
         return handleRouteError("POST /api/trash/restore", e);
@@ -645,6 +672,26 @@ export async function DELETE(request: NextRequest) {
         const body = await parseBody<EntityInput>(entitySchema as never, request);
         const deleted = await hardDeleteEntity(t.db, t.workspaceId, body.entityType, body.id);
         if (!deleted) throw new ApiError("Item not found", 404);
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "hard_delete",
+            entityType: body.entityType,
+            entityId: body.id,
+            metadata: { permanent: true },
+        });
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "hard_delete",
+                entityType: body.entityType,
+                entityId: body.id,
+                metadata: { permanent: true },
+            },
+            t.db,
+            true,
+        );
         return ok({ deleted: true });
     } catch (e) {
         return handleRouteError("DELETE /api/trash", e);

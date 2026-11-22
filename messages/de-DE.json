@@ -53,12 +53,9 @@
         "restoreDeleted": "Gelöschte Elemente wiederherstellen",
         "trash": "Papierkorb",
         "permanentlyDelete": "Endgültig löschen",
-        "dangerZone": "Gefahrenbereich"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "Der gemeinsame Arbeitsbereich für Schülerorganisationen",
-        "description": "General Portal ist eine mandantenfähige Kollaborationsplattform für Schulklubs und Schülerorganisationen. Sie bündelt Anträge, Aufgaben, Veranstaltungen, Finanzen, Ehrenamt und Mitgliederverwaltung an einem sicheren Ort."
+        "dangerZone": "Gefahrenbereich",
+        "breadcrumb": "Brotkrümelnavigation",
+        "viewInFinance": "In Finanzen öffnen"
     },
     "landing": {
         "title": "General Portal",
@@ -99,7 +96,19 @@
         "dues": "Beiträge",
         "assets": "Vermögen",
         "kudos": "Kudos",
-        "customFields": "Benutzerdefinierte Felder"
+        "customFields": "Benutzerdefinierte Felder",
+        "search": "Suche",
+        "budget": "Budget",
+        "partnerships": "Partnerschaften",
+        "myWork": "Meine Arbeit",
+        "onboarding": "Einrichtung",
+        "invitations": "Einladungen",
+        "analytics": "Analysen",
+        "approvals": "Freigaben",
+        "import": "Datenimport",
+        "usage": "Nutzung",
+        "digestPreview": "Zusammenfassungsvorschau",
+        "purchaseRequests": "Bestellanträge"
     },
     "auth": {
         "signIn": "Anmelden",
@@ -142,7 +151,8 @@
         "resetPassword": "Passwort zurücksetzen",
         "resetSuccess": "Ihr Passwort wurde zurückgesetzt. Bitte melden Sie sich an.",
         "backToSignIn": "Zurück zur Anmeldung",
-        "passwordTooShort": "Verwenden Sie mindestens 12 Zeichen."
+        "passwordTooShort": "Verwenden Sie mindestens 12 Zeichen.",
+        "unavailable": "Die Anmeldung ist derzeit nicht verfügbar"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -193,7 +203,10 @@
         "dueToday": "Heute fällig",
         "deleteConfirm": "Möchten Sie diese Aufgabe wirklich löschen?",
         "markDone": "Als erledigt markieren",
-        "markTodo": "Als zu erledigen markieren"
+        "markTodo": "Als zu erledigen markieren",
+        "sendComment": "Kommentar senden",
+        "occurrences": "Künftige Wiederholungen",
+        "noOccurrences": "Keine Wiederholungen in diesem Zeitraum."
     },
     "events": {
         "title": "Veranstaltungen",
@@ -416,7 +429,8 @@
         "statusScheduled": "Geplant",
         "statusOngoing": "Läuft",
         "statusCompleted": "Abgeschlossen",
-        "statusCancelled": "Abgesagt"
+        "statusCancelled": "Abgesagt",
+        "noMinutes": "Noch keine Protokolle vorhanden."
     },
     "members": {
         "title": "Mitglieder",
@@ -483,7 +497,11 @@
         "uploadFailed": "Hochladen fehlgeschlagen.",
         "deleteFailed": "Löschen fehlgeschlagen.",
         "downloading": "Wird heruntergeladen",
-        "storagePath": "Speicherpfad"
+        "storagePath": "Speicherpfad",
+        "preview": "Vorschau",
+        "selectAll": "Alle auswählen",
+        "bulkDelete": "Auswahl löschen",
+        "bulkDeleteForever": "Auswahl endgültig löschen"
     },
     "links": {
         "title": "Links",
@@ -569,7 +587,10 @@
         "moduleDisabled": "Modul deaktiviert",
         "terminology": "Terminologie",
         "terminologyHint": "Benennen Sie Module um, um dem Vokabular Ihrer Organisation zu entsprechen.",
-        "reset": "Zurücksetzen"
+        "reset": "Zurücksetzen",
+        "radius": "Eckenradius",
+        "preview": "Vorschau",
+        "invalidTerminology": "Die Terminologie muss ein JSON-Objekt mit Textwerten sein."
     },
     "search": {
         "title": "Suche",
@@ -665,7 +686,10 @@
         "noWebhooks": "Noch keine Webhooks.",
         "testWebhook": "Webhook testen",
         "testSuccess": "Test erfolgreich zugestellt.",
-        "noSecret": "Kein Signaturschlüssel konfiguriert."
+        "noSecret": "Kein Signaturschlüssel konfiguriert.",
+        "replay": "Erneut senden",
+        "replaySuccess": "Erneutes Senden für {event} vorgemerkt.",
+        "replayFailed": "Erneutes Senden fehlgeschlagen"
     },
     "apiTokens": {
         "title": "API-Token",
@@ -680,20 +704,6 @@
         "revoke": "Widerrufen",
         "noTokens": "Noch keine API-Token.",
         "tokenShownOnce": "Dieser Token wird nur einmal angezeigt."
-    },
-    "audit": {
-        "title": "Audit-Protokoll",
-        "action": "Aktion",
-        "entityType": "Entitätstyp",
-        "entityId": "Entitäts-ID",
-        "performedBy": "Ausgeführt von",
-        "timestamp": "Zeitstempel",
-        "ipAddress": "IP-Adresse",
-        "noLogs": "Noch keine Audit-Protokolle.",
-        "export": "Exportieren",
-        "verifyIntegrity": "Integrität prüfen",
-        "integrityOk": "Integrität bestätigt.",
-        "integrityFailed": "Integritätsprüfung fehlgeschlagen."
     },
     "sessions": {
         "title": "Meine Sitzungen",
@@ -836,40 +846,6 @@
         "conflict": "Diese Aktion steht im Widerspruch zu vorhandenen Daten.",
         "moduleDisabled": "Dieses Modul ist für diesen Arbeitsbereich deaktiviert."
     },
-    "validation": {
-        "required": "Dieses Feld ist erforderlich.",
-        "tooShort": "Muss mindestens {min} Zeichen lang sein.",
-        "tooLong": "Darf höchstens {max} Zeichen lang sein.",
-        "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein.",
-        "invalidUrl": "Geben Sie eine gültige URL ein.",
-        "invalidDate": "Geben Sie ein gültiges Datum ein.",
-        "invalidNumber": "Geben Sie eine gültige Zahl ein.",
-        "mustBePositive": "Muss größer als null sein.",
-        "invalidOption": "Wählen Sie eine gültige Option."
-    },
-    "tui": {
-        "title": "Terminal",
-        "mainMenu": "Hauptmenü",
-        "sites": "Websites",
-        "addSite": "Website hinzufügen",
-        "removeSite": "Website entfernen",
-        "migrate": "Migrieren",
-        "backup": "Sichern",
-        "jobs": "Aufgaben",
-        "health": "Systemzustand",
-        "logs": "Protokolle",
-        "danger": "Gefahr",
-        "quit": "Beenden",
-        "selectOption": "Wählen Sie eine Option",
-        "confirmDeletion": "Löschung bestätigen",
-        "typeSlugToConfirm": "Geben Sie {slug} ein, um zu bestätigen",
-        "backupCreated": "Sicherung erstellt.",
-        "siteAdded": "Website hinzugefügt.",
-        "siteRemoved": "Website entfernt.",
-        "migrationComplete": "Migration abgeschlossen.",
-        "yes": "Ja",
-        "no": "Nein"
-    },
     "productivity": {
         "blocked": "Blockiert",
         "blockedBy": "Blockiert durch {title}",
@@ -928,6 +904,502 @@
         "noViews": "Keine gespeicherten Ansichten",
         "invalidJson": "Die Filter müssen ein gültiges JSON-Objekt sein.",
         "sharedWithYou": "Für dich freigegeben",
-        "filtersJson": "Filter (JSON)"
+        "filtersJson": "Filter (JSON)",
+        "apply": "Anwenden",
+        "share": "Teilen",
+        "revoke": "Widerrufen",
+        "shareLink": "Freigabelink",
+        "revoked": "Freigabelink widerrufen."
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Arbeitsbereich wählen",
+            "subtitle": "Eine Plattform für jede Organisationsform.",
+            "clubs": {
+                "title": "Vereine und Studentenorganisationen",
+                "description": "Projekte, Veranstaltungen, Budgets und Wahlen an einem Ort."
+            },
+            "firms": {
+                "title": "Kleine Unternehmen und Teams",
+                "description": "Freigaben, Dateien, Finanzen und Kundenarbeit ohne Tool-Wildwuchs."
+            },
+            "agencies": {
+                "title": "Agenturen und Großorganisationen",
+                "description": "Zehn bis fünfzig isolierte Arbeitsbereiche mit zentraler Steuerung."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "Was Sie erhalten",
+            "clubs": {
+                "title": "Für Vereine gemacht",
+                "intro": "Von der Rekrutierung bis zur Jahresplanung alles an einem Ort.",
+                "benefits": {
+                    "1": "Isolierte Datenbanken pro Arbeitsbereich",
+                    "2": "Neun Anmeldeprovider",
+                    "3": "YAML-gesteuerte Konfiguration",
+                    "4": "Fünf Sprachen sofort verfügbar"
+                }
+            },
+            "firms": {
+                "title": "Für Teams gemacht",
+                "intro": "Halten Sie Entscheidungen, Ausgaben und Ergebnisse prüfbar und schnell.",
+                "benefits": {
+                    "1": "Über 40 integrierte Module",
+                    "2": "Rechtebasierte Zugriffskontrolle",
+                    "3": "Manipulationssicheres Auditprotokoll",
+                    "4": "Gestreamte, geprüfte Datei-Uploads"
+                }
+            },
+            "agencies": {
+                "title": "Für Agenturen gemacht",
+                "intro": "Trennen Sie jeden Kunden bei einer einzigen Installation und Prüfspur.",
+                "benefits": {
+                    "1": "Zehn bis fünfzig Arbeitsbereiche pro Installation",
+                    "2": "Visuelles Branding pro Arbeitsbereich",
+                    "3": "Geplante verschlüsselte Backups",
+                    "4": "Operator-API für Agenten"
+                }
+            }
+        },
+        "links": {
+            "label": "Entdecken",
+            "features": "Funktionen",
+            "demo": "Live-Demo"
+        },
+        "changelog": {
+            "title": "Änderungsprotokoll",
+            "empty": "Noch keine Einträge."
+        },
+        "roadmap": {
+            "title": "Roadmap",
+            "subtitle": "Was als Nächstes kommt.",
+            "columns": {
+                "now": "Jetzt",
+                "next": "Als Nächstes",
+                "later": "Später",
+                "done": "Fertig"
+            },
+            "items": {
+                "presets": "Arbeitsbereich-Vorlagen",
+                "demo": "Schreibgeschützter Demo-Modus",
+                "sdk": "Typisiertes SDK und CLI",
+                "analytics": "Analyse-Center",
+                "backups": "Geplante verschlüsselte Backups",
+                "scim": "SCIM-Bereitstellung",
+                "presence": "Live-Präsenz",
+                "badges": "Teilnahme-Abzeichen"
+            }
+        },
+        "security": {
+            "title": "Sicherheit",
+            "subtitle": "Wie General Portal Ihre Daten schützt.",
+            "topics": {
+                "transport": {
+                    "title": "Transport",
+                    "body": "Nur HTTPS in Produktion, HSTS, Nonce-CSP und gehärtete Header."
+                },
+                "authn": {
+                    "title": "Authentifizierung",
+                    "body": "Undurchsichtige Sitzungen mit Rotation und sofortiger Sperrung, neun Provider und Passkeys."
+                },
+                "authz": {
+                    "title": "Autorisierung",
+                    "body": "Jede Route verlangt einen Mandantenkontext; jede Änderung prüft Rechte und Besitz."
+                },
+                "uploads": {
+                    "title": "Uploads",
+                    "body": "Magic-Byte-Prüfung, gestreamte Größenlimits, Prüfsummen und Nur-Anhang-Downloads."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Nicht vertrauenswürdige URLs werden auf geprüfte IPs aufgelöst, die Verbindung gepinnt und jede Umleitung geprüft."
+                },
+                "rateLimits": {
+                    "title": "Ratenbegrenzung",
+                    "body": "Ein gemeinsamer Postgres-Token-Bucket schützt sensible Endpunkte über Instanzen hinweg."
+                },
+                "audit": {
+                    "title": "Audit",
+                    "body": "Ein nur anfügbares Protokoll mit SHA-256-Hashkette und periodischen Prüfpunkten."
+                },
+                "supplyChain": {
+                    "title": "Lieferkette",
+                    "body": "Eingefrorene Lockdatei, Dependency Review, CodeQL, Scorecard, SBOM und signierte Releases."
+                }
+            },
+            "reporting": "Bitte privat über GitHub Security Advisories melden.",
+            "docsLink": "Sicherheitsleitfaden lesen"
+        },
+        "about": {
+            "tagline": "Das selbst gehostete Arbeitsbereich-Betriebssystem",
+            "title": "Über General Portal",
+            "story1": "General Portal begann als Portal für zwei Organisationen und wurde zu einer allgemeinen Plattform für jedes Team.",
+            "story2": "Sie besitzen Deployment, Daten und Branding. Kein externes CDN nötig.",
+            "factsTitle": "Fakten",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Selbst gehostet auf Ihrem eigenen Postgres",
+                "fonts": "Selbst gehostete Schriften, kein CDN"
+            }
+        },
+        "docs": {
+            "title": "Dokumentation",
+            "subtitle": "Alles, was Sie zum Konfigurieren, Bereitstellen und Betreiben brauchen.",
+            "guidesTitle": "Anleitungen",
+            "guides": {
+                "readme": "README",
+                "architecture": "Architektur",
+                "deployment": "Bereitstellung",
+                "auth": "Authentifizierung",
+                "security": "Sicherheit",
+                "i18n": "Internationalisierung",
+                "tui": "Betreiberkonsole",
+                "api": "API-Referenz",
+                "runbook": "Runbook",
+                "sdk": "SDK-Leitfaden",
+                "features": "Funktionsleitfaden"
+            },
+            "apiTitle": "API-Referenzen",
+            "publicApi": "Öffentliche API-Beschreibung",
+            "operatorApi": "Operator-API-Beschreibung"
+        },
+        "demo": {
+            "banner": "Schreibgeschützte Vorschau. Echte Arbeitsbereiche erfordern Anmeldung.",
+            "title": "Arbeitsbereich ansehen",
+            "subtitle": "Eine statische Vorschau der enthaltenen Module.",
+            "gated": "Melden Sie sich an, um den echten Arbeitsbereich zu nutzen.",
+            "cards": {
+                "tasks": {
+                    "title": "Aufgaben",
+                    "rows": {
+                        "1": "Quartalsplan vorbereiten",
+                        "2": "Jahresbudget prüfen",
+                        "3": "Veranstaltungsrückblick veröffentlichen"
+                    }
+                },
+                "proposals": {
+                    "title": "Anträge",
+                    "rows": {
+                        "1": "Neue Workshop-Reihe",
+                        "2": "Community-Partnerschaft"
+                    }
+                },
+                "members": {
+                    "title": "Mitglieder",
+                    "rows": {
+                        "1": "Administrator",
+                        "2": "Funktionär",
+                        "3": "Mitglied"
+                    }
+                }
+            }
+        },
+        "compare": {
+            "title": "Warum General Portal",
+            "subtitle": "Ein Arbeitsbereich für die gesamte Organisation.",
+            "selfHostedTitle": "Von Grund auf selbst gehostet",
+            "selfHostedBody": "Sie besitzen die Installation, die Daten und das Branding. Kein externer Dienst ist erforderlich."
+        },
+        "features": {
+            "title": "Für die gesamte Organisation entwickelt",
+            "subtitle": "Alles, was Ihr Team braucht, an einem Ort.",
+            "modulesTitle": "Module, die zusammenarbeiten",
+            "modulesBody": "Projekte, Veranstaltungen, Finanzen und Kommunikation teilen ein Berechtigungsmodell und ein Auditprotokoll."
+        }
+    },
+    "myWork": {
+        "title": "Meine Arbeit",
+        "subtitle": "Alles, was Ihnen zugewiesen ist, an einem Ort.",
+        "customize": "Anpassen",
+        "done": "Fertig",
+        "show": "Anzeigen",
+        "hide": "Ausblenden",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "widget": {
+            "tasks": "Meine Aufgaben",
+            "events": "Anstehende Veranstaltungen",
+            "proposals": "Offene Anträge",
+            "approvals": "Freigaben",
+            "dues": "Meine Beiträge",
+            "polls": "Offene Umfragen",
+            "rsvps": "Meine Zusagen",
+            "kudos": "Aktuelle Kudos"
+        }
+    },
+    "invitations": {
+        "title": "Einladungen",
+        "description": "Laden Sie Personen mit einem ablaufenden Link in diesen Arbeitsbereich ein.",
+        "forbidden": "Sie haben keine Berechtigung, Einladungen zu verwalten.",
+        "createInvitation": "Einladung erstellen",
+        "noInvitations": "Keine offenen Einladungen.",
+        "expiresAt": "Läuft ab",
+        "revoke": "Widerrufen",
+        "revokeWarning": "Diese Einladung widerrufen? Der Link funktioniert sofort nicht mehr.",
+        "role": "Rolle",
+        "roleAdmin": "Administrator",
+        "roleOfficer": "Funktionär",
+        "roleMember": "Mitglied",
+        "expiresInDays": "Gültig für Tage",
+        "invite": "Einladung senden",
+        "tokenTitle": "Einladungslink",
+        "tokenNotice": "Kopieren Sie diesen Link jetzt. Er wird nicht erneut angezeigt.",
+        "copyToken": "Link kopieren",
+        "emailedNotice": "Der Einladungslink wurde dem Eingeladenen per E-Mail gesendet."
+    },
+    "onboarding": {
+        "title": "Arbeitsbereich einrichten",
+        "description": "Vier schnelle Schritte für Ihren Teamstart.",
+        "progressLabel": "Einrichtungsfortschritt",
+        "progressCount": "{completed} von {total} erledigt",
+        "done": "Erledigt",
+        "pending": "Ausstehend",
+        "passwordTitle": "Administrationspasswort festlegen",
+        "passwordDescription": "Schützen Sie Ihr Konto mit einem starken Passwort.",
+        "passwordAction": "Kontoeinstellungen öffnen",
+        "brandTitle": "Arbeitsbereich gestalten",
+        "brandDescription": "Fügen Sie Name, Logo und Primärfarbe hinzu.",
+        "brandAction": "Einstellungen öffnen",
+        "inviteTitle": "Team einladen",
+        "inviteDescription": "Holen Sie Ihre Kollegen in den Arbeitsbereich.",
+        "inviteAction": "Einladungen öffnen",
+        "showcaseTitle": "Showcase veröffentlichen",
+        "showcaseDescription": "Veranstaltungen und Neuigkeiten öffentlich teilen.",
+        "showcaseAction": "Showcase-Verwaltung öffnen"
+    },
+    "permissions": {
+        "title": "Berechtigungsmatrix",
+        "permission": "Berechtigung",
+        "updateSuccess": "Berechtigungen aktualisiert"
+    },
+    "analytics": {
+        "title": "Analysen",
+        "range30": "Letzte 30 Tage",
+        "range90": "Letzte 90 Tage",
+        "range365": "Letztes Jahr",
+        "tasksCreated": "Erstellte Aufgaben",
+        "tasksCompleted": "Abgeschlossene Aufgaben",
+        "events": "Veranstaltungen",
+        "members": "Mitglieder",
+        "participation": "Teilnahme",
+        "attendanceRate": "Anwesenheitsrate",
+        "tasksTrend": "Aufgabentrend",
+        "eventsTrend": "Veranstaltungstrend",
+        "membersTrend": "Mitgliederwachstum",
+        "financeTrend": "Finanztrend",
+        "noData": "Keine Daten für diesen Zeitraum",
+        "created": "Erstellt",
+        "completed": "Abgeschlossen",
+        "income": "Einnahmen",
+        "expense": "Ausgaben",
+        "net": "Netto",
+        "cents": "Beträge werden in ganzzahligen Cents gespeichert."
+    },
+    "status": {
+        "title": "Öffentlicher Status",
+        "portals": "Arbeitsbereiche",
+        "name": "Name",
+        "slug": "Kennung",
+        "configured": "Konfiguriert",
+        "notConfigured": "Nicht konfiguriert",
+        "migrations": "Migrationen",
+        "yes": "Ja",
+        "queues": "Job-Warteschlangen",
+        "state": "Zustand",
+        "count": "Anzahl",
+        "unavailable": "Nicht verfügbar",
+        "storageNote": "Hochgeladene Dateien werden lokal auf dem Server gespeichert."
+    },
+    "apiPlayground": {
+        "title": "API-Testumgebung",
+        "method": "Methode",
+        "endpoint": "Endpunkt",
+        "body": "JSON-Körper",
+        "bodyHint": "Optionaler Anfragetext als JSON",
+        "send": "Anfrage senden",
+        "running": "Läuft",
+        "response": "Antwort",
+        "empty": "Noch keine Antwort"
+    },
+    "workflowBuilder": {
+        "title": "Workflow-Builder",
+        "newWorkflow": "Neuer Workflow",
+        "stages": "Phasen",
+        "stage": "Phase",
+        "slaHours": "SLA-Stunden",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "removeStage": "Phase entfernen",
+        "addStage": "Phase hinzufügen",
+        "maxStages": "Höchstens {count} Phasen",
+        "advanced": "Erweitert",
+        "advancedHint": "Optionale Felder pro Phase als JSON",
+        "created": "Workflow erstellt",
+        "deleted": "Workflow gelöscht",
+        "deleteTitle": "Workflow löschen",
+        "deleteDescription": "{name} löschen? Dies kann nicht rückgängig gemacht werden.",
+        "noWorkflows": "Keine Workflows konfiguriert",
+        "stageCount": "{count} Phasen"
+    },
+    "badges": {
+        "title": "Abzeichen",
+        "subtitle": "Durch Teilnahme erreichte Meilensteine",
+        "firstTask": "Erste Aufgabe",
+        "firstTaskDesc": "Schließen Sie Ihre erste Aufgabe ab",
+        "eventGoer": "Veranstaltungsbesucher",
+        "eventGoerDesc": "Besuchen Sie drei Veranstaltungen",
+        "volunteer": "Freiwilliger",
+        "volunteerDesc": "Melden Sie sich für Freiwilligenstunden an",
+        "kudosStar": "Kudos-Star",
+        "kudosStarDesc": "Erhalten Sie fünf Kudos",
+        "streak": "Serie",
+        "streakDesc": "In drei Zeiträumen aktiv sein",
+        "top10": "Top zehn",
+        "top10Desc": "Erreichen Sie die Top zehn",
+        "noBadges": "Noch keine Abzeichen",
+        "progress": "{current} von {target}",
+        "earnedOn": "Erhalten am {date}",
+        "notEarned": "Noch nicht erhalten"
+    },
+    "presence": {
+        "onlineNow": "{count} jetzt online",
+        "noOneOnline": "Niemand online",
+        "lastSeen": "Zuletzt gesehen {time}"
+    },
+    "translations": {
+        "title": "Übersetzungsprüfung",
+        "subtitle": "Fehlende Schlüssel pro Sprache",
+        "complete": "Alle Sprachen sind vollständig",
+        "missing": "Fehlend",
+        "description": "Fehlende Schlüssel pro Sprache",
+        "allComplete": "Alle Sprachen sind vollständig",
+        "locale": "Sprache",
+        "keys": "Schlüssel",
+        "showingFirst": "Erste {count} anzeigen",
+        "contributing": "Beitragsleitfaden"
+    },
+    "changelogDrawer": {
+        "title": "Neuigkeiten",
+        "empty": "Noch keine Versionshinweise",
+        "trigger": "Versionshinweise",
+        "description": "Versionshöhepunkte"
+    },
+    "scim": {
+        "notConfigured": "SCIM nicht konfiguriert",
+        "unauthorized": "Nicht autorisiert",
+        "invalidRequest": "Ungültige Anfrage",
+        "invalidFilter": "Ungültiger Filter",
+        "notFound": "Nicht gefunden",
+        "conflict": "Konflikt",
+        "internal": "Interner Fehler"
+    },
+    "usage": {
+        "title": "Nutzung und Kontingente",
+        "subtitle": "Aktueller Ressourcenverbrauch dieses Arbeitsbereichs",
+        "storage": "Dateispeicher",
+        "storageUsed": "{used} von {limit}",
+        "percentUsed": "{percent}% belegt",
+        "seats": "Mitglieder",
+        "noLimit": "Kein Limit konfiguriert",
+        "activeSessions": "Aktive Sitzungen",
+        "pendingInvitations": "Offene Einladungen",
+        "activeTokens": "Aktive API-Tokens",
+        "alerts": "Warnungen",
+        "noAlerts": "Keine Kontingentwarnungen",
+        "requestsPerMinute": "{count} Anfragen pro Minute",
+        "auditRetentionDays": "{count} Tage Prüfverlauf"
+    },
+    "slaInbox": {
+        "title": "Freigabenpostfach",
+        "filterMine": "Meine",
+        "filterOverdue": "Überfällig",
+        "empty": "Keine offenen Freigaben",
+        "overdue": "Überfällig",
+        "dueSoon": "Bald fällig",
+        "onTrack": "Im Plan",
+        "noDueDate": "Kein Fälligkeitsdatum",
+        "dueAt": "Fällig am {date}",
+        "stage": "Phase {n}",
+        "assignedTo": "Zugewiesen an {name}",
+        "commentOptional": "Optionaler Kommentar",
+        "approve": "Genehmigen",
+        "reject": "Ablehnen",
+        "approveSuccess": "Freigabe erteilt",
+        "rejectSuccess": "Freigabe abgelehnt",
+        "typeEvent": "Veranstaltung",
+        "typeProposal": "Antrag",
+        "typeTask": "Aufgabe",
+        "typeMeeting": "Besprechung",
+        "typeOther": "Sonstiges"
+    },
+    "sharedView": {
+        "invalidLink": "Dieser Link ist ungültig oder abgelaufen.",
+        "filters": "Gespeicherte Filter",
+        "backToList": "Zurück zu den Ansichten"
+    },
+    "dataImport": {
+        "title": "Datenimport",
+        "description": "Importieren Sie bis zu 500 Zeilen aus einer CSV-Datei.",
+        "entityType": "Entitätstyp",
+        "entityTask": "Aufgaben",
+        "entityMember": "Mitglieder",
+        "entityTransaction": "Transaktionen",
+        "fileLabel": "CSV-Datei",
+        "fileHint": "Maximal 2 MB, UTF-8-Text mit Kopfzeile.",
+        "upload": "Datei importieren",
+        "success": "Import abgeschlossen",
+        "preview": "Vorschau",
+        "noPreview": "Keine Zeilen zur Vorschau",
+        "result": "Ergebnis",
+        "inserted": "Eingefügt",
+        "failed": "Fehlgeschlagen",
+        "row": "Zeile",
+        "reason": "Grund"
+    },
+    "digestPreview": {
+        "title": "Zusammenfassungsvorschau",
+        "channel": "Kanal",
+        "generate": "Vorschau erzeugen",
+        "total": "Ungelesene Benachrichtigungen",
+        "sample": "Beispieltext",
+        "empty": "Nichts für diese Zusammenfassung",
+        "description": "Wählen Sie einen Kanal und sehen Sie die Zusammenfassung.",
+        "channelEmail": "E-Mail",
+        "channelInApp": "In der App",
+        "digest": "Zusammenfassungsintervall",
+        "digestNever": "Nie",
+        "digestDaily": "Täglich",
+        "digestWeekly": "Wöchentlich",
+        "sampleHeading": "Beispielausgabe",
+        "totalUnread": "{total} ungelesene Benachrichtigungen",
+        "groupsHeading": "Enthaltene Gruppen",
+        "openPreferences": "Benachrichtigungseinstellungen öffnen"
+    },
+    "comments": {
+        "title": "Kommentare",
+        "empty": "Noch keine Kommentare.",
+        "placeholder": "Kommentar schreiben",
+        "add": "Hinzufügen"
+    },
+    "linkPreview": {
+        "loading": "Vorschau wird geladen",
+        "alt": "Linkvorschau"
+    },
+    "sidebar": {
+        "toggle": "Seitenleiste umschalten",
+        "expand": "Seitenleiste ausklappen",
+        "collapse": "Seitenleiste einklappen",
+        "displaysMobile": "Auf Mobilgeräten anzeigen",
+        "language": "Sprache"
+    },
+    "pagination": {
+        "previous": "Zurück",
+        "next": "Weiter",
+        "previousAria": "Zur vorherigen Seite",
+        "nextAria": "Zur nächsten Seite",
+        "morePages": "Weitere Seiten"
+    },
+    "commandPalette": {
+        "title": "Befehlspalette"
     }
 }

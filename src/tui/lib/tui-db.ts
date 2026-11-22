@@ -1,7 +1,10 @@
 import fs from "node:fs";
+import fsp from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { Client } from "pg";
 
 const execAsync = promisify(exec);
@@ -130,7 +133,9 @@ export function backupDir(slug: string): string {
 export function listBackups(slug: string): BackupEntry[] {
     let names: string[] = [];
     try {
-        names = fs.readdirSync(backupDir(slug)).filter((f) => f.endsWith(".sql"));
+        names = fs
+            .readdirSync(backupDir(slug))
+            .filter((f) => f.endsWith(".sql") || f.endsWith(".sql.enc"));
     } catch {
         return [];
     }
@@ -169,8 +174,69 @@ export function backupFilePath(slug: string, tag: string): string {
     return path.join(backupDir(slug), `${stamp}-${tag}.sql`);
 }
 
+const GPENC1 = Buffer.from("GPENC1", "ascii");
+
+export function backupEncryptionKey(): Buffer | null {
+    const raw = process.env.BACKUP_ENCRYPTION_KEY ?? "";
+    if (raw === "") return null;
+    const key = Buffer.from(raw, "base64");
+    if (key.length !== 32) {
+        throw new Error("BACKUP_ENCRYPTION_KEY must be a base64-encoded 32-byte key");
+    }
+    return key;
+}
+
+export async function encryptDump(
+    source: string,
+    key: Buffer,
+): Promise<{ path: string; bytes: number; sha256: string }> {
+    const plain = await fsp.readFile(source);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", key, iv);
+    const encrypted = Buffer.concat([cipher.update(plain), cipher.final()]);
+    const out = Buffer.concat([GPENC1, iv, cipher.getAuthTag(), encrypted]);
+    const target = `${source}.enc`;
+    await fsp.writeFile(target, out, { mode: 0o600 });
+    await fsp.unlink(source);
+    return {
+        path: target,
+        bytes: out.length,
+        sha256: createHash("sha256").update(out).digest("hex"),
+    };
+}
+
+export async function decryptDump(
+    source: string,
+    key: Buffer,
+): Promise<{ path: string; bytes: number }> {
+    const data = await fsp.readFile(source);
+    if (data.length < 34 || data.subarray(0, 6).toString("ascii") !== "GPENC1") {
+        throw new Error("Not a GPENC1 encrypted backup");
+    }
+    const decipher = createDecipheriv("aes-256-gcm", key, data.subarray(6, 18));
+    decipher.setAuthTag(data.subarray(18, 34));
+    const plain = Buffer.concat([decipher.update(data.subarray(34)), decipher.final()]);
+    const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "gp-restore-"));
+    const target = path.join(dir, path.basename(source).replace(/\.enc$/, ""));
+    await fsp.writeFile(target, plain, { mode: 0o600 });
+    return { path: target, bytes: plain.length };
+}
+
+export async function sealDumpIfConfigured(
+    source: string,
+): Promise<{ path: string; bytes: number; sha256: string } | null> {
+    const key = backupEncryptionKey();
+    if (!key) return null;
+    try {
+        return await encryptDump(source, key);
+    } catch (e) {
+        await fsp.rm(source, { force: true }).catch(() => undefined);
+        throw e;
+    }
+}
+
 function shellQuote(s: string): string {
-    return `"${s.replace(/"/g, '\\"')}"`;
+    return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\$/g, "\\$").replace(/`/g, "\\`")}"`;
 }
 
 export async function runBin(

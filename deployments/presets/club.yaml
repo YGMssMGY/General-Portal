@@ -1,0 +1,95 @@
+version: 1
+deployment:
+    id: club-portal
+    environment: production
+    baseUrl: https://club.example.com
+defaults:
+    locale: en-US
+    timezone: America/New_York
+    theme:
+        primary: "#1d4ed8"
+        radius: 6
+portals:
+    - slug: club
+      name: Campus Club
+      category: education
+      description: A shared workspace for a student club to coordinate meetings, events, dues, and service projects.
+      branding:
+          logo: /club.png
+          favicon: /club.png
+          primary: "#1d4ed8"
+      db:
+          envVar: DATABASE_URL_CLUB
+      auth:
+          providers: [password, passkey]
+          allowedDomains: []
+      modules:
+          [
+              dashboard,
+              onboarding,
+              invitations,
+              proposals,
+              tasks,
+              events,
+              messages,
+              finance,
+              volunteers,
+              members,
+              files,
+              meetings,
+              activity,
+              subgroups,
+              settings,
+              notifications,
+              calendar,
+              search,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /onboarding
+            label: Setup
+            icon: list-checks
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: mail
+            module: invitations
+          - path: /events
+            label: Events
+            icon: calendar
+            module: events
+          - path: /members
+            label: Members
+            icon: users
+            module: members
+          - path: /proposals
+            label: Proposals
+            icon: file-text
+            module: proposals
+          - path: /tasks
+            label: Tasks
+            icon: list-todo
+            module: tasks
+          - path: /finance
+            label: Finance
+            icon: wallet
+            module: finance
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+      terminology:
+          subgroup: Committee
+          academicYear: Academic Year
+          member: Member
+          event: Club Event
+      roles: [admin, officer, member]
+      seedPack: club_default
+      limits:
+          uploadMb: 10
+          requestsPerMinute: 120
+          auditRetentionDays: 365
+      features: [attendance, dues, reports, custom_fields]

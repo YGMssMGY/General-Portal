@@ -20,14 +20,29 @@ export async function GET(request: NextRequest) {
     }
 }
 
+const brandingSchema = z.object({
+    primary: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/, "Expected a #rrggbb color")
+        .optional(),
+    radius: z.number().min(0).max(32).optional(),
+});
+
+const terminologySchema = z
+    .record(z.string(), z.string().max(80))
+    .refine((v) => Object.keys(v).length <= 50, { message: "Too many terminology keys (max 50)" });
+
 const updateSettingsSchema = z.object({
     name: z.string().trim().min(1).max(200).nullish(),
     description: z.string().trim().max(2000).nullish(),
     logoUrl: z.string().trim().max(2000).nullish(),
     settings: z
-        .record(z.string(), z.boolean())
+        .record(z.string(), z.unknown())
         .refine((v) => Object.keys(v).length <= 50, { message: "Too many settings keys (max 50)" })
         .nullish(),
+    branding: brandingSchema.nullish(),
+    faviconUrl: z.string().trim().max(2000).nullish(),
+    terminology: terminologySchema.nullish(),
 });
 type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 
@@ -45,7 +60,21 @@ export async function PUT(request: NextRequest) {
         if (body.name) patch.name = body.name;
         if (body.description !== undefined) patch.description = body.description;
         if (body.logoUrl !== undefined) patch.logoUrl = body.logoUrl;
-        if (body.settings !== undefined && body.settings !== null) patch.settings = body.settings;
+
+        const merged = { ...(body.settings ?? {}) } as Record<string, unknown>;
+        if (body.branding !== undefined && body.branding !== null) merged.branding = body.branding;
+        if (body.faviconUrl !== undefined) merged.faviconUrl = body.faviconUrl;
+        if (body.terminology !== undefined && body.terminology !== null) {
+            merged.terminology = body.terminology;
+        }
+        if (
+            (body.settings !== undefined && body.settings !== null) ||
+            body.branding !== undefined ||
+            body.faviconUrl !== undefined ||
+            body.terminology !== undefined
+        ) {
+            patch.settings = merged as Record<string, boolean>;
+        }
 
         const [updated] = await t.db
             .update(workspaces)

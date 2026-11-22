@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { config } from "@/config";
+import { config, readEnv } from "@/config";
 import { logger } from "@/lib/logger";
 
 export const providerIds = [
@@ -29,11 +29,8 @@ function isKnownProvider(v: string): boolean {
 
 export function getPortalAuthConfig(slug: string): PortalAuthConfig {
     const envKey = `AUTH_PROVIDERS_${slug.toUpperCase().replace(/-/g, "_")}`;
-    // Dynamic per-portal keys cannot be statically typed in @/config; read here.
-    // eslint-disable-next-line no-restricted-properties
-    const rawProviders = process.env[envKey];
-    // eslint-disable-next-line no-restricted-properties
-    const rawDomains = process.env.ALLOWED_DOMAINS ?? "";
+    const rawProviders = readEnv(envKey);
+    const rawDomains = readEnv("ALLOWED_DOMAINS") ?? "";
     return portalAuthSchema.parse({
         providers:
             rawProviders === undefined

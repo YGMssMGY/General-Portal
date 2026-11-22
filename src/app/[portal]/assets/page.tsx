@@ -107,12 +107,8 @@ export default function AssetsPage() {
     const assetIds = assets.map((a) => a.id).join(",");
     const { data: myLoans } = useQuery({
         queryKey: [portal, "assets", "my-loans", assetIds],
-        queryFn: async () => {
-            const all = await Promise.all(
-                assets.map((a) => fetchJson<Loan[]>(`/api/assets/${a.id}/loans`)),
-            );
-            return all.flat().filter((l) => l.userId === user?.id && !l.returnedAt);
-        },
+        queryFn: () =>
+            fetchJson<Loan[]>(`/api/assets/loans/mine?ids=${encodeURIComponent(assetIds)}`),
         enabled: portal !== "" && assets.length > 0,
     });
 

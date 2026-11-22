@@ -53,12 +53,9 @@
         "restoreDeleted": "Restaurer les éléments supprimés",
         "trash": "Corbeille",
         "permanentlyDelete": "Supprimer définitivement",
-        "dangerZone": "Zone de danger"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "L'espace de travail partagé des organisations étudiantes",
-        "description": "General Portal est une plateforme de collaboration mutualisée destinée aux clubs scolaires et aux organisations étudiantes. Elle réunit en un seul endroit sécurisé les propositions, les tâches, les événements, les finances, le bénévolat et la gestion des membres."
+        "dangerZone": "Zone de danger",
+        "breadcrumb": "Fil d'Ariane",
+        "viewInFinance": "Ouvrir dans Finances"
     },
     "landing": {
         "title": "General Portal",
@@ -99,7 +96,19 @@
         "dues": "Cotisations",
         "assets": "Actifs",
         "kudos": "Kudos",
-        "customFields": "Champs personnalisés"
+        "customFields": "Champs personnalisés",
+        "search": "Recherche",
+        "budget": "Budget",
+        "partnerships": "Partenariats",
+        "myWork": "Mon travail",
+        "onboarding": "Configuration",
+        "invitations": "Invitations",
+        "analytics": "Analyses",
+        "approvals": "Validations",
+        "import": "Import de données",
+        "usage": "Utilisation",
+        "digestPreview": "Aperçu du résumé",
+        "purchaseRequests": "Demandes d'achat"
     },
     "auth": {
         "signIn": "Connexion",
@@ -142,7 +151,8 @@
         "resetPassword": "Réinitialiser le mot de passe",
         "resetSuccess": "Votre mot de passe a été réinitialisé. Veuillez vous connecter.",
         "backToSignIn": "Retour à la connexion",
-        "passwordTooShort": "Utilisez au moins 12 caractères."
+        "passwordTooShort": "Utilisez au moins 12 caractères.",
+        "unavailable": "La connexion est momentanément indisponible"
     },
     "dashboard": {
         "title": "Tableau de bord",
@@ -193,7 +203,10 @@
         "dueToday": "Échéance aujourd'hui",
         "deleteConfirm": "Voulez-vous vraiment supprimer cette tâche ?",
         "markDone": "Marquer comme terminée",
-        "markTodo": "Marquer comme à faire"
+        "markTodo": "Marquer comme à faire",
+        "sendComment": "Envoyer le commentaire",
+        "occurrences": "Occurrences à venir",
+        "noOccurrences": "Aucune occurrence dans cette période."
     },
     "events": {
         "title": "Événements",
@@ -416,7 +429,8 @@
         "statusScheduled": "Planifiée",
         "statusOngoing": "En cours",
         "statusCompleted": "Terminée",
-        "statusCancelled": "Annulée"
+        "statusCancelled": "Annulée",
+        "noMinutes": "Aucun compte rendu pour le moment."
     },
     "members": {
         "title": "Membres",
@@ -483,7 +497,11 @@
         "uploadFailed": "Échec du téléversement.",
         "deleteFailed": "Échec de la suppression.",
         "downloading": "Téléchargement en cours",
-        "storagePath": "Chemin de stockage"
+        "storagePath": "Chemin de stockage",
+        "preview": "Aperçu",
+        "selectAll": "Tout sélectionner",
+        "bulkDelete": "Supprimer la sélection",
+        "bulkDeleteForever": "Supprimer définitivement la sélection"
     },
     "links": {
         "title": "Liens",
@@ -569,7 +587,10 @@
         "moduleDisabled": "Module désactivé",
         "terminology": "Terminologie",
         "terminologyHint": "Renommez les modules pour correspondre au vocabulaire de votre organisation.",
-        "reset": "Réinitialiser"
+        "reset": "Réinitialiser",
+        "radius": "Rayon des coins",
+        "preview": "Aperçu",
+        "invalidTerminology": "La terminologie doit être un objet JSON de valeurs texte."
     },
     "search": {
         "title": "Recherche",
@@ -665,7 +686,10 @@
         "noWebhooks": "Aucun crochet Web pour le moment.",
         "testWebhook": "Tester le crochet Web",
         "testSuccess": "Test transmis avec succès.",
-        "noSecret": "Aucune clé secrète configurée."
+        "noSecret": "Aucune clé secrète configurée.",
+        "replay": "Rejouer",
+        "replaySuccess": "Rejeu mis en file pour {event}.",
+        "replayFailed": "Le rejeu a échoué"
     },
     "apiTokens": {
         "title": "Jetons API",
@@ -680,20 +704,6 @@
         "revoke": "Révoquer",
         "noTokens": "Aucun jeton API pour le moment.",
         "tokenShownOnce": "Ce jeton n'est affiché qu'une seule fois."
-    },
-    "audit": {
-        "title": "Journal d'audit",
-        "action": "Action",
-        "entityType": "Type d'entité",
-        "entityId": "ID de l'entité",
-        "performedBy": "Effectué par",
-        "timestamp": "Horodatage",
-        "ipAddress": "Adresse IP",
-        "noLogs": "Aucune entrée de journal pour le moment.",
-        "export": "Exporter",
-        "verifyIntegrity": "Vérifier l'intégrité",
-        "integrityOk": "Intégrité vérifiée.",
-        "integrityFailed": "Échec de la vérification d'intégrité."
     },
     "sessions": {
         "title": "Mes sessions",
@@ -836,40 +846,6 @@
         "conflict": "Cette action est en conflit avec les données existantes.",
         "moduleDisabled": "Ce module est désactivé pour cet espace de travail."
     },
-    "validation": {
-        "required": "Ce champ est obligatoire.",
-        "tooShort": "Doit contenir au moins {min} caractères.",
-        "tooLong": "Ne doit pas dépasser {max} caractères.",
-        "invalidEmail": "Saisissez une adresse électronique valide.",
-        "invalidUrl": "Saisissez une URL valide.",
-        "invalidDate": "Saisissez une date valide.",
-        "invalidNumber": "Saisissez un nombre valide.",
-        "mustBePositive": "Doit être supérieur à zéro.",
-        "invalidOption": "Sélectionnez une option valide."
-    },
-    "tui": {
-        "title": "Terminal",
-        "mainMenu": "Menu principal",
-        "sites": "Sites",
-        "addSite": "Ajouter un site",
-        "removeSite": "Supprimer un site",
-        "migrate": "Migrer",
-        "backup": "Sauvegarder",
-        "jobs": "Tâches",
-        "health": "État de santé",
-        "logs": "Journaux",
-        "danger": "Danger",
-        "quit": "Quitter",
-        "selectOption": "Sélectionnez une option",
-        "confirmDeletion": "Confirmer la suppression",
-        "typeSlugToConfirm": "Saisissez {slug} pour confirmer",
-        "backupCreated": "Sauvegarde créée.",
-        "siteAdded": "Site ajouté.",
-        "siteRemoved": "Site supprimé.",
-        "migrationComplete": "Migration terminée.",
-        "yes": "Oui",
-        "no": "Non"
-    },
     "productivity": {
         "blocked": "Bloqué",
         "blockedBy": "Bloqué par {title}",
@@ -928,6 +904,502 @@
         "noViews": "Aucune vue enregistrée",
         "invalidJson": "Les filtres doivent être un objet JSON valide.",
         "sharedWithYou": "Partagée avec vous",
-        "filtersJson": "Filtres (JSON)"
+        "filtersJson": "Filtres (JSON)",
+        "apply": "Appliquer",
+        "share": "Partager",
+        "revoke": "Révoquer",
+        "shareLink": "Lien de partage",
+        "revoked": "Lien de partage révoqué."
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Choisissez votre espace",
+            "subtitle": "Une plateforme pour chaque type d'organisation.",
+            "clubs": {
+                "title": "Clubs et organisations étudiantes",
+                "description": "Projets, événements, budgets et élections au même endroit."
+            },
+            "firms": {
+                "title": "Petites entreprises et équipes",
+                "description": "Validations, fichiers, finances et travaux clients sans outils dispersés."
+            },
+            "agencies": {
+                "title": "Agences et grandes organisations",
+                "description": "Dix à cinquante espaces isolés avec gouvernance centrale."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "Ce que vous obtenez",
+            "clubs": {
+                "title": "Conçu pour les clubs",
+                "intro": "Du recrutement à la planification annuelle, tout au même endroit.",
+                "benefits": {
+                    "1": "Bases isolées par espace",
+                    "2": "Neuf fournisseurs de connexion",
+                    "3": "Configuration pilotée par YAML",
+                    "4": "Cinq langues incluses"
+                }
+            },
+            "firms": {
+                "title": "Conçu pour les équipes",
+                "intro": "Gardez décisions, dépenses et livrables vérifiables et rapides.",
+                "benefits": {
+                    "1": "Plus de 40 modules intégrés",
+                    "2": "Contrôle d'accès par permissions",
+                    "3": "Journal d'audit inviolable",
+                    "4": "Téléversements vérifiés en flux"
+                }
+            },
+            "agencies": {
+                "title": "Conçu pour les agences",
+                "intro": "Séparez chaque client avec un seul déploiement et une piste d'audit.",
+                "benefits": {
+                    "1": "Dix à cinquante espaces par déploiement",
+                    "2": "Image de marque par espace",
+                    "3": "Sauvegardes chiffrées planifiées",
+                    "4": "API d'exploitation pour agents"
+                }
+            }
+        },
+        "links": {
+            "label": "Explorer",
+            "features": "Fonctionnalités",
+            "demo": "Démo en direct"
+        },
+        "changelog": {
+            "title": "Journal des modifications",
+            "empty": "Aucune entrée pour le moment."
+        },
+        "roadmap": {
+            "title": "Feuille de route",
+            "subtitle": "Ce qui arrive ensuite.",
+            "columns": {
+                "now": "Maintenant",
+                "next": "Ensuite",
+                "later": "Plus tard",
+                "done": "Terminé"
+            },
+            "items": {
+                "presets": "Modèles d'espace",
+                "demo": "Mode démo en lecture seule",
+                "sdk": "SDK et CLI typés",
+                "analytics": "Centre d'analyse",
+                "backups": "Sauvegardes chiffrées planifiées",
+                "scim": "Provisionnement SCIM",
+                "presence": "Présence en direct",
+                "badges": "Badges de participation"
+            }
+        },
+        "security": {
+            "title": "Sécurité",
+            "subtitle": "Comment General Portal protège vos données.",
+            "topics": {
+                "transport": {
+                    "title": "Transport",
+                    "body": "HTTPS uniquement en production, HSTS, CSP à nonce et en-têtes renforcés."
+                },
+                "authn": {
+                    "title": "Authentification",
+                    "body": "Sessions opaques avec rotation et révocation immédiate, neuf fournisseurs et passkeys."
+                },
+                "authz": {
+                    "title": "Autorisation",
+                    "body": "Chaque route exige un contexte locataire; chaque mutation vérifie les droits et la propriété."
+                },
+                "uploads": {
+                    "title": "Téléversements",
+                    "body": "Détection par signature, limites de taille en flux, sommes de contrôle et téléchargements en pièce jointe."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Les URL non fiables sont résolues vers des IP validées, la connexion est épinglée et chaque redirection vérifiée."
+                },
+                "rateLimits": {
+                    "title": "Limites de débit",
+                    "body": "Un seau à jetons Postgres partagé protège les points sensibles entre instances."
+                },
+                "audit": {
+                    "title": "Audit",
+                    "body": "Un journal en ajout seul avec chaîne de hachage SHA-256 et points de contrôle périodiques."
+                },
+                "supplyChain": {
+                    "title": "Chaîne d'approvisionnement",
+                    "body": "Lockfile figé, revue des dépendances, CodeQL, Scorecard, SBOM et versions signées."
+                }
+            },
+            "reporting": "Signalez de façon privée via les avis de sécurité GitHub.",
+            "docsLink": "Lire le guide de sécurité"
+        },
+        "about": {
+            "tagline": "Le système d'exploitation d'espaces auto-hébergé",
+            "title": "À propos de General Portal",
+            "story1": "General Portal a commencé comme un portail pour deux organisations et est devenu une plateforme générale.",
+            "story2": "Vous possédez le déploiement, les données et l'image de marque. Aucun CDN externe requis.",
+            "factsTitle": "Faits",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Auto-hébergé sur votre propre Postgres",
+                "fonts": "Polices auto-hébergées, aucun CDN"
+            }
+        },
+        "docs": {
+            "title": "Documentation",
+            "subtitle": "Tout ce qu'il faut pour configurer, déployer et exploiter un espace.",
+            "guidesTitle": "Guides",
+            "guides": {
+                "readme": "README",
+                "architecture": "Architecture",
+                "deployment": "Déploiement",
+                "auth": "Authentification",
+                "security": "Sécurité",
+                "i18n": "Internationalisation",
+                "tui": "Console d'exploitation",
+                "api": "Référence API",
+                "runbook": "Runbook",
+                "sdk": "Guide du SDK",
+                "features": "Guide des fonctionnalités"
+            },
+            "apiTitle": "Références API",
+            "publicApi": "Description de l'API publique",
+            "operatorApi": "Description de l'API d'exploitation"
+        },
+        "demo": {
+            "banner": "Aperçu en lecture seule. Les vrais espaces nécessitent une connexion.",
+            "title": "Découvrir l'espace",
+            "subtitle": "Un aperçu statique des modules inclus.",
+            "gated": "Connectez-vous pour utiliser le vrai espace.",
+            "cards": {
+                "tasks": {
+                    "title": "Tâches",
+                    "rows": {
+                        "1": "Préparer le plan trimestriel",
+                        "2": "Vérifier le budget annuel",
+                        "3": "Publier le compte rendu"
+                    }
+                },
+                "proposals": {
+                    "title": "Propositions",
+                    "rows": {
+                        "1": "Nouvelle série d'ateliers",
+                        "2": "Partenariat communautaire"
+                    }
+                },
+                "members": {
+                    "title": "Membres",
+                    "rows": {
+                        "1": "Administrateur",
+                        "2": "Responsable",
+                        "3": "Membre"
+                    }
+                }
+            }
+        },
+        "compare": {
+            "title": "Pourquoi General Portal",
+            "subtitle": "Un espace de travail pour toute la vie de votre organisation.",
+            "selfHostedTitle": "Conçu pour l'auto-hébergement",
+            "selfHostedBody": "Vous maîtrisez le déploiement, les données et la marque. Aucun service externe n'est requis."
+        },
+        "features": {
+            "title": "Conçu pour toute l'organisation",
+            "subtitle": "Tout ce dont votre équipe a besoin, au même endroit.",
+            "modulesTitle": "Des modules qui fonctionnent ensemble",
+            "modulesBody": "Projets, événements, finances et communication partagent un modèle d'autorisations et un journal d'audit."
+        }
+    },
+    "myWork": {
+        "title": "Mon travail",
+        "subtitle": "Tout ce qui vous est assigné, au même endroit.",
+        "customize": "Personnaliser",
+        "done": "Terminé",
+        "show": "Afficher",
+        "hide": "Masquer",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "widget": {
+            "tasks": "Mes tâches",
+            "events": "Événements à venir",
+            "proposals": "Propositions en attente",
+            "approvals": "Validations",
+            "dues": "Mes cotisations",
+            "polls": "Sondages ouverts",
+            "rsvps": "Mes participations",
+            "kudos": "Kudos récents"
+        }
+    },
+    "invitations": {
+        "title": "Invitations",
+        "description": "Invitez des personnes avec un lien qui expire.",
+        "forbidden": "Vous n'avez pas le droit de gérer les invitations.",
+        "createInvitation": "Créer une invitation",
+        "noInvitations": "Aucune invitation en attente.",
+        "expiresAt": "Expire le",
+        "revoke": "Révoquer",
+        "revokeWarning": "Révoquer cette invitation ? Le lien cessera immédiatement de fonctionner.",
+        "role": "Rôle",
+        "roleAdmin": "Administrateur",
+        "roleOfficer": "Responsable",
+        "roleMember": "Membre",
+        "expiresInDays": "Expire dans jours",
+        "invite": "Envoyer l'invitation",
+        "tokenTitle": "Lien d'invitation",
+        "tokenNotice": "Copiez ce lien maintenant. Il ne sera plus affiché.",
+        "copyToken": "Copier le lien",
+        "emailedNotice": "Le lien d’invitation a été envoyé par e-mail au destinataire."
+    },
+    "onboarding": {
+        "title": "Configurer votre espace",
+        "description": "Quatre étapes rapides pour démarrer votre équipe.",
+        "progressLabel": "Progression de la configuration",
+        "progressCount": "{completed} sur {total} terminées",
+        "done": "Terminé",
+        "pending": "En attente",
+        "passwordTitle": "Définir un mot de passe admin",
+        "passwordDescription": "Protégez votre compte avec un mot de passe fort.",
+        "passwordAction": "Ouvrir les paramètres du compte",
+        "brandTitle": "Personnaliser votre espace",
+        "brandDescription": "Ajoutez le nom, le logo et la couleur principale.",
+        "brandAction": "Ouvrir les paramètres",
+        "inviteTitle": "Inviter votre équipe",
+        "inviteDescription": "Invitez vos collègues dans l'espace.",
+        "inviteAction": "Ouvrir les invitations",
+        "showcaseTitle": "Publier la vitrine",
+        "showcaseDescription": "Partagez événements et actualités publiquement.",
+        "showcaseAction": "Ouvrir la gestion de la vitrine"
+    },
+    "permissions": {
+        "title": "Matrice des permissions",
+        "permission": "Permission",
+        "updateSuccess": "Permissions mises à jour"
+    },
+    "analytics": {
+        "title": "Analyses",
+        "range30": "30 derniers jours",
+        "range90": "90 derniers jours",
+        "range365": "Dernière année",
+        "tasksCreated": "Tâches créées",
+        "tasksCompleted": "Tâches terminées",
+        "events": "Événements",
+        "members": "Membres",
+        "participation": "Participation",
+        "attendanceRate": "Taux de présence",
+        "tasksTrend": "Tendance des tâches",
+        "eventsTrend": "Tendance des événements",
+        "membersTrend": "Croissance des membres",
+        "financeTrend": "Tendance financière",
+        "noData": "Aucune donnée pour cette période",
+        "created": "Créées",
+        "completed": "Terminées",
+        "income": "Revenus",
+        "expense": "Dépenses",
+        "net": "Net",
+        "cents": "Les montants sont stockés en centimes entiers."
+    },
+    "status": {
+        "title": "Statut public",
+        "portals": "Espaces",
+        "name": "Nom",
+        "slug": "Identifiant",
+        "configured": "Configuré",
+        "notConfigured": "Non configuré",
+        "migrations": "Migrations",
+        "yes": "Oui",
+        "queues": "Files de tâches",
+        "state": "État",
+        "count": "Nombre",
+        "unavailable": "Indisponible",
+        "storageNote": "Les fichiers téléversés sont stockés localement sur le serveur."
+    },
+    "apiPlayground": {
+        "title": "Bac à sable API",
+        "method": "Méthode",
+        "endpoint": "Point d'accès",
+        "body": "Corps JSON",
+        "bodyHint": "Corps de requête JSON facultatif",
+        "send": "Envoyer la requête",
+        "running": "En cours",
+        "response": "Réponse",
+        "empty": "Aucune réponse"
+    },
+    "workflowBuilder": {
+        "title": "Créateur de workflows",
+        "newWorkflow": "Nouveau workflow",
+        "stages": "Étapes",
+        "stage": "Étape",
+        "slaHours": "Heures SLA",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "removeStage": "Retirer l'étape",
+        "addStage": "Ajouter une étape",
+        "maxStages": "Au plus {count} étapes",
+        "advanced": "Avancé",
+        "advancedHint": "Champs avancés par étape en JSON",
+        "created": "Workflow créé",
+        "deleted": "Workflow supprimé",
+        "deleteTitle": "Supprimer le workflow",
+        "deleteDescription": "Supprimer {name} ? Cette action est irréversible.",
+        "noWorkflows": "Aucun workflow configuré",
+        "stageCount": "{count} étapes"
+    },
+    "badges": {
+        "title": "Badges",
+        "subtitle": "Jalons obtenus par la participation",
+        "firstTask": "Première tâche",
+        "firstTaskDesc": "Terminez votre première tâche",
+        "eventGoer": "Participant aux événements",
+        "eventGoerDesc": "Participez à trois événements",
+        "volunteer": "Bénévole",
+        "volunteerDesc": "Inscrivez-vous pour des heures de bénévolat",
+        "kudosStar": "Étoile des kudos",
+        "kudosStarDesc": "Recevez cinq kudos",
+        "streak": "Série",
+        "streakDesc": "Soyez actif sur trois périodes",
+        "top10": "Top dix",
+        "top10Desc": "Atteignez le top dix",
+        "noBadges": "Aucun badge",
+        "progress": "{current} sur {target}",
+        "earnedOn": "Obtenu le {date}",
+        "notEarned": "Pas encore obtenu"
+    },
+    "presence": {
+        "onlineNow": "{count} en ligne",
+        "noOneOnline": "Personne en ligne",
+        "lastSeen": "Vu à {time}"
+    },
+    "translations": {
+        "title": "Revue des traductions",
+        "subtitle": "Clés manquantes par langue",
+        "complete": "Toutes les langues sont complètes",
+        "missing": "Manquantes",
+        "description": "Clés manquantes par langue",
+        "allComplete": "Toutes les langues sont complètes",
+        "locale": "Langue",
+        "keys": "Clés",
+        "showingFirst": "Afficher les {count} premières",
+        "contributing": "Guide de contribution"
+    },
+    "changelogDrawer": {
+        "title": "Nouveautés",
+        "empty": "Aucune note de version",
+        "trigger": "Notes de version",
+        "description": "Points forts de la version"
+    },
+    "scim": {
+        "notConfigured": "SCIM non configuré",
+        "unauthorized": "Non autorisé",
+        "invalidRequest": "Requête invalide",
+        "invalidFilter": "Filtre invalide",
+        "notFound": "Introuvable",
+        "conflict": "Conflit",
+        "internal": "Erreur interne"
+    },
+    "usage": {
+        "title": "Utilisation et quotas",
+        "subtitle": "Consommation actuelle de cet espace",
+        "storage": "Stockage de fichiers",
+        "storageUsed": "{used} sur {limit}",
+        "percentUsed": "{percent}% utilisés",
+        "seats": "Membres",
+        "noLimit": "Aucune limite configurée",
+        "activeSessions": "Sessions actives",
+        "pendingInvitations": "Invitations en attente",
+        "activeTokens": "Jetons API actifs",
+        "alerts": "Alertes",
+        "noAlerts": "Aucune alerte de quota",
+        "requestsPerMinute": "{count} requêtes par minute",
+        "auditRetentionDays": "{count} jours d'historique d'audit"
+    },
+    "slaInbox": {
+        "title": "Boîte de validation",
+        "filterMine": "Les miennes",
+        "filterOverdue": "En retard",
+        "empty": "Aucune validation en attente",
+        "overdue": "En retard",
+        "dueSoon": "Bientôt dû",
+        "onTrack": "À temps",
+        "noDueDate": "Aucune échéance",
+        "dueAt": "Échéance le {date}",
+        "stage": "Étape {n}",
+        "assignedTo": "Assignée à {name}",
+        "commentOptional": "Commentaire facultatif",
+        "approve": "Approuver",
+        "reject": "Rejeter",
+        "approveSuccess": "Validation accordée",
+        "rejectSuccess": "Validation refusée",
+        "typeEvent": "Événement",
+        "typeProposal": "Proposition",
+        "typeTask": "Tâche",
+        "typeMeeting": "Réunion",
+        "typeOther": "Autre"
+    },
+    "sharedView": {
+        "invalidLink": "Ce lien est invalide ou expiré.",
+        "filters": "Filtres enregistrés",
+        "backToList": "Retour aux vues"
+    },
+    "dataImport": {
+        "title": "Import de données",
+        "description": "Importez jusqu'à 500 lignes depuis un fichier CSV.",
+        "entityType": "Type d'entité",
+        "entityTask": "Tâches",
+        "entityMember": "Membres",
+        "entityTransaction": "Transactions",
+        "fileLabel": "Fichier CSV",
+        "fileHint": "2 Mo maximum, texte UTF-8 avec en-tête.",
+        "upload": "Importer le fichier",
+        "success": "Import terminé",
+        "preview": "Aperçu",
+        "noPreview": "Aucune ligne à prévisualiser",
+        "result": "Résultat",
+        "inserted": "Insérées",
+        "failed": "Échouées",
+        "row": "Ligne",
+        "reason": "Raison"
+    },
+    "digestPreview": {
+        "title": "Aperçu du résumé",
+        "channel": "Canal",
+        "generate": "Générer l'aperçu",
+        "total": "Notifications non lues",
+        "sample": "Texte d'exemple",
+        "empty": "Rien à inclure dans ce résumé",
+        "description": "Choisissez un canal et prévisualisez le résumé.",
+        "channelEmail": "E-mail",
+        "channelInApp": "Dans l'application",
+        "digest": "Fréquence du résumé",
+        "digestNever": "Jamais",
+        "digestDaily": "Quotidien",
+        "digestWeekly": "Hebdomadaire",
+        "sampleHeading": "Exemple de sortie",
+        "totalUnread": "{total} notifications non lues",
+        "groupsHeading": "Groupes inclus",
+        "openPreferences": "Ouvrir les préférences de notification"
+    },
+    "comments": {
+        "title": "Commentaires",
+        "empty": "Aucun commentaire pour le moment.",
+        "placeholder": "Écrire un commentaire",
+        "add": "Ajouter"
+    },
+    "linkPreview": {
+        "loading": "Chargement de l'aperçu",
+        "alt": "Aperçu du lien"
+    },
+    "sidebar": {
+        "toggle": "Basculer la barre latérale",
+        "expand": "Développer la barre latérale",
+        "collapse": "Réduire la barre latérale",
+        "displaysMobile": "Afficher sur mobile",
+        "language": "Langue"
+    },
+    "pagination": {
+        "previous": "Précédent",
+        "next": "Suivant",
+        "previousAria": "Aller à la page précédente",
+        "nextAria": "Aller à la page suivante",
+        "morePages": "Plus de pages"
+    },
+    "commandPalette": {
+        "title": "Palette de commandes"
     }
 }

@@ -53,12 +53,9 @@
         "restoreDeleted": "Restore deleted items",
         "trash": "Trash",
         "permanentlyDelete": "Permanently delete",
-        "dangerZone": "Danger zone"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "The shared workspace for student organizations",
-        "description": "General Portal is a multi-tenant collaboration platform for school clubs and student organizations. It brings proposals, tasks, events, finance, volunteering, and member management together in one secure place."
+        "dangerZone": "Danger zone",
+        "breadcrumb": "Breadcrumb",
+        "viewInFinance": "Open in Finance"
     },
     "landing": {
         "title": "General Portal",
@@ -99,7 +96,19 @@
         "dues": "Dues",
         "assets": "Assets",
         "kudos": "Kudos",
-        "customFields": "Custom Fields"
+        "customFields": "Custom Fields",
+        "search": "Search",
+        "budget": "Budget",
+        "partnerships": "Partnerships",
+        "myWork": "My Work",
+        "onboarding": "Setup",
+        "invitations": "Invitations",
+        "analytics": "Analytics",
+        "approvals": "Approvals",
+        "import": "Data import",
+        "usage": "Usage",
+        "digestPreview": "Digest preview",
+        "purchaseRequests": "Purchase Requests"
     },
     "auth": {
         "signIn": "Sign In",
@@ -142,7 +151,8 @@
         "resetPassword": "Reset password",
         "resetSuccess": "Your password was reset. Please sign in.",
         "backToSignIn": "Back to sign in",
-        "passwordTooShort": "Use at least 12 characters."
+        "passwordTooShort": "Use at least 12 characters.",
+        "unavailable": "Sign-in is unavailable right now"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -193,7 +203,10 @@
         "dueToday": "Due Today",
         "deleteConfirm": "Are you sure you want to delete this task?",
         "markDone": "Mark as Done",
-        "markTodo": "Mark as To Do"
+        "markTodo": "Mark as To Do",
+        "sendComment": "Send comment",
+        "occurrences": "Upcoming occurrences",
+        "noOccurrences": "No occurrences in this window."
     },
     "events": {
         "title": "Events",
@@ -416,7 +429,8 @@
         "statusScheduled": "Scheduled",
         "statusOngoing": "In Progress",
         "statusCompleted": "Completed",
-        "statusCancelled": "Cancelled"
+        "statusCancelled": "Cancelled",
+        "noMinutes": "No minutes recorded yet."
     },
     "members": {
         "title": "Members",
@@ -483,7 +497,11 @@
         "uploadFailed": "Upload failed.",
         "deleteFailed": "Delete failed.",
         "downloading": "Downloading",
-        "storagePath": "Storage Path"
+        "storagePath": "Storage Path",
+        "preview": "Preview",
+        "selectAll": "Select all",
+        "bulkDelete": "Delete selected",
+        "bulkDeleteForever": "Delete selected permanently"
     },
     "links": {
         "title": "Links",
@@ -569,7 +587,10 @@
         "moduleDisabled": "Module Disabled",
         "terminology": "Terminology",
         "terminologyHint": "Rename modules to match your organization's vocabulary.",
-        "reset": "Reset"
+        "reset": "Reset",
+        "radius": "Corner radius",
+        "preview": "Preview",
+        "invalidTerminology": "Terminology must be a JSON object of text values."
     },
     "search": {
         "title": "Search",
@@ -665,7 +686,10 @@
         "noWebhooks": "No webhooks yet.",
         "testWebhook": "Test Webhook",
         "testSuccess": "Test delivered successfully.",
-        "noSecret": "No secret configured."
+        "noSecret": "No secret configured.",
+        "replay": "Replay",
+        "replaySuccess": "Replay queued for {event}.",
+        "replayFailed": "Replay failed"
     },
     "apiTokens": {
         "title": "API Tokens",
@@ -680,20 +704,6 @@
         "revoke": "Revoke",
         "noTokens": "No API tokens yet.",
         "tokenShownOnce": "This token is shown only once."
-    },
-    "audit": {
-        "title": "Audit Log",
-        "action": "Action",
-        "entityType": "Entity Type",
-        "entityId": "Entity ID",
-        "performedBy": "Performed By",
-        "timestamp": "Timestamp",
-        "ipAddress": "IP Address",
-        "noLogs": "No audit logs yet.",
-        "export": "Export",
-        "verifyIntegrity": "Verify Integrity",
-        "integrityOk": "Integrity verified.",
-        "integrityFailed": "Integrity check failed."
     },
     "sessions": {
         "title": "My Sessions",
@@ -836,40 +846,6 @@
         "conflict": "This action conflicts with existing data.",
         "moduleDisabled": "This module is disabled for this workspace."
     },
-    "validation": {
-        "required": "This field is required.",
-        "tooShort": "Must be at least {min} characters.",
-        "tooLong": "Must be at most {max} characters.",
-        "invalidEmail": "Enter a valid email address.",
-        "invalidUrl": "Enter a valid URL.",
-        "invalidDate": "Enter a valid date.",
-        "invalidNumber": "Enter a valid number.",
-        "mustBePositive": "Must be greater than zero.",
-        "invalidOption": "Select a valid option."
-    },
-    "tui": {
-        "title": "Terminal",
-        "mainMenu": "Main Menu",
-        "sites": "Sites",
-        "addSite": "Add Site",
-        "removeSite": "Remove Site",
-        "migrate": "Migrate",
-        "backup": "Back Up",
-        "jobs": "Jobs",
-        "health": "Health",
-        "logs": "Logs",
-        "danger": "Danger",
-        "quit": "Quit",
-        "selectOption": "Select an option",
-        "confirmDeletion": "Confirm Deletion",
-        "typeSlugToConfirm": "Type {slug} to confirm",
-        "backupCreated": "Backup created.",
-        "siteAdded": "Site added.",
-        "siteRemoved": "Site removed.",
-        "migrationComplete": "Migration complete.",
-        "yes": "Yes",
-        "no": "No"
-    },
     "productivity": {
         "blocked": "Blocked",
         "blockedBy": "Blocked by {title}",
@@ -928,6 +904,502 @@
         "noViews": "No saved views",
         "invalidJson": "Filters must be a valid JSON object.",
         "sharedWithYou": "Shared with you",
-        "filtersJson": "Filters (JSON)"
+        "filtersJson": "Filters (JSON)",
+        "apply": "Apply",
+        "share": "Share",
+        "revoke": "Revoke",
+        "shareLink": "Share link",
+        "revoked": "Share link revoked."
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Choose your workspace",
+            "subtitle": "One platform, purpose-built for every kind of organization.",
+            "clubs": {
+                "title": "Clubs and student organizations",
+                "description": "Run projects, events, budgets and elections in one place."
+            },
+            "firms": {
+                "title": "Small firms and teams",
+                "description": "Approvals, files, finance and client work without tool sprawl."
+            },
+            "agencies": {
+                "title": "Agencies and large organizations",
+                "description": "Ten to fifty isolated workspaces with central governance."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "What you get",
+            "clubs": {
+                "title": "Built for clubs",
+                "intro": "From recruitment to annual planning, everything stays in one workspace.",
+                "benefits": {
+                    "1": "Isolated databases per workspace",
+                    "2": "Nine sign-in providers",
+                    "3": "YAML-driven configuration",
+                    "4": "Five locales out of the box"
+                }
+            },
+            "firms": {
+                "title": "Built for teams",
+                "intro": "Keep decisions, spend and deliverables auditable and fast.",
+                "benefits": {
+                    "1": "40+ built-in modules",
+                    "2": "Permission-based access control",
+                    "3": "Tamper-evident audit log",
+                    "4": "Streamed, verified file uploads"
+                }
+            },
+            "agencies": {
+                "title": "Built for agencies",
+                "intro": "Separate every client while keeping one deployment and one audit trail.",
+                "benefits": {
+                    "1": "Ten to fifty workspaces per deployment",
+                    "2": "Visual branding per workspace",
+                    "3": "Scheduled encrypted backups",
+                    "4": "Operator API for agents"
+                }
+            }
+        },
+        "links": {
+            "label": "Explore",
+            "features": "Features",
+            "demo": "Live demo"
+        },
+        "changelog": {
+            "title": "Changelog",
+            "empty": "No changelog entries yet."
+        },
+        "roadmap": {
+            "title": "Roadmap",
+            "subtitle": "What is shipping next.",
+            "columns": {
+                "now": "Now",
+                "next": "Next",
+                "later": "Later",
+                "done": "Done"
+            },
+            "items": {
+                "presets": "Workspace presets",
+                "demo": "Read-only demo mode",
+                "sdk": "Typed SDK and CLI",
+                "analytics": "Analytics hub",
+                "backups": "Scheduled encrypted backups",
+                "scim": "SCIM provisioning",
+                "presence": "Live presence",
+                "badges": "Participation badges"
+            }
+        },
+        "security": {
+            "title": "Security",
+            "subtitle": "How General Portal protects your data.",
+            "topics": {
+                "transport": {
+                    "title": "Transport",
+                    "body": "HTTPS only in production, HSTS, nonce-based CSP and hardened headers."
+                },
+                "authn": {
+                    "title": "Authentication",
+                    "body": "Opaque sessions with rotation and instant revocation, plus nine providers and passkeys."
+                },
+                "authz": {
+                    "title": "Authorization",
+                    "body": "Every route requires a tenant context; every mutation checks a permission and object ownership."
+                },
+                "uploads": {
+                    "title": "Uploads",
+                    "body": "Magic-byte sniffing, streamed size caps, checksums and attachment-only downloads."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Untrusted URLs resolve to validated IPs, pin the connection and revalidate every redirect."
+                },
+                "rateLimits": {
+                    "title": "Rate limits",
+                    "body": "A shared Postgres token bucket backs sensitive endpoints across instances."
+                },
+                "audit": {
+                    "title": "Audit",
+                    "body": "An append-only log with a SHA-256 hash chain and periodic checkpoints."
+                },
+                "supplyChain": {
+                    "title": "Supply chain",
+                    "body": "Frozen lockfile, dependency review, CodeQL, Scorecard, SBOM and signed releases."
+                }
+            },
+            "reporting": "Report privately through GitHub Security Advisories.",
+            "docsLink": "Read the security guide"
+        },
+        "about": {
+            "tagline": "The self-hosted workspace OS",
+            "title": "About General Portal",
+            "story1": "General Portal started as a portal for two organizations and grew into a general platform for any team.",
+            "story2": "You own the deployment, the data and the branding. No external CDN is required.",
+            "factsTitle": "Facts",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Self-hosted on your own Postgres",
+                "fonts": "Self-hosted fonts, no CDN"
+            }
+        },
+        "docs": {
+            "title": "Documentation",
+            "subtitle": "Everything you need to configure, deploy and operate a workspace.",
+            "guidesTitle": "Guides",
+            "guides": {
+                "readme": "README",
+                "architecture": "Architecture",
+                "deployment": "Deployment",
+                "auth": "Authentication",
+                "security": "Security",
+                "i18n": "Internationalization",
+                "tui": "Operator console",
+                "api": "API reference",
+                "runbook": "Runbook",
+                "sdk": "SDK guide",
+                "features": "Features guide"
+            },
+            "apiTitle": "API references",
+            "publicApi": "Public API description",
+            "operatorApi": "Operator API description"
+        },
+        "demo": {
+            "banner": "Read-only preview. Real workspaces require sign-in.",
+            "title": "See the workspace",
+            "subtitle": "A static preview of the modules you get.",
+            "gated": "Sign in to use the real workspace.",
+            "cards": {
+                "tasks": {
+                    "title": "Tasks",
+                    "rows": {
+                        "1": "Prepare the quarterly plan",
+                        "2": "Review the annual budget",
+                        "3": "Publish the event recap"
+                    }
+                },
+                "proposals": {
+                    "title": "Proposals",
+                    "rows": {
+                        "1": "New workshop series",
+                        "2": "Community partnership"
+                    }
+                },
+                "members": {
+                    "title": "Members",
+                    "rows": {
+                        "1": "Admin",
+                        "2": "Officer",
+                        "3": "Member"
+                    }
+                }
+            }
+        },
+        "compare": {
+            "title": "Why General Portal",
+            "subtitle": "One workspace, every part of running your organization.",
+            "selfHostedTitle": "Self-hosted by design",
+            "selfHostedBody": "You own the deployment, the data and the branding. No external service is required."
+        },
+        "features": {
+            "title": "Built for the whole organization",
+            "subtitle": "Everything your team needs, in one place.",
+            "modulesTitle": "Modules that work together",
+            "modulesBody": "Projects, events, finance and communication share one permission model and one audit trail."
+        }
+    },
+    "myWork": {
+        "title": "My Work",
+        "subtitle": "Everything assigned to you, in one place.",
+        "customize": "Customize",
+        "done": "Done",
+        "show": "Show",
+        "hide": "Hide",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "widget": {
+            "tasks": "My tasks",
+            "events": "Upcoming events",
+            "proposals": "Pending proposals",
+            "approvals": "Approvals",
+            "dues": "My dues",
+            "polls": "Open polls",
+            "rsvps": "My RSVPs",
+            "kudos": "Recent kudos"
+        }
+    },
+    "invitations": {
+        "title": "Invitations",
+        "description": "Invite people to this workspace with an expiring link.",
+        "forbidden": "You do not have permission to manage invitations.",
+        "createInvitation": "Create invitation",
+        "noInvitations": "No pending invitations.",
+        "expiresAt": "Expires",
+        "revoke": "Revoke",
+        "revokeWarning": "Revoke this invitation? The link will stop working immediately.",
+        "role": "Role",
+        "roleAdmin": "Admin",
+        "roleOfficer": "Officer",
+        "roleMember": "Member",
+        "expiresInDays": "Expires in days",
+        "invite": "Send invitation",
+        "tokenTitle": "Invitation link",
+        "tokenNotice": "Copy this link now. It will not be shown again.",
+        "copyToken": "Copy link",
+        "emailedNotice": "The invitation link was sent to the invitee by email."
+    },
+    "onboarding": {
+        "title": "Set up your workspace",
+        "description": "Four quick steps to get your team started.",
+        "progressLabel": "Setup progress",
+        "progressCount": "{completed} of {total} complete",
+        "done": "Done",
+        "pending": "Pending",
+        "passwordTitle": "Set an admin password",
+        "passwordDescription": "Protect your account with a strong password.",
+        "passwordAction": "Open account settings",
+        "brandTitle": "Brand your workspace",
+        "brandDescription": "Add your name, logo and primary color.",
+        "brandAction": "Open settings",
+        "inviteTitle": "Invite your team",
+        "inviteDescription": "Bring your teammates into the workspace.",
+        "inviteAction": "Open invitations",
+        "showcaseTitle": "Publish your showcase",
+        "showcaseDescription": "Share events and updates with the public.",
+        "showcaseAction": "Open showcase admin"
+    },
+    "permissions": {
+        "title": "Permission matrix",
+        "permission": "Permission",
+        "updateSuccess": "Permissions updated"
+    },
+    "analytics": {
+        "title": "Analytics",
+        "range30": "Last 30 days",
+        "range90": "Last 90 days",
+        "range365": "Last year",
+        "tasksCreated": "Tasks created",
+        "tasksCompleted": "Tasks completed",
+        "events": "Events",
+        "members": "Members",
+        "participation": "Participation",
+        "attendanceRate": "Attendance rate",
+        "tasksTrend": "Task trend",
+        "eventsTrend": "Event trend",
+        "membersTrend": "Member growth",
+        "financeTrend": "Finance trend",
+        "noData": "No data for this period",
+        "created": "Created",
+        "completed": "Completed",
+        "income": "Income",
+        "expense": "Expense",
+        "net": "Net",
+        "cents": "Amounts are stored in integer cents."
+    },
+    "status": {
+        "title": "Public status",
+        "portals": "Portals",
+        "name": "Name",
+        "slug": "Slug",
+        "configured": "Configured",
+        "notConfigured": "Not configured",
+        "migrations": "Migrations",
+        "yes": "Yes",
+        "queues": "Job queues",
+        "state": "State",
+        "count": "Count",
+        "unavailable": "Unavailable",
+        "storageNote": "Uploaded files are stored locally on the server."
+    },
+    "apiPlayground": {
+        "title": "API playground",
+        "method": "Method",
+        "endpoint": "Endpoint",
+        "body": "JSON body",
+        "bodyHint": "Optional request body as JSON",
+        "send": "Send request",
+        "running": "Running",
+        "response": "Response",
+        "empty": "No response yet"
+    },
+    "workflowBuilder": {
+        "title": "Workflow builder",
+        "newWorkflow": "New workflow",
+        "stages": "Stages",
+        "stage": "Stage",
+        "slaHours": "SLA hours",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "removeStage": "Remove stage",
+        "addStage": "Add stage",
+        "maxStages": "At most {count} stages",
+        "advanced": "Advanced",
+        "advancedHint": "Optional per-stage approver and escalation fields as JSON",
+        "created": "Workflow created",
+        "deleted": "Workflow deleted",
+        "deleteTitle": "Delete workflow",
+        "deleteDescription": "Delete {name}? This cannot be undone.",
+        "noWorkflows": "No workflows configured",
+        "stageCount": "{count} stages"
+    },
+    "badges": {
+        "title": "Badges",
+        "subtitle": "Milestones earned through participation",
+        "firstTask": "First task",
+        "firstTaskDesc": "Complete your first task",
+        "eventGoer": "Event goer",
+        "eventGoerDesc": "Attend three events",
+        "volunteer": "Volunteer",
+        "volunteerDesc": "Sign up for volunteer hours",
+        "kudosStar": "Kudos star",
+        "kudosStarDesc": "Receive five kudos",
+        "streak": "Streak",
+        "streakDesc": "Be active in three periods",
+        "top10": "Top ten",
+        "top10Desc": "Reach the top ten in participation",
+        "noBadges": "No badges yet",
+        "progress": "{current} of {target}",
+        "earnedOn": "Earned on {date}",
+        "notEarned": "Not earned yet"
+    },
+    "presence": {
+        "onlineNow": "{count} online now",
+        "noOneOnline": "No one online",
+        "lastSeen": "Last seen {time}"
+    },
+    "translations": {
+        "title": "Translation review",
+        "subtitle": "Missing keys by locale",
+        "complete": "All locales are complete",
+        "missing": "Missing",
+        "description": "Missing keys by locale",
+        "allComplete": "All locales are complete",
+        "locale": "Locale",
+        "keys": "Keys",
+        "showingFirst": "Showing first {count}",
+        "contributing": "Contribution guide"
+    },
+    "changelogDrawer": {
+        "title": "What is new",
+        "empty": "No release notes yet",
+        "trigger": "Release notes",
+        "description": "Release highlights"
+    },
+    "scim": {
+        "notConfigured": "SCIM is not configured",
+        "unauthorized": "Unauthorized",
+        "invalidRequest": "Invalid request",
+        "invalidFilter": "Invalid filter",
+        "notFound": "Not found",
+        "conflict": "Conflict",
+        "internal": "Internal error"
+    },
+    "usage": {
+        "title": "Usage and quotas",
+        "subtitle": "Current resource consumption for this workspace",
+        "storage": "File storage",
+        "storageUsed": "{used} of {limit}",
+        "percentUsed": "{percent}% used",
+        "seats": "Members",
+        "noLimit": "No limit configured",
+        "activeSessions": "Active sessions",
+        "pendingInvitations": "Pending invitations",
+        "activeTokens": "Active API tokens",
+        "alerts": "Alerts",
+        "noAlerts": "No quota alerts",
+        "requestsPerMinute": "{count} requests per minute",
+        "auditRetentionDays": "{count} days of audit history"
+    },
+    "slaInbox": {
+        "title": "Approval Inbox",
+        "filterMine": "Mine",
+        "filterOverdue": "Overdue",
+        "empty": "No pending approvals",
+        "overdue": "Overdue",
+        "dueSoon": "Due soon",
+        "onTrack": "On track",
+        "noDueDate": "No due date",
+        "dueAt": "Due {date}",
+        "stage": "Stage {n}",
+        "assignedTo": "Assigned to {name}",
+        "commentOptional": "Optional comment",
+        "approve": "Approve",
+        "reject": "Reject",
+        "approveSuccess": "Approval granted",
+        "rejectSuccess": "Approval rejected",
+        "typeEvent": "Event",
+        "typeProposal": "Proposal",
+        "typeTask": "Task",
+        "typeMeeting": "Meeting",
+        "typeOther": "Other"
+    },
+    "sharedView": {
+        "invalidLink": "This shared view link is invalid or expired.",
+        "filters": "Saved filters",
+        "backToList": "Back to views"
+    },
+    "dataImport": {
+        "title": "Data import",
+        "description": "Import up to 500 rows from a CSV file.",
+        "entityType": "Entity type",
+        "entityTask": "Tasks",
+        "entityMember": "Members",
+        "entityTransaction": "Transactions",
+        "fileLabel": "CSV file",
+        "fileHint": "Maximum 2 MB. UTF-8 text with a header row.",
+        "upload": "Import file",
+        "success": "Import completed",
+        "preview": "Preview",
+        "noPreview": "No rows to preview",
+        "result": "Result",
+        "inserted": "Inserted",
+        "failed": "Failed",
+        "row": "Row",
+        "reason": "Reason"
+    },
+    "digestPreview": {
+        "title": "Digest preview",
+        "channel": "Channel",
+        "generate": "Generate preview",
+        "total": "Unread notifications",
+        "sample": "Sample text",
+        "empty": "Nothing to include in this digest",
+        "description": "Choose a channel and preview the email or in-app digest.",
+        "channelEmail": "Email",
+        "channelInApp": "In-app",
+        "digest": "Digest frequency",
+        "digestNever": "Never",
+        "digestDaily": "Daily",
+        "digestWeekly": "Weekly",
+        "sampleHeading": "Sample output",
+        "totalUnread": "{total} unread notifications",
+        "groupsHeading": "Included groups",
+        "openPreferences": "Open notification preferences"
+    },
+    "comments": {
+        "title": "Comments",
+        "empty": "No comments yet.",
+        "placeholder": "Write a comment",
+        "add": "Add"
+    },
+    "linkPreview": {
+        "loading": "Loading preview",
+        "alt": "Link preview"
+    },
+    "sidebar": {
+        "toggle": "Toggle sidebar",
+        "expand": "Expand sidebar",
+        "collapse": "Collapse sidebar",
+        "displaysMobile": "Show on mobile",
+        "language": "Language"
+    },
+    "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "previousAria": "Go to previous page",
+        "nextAria": "Go to next page",
+        "morePages": "More pages"
+    },
+    "commandPalette": {
+        "title": "Command palette"
     }
 }

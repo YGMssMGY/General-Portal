@@ -8,6 +8,11 @@ function opt(name: string, fallback = ""): string {
     return process.env[name] ?? fallback;
 }
 
+function boolEnv(name: string): boolean {
+    const value = opt(name).trim().toLowerCase();
+    return value === "true" || value === "1" || value === "yes";
+}
+
 const LOG_LEVELS = new Set(["trace", "debug", "info", "warn", "error", "fatal", "silent"]);
 const LOG_LEVEL_BY_ENV: Record<string, string> = {
     production: "info",
@@ -24,18 +29,27 @@ function resolveLogLevel(): string {
 
 export const config = {
     nodeEnv: opt("NODE_ENV", "development"),
+    trustProxy: boolEnv("TRUST_PROXY"),
     logLevel: resolveLogLevel(),
     port: Number(opt("PORT", "3000")),
     baseUrl: opt("APP_BASE_URL", opt("AUTH_URL", "http://localhost:3000")),
     deploymentFile: opt("DEPLOYMENT_FILE", "deployment.yaml"),
     uploadsDir: opt("UPLOADS_DIR", "./uploads"),
     bossUrl: opt("PG_BOSS_URL"),
+    singleDbUrl: opt("DATABASE_URL_SINGLE"),
+    singleDbModeEnabled: opt("DATABASE_URL_SINGLE") !== "",
     poolMax: Math.max(2, Number(opt("PG_POOL_MAX", "10")) || 10),
     sessionCookie: "gp_session",
     portalCookie: "portal",
     sessionTtlHours: Number(opt("SESSION_TTL_HOURS", "24")),
     rateLimitMax: Number(opt("RATE_LIMIT_MAX", "100")),
     authSecret: opt("AUTH_SECRET", ""),
+    opsToken: opt("OPS_API_TOKEN"),
+    opsAdminToken: opt("OPS_ADMIN_TOKEN"),
+    opsSecret: opt("OPS_SECRET", opt("AUTH_SECRET", "")),
+    opsAllowedIps: opt("OPS_ALLOWED_IPS"),
+    scimToken: opt("SCIM_TOKEN"),
+    backupKey: opt("BACKUP_ENCRYPTION_KEY"),
     entra: {
         clientId: opt("MICROSOFT_CLIENT_ID"),
         clientSecret: opt("MICROSOFT_CLIENT_SECRET"),
@@ -79,4 +93,8 @@ export const config = {
 
 export function requireEnv(...names: string[]): void {
     for (const n of names) req(n);
+}
+
+export function readEnv(name: string): string | undefined {
+    return process.env[name];
 }

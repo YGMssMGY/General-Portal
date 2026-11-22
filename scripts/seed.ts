@@ -122,7 +122,17 @@ async function main(): Promise<void> {
         );
         process.exit(1);
     }
-    const packArg = positionals[1] ?? path.join("deployments", "seed-packs", `${slug}.yaml`);
+    let defaultPack = `deployments/seed-packs/${slug}.yaml`;
+    try {
+        const deployment = parse(
+            await readFile(path.resolve(process.cwd(), "deployment.yaml"), "utf8"),
+        ) as { portals?: Array<{ slug: string; seedPack?: string }> };
+        const declared = deployment.portals?.find((p) => p.slug === slug)?.seedPack;
+        if (declared) defaultPack = `deployments/seed-packs/${declared}.yaml`;
+    } catch {
+        void 0;
+    }
+    const packArg = positionals[1] ?? defaultPack;
     const pack = parse(await readFile(path.resolve(process.cwd(), packArg), "utf8")) as Pack;
     if (!pack.workspace?.slug || !pack.workspace?.name)
         throw new Error(`Invalid pack: missing workspace.name/slug`);
