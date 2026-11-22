@@ -3,15 +3,14 @@ import { test, expect } from "@playwright/test";
 test("Landing Page Lists Both Seeded Portals", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "General Portal" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Developers Club/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Student Council/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Developers Club", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Student Council", exact: true })).toBeVisible();
 });
 
-test("Login Page Shows A Heading And The Configured Providers", async ({ page }) => {
+test("Login Page Offers A Configured Provider Or A Password Form", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: /Sign in to/ })).toBeVisible();
-    const providerLinks = page.locator('a[href^="/api/auth/login/"]');
-    const passwordInput = page.locator('input[type="password"]');
-    const emptyState = page.getByText("No sign-in methods are configured.");
-    await expect(providerLinks.first().or(passwordInput.first()).or(emptyState)).toBeVisible();
+    const providerLink = page.locator('a[href^="/api/auth/login/"]').first();
+    const passwordInput = page.locator('input[type="password"]').first();
+    await expect(providerLink.or(passwordInput)).toBeVisible();
 });

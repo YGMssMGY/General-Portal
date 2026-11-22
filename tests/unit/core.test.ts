@@ -17,11 +17,15 @@ const ctx: OpsContext = {
 describe("cursor codec", () => {
     it("round-trips dates and ids", () => {
         const iso = "2026-01-02T03:04:05.000Z";
-        const encoded = encodeCursorValues([iso, "abc"]);
-        expect(decodeCursorValues(encoded)).toEqual([iso, "abc"]);
+        const id = "00000000-0000-0000-0000-000000000001";
+        const encoded = encodeCursorValues([iso, id]);
+        expect(decodeCursorValues(encoded)).toEqual([iso, id]);
     });
     it("rejects invalid cursors", () => {
         expect(decodeCursorValues("not-base64!!")).toBeNull();
+        expect(
+            decodeCursorValues(encodeCursorValues(["2026-01-02T03:04:05.000Z", "abc"])),
+        ).toBeNull();
     });
 });
 

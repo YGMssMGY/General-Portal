@@ -10,7 +10,7 @@ Changes are proposed through issues and pull requests. Technical decisions favor
 
 ## Release process
 
-Releases are prepared with release-please from Conventional Commits, tagged with a semantic version, and published with signed artifacts and an SBOM.
+Releases are prepared with release-please from Conventional Commits and tagged with a semantic version. Artifact signing and SBOM generation are not configured.
 
 ## Becoming a maintainer
 

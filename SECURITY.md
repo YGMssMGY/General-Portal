@@ -37,4 +37,4 @@ Production requires HTTPS; the middleware fails closed behind a proxy. Sessions 
 
 ## Security tooling
 
-CI runs CodeQL, dependency review, OSSF Scorecard, Dependabot, frozen-lockfile installs, and `pnpm security:check`. Releases are signed and include an SBOM.
+CI runs `pnpm verify` on a frozen lockfile: oxfmt check, lint, typecheck, build, unit tests, i18n, SEO, and security checks. Separate CodeQL, dependency review, and OSSF Scorecard workflows plus Dependabot add supplementary analysis. Releases are tagged with a semantic version; artifact signing and SBOM generation are not configured.

@@ -27,11 +27,12 @@ App:
 | `UPLOADS_DIR` | `./uploads` | Local file storage root (per-portal subdirectories) |
 | `SESSION_TTL_HOURS` | 24 | Opaque session lifetime |
 | `AUTH_SECRET` | empty | App secret; rotate with session revocation (see runbook) |
-| `FRONTEND_ORIGIN` | `http://localhost:3000` | Allowed client origin |
-| `API_KEY` | empty | Legacy key placeholder |
 | `OPS_API_TOKEN` | empty | Bootstrap operator token; when set, an exact Bearer match gets all four `ops:*` scopes |
 | `OPS_SECRET` | falls back to `AUTH_SECRET`, then empty | HMAC key that signs issued operator tokens and two-phase confirmation tokens |
 | `OPS_ALLOWED_IPS` | empty | Comma-separated source IPs; empty allows any source |
+| `SCIM_TOKEN` | empty | Bearer credential for the SCIM 2.0 Users and Groups endpoints; 501 when unset |
+| `BACKUP_ENCRYPTION_KEY` | empty | Base64-encoded 32-byte AES-256-GCM key; when set, scheduled backups are sealed, otherwise stored unencrypted |
+| `TRUST_PROXY` | false (`true`, `1`, or `yes` to enable) | Controls whether `X-Forwarded-For` is trusted for client IP (rate limits, operator IP allowlist) and permits HSTS in production without an explicit `X-Forwarded-Proto: https`. Enable only behind a proxy you control |
 
 Providers (each group fully gates its provider; partial config keeps it invisible):
 
@@ -88,7 +89,7 @@ Validated by `src/lib/deployment/schema.ts` (`deploymentConfigSchema`, version l
 | `portals[].name/.category/.description` | Display name, category, public description |
 | `portals[].branding.{logo,favicon,primary}` | Static asset paths and accent color |
 | `portals[].db.envVar` | Env var holding this portal's URL (e.g. `DATABASE_URL_DEVELOPERS`) |
-| `portals[].auth.providers` | Allowed providers (enum of the 10 schema ids); intersected with env-enabled set |
+| `portals[].auth.providers` | Allowed providers (enum of the nine schema ids); intersected with env-enabled set |
 | `portals[].auth.allowedDomains` | SSO auto-join domains (e.g. `basischina.com`); empty disables auto-join |
 | `portals[].modules` | Enabled product areas; enforced per request via `module` option |
 | `portals[].nav[]` | Sidebar entries `{ path, label, icon, module }` |
@@ -121,7 +122,7 @@ Budget Postgres connections as `number_of_sites x PG_POOL_MAX`, plus pg-boss (sh
 
 ## Reverse proxy
 
-Point the proxy at the Node port with `X-Forwarded-Proto` preserved; the app sets HSTS only when that header is `https` or `NODE_ENV` is production, and the operator API rejects non-HTTPS production calls on the same signal. Preserve the client IP in `X-Forwarded-For` or `X-Real-IP` if `OPS_ALLOWED_IPS` is set. The app never manages proxy services: no container or proxy configuration lives in this repo.
+Point the proxy at the Node port with `X-Forwarded-Proto` preserved; the app sets HSTS only when that header is `https` or `NODE_ENV` is production, and the operator API rejects non-HTTPS production calls on the same signal. Preserve the client IP in `X-Forwarded-For` or `X-Real-IP` if `OPS_ALLOWED_IPS` is set; `X-Forwarded-For` is consulted only when `TRUST_PROXY` is enabled. The app never manages proxy services: no container or proxy configuration lives in this repo.
 
 ## Upgrades
 
@@ -208,7 +209,7 @@ Set `ingress.enabled=true` with the appropriate host, class, and TLS Secret to e
 
 Set `DATABASE_URL_SINGLE` to map every portal in `deployment.yaml` to one Postgres database. `config.singleDbModeEnabled` is true whenever the variable is non-empty; `portalDbUrl()` then returns that URL for each configured slug while pools stay cached per slug (each portal still has its own pool against the same database). `listPortalSlugs()` includes the configured slugs so jobs, TUI, and operator actions keep working, and `isKnownPortal()` accepts only configured slugs. Boot reconcile is insert-only and gives every configured portal a workspace row and system roles in that shared database; workspace scoping still comes from `workspaceId`.
 
-Create the one database, run `MIGRATE_URL=<single-url> pnpm db:migrate` once, then seed each configured slug with `pnpm exec tsx scripts/seed.ts <slug> <packFile>`. A per-portal `DATABASE_URL_<SLUG>` still overrides the single URL for that slug, which is how per-PR previews work. Leave `DATABASE_URL_SINGLE` unset to keep one database per portal; Docker Compose and Helm values continue to provide one URL per portal by default.
+Create the one database, run `MIGRATE_URL=<single-url> pnpm db:migrate` once, then seed each configured slug with `pnpm exec tsx scripts/seed.ts <slug> <packFile>`. With `DATABASE_URL_SINGLE` set, the single URL wins for every slug declared in `deployment.yaml`; a per-portal `DATABASE_URL_<SLUG>` applies only to slugs not declared in YAML, which is how per-PR previews work. Leave `DATABASE_URL_SINGLE` unset to keep one database per portal; Docker Compose and Helm values continue to provide one URL per portal by default.
 
 ### PR preview sites
 

@@ -12,7 +12,7 @@ Three frontends sit over the same services:
 2. **Ink operator console** — `src/tui`, started with `pnpm tui` on an interactive TTY. Beyond the per-domain screens it has an Actions palette that runs any registered command locally.
 3. **Operator HTTP API and CLI** — `src/app/api/ops` plus the `cli/gp.sh` and `cli/gp.ps1` wrappers. Any host with `curl` or PowerShell `irm` can operate the deployment over HTTPS; no SSH is used.
 
-`src/ops/registry.ts` is the single source of truth for 41 actions grouped as site, migrate, backup, job, ops, config, user, data, system, and danger. Each definition declares an id, group, summary, required `ops:*` scopes, a destructive flag, an optional typed confirmation field, zod params, and a `run` function. `describeAll()` feeds `GET /api/ops`, `GET /api/ops/openapi.json`, and `GET /api/ops/manifest.json`, so discovery and the TUI palette cannot drift from execution. `src/ops/engine.ts` validates params, enforces scopes, runs two-phase confirmation (five-minute signed token plus a typed slug or email match), deduplicates by idempotency key (ten-minute window), and appends to `.tui-audit.log`. TUI callers invoke the engine directly with `source: "tui"`; HTTP callers authenticate with a scoped Bearer token in `src/ops/lib/auth.ts`.
+`src/ops/registry.ts` is the single source of truth for 46 actions grouped as site, migrate, backup, job, ops, config, user, data, system, webhook, and danger. Each definition declares an id, group, summary, required `ops:*` scopes, a destructive flag, an optional typed confirmation field, zod params, and a `run` function. `describeAll()` feeds `GET /api/ops`, `GET /api/ops/openapi.json`, and `GET /api/ops/manifest.json`, so discovery and the TUI palette cannot drift from execution. `src/ops/engine.ts` validates params, enforces scopes, runs two-phase confirmation (five-minute signed token plus a typed slug or email match), deduplicates by idempotency key (ten-minute window), and appends to `.tui-audit.log`. TUI callers invoke the engine directly with `source: "tui"`; HTTP callers authenticate with a scoped Bearer token in `src/ops/lib/auth.ts`.
 
 ## Tenant resolution
 
@@ -59,6 +59,7 @@ Registered on the Node.js runtime in `instrumentation.ts`; schedules:
 | `webhook-deliver` | on demand | Signed POST fan-out, 3 retries with backoff |
 | `retention` | `0 3 * * *` | Purge audit rows past `auditRetentionDays`, activity past 180d, read notifications past 90d |
 | `link-health` | `0 4 * * 0` | Re-check saved links, persist status where columns exist |
+| `scheduled-backup` | `0 2 * * *` | Daily `pg_dump` per portal; AES-256-GCM sealed when `BACKUP_ENCRYPTION_KEY` is set |
 
 ## i18n routing
 
