@@ -20,6 +20,7 @@ export default defineConfig({
         { name: "setup", testMatch: /auth\.setup\.ts/ },
         { name: "public", testMatch: /public\.spec\.ts/ },
         { name: "ops", testMatch: /ops\.spec\.ts/ },
+        { name: "a11y", testMatch: /a11y\.spec\.ts/ },
         {
             name: "portal",
             testMatch: /portal\.spec\.ts/,

@@ -96,6 +96,29 @@ export const roles = pgTable(
     ],
 );
 
+export const comments = pgTable(
+    "comments",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        entityType: text("entityType").notNull(),
+        entityId: uuid("entityId").notNull(),
+        userId: uuid("userId")
+            .notNull()
+            .references(() => users.id),
+        body: text("body").notNull(),
+        createdAt: ts("createdAt"),
+        updatedAt: updatedAt(),
+        deletedAt: deletedAt(),
+    },
+    (t) => [
+        index("comments_ws_entity_idx").on(t.workspaceId, t.entityType, t.entityId),
+        index("comments_user_idx").on(t.userId),
+    ],
+);
+
 export const invitations = pgTable(
     "invitations",
     {
