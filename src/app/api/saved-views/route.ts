@@ -1,8 +1,15 @@
 import { NextRequest } from "next/server";
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, gt, or } from "drizzle-orm";
 import { z } from "zod";
 import { savedViews } from "@/db/schema";
-import { handleRouteError, ok, parseBody } from "@/lib/api";
+import {
+    decodeCursorValues,
+    encodeCursorValues,
+    handleRouteError,
+    ok,
+    parseBody,
+    parsePagination,
+} from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 
 const createViewSchema = z.object({
@@ -23,11 +30,27 @@ export async function GET(request: NextRequest) {
             or(eq(savedViews.userId, t.userId), eq(savedViews.isShared, true)),
             ...(entityType ? [eq(savedViews.entityType, entityType)] : []),
         ];
+        const { limit, cursor } = parsePagination(request.nextUrl.searchParams);
+        const vals = decodeCursorValues(cursor);
+        const after =
+            vals && typeof vals[0] === "number" && typeof vals[1] === "string"
+                ? or(
+                      gt(savedViews.position, vals[0]),
+                      and(eq(savedViews.position, vals[0]), gt(savedViews.name, vals[1])),
+                  )
+                : undefined;
         const rows = await t.db.query.savedViews.findMany({
-            where: and(...conds),
+            where: and(...conds, after),
             orderBy: [asc(savedViews.position), asc(savedViews.name)],
+            limit: limit + 1,
         });
-        return ok(rows);
+        const items = rows.slice(0, limit);
+        const last = items[items.length - 1];
+        const nextCursor =
+            rows.length > limit && last ? encodeCursorValues([last.position, last.name]) : null;
+        const res = ok(items);
+        res.headers.set("X-Next-Cursor", nextCursor ?? "");
+        return res;
     } catch (e) {
         return handleRouteError("GET /api/saved-views", e);
     }

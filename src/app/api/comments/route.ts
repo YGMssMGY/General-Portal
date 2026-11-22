@@ -26,6 +26,7 @@ import {
     parsePagination,
     requireUuid,
 } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
 
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
             entityId: comment.id,
             metadata: { targetType: body.entityType, targetId: body.entityId },
             ipAddress: clientIp(request),
-        });
+        }).catch((err) => logger.error({ err }, "Comment side effects failed"));
 
         const rows = await t.db
             .select(commentSelection)
