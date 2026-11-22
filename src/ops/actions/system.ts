@@ -406,4 +406,148 @@ export const systemActions: ActionDefinition[] = [
             );
         },
     },
+    {
+        id: "data.import",
+        group: "data",
+        summary: "Import a previously exported SQL dump into a portal database",
+        scopes: ["ops:danger"],
+        destructive: true,
+        confirmField: "slug",
+        params: z.object({ slug, file: z.string().min(1) }),
+        run: async ({ slug, file }) => {
+            const { pgRestore } = await import("@/tui/lib/tui-db");
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const allowed = /^[a-zA-Z0-9_.-]+$/.test(file);
+            if (!allowed) throw new Error("Invalid backup filename");
+            const full = path.resolve(process.cwd(), ".backups", slug, file);
+            if (!full.startsWith(path.resolve(process.cwd(), ".backups", slug))) {
+                throw new Error("Path traversal rejected");
+            }
+            const r = await pgRestore(url, full);
+            if (r.code !== 0) throw new Error(`Import failed: ${r.out}`);
+            return { slug, imported: file };
+        },
+    },
+    {
+        id: "compliance.export",
+        group: "data",
+        summary: "Write a compliance evidence bundle for a portal",
+        scopes: ["ops:backup"],
+        destructive: false,
+        params: z.object({ slug }),
+        run: async ({ slug }) => {
+            const { latestBackup, listBackups } = await import("@/tui/lib/tui-db");
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const stats = await withClient(url, async (c) => {
+                const r = await c.query<{
+                    users: string;
+                    sessions: string;
+                    revoked: string;
+                    roles: string;
+                }>(
+                    'SELECT (SELECT COUNT(*)::text FROM users) AS users, (SELECT COUNT(*)::text FROM sessions) AS sessions, (SELECT COUNT(*)::text FROM sessions WHERE "revokedAt" IS NOT NULL) AS revoked, (SELECT COUNT(*)::text FROM roles) AS roles',
+                );
+                return r.rows[0];
+            });
+            const bundle = {
+                generatedAt: new Date().toISOString(),
+                portal: slug,
+                users: Number(stats?.users ?? 0),
+                sessions: Number(stats?.sessions ?? 0),
+                revokedSessions: Number(stats?.revoked ?? 0),
+                roles: Number(stats?.roles ?? 0),
+                backups: listBackups(slug).map((b) => ({ file: b.file, bytes: b.bytes })),
+                verifiedBackup: latestBackup(slug)?.file ?? null,
+            };
+            const dir = path.resolve(process.cwd(), ".backups", slug);
+            await fs.promises.mkdir(dir, { recursive: true });
+            const name = `compliance-${Date.now()}.json`;
+            await fs.promises.writeFile(path.join(dir, name), JSON.stringify(bundle, null, 4), {
+                mode: 0o600,
+            });
+            return { slug, file: name, bundle };
+        },
+    },
+    {
+        id: "secret.rotate",
+        group: "ops",
+        summary: "Generate a replacement value for a named secret and print rotation steps",
+        scopes: ["ops:danger"],
+        destructive: false,
+        params: z.object({
+            key: z.enum([
+                "AUTH_SECRET",
+                "OPS_API_TOKEN",
+                "OPS_SECRET",
+                "SCIM_TOKEN",
+                "BACKUP_ENCRYPTION_KEY",
+            ]),
+        }),
+        run: async ({ key }) => {
+            const { randomBytes } = await import("node:crypto");
+            const value =
+                key === "BACKUP_ENCRYPTION_KEY"
+                    ? randomBytes(32).toString("base64")
+                    : randomBytes(48).toString("base64url");
+            return {
+                key,
+                value,
+                steps: [
+                    "Set the new value in the deployment environment.",
+                    "Restart the application so the typed config accessor reads it.",
+                    "Revoke any tokens issued with the old value.",
+                    "Do not commit the value to the repository.",
+                ],
+            };
+        },
+    },
+    {
+        id: "webhook.replay",
+        group: "webhook",
+        summary: "Re-publish an event to all active webhooks for a workspace",
+        scopes: ["ops:deploy"],
+        destructive: false,
+        params: z.object({
+            slug,
+            event: z.string().min(1).max(80),
+            payload: z.record(z.string(), z.unknown()).default({}),
+        }),
+        run: async ({ slug, event, payload }) => {
+            const { publishWebhook } = await import("@/lib/jobs/webhooks");
+            const { getDb } = await import("@/db/client");
+            const db = getDb(slug);
+            const rows = await db.query.workspaces.findMany({
+                columns: { id: true },
+                limit: 1,
+            });
+            const workspaceId = rows[0]?.id;
+            if (!workspaceId) throw new Error(`No workspace for ${slug}`);
+            await publishWebhook(slug, workspaceId, event, payload);
+            return { slug, event, queued: true };
+        },
+    },
+    {
+        id: "cli.completion",
+        group: "ops",
+        summary: "Print a shell completion snippet generated from the action registry",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({ shell: z.enum(["bash", "zsh", "powershell"]) }),
+        run: async ({ shell }) => {
+            const { listActions } = await import("../registry");
+            const ids = listActions()
+                .map((a) => a.id)
+                .join(" ");
+            if (shell === "bash") return { script: `complete -W '${ids}' gp` };
+            if (shell === "zsh") return { script: `compdef '_arguments "1: :(${ids})"' gp` };
+            return {
+                script: `Register-ArgumentCompleter -Native -CommandName gp -ScriptBlock { param($wordToComplete) @(${ids
+                    .split(" ")
+                    .map((i) => `'${i}'`)
+                    .join(", ")}) | Where-Object { $_ -like "$wordToComplete*" } }`,
+            };
+        },
+    },
 ];
