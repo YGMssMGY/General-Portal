@@ -1,33 +1,29 @@
 import { NextRequest } from "next/server";
-import { and, desc, eq, gte, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { transactions } from "@/db/schema";
 import { handleRouteError, ok } from "@/lib/api";
 import { requireTenant } from "@/lib/tenant";
 
 export async function GET(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "finance" });
-        const searchParams = new URL(request.url).searchParams;
-        const rawTake = Number.parseInt(searchParams.get("limit") ?? "500", 10);
-        const take = Math.min(500, Math.max(1, Number.isFinite(rawTake) ? rawTake : 500));
+        const t = await requireTenant(request, {
+            permission: "view_reports",
+            module: "finance",
+        });
 
         const now = new Date();
-        const buckets: { key: string; income: number; expense: number }[] = [];
+        const buckets: string[] = [];
         for (let i = 23; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            buckets.push({
-                key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-                income: 0,
-                expense: 0,
-            });
+            buckets.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
         }
         const since = new Date(now.getFullYear(), now.getMonth() - 23, 1);
 
         const rows = await t.db
             .select({
-                amountCents: transactions.amountCents,
-                date: transactions.date,
-                type: transactions.type,
+                month: sql<string>`to_char(date_trunc('month', ${transactions.date}), 'YYYY-MM')`,
+                income: sql<string>`coalesce(sum(case when ${transactions.type} = 'income' then ${transactions.amountCents} else 0 end), 0)::text`,
+                expense: sql<string>`coalesce(sum(case when ${transactions.type} <> 'income' then ${transactions.amountCents} else 0 end), 0)::text`,
             })
             .from(transactions)
             .where(
@@ -37,26 +33,19 @@ export async function GET(request: NextRequest) {
                     gte(transactions.date, since),
                 ),
             )
-            .orderBy(desc(transactions.date))
-            .limit(take);
+            .groupBy(sql`date_trunc('month', ${transactions.date})`)
+            .orderBy(sql`date_trunc('month', ${transactions.date})`);
 
-        const byKey = new Map(buckets.map((b) => [b.key, b]));
-        for (const r of rows) {
-            const key = `${r.date.getFullYear()}-${String(r.date.getMonth() + 1).padStart(2, "0")}`;
-            const b = byKey.get(key);
-            if (!b) continue;
-            if (r.type === "income") b.income += r.amountCents;
-            else b.expense += r.amountCents;
-        }
-
-        return ok({
-            months: buckets.map((b) => ({
-                month: b.key,
-                income: b.income,
-                expense: b.expense,
-                net: b.income - b.expense,
-            })),
+        const byKey = new Map(
+            rows.map((r) => [r.month, { income: Number(r.income), expense: Number(r.expense) }]),
+        );
+        const months = buckets.map((key) => {
+            const income = byKey.get(key)?.income ?? 0;
+            const expense = byKey.get(key)?.expense ?? 0;
+            return { month: key, income, expense, net: income - expense };
         });
+
+        return ok({ months });
     } catch (e) {
         return handleRouteError("GET /api/finance/trends", e);
     }

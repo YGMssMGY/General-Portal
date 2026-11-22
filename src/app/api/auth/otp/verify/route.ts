@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getDb, listPortalSlugs, type PortalDb } from "@/db/client";
@@ -60,11 +60,12 @@ export async function POST(request: NextRequest) {
                 continue;
             }
             if (!row) continue;
-            if (row.attempts >= 5) throw new ApiError("Too many requests", 429);
-            await db
+            const claimed = await db
                 .update(emailOtps)
-                .set({ attempts: row.attempts + 1 })
-                .where(eq(emailOtps.id, row.id));
+                .set({ attempts: sql`${emailOtps.attempts} + 1` })
+                .where(and(eq(emailOtps.id, row.id), lt(emailOtps.attempts, 5)))
+                .returning({ id: emailOtps.id });
+            if (!claimed[0]) throw new ApiError("Too many requests", 429);
             if (!hashMatches(body.code, row.codeHash))
                 return apiError("Invalid or expired code", 400);
             await db

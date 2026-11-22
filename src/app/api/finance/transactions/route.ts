@@ -36,7 +36,7 @@ function toCents(v: unknown): number {
 
 export async function GET(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "finance" });
+        const t = await requireTenant(request, { permission: "view_reports", module: "finance" });
         const searchParams = new URL(request.url).searchParams;
         const { limit, cursor } = parsePagination(searchParams);
         const type = searchParams.get("type");

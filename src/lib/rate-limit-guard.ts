@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
-import { getPool, listPortalSlugs } from "@/db/client";
 import { config } from "@/config";
-import { clientIp } from "./api";
+import { getPool, listPortalSlugs } from "@/db/client";
+import { clientIp } from "@/lib/client-ip";
 import { consumeRateLimit, type RateLimitResult } from "./rate-limit";
 
 const sensitiveLimit = Math.max(60, config.rateLimitMax);
@@ -15,12 +15,12 @@ export async function sensitiveLimitCheck(
     try {
         const result = await consumeRateLimit(
             getPool(slug),
-            `${bucket}:${clientIp(request)}`,
+            `${slug}:${bucket}:${clientIp(request)}`,
             sensitiveLimit,
             60_000,
         );
         return result.allowed ? null : result;
     } catch {
-        return null;
+        return { allowed: false, remaining: 0, retryAfterMs: 60_000 };
     }
 }

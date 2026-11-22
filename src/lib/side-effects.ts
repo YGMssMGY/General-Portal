@@ -36,7 +36,7 @@ export async function emitSideEffects(
     },
 ): Promise<void> {
     const { workspaceId, userId, action, entityType, entityId, metadata, ipAddress } = params;
-    await Promise.all([
+    const results = await Promise.allSettled([
         db.insert(activityFeed).values({
             workspaceId,
             userId,
@@ -58,6 +58,11 @@ export async function emitSideEffects(
             db,
         ),
     ]);
+    for (const result of results) {
+        if (result.status === "rejected") {
+            logger.error({ err: result.reason, action }, "side effect failed");
+        }
+    }
     workspaceSlug(db, workspaceId)
         .then((slug) => {
             if (!slug) return undefined;

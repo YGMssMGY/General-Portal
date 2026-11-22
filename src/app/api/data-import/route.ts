@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { memberships, roles, tasks, transactions, users } from "@/db/schema";
 import { ApiError, clientIp, handleRouteError, ok } from "@/lib/api";
@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
             permission: "manage_reports",
             module: "members",
         });
+        const canManageUsers = t.permissions.includes("manage_users");
         const form = await request.formData();
         const parsedEntity = entityTypeSchema.safeParse(form.get("entityType"));
         if (!parsedEntity.success) throw new ApiError("Invalid entityType", 400);
@@ -202,6 +203,9 @@ export async function POST(request: NextRequest) {
                     continue;
                 }
                 const roleName = parsed.data.role || "member";
+                if (roleName !== "member" && !canManageUsers) {
+                    throw new ApiError("Forbidden", 403);
+                }
                 const roleId = roleIds.get(roleName);
                 if (!roleId) {
                     failed.push({ row, reason: "Unknown role" });
@@ -235,17 +239,23 @@ export async function POST(request: NextRequest) {
             if (taskValues.length > 0) await tx.insert(tasks).values(taskValues);
             if (transactionValues.length > 0)
                 await tx.insert(transactions).values(transactionValues);
-            for (const m of memberValues) {
-                await tx
+            if (memberValues.length > 0) {
+                const unique = [...new Map(memberValues.map((m) => [m.email, m])).values()];
+                const upserted = await tx
                     .insert(users)
-                    .values({ email: m.email, name: m.name })
-                    .onConflictDoNothing({ target: users.email });
-                const found = await tx.query.users.findFirst({ where: eq(users.email, m.email) });
-                if (!found) continue;
-                await tx
-                    .insert(memberships)
-                    .values({ workspaceId: t.workspaceId, userId: found.id, roleId: m.roleId })
-                    .onConflictDoNothing();
+                    .values(unique.map((m) => ({ email: m.email, name: m.name })))
+                    .onConflictDoUpdate({
+                        target: users.email,
+                        set: { name: sql`coalesce(${users.name}, excluded.name)` },
+                    })
+                    .returning({ id: users.id, email: users.email });
+                const idByEmail = new Map(upserted.map((u) => [u.email, u.id]));
+                const membershipValues = unique.flatMap((m) => {
+                    const userId = idByEmail.get(m.email);
+                    return userId ? [{ workspaceId: t.workspaceId, userId, roleId: m.roleId }] : [];
+                });
+                if (membershipValues.length > 0)
+                    await tx.insert(memberships).values(membershipValues).onConflictDoNothing();
             }
         });
 

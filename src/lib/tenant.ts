@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import type { NextRequest } from "next/server";
-import { getDb, isKnownPortal, normalizeSlug, type PortalDb } from "@/db/client";
+import { getDb, isKnownPortal, listPortalSlugs, normalizeSlug, type PortalDb } from "@/db/client";
 import {
     apiTokens,
     memberships,
@@ -45,8 +45,9 @@ function sha256Hex(v: string): string {
 }
 
 export function resolvePortalSlug(request: NextRequest): string {
-    const hinted = getCookie(request, config.portalCookie) ?? "developers";
-    const slug = normalizeSlug(hinted) ?? "developers";
+    const fallback = listPortalSlugs()[0] ?? "developers";
+    const hinted = getCookie(request, config.portalCookie) ?? fallback;
+    const slug = normalizeSlug(hinted) ?? fallback;
     if (!isKnownPortal(slug)) throw new ApiError("Unknown workspace", 404);
     return slug;
 }
@@ -70,36 +71,34 @@ export async function getSession(request: NextRequest): Promise<SessionInfo | nu
     const row = rows[0];
     if (!row || !row.user || row.user.disabled) return null;
 
-    const workspace = await db.query.workspaces.findFirst({ where: eq(workspaces.slug, slug) });
-    if (!workspace) return null;
+    const joined = await db
+        .select({ workspace: workspaces, membership: memberships, role: roles })
+        .from(memberships)
+        .innerJoin(workspaces, eq(workspaces.id, memberships.workspaceId))
+        .leftJoin(roles, eq(roles.id, memberships.roleId))
+        .where(and(eq(memberships.userId, row.user.id), eq(workspaces.slug, slug)))
+        .limit(1);
+    const found = joined[0];
+    if (!found) return null;
+    const { workspace, membership } = found;
+    const roleName = found.role?.name ?? "member";
+    const permissions: Permission[] = found.role
+        ? (found.role.permissions as Permission[])
+        : await resolvePermissions(db, workspace.id, membership.roleId, "member");
 
-    const member = await db.query.memberships.findFirst({
-        where: and(eq(memberships.workspaceId, workspace.id), eq(memberships.userId, row.user.id)),
-        with: { role: true },
-    });
-    if (!member) return null;
-
-    let roleName = "member";
-    let permissions: Permission[] = [];
-    if (member.role) {
-        roleName = member.role.name;
-        permissions = member.role.permissions as Permission[];
-    } else {
-        permissions = await resolvePermissions(db, workspace.id, member.roleId, "member");
-        if (member.roleId) {
-            const r = await db.query.roles.findFirst({ where: eq(roles.id, member.roleId) });
-            if (r) roleName = r.name;
-        }
-    }
-
-    await db.update(sessions).set({ lastSeenAt: new Date() }).where(eq(sessions.id, row.id));
+    const staleBefore = new Date(now.getTime() - 60_000);
+    void db
+        .update(sessions)
+        .set({ lastSeenAt: now })
+        .where(and(eq(sessions.id, row.id), lt(sessions.lastSeenAt, staleBefore)))
+        .catch(() => undefined);
 
     return {
         token,
         sessionId: row.id,
         user: row.user,
         workspace,
-        membership: member,
+        membership,
         roleName,
         permissions,
         provider: row.provider,
@@ -202,6 +201,7 @@ export async function authenticateToken(request: NextRequest): Promise<TenantCon
     });
     const row = rows[0];
     if (!row || !row.user || row.user.disabled || !row.workspace) return null;
+    if (normalizeSlug(row.workspace.slug) !== slug) return null;
     if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return null;
     const member = await db.query.memberships.findFirst({
         where: and(

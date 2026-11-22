@@ -13,7 +13,9 @@ export interface SafeFetchResult {
 }
 
 export interface SafeFetchOptions {
-    method?: "GET" | "HEAD";
+    method?: "GET" | "HEAD" | "POST";
+    headers?: Record<string, string>;
+    body?: string;
     timeoutMs?: number;
     maxBytes?: number;
     maxRedirects?: number;
@@ -86,7 +88,9 @@ interface HopResponse {
 function requestHop(
     target: URL,
     ip: string,
-    method: "GET" | "HEAD",
+    method: "GET" | "HEAD" | "POST",
+    headers: Record<string, string> | undefined,
+    body: string | undefined,
     timeoutMs: number,
     maxBytes: number,
 ): Promise<HopResponse | null> {
@@ -100,6 +104,12 @@ function requestHop(
             settled = true;
             resolve(value);
         };
+        const requestHeaders: Record<string, string> = {
+            Accept: "*/*",
+            ...headers,
+            Host: target.host,
+            "User-Agent": USER_AGENT,
+        };
 
         const req = transport.request(
             {
@@ -108,11 +118,7 @@ function requestHop(
                 port: target.port ? Number(target.port) : undefined,
                 method,
                 path: `${target.pathname}${target.search}`,
-                headers: {
-                    Host: target.host,
-                    "User-Agent": USER_AGENT,
-                    Accept: "*/*",
-                },
+                headers: requestHeaders,
                 lookup: (_hostname, _options, cb) => cb(null, ip, family),
                 servername: hostname,
                 signal: AbortSignal.timeout(timeoutMs),
@@ -156,8 +162,37 @@ function requestHop(
             },
         );
         req.on("error", () => finish(null));
-        req.end();
+        req.end(body);
     });
+}
+
+async function safeAddresses(target: URL): Promise<string[] | null> {
+    const hostname = target.hostname.replace(/^\[|\]$/g, "");
+    let addresses: string[];
+    if (isIP(hostname) !== 0) {
+        addresses = [hostname];
+    } else {
+        try {
+            const resolved = await dnsLookup(target.hostname, { all: true });
+            addresses = resolved.map((r) => r.address);
+        } catch {
+            return null;
+        }
+    }
+    if (addresses.length === 0 || addresses.some(isBlockedIp)) return null;
+    return addresses;
+}
+
+export async function isUrlSafe(url: string): Promise<boolean> {
+    let target: URL;
+    try {
+        target = new URL(url);
+    } catch {
+        return false;
+    }
+    if (target.protocol !== "http:" && target.protocol !== "https:") return false;
+    if (target.username || target.password) return false;
+    return (await safeAddresses(target)) !== null;
 }
 
 export async function fetchSafe(
@@ -190,25 +225,20 @@ export async function fetchSafe(
         }
         if (target.username || target.password) return fail(current, true);
 
-        const hostname = target.hostname.replace(/^\[|\]$/g, "");
-        let addresses: string[];
-        if (isIP(hostname) !== 0) {
-            addresses = [hostname];
-        } else {
-            try {
-                const resolved = await dnsLookup(target.hostname, { all: true });
-                addresses = resolved.map((r) => r.address);
-            } catch {
-                return fail(current);
-            }
-        }
-        if (addresses.length === 0 || addresses.some(isBlockedIp)) {
-            return fail(current, true);
-        }
+        const addresses = await safeAddresses(target);
+        if (!addresses) return fail(current, true);
 
         let hopResponse: HopResponse | null = null;
         try {
-            hopResponse = await requestHop(target, addresses[0], method, timeoutMs, maxBytes);
+            hopResponse = await requestHop(
+                target,
+                addresses[0],
+                method,
+                opts.headers,
+                opts.body,
+                timeoutMs,
+                maxBytes,
+            );
         } catch {
             return fail(current);
         }

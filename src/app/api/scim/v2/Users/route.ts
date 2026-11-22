@@ -177,8 +177,13 @@ export async function POST(request: NextRequest) {
             typeof rawName.familyName === "string" ? rawName.familyName.trim().slice(0, 100) : "";
         const fullName = [givenName, familyName].filter(Boolean).join(" ") || null;
 
-        const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
-        if (existing) {
+        const existing = await db
+            .select({ id: users.id })
+            .from(users)
+            .innerJoin(memberships, eq(memberships.userId, users.id))
+            .where(and(eq(users.email, email), eq(memberships.workspaceId, workspaceId)))
+            .limit(1);
+        if (existing[0]) {
             return scimError(
                 409,
                 td("conflict", "A user with this userName already exists."),

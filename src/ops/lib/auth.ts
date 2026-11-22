@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { config } from "@/config";
+import { clientIp } from "@/lib/client-ip";
 import { verifyToken } from "../actions/system";
 import type { OpsContext, OpsScope } from "../types";
 
@@ -29,10 +30,7 @@ export function authenticateOps(request: NextRequest): OpsAuthResult {
                 .map((s) => s.trim())
                 .filter(Boolean),
         );
-        const ip =
-            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-            request.headers.get("x-real-ip") ??
-            "";
+        const ip = clientIp(request);
         if (!ip || !allowed.has(ip)) {
             return { ctx: null, error: { status: 403, message: "Source IP not allowed" } };
         }
@@ -42,10 +40,7 @@ export function authenticateOps(request: NextRequest): OpsAuthResult {
     if (!token) {
         return { ctx: null, error: { status: 401, message: "Operator token required" } };
     }
-    const ip =
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        request.headers.get("x-real-ip") ??
-        undefined;
+    const ip = clientIp(request);
     if (config.opsToken && equalSecret(token, config.opsToken)) {
         return {
             ctx: { operatorId: "env-token", source: "api", scopes: ALL_SCOPES, ip },

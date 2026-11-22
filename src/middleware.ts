@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { config as appConfig } from "./config";
 import { routing } from "./i18n/routing";
+import { clientIp } from "./lib/client-ip";
 
 export const config = {
     matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|svg|ico|woff2?)$).*)"],
@@ -38,21 +39,14 @@ const BASE_FALLBACK: Record<string, string> = {
 
 const buckets = new Map<string, { count: number; reset: number }>();
 
-function clientIp(request: NextRequest): string {
-    return (
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        request.headers.get("x-real-ip") ||
-        "unknown"
-    );
-}
-
 function applySecurity(res: NextResponse, request: NextRequest, nonce: string): NextResponse {
     res.headers.set("Content-Security-Policy", contentSecurityPolicy(nonce));
-    if (
-        request.headers.get("x-forwarded-proto") === "https" ||
-        appConfig.nodeEnv === "production"
-    ) {
-        res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    const httpsSignal = request.headers.get("x-forwarded-proto") === "https";
+    if (httpsSignal || (appConfig.nodeEnv === "production" && appConfig.trustProxy)) {
+        res.headers.set(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains; preload",
+        );
     }
     res.headers.set("X-Frame-Options", "DENY");
     res.headers.set("X-Content-Type-Options", "nosniff");
@@ -106,6 +100,7 @@ function csrfBlocked(request: NextRequest): boolean {
     if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method.toUpperCase())) return false;
     if (!request.cookies.get(appConfig.sessionCookie)?.value) return false;
     if (request.headers.get("authorization")?.startsWith("Bearer ")) return false;
+    if (request.headers.get("sec-fetch-site") === "cross-site") return true;
     const origin = request.headers.get("origin");
     if (!origin) return false;
     try {
