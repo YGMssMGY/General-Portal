@@ -49,6 +49,10 @@ portals:
               onboarding,
               invitations,
               analytics,
+              approvals,
+              data_import,
+              usage,
+              digest_preview,
           ]
       nav:
           - path: /dashboard
@@ -71,6 +75,22 @@ portals:
             label: Analytics
             icon: activity
             module: analytics
+          - path: /approvals
+            label: Approvals
+            icon: check
+            module: approvals
+          - path: /admin/usage
+            label: Usage
+            icon: gauge
+            module: usage
+          - path: /admin/import
+            label: Data import
+            icon: upload
+            module: data_import
+          - path: /notifications/digest-preview
+            label: Digest preview
+            icon: mail
+            module: digest_preview
           - path: /proposals
             label: Proposals
             icon: file-text
@@ -199,6 +219,10 @@ portals:
               onboarding,
               invitations,
               analytics,
+              approvals,
+              data_import,
+              usage,
+              digest_preview,
           ]
       nav:
           - path: /dashboard
@@ -221,6 +245,22 @@ portals:
             label: Analytics
             icon: activity
             module: analytics
+          - path: /approvals
+            label: Approvals
+            icon: check
+            module: approvals
+          - path: /admin/usage
+            label: Usage
+            icon: gauge
+            module: usage
+          - path: /admin/import
+            label: Data import
+            icon: upload
+            module: data_import
+          - path: /notifications/digest-preview
+            label: Digest preview
+            icon: mail
+            module: digest_preview
           - path: /proposals
             label: Proposals
             icon: file-text

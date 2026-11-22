@@ -106,7 +106,11 @@
         "myWork": "我的工作",
         "onboarding": "设置",
         "invitations": "邀请",
-        "analytics": "分析"
+        "analytics": "分析",
+        "approvals": "审批",
+        "import": "数据导入",
+        "usage": "使用量",
+        "digestPreview": "摘要预览"
     },
     "auth": {
         "signIn": "登录",
@@ -679,7 +683,10 @@
         "noWebhooks": "暂无网络钩子。",
         "testWebhook": "测试网络钩子",
         "testSuccess": "测试已成功发送。",
-        "noSecret": "未配置密钥。"
+        "noSecret": "未配置密钥。",
+        "replay": "重放",
+        "replaySuccess": "已为 {event} 排队重放。",
+        "replayFailed": "重放失败"
     },
     "apiTokens": {
         "title": "API 令牌",
@@ -1311,5 +1318,87 @@
         "notFound": "未找到",
         "conflict": "冲突",
         "internal": "内部错误"
+    },
+    "usage": {
+        "title": "使用量与配额",
+        "subtitle": "当前工作空间的资源消耗",
+        "storage": "文件存储",
+        "storageUsed": "{used} / {limit}",
+        "percentUsed": "已使用 {percent}%",
+        "seats": "成员",
+        "noLimit": "未配置限制",
+        "activeSessions": "活跃会话",
+        "pendingInvitations": "待处理邀请",
+        "activeTokens": "活跃 API 令牌",
+        "alerts": "警报",
+        "noAlerts": "没有配额警报",
+        "requestsPerMinute": "每分钟 {count} 次请求",
+        "auditRetentionDays": "{count} 天审计历史"
+    },
+    "slaInbox": {
+        "title": "审批收件箱",
+        "filterMine": "我的",
+        "filterOverdue": "已逾期",
+        "empty": "暂无待审批项",
+        "overdue": "已逾期",
+        "dueSoon": "即将到期",
+        "onTrack": "正常",
+        "noDueDate": "无截止日期",
+        "dueAt": "截止 {date}",
+        "stage": "第 {n} 阶段",
+        "assignedTo": "指派给 {name}",
+        "commentOptional": "可选备注",
+        "approve": "批准",
+        "reject": "拒绝",
+        "approveSuccess": "已批准",
+        "rejectSuccess": "已拒绝",
+        "typeEvent": "活动",
+        "typeProposal": "提案",
+        "typeTask": "任务",
+        "typeMeeting": "会议",
+        "typeOther": "其他"
+    },
+    "sharedView": {
+        "invalidLink": "此共享视图链接无效或已过期。",
+        "filters": "已保存的筛选",
+        "backToList": "返回视图列表"
+    },
+    "dataImport": {
+        "title": "数据导入",
+        "description": "从 CSV 文件导入最多 500 行。",
+        "entityType": "实体类型",
+        "entityTask": "任务",
+        "entityMember": "成员",
+        "entityTransaction": "交易",
+        "fileLabel": "CSV 文件",
+        "fileHint": "最大 2 MB，带表头的 UTF-8 文本。",
+        "upload": "导入文件",
+        "success": "导入完成",
+        "preview": "预览",
+        "noPreview": "没有可预览的行",
+        "result": "结果",
+        "inserted": "已插入",
+        "failed": "失败",
+        "row": "行",
+        "reason": "原因"
+    },
+    "digestPreview": {
+        "title": "摘要预览",
+        "channel": "渠道",
+        "generate": "生成预览",
+        "total": "未读通知",
+        "sample": "示例文本",
+        "empty": "此摘要没有可包含的内容",
+        "description": "选择渠道并预览邮件或站内摘要。",
+        "channelEmail": "邮件",
+        "channelInApp": "站内",
+        "digest": "摘要频率",
+        "digestNever": "从不",
+        "digestDaily": "每日",
+        "digestWeekly": "每周",
+        "sampleHeading": "示例输出",
+        "totalUnread": "{total} 条未读通知",
+        "groupsHeading": "包含的分类",
+        "openPreferences": "打开通知偏好"
     }
 }

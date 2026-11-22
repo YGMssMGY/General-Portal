@@ -22,6 +22,12 @@ export default defineConfig({
         { name: "ops", testMatch: /ops\.spec\.ts/ },
         { name: "a11y", testMatch: /a11y\.spec\.ts/ },
         {
+            name: "features",
+            testMatch: /features\.spec\.ts/,
+            dependencies: ["portal"],
+            use: { storageState: "tests/e2e/.auth/user.json" },
+        },
+        {
             name: "portal",
             testMatch: /portal\.spec\.ts/,
             dependencies: ["setup"],

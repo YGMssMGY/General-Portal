@@ -21,7 +21,7 @@ flowchart LR
     Node --> Boss[pg-boss queues + rate_buckets]
     TUI[Ink TUI: pnpm tui] --> Engine[Ops engine]
     OpsAPI[POST /api/ops/run] --> Engine
-    Engine --> Registry[Shared ops registry: 41 actions]
+    Engine --> Registry[Shared ops registry: 46 actions]
     Registry --> DB
     YAML --> Node
 ```
@@ -244,6 +244,7 @@ GPL-3.0-or-later. See `LICENSE` at the repo root.
 - `docs/tui.md` — operator console screens, Actions palette, safety rails, remote operation
 - `docs/api.md` — envelope, pagination, endpoint catalogue, operator API, webhooks
 - `docs/runbook.md` — operations, config doctor, operator tokens, DR drills, health, recovery
+- `docs/FEATURES.md` — auditable feature completeness manifest
 
 ## Contributing
 
