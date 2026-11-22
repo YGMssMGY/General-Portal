@@ -24,7 +24,7 @@ const AuthSessionContext = createContext<{ user: AuthUser | null; status: AuthSt
 async function fetchMe(): Promise<AuthUser | null> {
     const res = await fetch("/api/auth/me", { credentials: "same-origin" });
     if (res.status === 401) return null;
-    if (!res.ok) throw new Error("Sign-in is unavailable right now");
+    if (!res.ok) throw new Error("auth.unavailable");
     const json = (await res.json()) as { success: boolean; data?: AuthUser };
     return json.success && json.data ? json.data : null;
 }

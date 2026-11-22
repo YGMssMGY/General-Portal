@@ -53,12 +53,9 @@
         "restoreDeleted": "恢复已删除的项目",
         "trash": "回收站",
         "permanentlyDelete": "永久删除",
-        "dangerZone": "危险操作区"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "学生组织的共享工作空间",
-        "description": "General Portal 是面向学校社团和学生组织的多租户协作平台，将提案、任务、活动、财务、志愿服务和成员管理整合于一处，安全便捷。"
+        "dangerZone": "危险操作区",
+        "breadcrumb": "面包屑导航",
+        "viewInFinance": "在财务中打开"
     },
     "landing": {
         "title": "General Portal",
@@ -110,7 +107,8 @@
         "approvals": "审批",
         "import": "数据导入",
         "usage": "使用量",
-        "digestPreview": "摘要预览"
+        "digestPreview": "摘要预览",
+        "purchaseRequests": "采购申请"
     },
     "auth": {
         "signIn": "登录",
@@ -153,7 +151,8 @@
         "resetPassword": "重置密码",
         "resetSuccess": "密码已重置，请登录。",
         "backToSignIn": "返回登录",
-        "passwordTooShort": "至少使用 12 个字符。"
+        "passwordTooShort": "至少使用 12 个字符。",
+        "unavailable": "当前无法登录"
     },
     "dashboard": {
         "title": "仪表板",
@@ -204,7 +203,10 @@
         "dueToday": "今日截止",
         "deleteConfirm": "确定要删除此任务吗？",
         "markDone": "标记为已完成",
-        "markTodo": "标记为待处理"
+        "markTodo": "标记为待处理",
+        "sendComment": "发送评论",
+        "occurrences": "即将发生的重复事项",
+        "noOccurrences": "此时间范围内没有重复事项。"
     },
     "events": {
         "title": "活动",
@@ -427,7 +429,8 @@
         "statusScheduled": "已安排",
         "statusOngoing": "进行中",
         "statusCompleted": "已结束",
-        "statusCancelled": "已取消"
+        "statusCancelled": "已取消",
+        "noMinutes": "尚无会议纪要。"
     },
     "members": {
         "title": "成员",
@@ -702,20 +705,6 @@
         "noTokens": "暂无 API 令牌。",
         "tokenShownOnce": "此令牌仅显示一次。"
     },
-    "audit": {
-        "title": "审计日志",
-        "action": "操作",
-        "entityType": "实体类型",
-        "entityId": "实体 ID",
-        "performedBy": "操作人",
-        "timestamp": "时间戳",
-        "ipAddress": "IP 地址",
-        "noLogs": "暂无审计日志。",
-        "export": "导出",
-        "verifyIntegrity": "验证完整性",
-        "integrityOk": "完整性验证通过。",
-        "integrityFailed": "完整性验证失败。"
-    },
     "sessions": {
         "title": "我的会话",
         "device": "设备",
@@ -857,40 +846,6 @@
         "conflict": "此操作与现有数据冲突。",
         "moduleDisabled": "此模块已在此工作区停用。"
     },
-    "validation": {
-        "required": "此项为必填。",
-        "tooShort": "长度不得少于 {min} 个字符。",
-        "tooLong": "长度不得超过 {max} 个字符。",
-        "invalidEmail": "请输入有效的电子邮箱地址。",
-        "invalidUrl": "请输入有效的 URL。",
-        "invalidDate": "请输入有效的日期。",
-        "invalidNumber": "请输入有效的数字。",
-        "mustBePositive": "必须大于零。",
-        "invalidOption": "请选择有效的选项。"
-    },
-    "tui": {
-        "title": "终端",
-        "mainMenu": "主菜单",
-        "sites": "站点",
-        "addSite": "添加站点",
-        "removeSite": "移除站点",
-        "migrate": "迁移",
-        "backup": "备份",
-        "jobs": "任务",
-        "health": "健康状态",
-        "logs": "日志",
-        "danger": "危险操作",
-        "quit": "退出",
-        "selectOption": "请选择操作",
-        "confirmDeletion": "确认删除",
-        "typeSlugToConfirm": "输入 {slug} 以确认",
-        "backupCreated": "备份已创建。",
-        "siteAdded": "站点已添加。",
-        "siteRemoved": "站点已移除。",
-        "migrationComplete": "迁移完成。",
-        "yes": "是",
-        "no": "否"
-    },
     "productivity": {
         "blocked": "已阻塞",
         "blockedBy": "被 {title} 阻塞",
@@ -950,7 +905,11 @@
         "invalidJson": "筛选条件必须是有效的 JSON 对象。",
         "sharedWithYou": "与您共享",
         "filtersJson": "筛选条件 (JSON)",
-        "apply": "应用"
+        "apply": "应用",
+        "share": "分享",
+        "revoke": "撤销",
+        "shareLink": "分享链接",
+        "revoked": "分享链接已撤销。"
     },
     "marketing": {
         "useCases": {
@@ -1096,7 +1055,9 @@
                 "i18n": "国际化",
                 "tui": "运维控制台",
                 "api": "API 参考",
-                "runbook": "运维手册"
+                "runbook": "运维手册",
+                "sdk": "SDK 指南",
+                "features": "功能指南"
             },
             "apiTitle": "API 参考",
             "publicApi": "公开 API 描述",
@@ -1132,6 +1093,18 @@
                     }
                 }
             }
+        },
+        "compare": {
+            "title": "为什么选择 General Portal",
+            "subtitle": "一个工作空间，覆盖组织运营的方方面面。",
+            "selfHostedTitle": "原生支持自托管",
+            "selfHostedBody": "部署、数据和品牌均由您掌控，无需依赖外部服务。"
+        },
+        "features": {
+            "title": "为整个组织而构建",
+            "subtitle": "团队所需的一切，尽在一处。",
+            "modulesTitle": "协同工作的模块",
+            "modulesBody": "项目、活动、财务与沟通共享统一的权限模型和审计记录。"
         }
     },
     "myWork": {
@@ -1400,5 +1373,32 @@
         "totalUnread": "{total} 条未读通知",
         "groupsHeading": "包含的分类",
         "openPreferences": "打开通知偏好"
+    },
+    "comments": {
+        "title": "评论",
+        "empty": "尚无评论。",
+        "placeholder": "写下评论",
+        "add": "添加"
+    },
+    "linkPreview": {
+        "loading": "正在加载预览",
+        "alt": "链接预览"
+    },
+    "sidebar": {
+        "toggle": "切换侧边栏",
+        "expand": "展开侧边栏",
+        "collapse": "收起侧边栏",
+        "displaysMobile": "在移动设备上显示",
+        "language": "语言"
+    },
+    "pagination": {
+        "previous": "上一页",
+        "next": "下一页",
+        "previousAria": "转到上一页",
+        "nextAria": "转到下一页",
+        "morePages": "更多页面"
+    },
+    "commandPalette": {
+        "title": "命令面板"
     }
 }

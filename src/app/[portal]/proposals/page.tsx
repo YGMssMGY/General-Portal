@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fetchJson, fetchPage } from "@/lib/api-client";
 import { useAuthSession } from "@/components/AuthSessionProvider";
+import EntityComments from "@/components/EntityComments";
 import { usePortal } from "@/hooks/usePortal";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -561,6 +562,10 @@ export default function ProposalsPage() {
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        <EntityComments
+                                                            entityType="proposal"
+                                                            entityId={proposal.id}
+                                                        />
                                                     </div>
                                                 )}
                                             </Card>

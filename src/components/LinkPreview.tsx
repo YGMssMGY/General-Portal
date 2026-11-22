@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { fetchJson } from "@/lib/api-client";
 import { ExternalLink, ImageOff } from "lucide-react";
 
@@ -13,6 +14,7 @@ interface LinkPreviewData {
 }
 
 export function LinkPreview({ url }: { url: string }) {
+    const t = useTranslations("linkPreview");
     const { data, isLoading, isError } = useQuery<LinkPreviewData>({
         queryKey: ["link-preview", url],
         queryFn: () => fetchJson(`/api/link-preview?url=${encodeURIComponent(url)}`),
@@ -38,7 +40,7 @@ export function LinkPreview({ url }: { url: string }) {
                 }}
             >
                 <ExternalLink size={14} />
-                Loading preview...
+                {t("loading")}
             </div>
         );
     }
@@ -85,7 +87,7 @@ export function LinkPreview({ url }: { url: string }) {
                     {/* eslint-disable-next-line @next/next/no-img-element -- external untrusted preview images must not pass through the next/image optimizer (SSRF via fetch); plain img with an error fallback is the secure choice. */}
                     <img
                         src={data.image}
-                        alt={data.title ?? "Link preview"}
+                        alt={data.title ?? t("alt")}
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         onError={(e) => {
                             const el = e.currentTarget;

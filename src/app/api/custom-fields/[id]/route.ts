@@ -2,7 +2,8 @@ import { NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { customFieldDefs } from "@/db/schema";
-import { ApiError, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { ApiError, fail, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
+import { isFeatureEnabled } from "@/lib/deployment";
 import { requireTenant } from "@/lib/tenant";
 
 const updateDefSchema = z.object({
@@ -23,6 +24,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             permission: "manage_custom_fields",
             module: "members",
         });
+        if (!isFeatureEnabled(t.portal, "custom_fields")) return fail("Forbidden", 403);
         const id = requireUuid((await params).id);
         const existing = await t.db.query.customFieldDefs.findFirst({
             where: scoped(id, t.workspaceId),
@@ -51,6 +53,7 @@ export async function DELETE(
             permission: "manage_custom_fields",
             module: "members",
         });
+        if (!isFeatureEnabled(t.portal, "custom_fields")) return fail("Forbidden", 403);
         const id = requireUuid((await params).id);
         const existing = await t.db.query.customFieldDefs.findFirst({
             where: scoped(id, t.workspaceId),

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fetchJson, fetchPage } from "@/lib/api-client";
 import { useAuthSession } from "@/components/AuthSessionProvider";
+import EntityComments from "@/components/EntityComments";
 import { usePortal } from "@/hooks/usePortal";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -69,6 +70,7 @@ interface EventData {
     annualPlan: { id: string; name: string; academicYear: string } | null;
     createdBy: EventUser;
     createdAt: string;
+    teamsMessageId?: string | null;
 }
 
 interface AnnualPlan {
@@ -122,6 +124,7 @@ export default function EventsPage() {
     const [permanent, setPermanent] = useState(false);
 
     const isAdmin = user?.role === "admin";
+    const canPostTeams = user?.permissions.includes("manage_all_events") ?? false;
     const cursor = cursorStack.length > 0 ? cursorStack[cursorStack.length - 1] : null;
 
     const { data, isLoading, isError, refetch } = useQuery({
@@ -242,6 +245,15 @@ export default function EventsPage() {
             toast.success(tCommon("delete"));
         },
         onError: () => toast.error(tErrors("internal")),
+    });
+
+    const teamsPostMutation = useMutation({
+        mutationFn: (id: string) => fetchJson(`/api/events/teams-post/${id}`, { method: "POST" }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [portal, "events"] });
+            toast.success(t("teamsPosted"));
+        },
+        onError: (err) => toast.error(err instanceof Error ? err.message : tErrors("internal")),
     });
 
     const createPlanMutation = useMutation({
@@ -702,6 +714,18 @@ export default function EventsPage() {
                                                         {t("unpublish")}
                                                     </Button>
                                                 )}
+                                                {canPostTeams && !event.teamsMessageId && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            teamsPostMutation.mutate(event.id)
+                                                        }
+                                                        disabled={teamsPostMutation.isPending}
+                                                    >
+                                                        {t("postToTeams")}
+                                                    </Button>
+                                                )}
                                                 {isAdmin && event.approvalStatus === "pending" && (
                                                     <>
                                                         <Button
@@ -762,6 +786,10 @@ export default function EventsPage() {
                                                     </div>
                                                 )}
                                             </div>
+                                            <EntityComments
+                                                entityType="event"
+                                                entityId={event.id}
+                                            />
                                         </div>
                                     )}
                                 </Card>

@@ -32,6 +32,8 @@ const guides = [
     { key: "i18n", file: "docs/i18n.md" },
     { key: "tui", file: "docs/tui.md" },
     { key: "api", file: "docs/api.md" },
+    { key: "sdk", file: "docs/sdk.md" },
+    { key: "features", file: "docs/FEATURES.md" },
     { key: "runbook", file: "docs/runbook.md" },
 ] as const;
 

@@ -51,7 +51,9 @@ export default function ShowcaseAdminPage() {
     usePageTitle(`${t("manageShowcase")} | ${workspace?.name ?? portal}`);
     const queryClient = useQueryClient();
 
-    const canManage = user?.permissions.includes("manage_showcase") ?? false;
+    const canManage =
+        (user?.permissions.includes("manage_showcase") ?? false) &&
+        (user?.permissions.includes("manage_announcements") ?? false);
     const isAdmin = user?.role === "admin";
 
     const [activeTab, setActiveTab] = useState(TYPES[0]);

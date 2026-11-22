@@ -103,6 +103,7 @@ function SavedViewsContent() {
     const [isShared, setIsShared] = useState(false);
     const [filtersText, setFiltersText] = useState("{}");
     const [filtersError, setFiltersError] = useState("");
+    const [shareLink, setShareLink] = useState<{ viewId: string; url: string } | null>(null);
 
     const qs = entityFilter === "" ? "" : `?entityType=${encodeURIComponent(entityFilter)}`;
     const {
@@ -147,6 +148,33 @@ function SavedViewsContent() {
     const deleteMutation = useMutation({
         mutationFn: (id: string) => fetchJson(`/api/saved-views/${id}`, { method: "DELETE" }),
         onSuccess: invalidate,
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
+
+    const shareMutation = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson<{ url: string }>(`/api/saved-views/share?id=${encodeURIComponent(id)}`),
+        onSuccess: (result, id) => {
+            setShareLink({ viewId: id, url: `${window.location.origin}${result.url}` });
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : te("internal"));
+        },
+    });
+
+    const revokeMutation = useMutation({
+        mutationFn: (id: string) =>
+            fetchJson("/api/saved-views/share", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, revoke: true }),
+            }),
+        onSuccess: () => {
+            setShareLink(null);
+            toast.success(tS("revoked"));
+        },
         onError: (err) => {
             toast.error(err instanceof Error ? err.message : te("internal"));
         },
@@ -288,6 +316,16 @@ function SavedViewsContent() {
                                 <Button size="sm" variant="outline" onClick={() => applyView(v)}>
                                     {tS("apply")}
                                 </Button>
+                                {canShare && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => shareMutation.mutate(v.id)}
+                                        disabled={shareMutation.isPending}
+                                    >
+                                        {tS("share")}
+                                    </Button>
+                                )}
                                 <Button
                                     size="sm"
                                     variant="destructive"
@@ -301,6 +339,49 @@ function SavedViewsContent() {
                     ))}
                 </div>
             )}
+            <Dialog
+                open={shareLink !== null}
+                onOpenChange={(next) => {
+                    if (!next) setShareLink(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{tS("shareLink")}</DialogTitle>
+                    </DialogHeader>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Input readOnly value={shareLink?.url ?? ""} aria-label={tS("shareLink")} />
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <Button
+                                size="sm"
+                                onClick={() => {
+                                    if (!shareLink) return;
+                                    void navigator.clipboard
+                                        .writeText(shareLink.url)
+                                        .then(() => toast.success(tc("copied")));
+                                }}
+                            >
+                                {tc("copied")}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                    if (shareLink) revokeMutation.mutate(shareLink.viewId);
+                                }}
+                                disabled={revokeMutation.isPending}
+                            >
+                                {tS("revoke")}
+                            </Button>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShareLink(null)}>
+                            {tc("close")}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent>
                     <DialogHeader>

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fetchPage } from "@/lib/api-client";
+import { useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -52,6 +53,7 @@ function relativeTime(iso: string): string {
 export default function ActivityPage() {
     const portal = usePortal();
     const { data: workspace } = useWorkspace();
+    const { user } = useAuthSession();
     const t = useTranslations("activity");
     const tc = useTranslations("common");
     const te = useTranslations("errors");
@@ -95,6 +97,24 @@ export default function ActivityPage() {
     function pickFilter(value: string) {
         setFilter(value);
         setCursor(null);
+    }
+
+    if (user && !user.permissions.includes("view_activity")) {
+        return (
+            <Card>
+                <CardContent style={{ padding: "32px", textAlign: "center" }}>
+                    <p
+                        style={{
+                            fontSize: "14px",
+                            color: "var(--color-destructive)",
+                            margin: 0,
+                        }}
+                    >
+                        {te("forbidden")}
+                    </p>
+                </CardContent>
+            </Card>
+        );
     }
 
     return (

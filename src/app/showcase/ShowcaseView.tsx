@@ -144,7 +144,7 @@ export function ShowcaseView({
     const portalName = (slug: string) => portals.find((p) => p.slug === slug)?.name ?? slug;
 
     return (
-        <div style={container}>
+        <main style={container}>
             <div style={heroSection}>
                 <h1 style={heroTitle}>{t("title")}</h1>
                 <p style={heroSubtitle}>{t("subtitle")}</p>
@@ -629,6 +629,6 @@ export function ShowcaseView({
                     )}
                 </div>
             )}
-        </div>
+        </main>
     );
 }

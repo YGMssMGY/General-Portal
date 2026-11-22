@@ -53,12 +53,9 @@
         "restoreDeleted": "Gelöschte Elemente wiederherstellen",
         "trash": "Papierkorb",
         "permanentlyDelete": "Endgültig löschen",
-        "dangerZone": "Gefahrenbereich"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "Der gemeinsame Arbeitsbereich für Schülerorganisationen",
-        "description": "General Portal ist eine mandantenfähige Kollaborationsplattform für Schulklubs und Schülerorganisationen. Sie bündelt Anträge, Aufgaben, Veranstaltungen, Finanzen, Ehrenamt und Mitgliederverwaltung an einem sicheren Ort."
+        "dangerZone": "Gefahrenbereich",
+        "breadcrumb": "Brotkrümelnavigation",
+        "viewInFinance": "In Finanzen öffnen"
     },
     "landing": {
         "title": "General Portal",
@@ -110,7 +107,8 @@
         "approvals": "Freigaben",
         "import": "Datenimport",
         "usage": "Nutzung",
-        "digestPreview": "Zusammenfassungsvorschau"
+        "digestPreview": "Zusammenfassungsvorschau",
+        "purchaseRequests": "Bestellanträge"
     },
     "auth": {
         "signIn": "Anmelden",
@@ -153,7 +151,8 @@
         "resetPassword": "Passwort zurücksetzen",
         "resetSuccess": "Ihr Passwort wurde zurückgesetzt. Bitte melden Sie sich an.",
         "backToSignIn": "Zurück zur Anmeldung",
-        "passwordTooShort": "Verwenden Sie mindestens 12 Zeichen."
+        "passwordTooShort": "Verwenden Sie mindestens 12 Zeichen.",
+        "unavailable": "Die Anmeldung ist derzeit nicht verfügbar"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -204,7 +203,10 @@
         "dueToday": "Heute fällig",
         "deleteConfirm": "Möchten Sie diese Aufgabe wirklich löschen?",
         "markDone": "Als erledigt markieren",
-        "markTodo": "Als zu erledigen markieren"
+        "markTodo": "Als zu erledigen markieren",
+        "sendComment": "Kommentar senden",
+        "occurrences": "Künftige Wiederholungen",
+        "noOccurrences": "Keine Wiederholungen in diesem Zeitraum."
     },
     "events": {
         "title": "Veranstaltungen",
@@ -427,7 +429,8 @@
         "statusScheduled": "Geplant",
         "statusOngoing": "Läuft",
         "statusCompleted": "Abgeschlossen",
-        "statusCancelled": "Abgesagt"
+        "statusCancelled": "Abgesagt",
+        "noMinutes": "Noch keine Protokolle vorhanden."
     },
     "members": {
         "title": "Mitglieder",
@@ -702,20 +705,6 @@
         "noTokens": "Noch keine API-Token.",
         "tokenShownOnce": "Dieser Token wird nur einmal angezeigt."
     },
-    "audit": {
-        "title": "Audit-Protokoll",
-        "action": "Aktion",
-        "entityType": "Entitätstyp",
-        "entityId": "Entitäts-ID",
-        "performedBy": "Ausgeführt von",
-        "timestamp": "Zeitstempel",
-        "ipAddress": "IP-Adresse",
-        "noLogs": "Noch keine Audit-Protokolle.",
-        "export": "Exportieren",
-        "verifyIntegrity": "Integrität prüfen",
-        "integrityOk": "Integrität bestätigt.",
-        "integrityFailed": "Integritätsprüfung fehlgeschlagen."
-    },
     "sessions": {
         "title": "Meine Sitzungen",
         "device": "Gerät",
@@ -857,40 +846,6 @@
         "conflict": "Diese Aktion steht im Widerspruch zu vorhandenen Daten.",
         "moduleDisabled": "Dieses Modul ist für diesen Arbeitsbereich deaktiviert."
     },
-    "validation": {
-        "required": "Dieses Feld ist erforderlich.",
-        "tooShort": "Muss mindestens {min} Zeichen lang sein.",
-        "tooLong": "Darf höchstens {max} Zeichen lang sein.",
-        "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein.",
-        "invalidUrl": "Geben Sie eine gültige URL ein.",
-        "invalidDate": "Geben Sie ein gültiges Datum ein.",
-        "invalidNumber": "Geben Sie eine gültige Zahl ein.",
-        "mustBePositive": "Muss größer als null sein.",
-        "invalidOption": "Wählen Sie eine gültige Option."
-    },
-    "tui": {
-        "title": "Terminal",
-        "mainMenu": "Hauptmenü",
-        "sites": "Websites",
-        "addSite": "Website hinzufügen",
-        "removeSite": "Website entfernen",
-        "migrate": "Migrieren",
-        "backup": "Sichern",
-        "jobs": "Aufgaben",
-        "health": "Systemzustand",
-        "logs": "Protokolle",
-        "danger": "Gefahr",
-        "quit": "Beenden",
-        "selectOption": "Wählen Sie eine Option",
-        "confirmDeletion": "Löschung bestätigen",
-        "typeSlugToConfirm": "Geben Sie {slug} ein, um zu bestätigen",
-        "backupCreated": "Sicherung erstellt.",
-        "siteAdded": "Website hinzugefügt.",
-        "siteRemoved": "Website entfernt.",
-        "migrationComplete": "Migration abgeschlossen.",
-        "yes": "Ja",
-        "no": "Nein"
-    },
     "productivity": {
         "blocked": "Blockiert",
         "blockedBy": "Blockiert durch {title}",
@@ -950,7 +905,11 @@
         "invalidJson": "Die Filter müssen ein gültiges JSON-Objekt sein.",
         "sharedWithYou": "Für dich freigegeben",
         "filtersJson": "Filter (JSON)",
-        "apply": "Anwenden"
+        "apply": "Anwenden",
+        "share": "Teilen",
+        "revoke": "Widerrufen",
+        "shareLink": "Freigabelink",
+        "revoked": "Freigabelink widerrufen."
     },
     "marketing": {
         "useCases": {
@@ -1096,7 +1055,9 @@
                 "i18n": "Internationalisierung",
                 "tui": "Betreiberkonsole",
                 "api": "API-Referenz",
-                "runbook": "Runbook"
+                "runbook": "Runbook",
+                "sdk": "SDK-Leitfaden",
+                "features": "Funktionsleitfaden"
             },
             "apiTitle": "API-Referenzen",
             "publicApi": "Öffentliche API-Beschreibung",
@@ -1132,6 +1093,18 @@
                     }
                 }
             }
+        },
+        "compare": {
+            "title": "Warum General Portal",
+            "subtitle": "Ein Arbeitsbereich für die gesamte Organisation.",
+            "selfHostedTitle": "Von Grund auf selbst gehostet",
+            "selfHostedBody": "Sie besitzen die Installation, die Daten und das Branding. Kein externer Dienst ist erforderlich."
+        },
+        "features": {
+            "title": "Für die gesamte Organisation entwickelt",
+            "subtitle": "Alles, was Ihr Team braucht, an einem Ort.",
+            "modulesTitle": "Module, die zusammenarbeiten",
+            "modulesBody": "Projekte, Veranstaltungen, Finanzen und Kommunikation teilen ein Berechtigungsmodell und ein Auditprotokoll."
         }
     },
     "myWork": {
@@ -1400,5 +1373,32 @@
         "totalUnread": "{total} ungelesene Benachrichtigungen",
         "groupsHeading": "Enthaltene Gruppen",
         "openPreferences": "Benachrichtigungseinstellungen öffnen"
+    },
+    "comments": {
+        "title": "Kommentare",
+        "empty": "Noch keine Kommentare.",
+        "placeholder": "Kommentar schreiben",
+        "add": "Hinzufügen"
+    },
+    "linkPreview": {
+        "loading": "Vorschau wird geladen",
+        "alt": "Linkvorschau"
+    },
+    "sidebar": {
+        "toggle": "Seitenleiste umschalten",
+        "expand": "Seitenleiste ausklappen",
+        "collapse": "Seitenleiste einklappen",
+        "displaysMobile": "Auf Mobilgeräten anzeigen",
+        "language": "Sprache"
+    },
+    "pagination": {
+        "previous": "Zurück",
+        "next": "Weiter",
+        "previousAria": "Zur vorherigen Seite",
+        "nextAria": "Zur nächsten Seite",
+        "morePages": "Weitere Seiten"
+    },
+    "commandPalette": {
+        "title": "Befehlspalette"
     }
 }

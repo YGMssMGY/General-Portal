@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { fetchJson } from "@/lib/api-client";
 import { AuthSessionProvider, useAuthSession } from "@/components/AuthSessionProvider";
 import { usePortal } from "@/hooks/usePortal";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface Webhook {
@@ -51,6 +52,7 @@ function WebhooksContent() {
     const t = useTranslations("webhooks");
     const tc = useTranslations("common");
     const portal = usePortal();
+    const { data: workspace } = useWorkspace();
     const qc = useQueryClient();
     const { user } = useAuthSession();
     usePageTitle(t("title"));
@@ -121,6 +123,12 @@ function WebhooksContent() {
         onSuccess: (r) => toast.success(t("replaySuccess", { event: r.event })),
         onError: (e) => toast.error(e instanceof Error ? e.message : t("replayFailed")),
     });
+
+    if (workspace && !workspace.features.includes("webhooks")) {
+        return (
+            <p style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>{tc("soon")}</p>
+        );
+    }
 
     if (!canManage) {
         return (
