@@ -9,6 +9,7 @@ export default defineConfig({
     use: {
         baseURL: "http://localhost:3000",
         trace: "on-first-retry",
+        extraHTTPHeaders: { "x-forwarded-for": "198.51.100.250" },
     },
     webServer: {
         command: "pnpm dev",
