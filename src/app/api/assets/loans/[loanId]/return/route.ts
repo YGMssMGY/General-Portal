@@ -14,9 +14,17 @@ export async function POST(
         const loanId = requireUuid((await params).loanId, "loanId");
         const loan = await t.db.query.assetLoans.findFirst({
             where: eq(assetLoans.id, loanId),
-            with: { asset: true, user: { columns: { id: true, name: true } } },
+            with: {
+                asset: { columns: { id: true, name: true, workspaceId: true, deletedAt: true } },
+                user: { columns: { id: true, name: true } },
+            },
         });
-        if (!loan || !loan.asset || loan.asset.workspaceId !== t.workspaceId) {
+        if (
+            !loan ||
+            !loan.asset ||
+            loan.asset.workspaceId !== t.workspaceId ||
+            loan.asset.deletedAt
+        ) {
             throw new ApiError("Loan not found", 404);
         }
         const canManage = t.permissions.includes("manage_assets");

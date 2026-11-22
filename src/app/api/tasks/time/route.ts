@@ -87,12 +87,12 @@ export async function GET(request: NextRequest) {
             limit: limit + 1,
             with: {
                 user: { columns: { id: true, name: true, image: true } },
-                task: { columns: { id: true, title: true, workspaceId: true } },
+                task: { columns: { id: true, title: true, workspaceId: true, deletedAt: true } },
             },
         });
         const scoped = taskId
-            ? rows.filter((r) => r.task.workspaceId === t.workspaceId)
-            : rows.filter((r) => r.task.workspaceId === t.workspaceId);
+            ? rows.filter((r) => r.task.workspaceId === t.workspaceId && !r.task.deletedAt)
+            : rows.filter((r) => r.task.workspaceId === t.workspaceId && !r.task.deletedAt);
         let nextCursor: string | null = null;
         if (scoped.length > limit) {
             const last = scoped.pop()!;

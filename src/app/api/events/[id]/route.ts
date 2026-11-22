@@ -43,10 +43,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             with: {
                 createdBy: { columns: { id: true, name: true, email: true, image: true } },
                 approvedBy: { columns: { id: true, name: true, email: true, image: true } },
-                annualPlan: { columns: { id: true, name: true, academicYear: true } },
+                annualPlan: {
+                    columns: { id: true, name: true, academicYear: true, deletedAt: true },
+                },
             },
         });
         if (!event) throw new ApiError("Event not found", 404);
+        if (event.annualPlan?.deletedAt) return ok({ ...event, annualPlan: null });
         return ok(event);
     } catch (e) {
         return handleRouteError("GET /api/events/[id]", e);

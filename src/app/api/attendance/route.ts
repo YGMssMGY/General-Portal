@@ -66,8 +66,10 @@ export async function GET(request: NextRequest) {
             orderBy: [desc(attendance.createdAt), desc(attendance.id)],
             limit: limit + 1,
             with: {
-                meeting: { columns: { id: true, title: true, startTime: true } },
-                event: { columns: { id: true, title: true, startDate: true } },
+                meeting: {
+                    columns: { id: true, title: true, startTime: true, deletedAt: true },
+                },
+                event: { columns: { id: true, title: true, startDate: true, deletedAt: true } },
             },
         });
 
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
             nextCursor = encodeCursorValues([last.createdAt.toISOString(), last.id]);
         }
 
-        const res = ok(rows);
+        const res = ok(rows.filter((r) => !r.meeting?.deletedAt && !r.event?.deletedAt));
         res.headers.set("X-Next-Cursor", nextCursor ?? "");
         return res;
     } catch (e) {

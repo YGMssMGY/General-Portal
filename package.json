@@ -30,6 +30,8 @@
         "db:studio": "drizzle-kit studio",
         "schema:check": "tsx scripts/schema-check.ts",
         "db:seed": "tsx scripts/seed.ts",
+        "db:seed:demo": "tsx scripts/seed-demo.ts",
+        "screenshots": "tsx scripts/screenshots.ts",
         "config:check": "tsx scripts/config.ts check",
         "config:init": "tsx scripts/config.ts init",
         "config:diff": "tsx scripts/config.ts diff",

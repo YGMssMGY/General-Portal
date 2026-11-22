@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { PortalDb } from "@/db/client";
 import { approvals, events, memberships, meetings, proposals, tasks, workflows } from "@/db/schema";
@@ -111,7 +111,11 @@ export async function GET(request: NextRequest) {
             [...byType.entries()].map(async ([type, ids]) => {
                 if (type === "event") {
                     const found = await t.db.query.events.findMany({
-                        where: and(eq(events.workspaceId, t.workspaceId), inArray(events.id, ids)),
+                        where: and(
+                            eq(events.workspaceId, t.workspaceId),
+                            isNull(events.deletedAt),
+                            inArray(events.id, ids),
+                        ),
                         columns: { id: true, title: true },
                     });
                     for (const f of found) titles.set(`event:${f.id}`, f.title);
@@ -119,6 +123,7 @@ export async function GET(request: NextRequest) {
                     const found = await t.db.query.proposals.findMany({
                         where: and(
                             eq(proposals.workspaceId, t.workspaceId),
+                            isNull(proposals.deletedAt),
                             inArray(proposals.id, ids),
                         ),
                         columns: { id: true, title: true },
@@ -126,7 +131,11 @@ export async function GET(request: NextRequest) {
                     for (const f of found) titles.set(`proposal:${f.id}`, f.title);
                 } else if (type === "task") {
                     const found = await t.db.query.tasks.findMany({
-                        where: and(eq(tasks.workspaceId, t.workspaceId), inArray(tasks.id, ids)),
+                        where: and(
+                            eq(tasks.workspaceId, t.workspaceId),
+                            isNull(tasks.deletedAt),
+                            inArray(tasks.id, ids),
+                        ),
                         columns: { id: true, title: true },
                     });
                     for (const f of found) titles.set(`task:${f.id}`, f.title);
@@ -134,6 +143,7 @@ export async function GET(request: NextRequest) {
                     const found = await t.db.query.meetings.findMany({
                         where: and(
                             eq(meetings.workspaceId, t.workspaceId),
+                            isNull(meetings.deletedAt),
                             inArray(meetings.id, ids),
                         ),
                         columns: { id: true, title: true },
