@@ -36,6 +36,9 @@ export const config = {
     sessionTtlHours: Number(opt("SESSION_TTL_HOURS", "24")),
     rateLimitMax: Number(opt("RATE_LIMIT_MAX", "100")),
     authSecret: opt("AUTH_SECRET", ""),
+    opsToken: opt("OPS_API_TOKEN"),
+    opsSecret: opt("OPS_SECRET", opt("AUTH_SECRET", "")),
+    opsAllowedIps: opt("OPS_ALLOWED_IPS"),
     entra: {
         clientId: opt("MICROSOFT_CLIENT_ID"),
         clientSecret: opt("MICROSOFT_CLIENT_SECRET"),
