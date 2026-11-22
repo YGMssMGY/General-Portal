@@ -16,7 +16,7 @@ jobs:
             - name: Review dependencies
               id: review
               continue-on-error: true
-              uses: actions/dependency-review-action@v4
+              uses: actions/dependency-review-action@v5
             - name: Install dependencies
               if: steps.review.outcome == 'failure'
               uses: pnpm/action-setup@v6
