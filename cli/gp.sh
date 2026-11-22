@@ -4,7 +4,8 @@ set -eu
 BASE="${GP_URL:-}"
 TOKEN="${GP_TOKEN:-}"
 ACTION="${1:-}"
-RAW="${2:-'{}'}"
+RAW="${2:-}"
+if [ -z "$RAW" ]; then RAW='{}'; fi
 
 if [ -z "$BASE" ] || [ -z "$TOKEN" ]; then
     echo "Set GP_URL and GP_TOKEN. Example: GP_URL=https://portal.example GP_TOKEN=<token> gp site.list" >&2
@@ -27,7 +28,7 @@ case "$ACTION" in
         curl -sS "$BASE/api/ops" -H "Authorization: Bearer $TOKEN"
         ;;
     explain)
-        curl -sS "$BASE/api/ops" -H "Authorization: Bearer $TOKEN" | grep -o "\"id\":\"$RAW\""
+        request "{\"action\":\"ops.explain\",\"params\":{\"action\":\"$RAW\"}}"
         ;;
     run)
         request "$RAW"

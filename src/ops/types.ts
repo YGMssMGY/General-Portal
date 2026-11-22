@@ -35,6 +35,12 @@ export interface ActionDescriptor {
     destructive: boolean;
     confirmField?: "slug" | "email";
     params: Record<string, unknown>;
+    inputSchema: {
+        type: "object";
+        properties: Record<string, unknown>;
+        required: string[];
+        additionalProperties: false;
+    };
     exampleCurl: string;
     exampleIrm: string;
 }

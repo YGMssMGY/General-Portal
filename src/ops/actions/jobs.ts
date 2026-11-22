@@ -1,16 +1,24 @@
 import { z } from "zod";
-import { config } from "@/config";
-import { getBoss } from "@/lib/jobs/boss";
-import { listPortalSlugs } from "@/db/client";
+import { connectionString, getBoss } from "@/lib/jobs/boss";
 import { withClient } from "@/tui/lib/tui-db";
-import { portalDbUrl } from "@/db/client";
 import type { ActionDefinition } from "../types";
 
+const PUBLISH_QUEUES = [
+    "nudge",
+    "digest",
+    "report-generate",
+    "webhook-deliver",
+    "retention",
+    "link-health",
+    "scheduled-backup",
+] as const;
+
 function bossUrl(): string | null {
-    return (
-        config.bossUrl ||
-        (listPortalSlugs()[0] ? (portalDbUrl(listPortalSlugs()[0]) ?? null) : null)
-    );
+    try {
+        return connectionString();
+    } catch {
+        return null;
+    }
 }
 
 export const jobActions: ActionDefinition[] = [
@@ -58,11 +66,11 @@ export const jobActions: ActionDefinition[] = [
     {
         id: "job.publish",
         group: "job",
-        summary: "Publish a job to a pg-boss queue",
+        summary: "Publish a job to a known application pg-boss queue",
         scopes: ["ops:deploy"],
-        destructive: false,
+        destructive: true,
         params: z.object({
-            queue: z.string().min(1).max(64),
+            queue: z.enum(PUBLISH_QUEUES),
             data: z.record(z.string(), z.unknown()).default({}),
         }),
         run: async ({ queue, data }) => {

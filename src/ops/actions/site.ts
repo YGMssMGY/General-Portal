@@ -11,10 +11,11 @@ import {
     parseDbUrl,
     pgDump,
     runTsx,
+    sealDumpIfConfigured,
     tableRowCounts,
 } from "@/tui/lib/tui-db";
 import { getPortal, listPortals } from "@/lib/deployment";
-import { closeAllPools, listPortalSlugs, portalDbUrl } from "@/db/client";
+import { closeAllPools, isSingleDbMode, listPortalSlugs, portalDbUrl } from "@/db/client";
 import type { ActionDefinition } from "../types";
 
 const slugParam = z
@@ -192,22 +193,36 @@ export const siteActions: ActionDefinition[] = [
                 database: parseDbUrl(url).dbName,
                 rows,
                 verifiedBackup: backup ? { file: backup.file, bytes: backup.bytes } : null,
-                warning: "All data in this portal database will be permanently deleted.",
+                warning: isSingleDbMode()
+                    ? "Single-DB mode: physical database drop is refused; use trash/admin data deletion instead."
+                    : "All data in this portal database will be permanently deleted.",
             };
         },
         run: async ({ slug }) => {
+            if (isSingleDbMode()) {
+                throw new Error(
+                    "Refusing to drop a database in single-DB mode; delete portal data via the trash/admin flows instead.",
+                );
+            }
             const url = portalDbUrl(slug);
             if (!url) throw new Error(`Unknown portal: ${slug}`);
             const backup = latestBackup(slug);
             if (!backup || backup.bytes < 100) {
                 throw new Error("Refusing to drop: no verified backup exists");
             }
-            const dump = await pgDump(url, backupFilePath(slug, "pre-drop"));
+            const staged = backupFilePath(slug, "pre-drop");
+            const dump = await pgDump(url, staged);
             if (!dump.ok) throw new Error("Refusing to drop: final backup failed");
+            const sealed = await sealDumpIfConfigured(staged);
             const parsed = parseDbUrl(url);
             await dropDatabase(adminUrlFor(url), parsed.dbName);
             closeAllPools();
-            return { slug, database: parsed.dbName, dropped: true, backupBytes: dump.bytes };
+            return {
+                slug,
+                database: parsed.dbName,
+                dropped: true,
+                backupBytes: sealed?.bytes ?? dump.bytes,
+            };
         },
     },
     {
