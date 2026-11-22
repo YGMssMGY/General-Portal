@@ -21,11 +21,11 @@ describe("cursor codec", () => {
         const encoded = encodeCursorValues([iso, id]);
         expect(decodeCursorValues(encoded)).toEqual([iso, id]);
     });
-    it("rejects invalid cursors", () => {
+    it("rejects malformed cursors but accepts caller-specific shapes", () => {
         expect(decodeCursorValues("not-base64!!")).toBeNull();
-        expect(
-            decodeCursorValues(encodeCursorValues(["2026-01-02T03:04:05.000Z", "abc"])),
-        ).toBeNull();
+        expect(decodeCursorValues(encodeCursorValues([1, "name"]))).toEqual([1, "name"]);
+        expect(decodeCursorValues(encodeCursorValues([1, "a", "b"]))).toEqual([1, "a", "b"]);
+        expect(decodeCursorValues(encodeCursorValues(["ok", 1, 2, 3, 4]))).toBeNull();
     });
 });
 

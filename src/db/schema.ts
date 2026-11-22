@@ -1882,7 +1882,10 @@ export const attachmentVersions = pgTable(
         createdById: uuid("createdById").references(() => users.id),
         createdAt: ts("createdAt"),
     },
-    (t) => [index("attachment_versions_att_idx").on(t.attachmentId)],
+    (t) => [
+        index("attachment_versions_att_idx").on(t.attachmentId),
+        uniqueIndex("attachment_versions_att_version_uidx").on(t.attachmentId, t.version),
+    ],
 );
 
 export const agendaItems = pgTable(

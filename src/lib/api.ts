@@ -128,10 +128,9 @@ export function decodeCursorValues(cursor: string | null): Array<string | number
     if (!cursor) return null;
     try {
         const v = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown;
-        if (!Array.isArray(v) || v.length !== 2) return null;
-        if (typeof v[0] !== "string" || Number.isNaN(new Date(v[0]).getTime())) return null;
-        if (!isUuid(String(v[1]))) return null;
-        return [v[0], v[1]];
+        if (!Array.isArray(v) || v.length < 2 || v.length > 3) return null;
+        if (!v.every((x) => typeof x === "string" || typeof x === "number")) return null;
+        return v as Array<string | number>;
     } catch {
         return null;
     }
