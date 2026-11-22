@@ -14,3 +14,21 @@ test("Login Page Offers A Configured Provider Or A Password Form", async ({ page
     const passwordInput = page.locator('input[type="password"]').first();
     await expect(providerLink.or(passwordInput)).toBeVisible();
 });
+
+const publicAssets = [
+    ["/sitemap.xml", "xml"],
+    ["/robots.txt", "text/plain"],
+    ["/manifest.webmanifest", "manifest"],
+    ["/opengraph-image", "image/png"],
+    ["/twitter-image", "image/png"],
+    ["/sw.js", "javascript"],
+    ["/offline.html", "text/html"],
+];
+
+for (const [path, contentType] of publicAssets) {
+    test(`${path} is publicly reachable with the right content type`, async ({ request }) => {
+        const response = await request.get(path, { maxRedirects: 0 });
+        expect(response.status()).toBe(200);
+        expect(response.headers()["content-type"]).toContain(contentType);
+    });
+}

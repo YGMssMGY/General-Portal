@@ -162,7 +162,14 @@ export function middleware(request: NextRequest): NextResponse {
         path === "/api/ops" ||
         path === "/api/ops/health" ||
         path === "/api/ops/openapi.json" ||
-        path === "/api/ops/manifest.json"
+        path === "/api/ops/manifest.json" ||
+        path === "/sitemap.xml" ||
+        path === "/robots.txt" ||
+        path === "/manifest.webmanifest" ||
+        path === "/sw.js" ||
+        path === "/offline.html" ||
+        path.startsWith("/opengraph-image") ||
+        path.startsWith("/twitter-image")
     ) {
         return pass(request);
     }
