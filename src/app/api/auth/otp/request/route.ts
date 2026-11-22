@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
     try {
         const body = await parseBody(requestSchema, request);
         const portal = resolvePortalSlug(request);
-        checkRateLimit(rateKey(clientIp(request), "email-otp"));
+        checkRateLimit(
+            rateKey(clientIp(request), "email-otp"),
+            Math.max(10, Math.floor(config.rateLimitMax / 10)),
+        );
         const limited = await sensitiveLimitCheck(request, "email-otp");
         if (limited) return fail("Too many requests", 429);
         if (!isProviderAllowed(portal, "email-otp")) throw new ApiError(unavailable, 503);
