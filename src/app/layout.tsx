@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "@/components/QueryClientProvider";
+import ChangelogProvider from "@/components/ChangelogProvider";
+import ServiceWorker from "@/components/ServiceWorker";
 import { normalizeSlug } from "@/db/client";
 import "@fontsource-variable/noto-sans";
 import "@fontsource/noto-sans-sc";
@@ -26,7 +28,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </head>
             <body>
                 <NextIntlClientProvider locale={locale} messages={messages}>
-                    <Providers>{children}</Providers>
+                    <Providers>
+                        {children}
+                        <ChangelogProvider />
+                        <ServiceWorker />
+                    </Providers>
                 </NextIntlClientProvider>
             </body>
         </html>
