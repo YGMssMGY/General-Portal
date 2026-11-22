@@ -1,0 +1,102 @@
+version: 1
+deployment:
+    id: general-portal
+    environment: production
+    baseUrl: https://general.example.com
+defaults:
+    locale: en-US
+    timezone: UTC
+    theme:
+        primary: "#0f62fe"
+        radius: 5
+portals:
+    - slug: general
+      name: General Workspace
+      category: general
+      description: A general-purpose workspace for any student organization to manage operations and collaboration.
+      branding:
+          logo: /general.png
+          favicon: /general.png
+          primary: "#0f62fe"
+      db:
+          envVar: DATABASE_URL_GENERAL
+      auth:
+          providers: [password, passkey]
+          allowedDomains: []
+      modules:
+          [
+              dashboard,
+              onboarding,
+              invitations,
+              proposals,
+              tasks,
+              events,
+              messages,
+              finance,
+              volunteers,
+              members,
+              files,
+              meetings,
+              activity,
+              subgroups,
+              settings,
+              notifications,
+              partnerships,
+              calendar,
+              search,
+              budget,
+              my_work,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /onboarding
+            label: Setup
+            icon: list-checks
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: mail
+            module: invitations
+          - path: /my-work
+            label: My Work
+            icon: clipboard-list
+            module: my_work
+          - path: /proposals
+            label: Proposals
+            icon: file-text
+            module: proposals
+          - path: /tasks
+            label: Tasks
+            icon: list-todo
+            module: tasks
+          - path: /events
+            label: Events
+            icon: calendar
+            module: events
+          - path: /members
+            label: Members
+            icon: users
+            module: members
+          - path: /finance
+            label: Finance
+            icon: wallet
+            module: finance
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+      terminology:
+          subgroup: Team
+          academicYear: Academic Year
+          member: Member
+          event: Event
+      roles: [admin, officer, member]
+      seedPack: general_default
+      limits:
+          uploadMb: 20
+          requestsPerMinute: 150
+          auditRetentionDays: 730
+      features: [meeting_minutes, attendance, participation, reports, custom_fields, webhooks]

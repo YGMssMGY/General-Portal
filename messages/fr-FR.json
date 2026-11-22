@@ -102,7 +102,11 @@
         "customFields": "Champs personnalisés",
         "search": "Recherche",
         "budget": "Budget",
-        "partnerships": "Partenariats"
+        "partnerships": "Partenariats",
+        "myWork": "Mon travail",
+        "onboarding": "Configuration",
+        "invitations": "Invitations",
+        "analytics": "Analyses"
     },
     "auth": {
         "signIn": "Connexion",
@@ -486,7 +490,11 @@
         "uploadFailed": "Échec du téléversement.",
         "deleteFailed": "Échec de la suppression.",
         "downloading": "Téléchargement en cours",
-        "storagePath": "Chemin de stockage"
+        "storagePath": "Chemin de stockage",
+        "preview": "Aperçu",
+        "selectAll": "Tout sélectionner",
+        "bulkDelete": "Supprimer la sélection",
+        "bulkDeleteForever": "Supprimer définitivement la sélection"
     },
     "links": {
         "title": "Liens",
@@ -572,7 +580,10 @@
         "moduleDisabled": "Module désactivé",
         "terminology": "Terminologie",
         "terminologyHint": "Renommez les modules pour correspondre au vocabulaire de votre organisation.",
-        "reset": "Réinitialiser"
+        "reset": "Réinitialiser",
+        "radius": "Rayon des coins",
+        "preview": "Aperçu",
+        "invalidTerminology": "La terminologie doit être un objet JSON de valeurs texte."
     },
     "search": {
         "title": "Recherche",
@@ -931,6 +942,248 @@
         "noViews": "Aucune vue enregistrée",
         "invalidJson": "Les filtres doivent être un objet JSON valide.",
         "sharedWithYou": "Partagée avec vous",
-        "filtersJson": "Filtres (JSON)"
+        "filtersJson": "Filtres (JSON)",
+        "apply": "Appliquer"
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Choisissez votre espace",
+            "subtitle": "Une plateforme pour chaque type d'organisation.",
+            "clubs": {
+                "title": "Clubs et organisations étudiantes",
+                "description": "Projets, événements, budgets et élections au même endroit."
+            },
+            "firms": {
+                "title": "Petites entreprises et équipes",
+                "description": "Validations, fichiers, finances et travaux clients sans outils dispersés."
+            },
+            "agencies": {
+                "title": "Agences et grandes organisations",
+                "description": "Dix à cinquante espaces isolés avec gouvernance centrale."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "Ce que vous obtenez",
+            "clubs": {
+                "title": "Conçu pour les clubs",
+                "intro": "Du recrutement à la planification annuelle, tout au même endroit.",
+                "benefits": {
+                    "1": "Bases isolées par espace",
+                    "2": "Neuf fournisseurs de connexion",
+                    "3": "Configuration pilotée par YAML",
+                    "4": "Cinq langues incluses"
+                }
+            },
+            "firms": {
+                "title": "Conçu pour les équipes",
+                "intro": "Gardez décisions, dépenses et livrables vérifiables et rapides.",
+                "benefits": {
+                    "1": "Plus de 40 modules intégrés",
+                    "2": "Contrôle d'accès par permissions",
+                    "3": "Journal d'audit inviolable",
+                    "4": "Téléversements vérifiés en flux"
+                }
+            },
+            "agencies": {
+                "title": "Conçu pour les agences",
+                "intro": "Séparez chaque client avec un seul déploiement et une piste d'audit.",
+                "benefits": {
+                    "1": "Dix à cinquante espaces par déploiement",
+                    "2": "Image de marque par espace",
+                    "3": "Sauvegardes chiffrées planifiées",
+                    "4": "API d'exploitation pour agents"
+                }
+            }
+        },
+        "links": {
+            "label": "Explorer",
+            "features": "Fonctionnalités",
+            "demo": "Démo en direct"
+        },
+        "changelog": {
+            "title": "Journal des modifications",
+            "empty": "Aucune entrée pour le moment."
+        },
+        "roadmap": {
+            "title": "Feuille de route",
+            "subtitle": "Ce qui arrive ensuite.",
+            "columns": {
+                "now": "Maintenant",
+                "next": "Ensuite",
+                "later": "Plus tard",
+                "done": "Terminé"
+            },
+            "items": {
+                "presets": "Modèles d'espace",
+                "demo": "Mode démo en lecture seule",
+                "sdk": "SDK et CLI typés",
+                "analytics": "Centre d'analyse",
+                "backups": "Sauvegardes chiffrées planifiées",
+                "scim": "Provisionnement SCIM",
+                "presence": "Présence en direct",
+                "badges": "Badges de participation"
+            }
+        },
+        "security": {
+            "title": "Sécurité",
+            "subtitle": "Comment General Portal protège vos données.",
+            "topics": {
+                "transport": {
+                    "title": "Transport",
+                    "body": "HTTPS uniquement en production, HSTS, CSP à nonce et en-têtes renforcés."
+                },
+                "authn": {
+                    "title": "Authentification",
+                    "body": "Sessions opaques avec rotation et révocation immédiate, neuf fournisseurs et passkeys."
+                },
+                "authz": {
+                    "title": "Autorisation",
+                    "body": "Chaque route exige un contexte locataire; chaque mutation vérifie les droits et la propriété."
+                },
+                "uploads": {
+                    "title": "Téléversements",
+                    "body": "Détection par signature, limites de taille en flux, sommes de contrôle et téléchargements en pièce jointe."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Les URL non fiables sont résolues vers des IP validées, la connexion est épinglée et chaque redirection vérifiée."
+                },
+                "rateLimits": {
+                    "title": "Limites de débit",
+                    "body": "Un seau à jetons Postgres partagé protège les points sensibles entre instances."
+                },
+                "audit": {
+                    "title": "Audit",
+                    "body": "Un journal en ajout seul avec chaîne de hachage SHA-256 et points de contrôle périodiques."
+                },
+                "supplyChain": {
+                    "title": "Chaîne d'approvisionnement",
+                    "body": "Lockfile figé, revue des dépendances, CodeQL, Scorecard, SBOM et versions signées."
+                }
+            },
+            "reporting": "Signalez de façon privée via les avis de sécurité GitHub.",
+            "docsLink": "Lire le guide de sécurité"
+        },
+        "about": {
+            "tagline": "Le système d'exploitation d'espaces auto-hébergé",
+            "title": "À propos de General Portal",
+            "story1": "General Portal a commencé comme un portail pour deux organisations et est devenu une plateforme générale.",
+            "story2": "Vous possédez le déploiement, les données et l'image de marque. Aucun CDN externe requis.",
+            "factsTitle": "Faits",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Auto-hébergé sur votre propre Postgres",
+                "fonts": "Polices auto-hébergées, aucun CDN"
+            }
+        },
+        "docs": {
+            "title": "Documentation",
+            "subtitle": "Tout ce qu'il faut pour configurer, déployer et exploiter un espace.",
+            "guidesTitle": "Guides",
+            "guides": {
+                "readme": "README",
+                "architecture": "Architecture",
+                "deployment": "Déploiement",
+                "auth": "Authentification",
+                "security": "Sécurité",
+                "i18n": "Internationalisation",
+                "tui": "Console d'exploitation",
+                "api": "Référence API",
+                "runbook": "Runbook"
+            },
+            "apiTitle": "Références API",
+            "publicApi": "Description de l'API publique",
+            "operatorApi": "Description de l'API d'exploitation"
+        },
+        "demo": {
+            "banner": "Aperçu en lecture seule. Les vrais espaces nécessitent une connexion.",
+            "title": "Découvrir l'espace",
+            "subtitle": "Un aperçu statique des modules inclus.",
+            "gated": "Connectez-vous pour utiliser le vrai espace.",
+            "cards": {
+                "tasks": {
+                    "title": "Tâches",
+                    "rows": {
+                        "1": "Préparer le plan trimestriel",
+                        "2": "Vérifier le budget annuel",
+                        "3": "Publier le compte rendu"
+                    }
+                },
+                "proposals": {
+                    "title": "Propositions",
+                    "rows": {
+                        "1": "Nouvelle série d'ateliers",
+                        "2": "Partenariat communautaire"
+                    }
+                },
+                "members": {
+                    "title": "Membres",
+                    "rows": {
+                        "1": "Administrateur",
+                        "2": "Responsable",
+                        "3": "Membre"
+                    }
+                }
+            }
+        }
+    },
+    "myWork": {
+        "title": "Mon travail",
+        "subtitle": "Tout ce qui vous est assigné, au même endroit.",
+        "customize": "Personnaliser",
+        "done": "Terminé",
+        "show": "Afficher",
+        "hide": "Masquer",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "widget": {
+            "tasks": "Mes tâches",
+            "events": "Événements à venir",
+            "proposals": "Propositions en attente",
+            "approvals": "Validations",
+            "dues": "Mes cotisations",
+            "polls": "Sondages ouverts",
+            "rsvps": "Mes participations",
+            "kudos": "Kudos récents"
+        }
+    },
+    "invitations": {
+        "title": "Invitations",
+        "description": "Invitez des personnes avec un lien qui expire.",
+        "forbidden": "Vous n'avez pas le droit de gérer les invitations.",
+        "createInvitation": "Créer une invitation",
+        "noInvitations": "Aucune invitation en attente.",
+        "expiresAt": "Expire le",
+        "revoke": "Révoquer",
+        "revokeWarning": "Révoquer cette invitation ? Le lien cessera immédiatement de fonctionner.",
+        "role": "Rôle",
+        "roleAdmin": "Administrateur",
+        "roleOfficer": "Responsable",
+        "roleMember": "Membre",
+        "expiresInDays": "Expire dans jours",
+        "invite": "Envoyer l'invitation",
+        "tokenTitle": "Lien d'invitation",
+        "tokenNotice": "Copiez ce lien maintenant. Il ne sera plus affiché.",
+        "copyToken": "Copier le lien"
+    },
+    "onboarding": {
+        "title": "Configurer votre espace",
+        "description": "Quatre étapes rapides pour démarrer votre équipe.",
+        "progressLabel": "Progression de la configuration",
+        "progressCount": "{completed} sur {total} terminées",
+        "done": "Terminé",
+        "pending": "En attente",
+        "passwordTitle": "Définir un mot de passe admin",
+        "passwordDescription": "Protégez votre compte avec un mot de passe fort.",
+        "passwordAction": "Ouvrir les paramètres du compte",
+        "brandTitle": "Personnaliser votre espace",
+        "brandDescription": "Ajoutez le nom, le logo et la couleur principale.",
+        "brandAction": "Ouvrir les paramètres",
+        "inviteTitle": "Inviter votre équipe",
+        "inviteDescription": "Invitez vos collègues dans l'espace.",
+        "inviteAction": "Ouvrir les invitations",
+        "showcaseTitle": "Publier la vitrine",
+        "showcaseDescription": "Partagez événements et actualités publiquement.",
+        "showcaseAction": "Ouvrir la gestion de la vitrine"
     }
 }

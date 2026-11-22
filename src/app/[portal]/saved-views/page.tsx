@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -53,6 +54,25 @@ const ENTITY_TYPES = [
     "meeting",
 ] as const;
 
+const ENTITY_ROUTES: Record<string, string> = {
+    task: "tasks",
+    event: "events",
+    proposal: "proposals",
+};
+
+function filtersToQuery(filters: Record<string, unknown>): string {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+        if (value === null || value === undefined) continue;
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+            params.set(key, String(value));
+        } else {
+            params.set(key, JSON.stringify(value));
+        }
+    }
+    return params.toString();
+}
+
 function parseFilters(text: string): { ok: true; value: Record<string, unknown> } | { ok: false } {
     try {
         const parsed: unknown = JSON.parse(text);
@@ -70,6 +90,7 @@ function SavedViewsContent() {
     const te = useTranslations("errors");
     const tS = useTranslations("savedViews");
     const portal = usePortal();
+    const router = useRouter();
     const queryClient = useQueryClient();
     const { user } = useAuthSession();
     usePageTitle(`${tS("title")} | ${portal}`);
@@ -131,6 +152,12 @@ function SavedViewsContent() {
         },
     });
 
+    function applyView(view: SavedView) {
+        const route = ENTITY_ROUTES[view.entityType] ?? "members";
+        const query = filtersToQuery(view.filters);
+        router.push(`/${portal}/${route}${query !== "" ? `?${query}` : ""}`);
+    }
+
     const handleCreate = () => {
         const parsed = parseFilters(filtersText);
         if (!parsed.ok) {
@@ -165,30 +192,30 @@ function SavedViewsContent() {
                         color: "var(--color-text)",
                     }}
                 >
-                    Saved Views
+                    {tS("title")}
                 </h1>
                 <Button size="sm" onClick={() => setOpen(true)}>
                     {tc("create")}
                 </Button>
             </div>
-            <div style={{ maxWidth: "320px" }}>
-                <Label htmlFor="saved-views-filter">{tc("filter")}</Label>
-                <Select
-                    value={entityFilter === "" ? "all" : entityFilter}
-                    onValueChange={(v) => setEntityFilter(v === "all" ? "" : v)}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                <Button
+                    size="sm"
+                    variant={entityFilter === "" ? "default" : "outline"}
+                    onClick={() => setEntityFilter("")}
                 >
-                    <SelectTrigger id="saved-views-filter">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">{tc("all")}</SelectItem>
-                        {ENTITY_TYPES.map((e) => (
-                            <SelectItem key={e} value={e}>
-                                {e}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                    {tc("all")}
+                </Button>
+                {ENTITY_TYPES.map((e) => (
+                    <Button
+                        key={e}
+                        size="sm"
+                        variant={entityFilter === e ? "default" : "outline"}
+                        onClick={() => setEntityFilter(e)}
+                    >
+                        {e}
+                    </Button>
+                ))}
             </div>
             {isLoading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -227,7 +254,7 @@ function SavedViewsContent() {
                             color: "var(--color-text-secondary)",
                         }}
                     >
-                        <p style={{ fontSize: "14px", margin: 0 }}>No saved views yet.</p>
+                        <p style={{ fontSize: "14px", margin: 0 }}>{tS("noViews")}</p>
                     </CardContent>
                 </Card>
             ) : (
@@ -258,6 +285,9 @@ function SavedViewsContent() {
                                 {user && v.userId !== user.id && (
                                     <Badge variant="secondary">{tS("sharedWithYou")}</Badge>
                                 )}
+                                <Button size="sm" variant="outline" onClick={() => applyView(v)}>
+                                    {tS("apply")}
+                                </Button>
                                 <Button
                                     size="sm"
                                     variant="destructive"

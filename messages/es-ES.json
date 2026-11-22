@@ -102,7 +102,11 @@
         "customFields": "Campos personalizados",
         "search": "Búsqueda",
         "budget": "Presupuesto",
-        "partnerships": "Asociaciones"
+        "partnerships": "Asociaciones",
+        "myWork": "Mi trabajo",
+        "onboarding": "Configuración",
+        "invitations": "Invitaciones",
+        "analytics": "Análisis"
     },
     "auth": {
         "signIn": "Iniciar sesión",
@@ -486,7 +490,11 @@
         "uploadFailed": "Error al subir el archivo.",
         "deleteFailed": "Error al eliminar el archivo.",
         "downloading": "Descargando",
-        "storagePath": "Ruta de almacenamiento"
+        "storagePath": "Ruta de almacenamiento",
+        "preview": "Vista previa",
+        "selectAll": "Seleccionar todo",
+        "bulkDelete": "Eliminar seleccionados",
+        "bulkDeleteForever": "Eliminar seleccionados permanentemente"
     },
     "links": {
         "title": "Enlaces",
@@ -572,7 +580,10 @@
         "moduleDisabled": "Módulo desactivado",
         "terminology": "Terminología",
         "terminologyHint": "Cambie el nombre de los módulos para adaptarlos al vocabulario de su organización.",
-        "reset": "Restablecer"
+        "reset": "Restablecer",
+        "radius": "Radio de esquinas",
+        "preview": "Vista previa",
+        "invalidTerminology": "La terminología debe ser un objeto JSON de valores de texto."
     },
     "search": {
         "title": "Búsqueda",
@@ -931,6 +942,248 @@
         "noViews": "No hay vistas guardadas",
         "invalidJson": "Los filtros deben ser un objeto JSON válido.",
         "sharedWithYou": "Compartida contigo",
-        "filtersJson": "Filtros (JSON)"
+        "filtersJson": "Filtros (JSON)",
+        "apply": "Aplicar"
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Elige tu espacio",
+            "subtitle": "Una plataforma para cada tipo de organización.",
+            "clubs": {
+                "title": "Clubes y organizaciones estudiantiles",
+                "description": "Proyectos, eventos, presupuestos y elecciones en un solo lugar."
+            },
+            "firms": {
+                "title": "Pequeñas empresas y equipos",
+                "description": "Aprobaciones, archivos, finanzas y trabajo con clientes sin dispersión."
+            },
+            "agencies": {
+                "title": "Agencias y grandes organizaciones",
+                "description": "Diez a cincuenta espacios aislados con gobernanza central."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "Lo que obtienes",
+            "clubs": {
+                "title": "Hecho para clubes",
+                "intro": "Desde la incorporación hasta la planificación anual, todo en un espacio.",
+                "benefits": {
+                    "1": "Bases de datos aisladas por espacio",
+                    "2": "Nueve proveedores de acceso",
+                    "3": "Configuración basada en YAML",
+                    "4": "Cinco idiomas incluidos"
+                }
+            },
+            "firms": {
+                "title": "Hecho para equipos",
+                "intro": "Mantenga decisiones, gastos y entregables auditables y rápidos.",
+                "benefits": {
+                    "1": "Más de 40 módulos integrados",
+                    "2": "Control de acceso por permisos",
+                    "3": "Registro de auditoría a prueba de manipulación",
+                    "4": "Cargas de archivos verificadas por flujo"
+                }
+            },
+            "agencies": {
+                "title": "Hecho para agencias",
+                "intro": "Separe cada cliente con un solo despliegue y una pista de auditoría.",
+                "benefits": {
+                    "1": "Diez a cincuenta espacios por despliegue",
+                    "2": "Marca visual por espacio",
+                    "3": "Copias de seguridad cifradas programadas",
+                    "4": "API de operaciones para agentes"
+                }
+            }
+        },
+        "links": {
+            "label": "Explorar",
+            "features": "Funciones",
+            "demo": "Demo en vivo"
+        },
+        "changelog": {
+            "title": "Registro de cambios",
+            "empty": "Aún no hay entradas."
+        },
+        "roadmap": {
+            "title": "Hoja de ruta",
+            "subtitle": "Lo que viene después.",
+            "columns": {
+                "now": "Ahora",
+                "next": "Siguiente",
+                "later": "Después",
+                "done": "Hecho"
+            },
+            "items": {
+                "presets": "Plantillas de espacio",
+                "demo": "Modo demo de solo lectura",
+                "sdk": "SDK y CLI tipados",
+                "analytics": "Centro de análisis",
+                "backups": "Copias cifradas programadas",
+                "scim": "Aprovisionamiento SCIM",
+                "presence": "Presencia en vivo",
+                "badges": "Insignias de participación"
+            }
+        },
+        "security": {
+            "title": "Seguridad",
+            "subtitle": "Cómo General Portal protege sus datos.",
+            "topics": {
+                "transport": {
+                    "title": "Transporte",
+                    "body": "Solo HTTPS en producción, HSTS, CSP con nonce y cabeceras reforzadas."
+                },
+                "authn": {
+                    "title": "Autenticación",
+                    "body": "Sesiones opacas con rotación y revocación instantánea, nueve proveedores y passkeys."
+                },
+                "authz": {
+                    "title": "Autorización",
+                    "body": "Cada ruta exige contexto de inquilino; cada mutación verifica permisos y propiedad."
+                },
+                "uploads": {
+                    "title": "Cargas",
+                    "body": "Detección por firma, límites de tamaño por flujo, sumas de verificación y descargas como adjunto."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Las URL no confiables se resuelven a IP validadas, se fija la conexión y se revalida cada redirección."
+                },
+                "rateLimits": {
+                    "title": "Límites de tasa",
+                    "body": "Un cubo de tokens Postgres compartido protege los puntos sensibles entre instancias."
+                },
+                "audit": {
+                    "title": "Auditoría",
+                    "body": "Un registro de solo adición con cadena de hash SHA-256 y puntos de control periódicos."
+                },
+                "supplyChain": {
+                    "title": "Cadena de suministro",
+                    "body": "Lockfile congelado, revisión de dependencias, CodeQL, Scorecard, SBOM y lanzamientos firmados."
+                }
+            },
+            "reporting": "Informe de forma privada mediante avisos de seguridad de GitHub.",
+            "docsLink": "Leer la guía de seguridad"
+        },
+        "about": {
+            "tagline": "El sistema operativo de espacios autohospedado",
+            "title": "Acerca de General Portal",
+            "story1": "General Portal comenzó como un portal para dos organizaciones y se convirtió en una plataforma general.",
+            "story2": "Usted posee el despliegue, los datos y la marca. No se requiere CDN externo.",
+            "factsTitle": "Datos",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Autohospedado en su propio Postgres",
+                "fonts": "Fuentes autohospedadas, sin CDN"
+            }
+        },
+        "docs": {
+            "title": "Documentación",
+            "subtitle": "Todo lo necesario para configurar, desplegar y operar un espacio.",
+            "guidesTitle": "Guías",
+            "guides": {
+                "readme": "README",
+                "architecture": "Arquitectura",
+                "deployment": "Despliegue",
+                "auth": "Autenticación",
+                "security": "Seguridad",
+                "i18n": "Internacionalización",
+                "tui": "Consola de operaciones",
+                "api": "Referencia de API",
+                "runbook": "Runbook"
+            },
+            "apiTitle": "Referencias de API",
+            "publicApi": "Descripción de la API pública",
+            "operatorApi": "Descripción de la API de operaciones"
+        },
+        "demo": {
+            "banner": "Vista de solo lectura. Los espacios reales requieren acceso.",
+            "title": "Conoce el espacio",
+            "subtitle": "Una vista estática de los módulos incluidos.",
+            "gated": "Inicie sesión para usar el espacio real.",
+            "cards": {
+                "tasks": {
+                    "title": "Tareas",
+                    "rows": {
+                        "1": "Preparar el plan trimestral",
+                        "2": "Revisar el presupuesto anual",
+                        "3": "Publicar el resumen del evento"
+                    }
+                },
+                "proposals": {
+                    "title": "Propuestas",
+                    "rows": {
+                        "1": "Nueva serie de talleres",
+                        "2": "Asociación comunitaria"
+                    }
+                },
+                "members": {
+                    "title": "Miembros",
+                    "rows": {
+                        "1": "Administrador",
+                        "2": "Responsable",
+                        "3": "Miembro"
+                    }
+                }
+            }
+        }
+    },
+    "myWork": {
+        "title": "Mi trabajo",
+        "subtitle": "Todo lo asignado a usted, en un solo lugar.",
+        "customize": "Personalizar",
+        "done": "Hecho",
+        "show": "Mostrar",
+        "hide": "Ocultar",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "widget": {
+            "tasks": "Mis tareas",
+            "events": "Próximos eventos",
+            "proposals": "Propuestas pendientes",
+            "approvals": "Aprobaciones",
+            "dues": "Mis cuotas",
+            "polls": "Encuestas abiertas",
+            "rsvps": "Mis confirmaciones",
+            "kudos": "Kudos recientes"
+        }
+    },
+    "invitations": {
+        "title": "Invitaciones",
+        "description": "Invite a personas con un enlace que caduca.",
+        "forbidden": "No tienes permiso para gestionar invitaciones.",
+        "createInvitation": "Crear invitación",
+        "noInvitations": "No hay invitaciones pendientes.",
+        "expiresAt": "Caduca",
+        "revoke": "Revocar",
+        "revokeWarning": "¿Revocar esta invitación? El enlace dejará de funcionar de inmediato.",
+        "role": "Rol",
+        "roleAdmin": "Administrador",
+        "roleOfficer": "Responsable",
+        "roleMember": "Miembro",
+        "expiresInDays": "Caduca en días",
+        "invite": "Enviar invitación",
+        "tokenTitle": "Enlace de invitación",
+        "tokenNotice": "Copie este enlace ahora. No se mostrará de nuevo.",
+        "copyToken": "Copiar enlace"
+    },
+    "onboarding": {
+        "title": "Configura tu espacio",
+        "description": "Cuatro pasos rápidos para comenzar con tu equipo.",
+        "progressLabel": "Progreso de configuración",
+        "progressCount": "{completed} de {total} completados",
+        "done": "Hecho",
+        "pending": "Pendiente",
+        "passwordTitle": "Establecer contraseña de administrador",
+        "passwordDescription": "Protege tu cuenta con una contraseña segura.",
+        "passwordAction": "Abrir ajustes de cuenta",
+        "brandTitle": "Personaliza tu espacio",
+        "brandDescription": "Agrega nombre, logo y color principal.",
+        "brandAction": "Abrir ajustes",
+        "inviteTitle": "Invita a tu equipo",
+        "inviteDescription": "Invita a tus compañeros al espacio.",
+        "inviteAction": "Abrir invitaciones",
+        "showcaseTitle": "Publica tu escaparate",
+        "showcaseDescription": "Comparte eventos y novedades públicamente.",
+        "showcaseAction": "Abrir administración de escaparate"
     }
 }

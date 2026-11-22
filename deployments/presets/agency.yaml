@@ -1,0 +1,97 @@
+version: 1
+deployment:
+    id: agency-portal
+    environment: production
+    baseUrl: https://agency.example.com
+defaults:
+    locale: en-US
+    timezone: America/Los_Angeles
+    theme:
+        primary: "#7c3aed"
+        radius: 8
+portals:
+    - slug: agency
+      name: Creative Agency
+      category: business
+      description: A shared workspace for campaigns, client approvals, deliverables, and team coordination.
+      branding:
+          logo: /agency.png
+          favicon: /agency.png
+          primary: "#7c3aed"
+      db:
+          envVar: DATABASE_URL_AGENCY
+      auth:
+          providers: [password, passkey]
+          allowedDomains: []
+      modules:
+          [
+              dashboard,
+              onboarding,
+              invitations,
+              proposals,
+              tasks,
+              calendar,
+              messages,
+              files,
+              members,
+              finance,
+              meetings,
+              activity,
+              settings,
+              notifications,
+              budget,
+              search,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /onboarding
+            label: Setup
+            icon: list-checks
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: mail
+            module: invitations
+          - path: /proposals
+            label: Client Proposals
+            icon: file-text
+            module: proposals
+          - path: /tasks
+            label: Deliverables
+            icon: list-todo
+            module: tasks
+          - path: /calendar
+            label: Campaign Calendar
+            icon: calendar-days
+            module: calendar
+          - path: /files
+            label: Assets
+            icon: folder
+            module: files
+          - path: /members
+            label: Team
+            icon: users
+            module: members
+          - path: /budget
+            label: Budget
+            icon: piggy-bank
+            module: budget
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+      terminology:
+          subgroup: Account Team
+          academicYear: Fiscal Year
+          member: Staff Member
+          event: Campaign
+      roles: [admin, officer, member]
+      seedPack: agency_default
+      limits:
+          uploadMb: 100
+          requestsPerMinute: 240
+          auditRetentionDays: 1095
+      features: [approvals, reports, webhooks, custom_fields]

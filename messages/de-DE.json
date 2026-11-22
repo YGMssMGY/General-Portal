@@ -102,7 +102,11 @@
         "customFields": "Benutzerdefinierte Felder",
         "search": "Suche",
         "budget": "Budget",
-        "partnerships": "Partnerschaften"
+        "partnerships": "Partnerschaften",
+        "myWork": "Meine Arbeit",
+        "onboarding": "Einrichtung",
+        "invitations": "Einladungen",
+        "analytics": "Analysen"
     },
     "auth": {
         "signIn": "Anmelden",
@@ -486,7 +490,11 @@
         "uploadFailed": "Hochladen fehlgeschlagen.",
         "deleteFailed": "Löschen fehlgeschlagen.",
         "downloading": "Wird heruntergeladen",
-        "storagePath": "Speicherpfad"
+        "storagePath": "Speicherpfad",
+        "preview": "Vorschau",
+        "selectAll": "Alle auswählen",
+        "bulkDelete": "Auswahl löschen",
+        "bulkDeleteForever": "Auswahl endgültig löschen"
     },
     "links": {
         "title": "Links",
@@ -572,7 +580,10 @@
         "moduleDisabled": "Modul deaktiviert",
         "terminology": "Terminologie",
         "terminologyHint": "Benennen Sie Module um, um dem Vokabular Ihrer Organisation zu entsprechen.",
-        "reset": "Zurücksetzen"
+        "reset": "Zurücksetzen",
+        "radius": "Eckenradius",
+        "preview": "Vorschau",
+        "invalidTerminology": "Die Terminologie muss ein JSON-Objekt mit Textwerten sein."
     },
     "search": {
         "title": "Suche",
@@ -931,6 +942,248 @@
         "noViews": "Keine gespeicherten Ansichten",
         "invalidJson": "Die Filter müssen ein gültiges JSON-Objekt sein.",
         "sharedWithYou": "Für dich freigegeben",
-        "filtersJson": "Filter (JSON)"
+        "filtersJson": "Filter (JSON)",
+        "apply": "Anwenden"
+    },
+    "marketing": {
+        "useCases": {
+            "title": "Arbeitsbereich wählen",
+            "subtitle": "Eine Plattform für jede Organisationsform.",
+            "clubs": {
+                "title": "Vereine und Studentenorganisationen",
+                "description": "Projekte, Veranstaltungen, Budgets und Wahlen an einem Ort."
+            },
+            "firms": {
+                "title": "Kleine Unternehmen und Teams",
+                "description": "Freigaben, Dateien, Finanzen und Kundenarbeit ohne Tool-Wildwuchs."
+            },
+            "agencies": {
+                "title": "Agenturen und Großorganisationen",
+                "description": "Zehn bis fünfzig isolierte Arbeitsbereiche mit zentraler Steuerung."
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "Was Sie erhalten",
+            "clubs": {
+                "title": "Für Vereine gemacht",
+                "intro": "Von der Rekrutierung bis zur Jahresplanung alles an einem Ort.",
+                "benefits": {
+                    "1": "Isolierte Datenbanken pro Arbeitsbereich",
+                    "2": "Neun Anmeldeprovider",
+                    "3": "YAML-gesteuerte Konfiguration",
+                    "4": "Fünf Sprachen sofort verfügbar"
+                }
+            },
+            "firms": {
+                "title": "Für Teams gemacht",
+                "intro": "Halten Sie Entscheidungen, Ausgaben und Ergebnisse prüfbar und schnell.",
+                "benefits": {
+                    "1": "Über 40 integrierte Module",
+                    "2": "Rechtebasierte Zugriffskontrolle",
+                    "3": "Manipulationssicheres Auditprotokoll",
+                    "4": "Gestreamte, geprüfte Datei-Uploads"
+                }
+            },
+            "agencies": {
+                "title": "Für Agenturen gemacht",
+                "intro": "Trennen Sie jeden Kunden bei einer einzigen Installation und Prüfspur.",
+                "benefits": {
+                    "1": "Zehn bis fünfzig Arbeitsbereiche pro Installation",
+                    "2": "Visuelles Branding pro Arbeitsbereich",
+                    "3": "Geplante verschlüsselte Backups",
+                    "4": "Operator-API für Agenten"
+                }
+            }
+        },
+        "links": {
+            "label": "Entdecken",
+            "features": "Funktionen",
+            "demo": "Live-Demo"
+        },
+        "changelog": {
+            "title": "Änderungsprotokoll",
+            "empty": "Noch keine Einträge."
+        },
+        "roadmap": {
+            "title": "Roadmap",
+            "subtitle": "Was als Nächstes kommt.",
+            "columns": {
+                "now": "Jetzt",
+                "next": "Als Nächstes",
+                "later": "Später",
+                "done": "Fertig"
+            },
+            "items": {
+                "presets": "Arbeitsbereich-Vorlagen",
+                "demo": "Schreibgeschützter Demo-Modus",
+                "sdk": "Typisiertes SDK und CLI",
+                "analytics": "Analyse-Center",
+                "backups": "Geplante verschlüsselte Backups",
+                "scim": "SCIM-Bereitstellung",
+                "presence": "Live-Präsenz",
+                "badges": "Teilnahme-Abzeichen"
+            }
+        },
+        "security": {
+            "title": "Sicherheit",
+            "subtitle": "Wie General Portal Ihre Daten schützt.",
+            "topics": {
+                "transport": {
+                    "title": "Transport",
+                    "body": "Nur HTTPS in Produktion, HSTS, Nonce-CSP und gehärtete Header."
+                },
+                "authn": {
+                    "title": "Authentifizierung",
+                    "body": "Undurchsichtige Sitzungen mit Rotation und sofortiger Sperrung, neun Provider und Passkeys."
+                },
+                "authz": {
+                    "title": "Autorisierung",
+                    "body": "Jede Route verlangt einen Mandantenkontext; jede Änderung prüft Rechte und Besitz."
+                },
+                "uploads": {
+                    "title": "Uploads",
+                    "body": "Magic-Byte-Prüfung, gestreamte Größenlimits, Prüfsummen und Nur-Anhang-Downloads."
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "Nicht vertrauenswürdige URLs werden auf geprüfte IPs aufgelöst, die Verbindung gepinnt und jede Umleitung geprüft."
+                },
+                "rateLimits": {
+                    "title": "Ratenbegrenzung",
+                    "body": "Ein gemeinsamer Postgres-Token-Bucket schützt sensible Endpunkte über Instanzen hinweg."
+                },
+                "audit": {
+                    "title": "Audit",
+                    "body": "Ein nur anfügbares Protokoll mit SHA-256-Hashkette und periodischen Prüfpunkten."
+                },
+                "supplyChain": {
+                    "title": "Lieferkette",
+                    "body": "Eingefrorene Lockdatei, Dependency Review, CodeQL, Scorecard, SBOM und signierte Releases."
+                }
+            },
+            "reporting": "Bitte privat über GitHub Security Advisories melden.",
+            "docsLink": "Sicherheitsleitfaden lesen"
+        },
+        "about": {
+            "tagline": "Das selbst gehostete Arbeitsbereich-Betriebssystem",
+            "title": "Über General Portal",
+            "story1": "General Portal begann als Portal für zwei Organisationen und wurde zu einer allgemeinen Plattform für jedes Team.",
+            "story2": "Sie besitzen Deployment, Daten und Branding. Kein externes CDN nötig.",
+            "factsTitle": "Fakten",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "Selbst gehostet auf Ihrem eigenen Postgres",
+                "fonts": "Selbst gehostete Schriften, kein CDN"
+            }
+        },
+        "docs": {
+            "title": "Dokumentation",
+            "subtitle": "Alles, was Sie zum Konfigurieren, Bereitstellen und Betreiben brauchen.",
+            "guidesTitle": "Anleitungen",
+            "guides": {
+                "readme": "README",
+                "architecture": "Architektur",
+                "deployment": "Bereitstellung",
+                "auth": "Authentifizierung",
+                "security": "Sicherheit",
+                "i18n": "Internationalisierung",
+                "tui": "Betreiberkonsole",
+                "api": "API-Referenz",
+                "runbook": "Runbook"
+            },
+            "apiTitle": "API-Referenzen",
+            "publicApi": "Öffentliche API-Beschreibung",
+            "operatorApi": "Operator-API-Beschreibung"
+        },
+        "demo": {
+            "banner": "Schreibgeschützte Vorschau. Echte Arbeitsbereiche erfordern Anmeldung.",
+            "title": "Arbeitsbereich ansehen",
+            "subtitle": "Eine statische Vorschau der enthaltenen Module.",
+            "gated": "Melden Sie sich an, um den echten Arbeitsbereich zu nutzen.",
+            "cards": {
+                "tasks": {
+                    "title": "Aufgaben",
+                    "rows": {
+                        "1": "Quartalsplan vorbereiten",
+                        "2": "Jahresbudget prüfen",
+                        "3": "Veranstaltungsrückblick veröffentlichen"
+                    }
+                },
+                "proposals": {
+                    "title": "Anträge",
+                    "rows": {
+                        "1": "Neue Workshop-Reihe",
+                        "2": "Community-Partnerschaft"
+                    }
+                },
+                "members": {
+                    "title": "Mitglieder",
+                    "rows": {
+                        "1": "Administrator",
+                        "2": "Funktionär",
+                        "3": "Mitglied"
+                    }
+                }
+            }
+        }
+    },
+    "myWork": {
+        "title": "Meine Arbeit",
+        "subtitle": "Alles, was Ihnen zugewiesen ist, an einem Ort.",
+        "customize": "Anpassen",
+        "done": "Fertig",
+        "show": "Anzeigen",
+        "hide": "Ausblenden",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "widget": {
+            "tasks": "Meine Aufgaben",
+            "events": "Anstehende Veranstaltungen",
+            "proposals": "Offene Anträge",
+            "approvals": "Freigaben",
+            "dues": "Meine Beiträge",
+            "polls": "Offene Umfragen",
+            "rsvps": "Meine Zusagen",
+            "kudos": "Aktuelle Kudos"
+        }
+    },
+    "invitations": {
+        "title": "Einladungen",
+        "description": "Laden Sie Personen mit einem ablaufenden Link in diesen Arbeitsbereich ein.",
+        "forbidden": "Sie haben keine Berechtigung, Einladungen zu verwalten.",
+        "createInvitation": "Einladung erstellen",
+        "noInvitations": "Keine offenen Einladungen.",
+        "expiresAt": "Läuft ab",
+        "revoke": "Widerrufen",
+        "revokeWarning": "Diese Einladung widerrufen? Der Link funktioniert sofort nicht mehr.",
+        "role": "Rolle",
+        "roleAdmin": "Administrator",
+        "roleOfficer": "Funktionär",
+        "roleMember": "Mitglied",
+        "expiresInDays": "Gültig für Tage",
+        "invite": "Einladung senden",
+        "tokenTitle": "Einladungslink",
+        "tokenNotice": "Kopieren Sie diesen Link jetzt. Er wird nicht erneut angezeigt.",
+        "copyToken": "Link kopieren"
+    },
+    "onboarding": {
+        "title": "Arbeitsbereich einrichten",
+        "description": "Vier schnelle Schritte für Ihren Teamstart.",
+        "progressLabel": "Einrichtungsfortschritt",
+        "progressCount": "{completed} von {total} erledigt",
+        "done": "Erledigt",
+        "pending": "Ausstehend",
+        "passwordTitle": "Administrationspasswort festlegen",
+        "passwordDescription": "Schützen Sie Ihr Konto mit einem starken Passwort.",
+        "passwordAction": "Kontoeinstellungen öffnen",
+        "brandTitle": "Arbeitsbereich gestalten",
+        "brandDescription": "Fügen Sie Name, Logo und Primärfarbe hinzu.",
+        "brandAction": "Einstellungen öffnen",
+        "inviteTitle": "Team einladen",
+        "inviteDescription": "Holen Sie Ihre Kollegen in den Arbeitsbereich.",
+        "inviteAction": "Einladungen öffnen",
+        "showcaseTitle": "Showcase veröffentlichen",
+        "showcaseDescription": "Veranstaltungen und Neuigkeiten öffentlich teilen.",
+        "showcaseAction": "Showcase-Verwaltung öffnen"
     }
 }
