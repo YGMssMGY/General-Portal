@@ -45,6 +45,7 @@ export const config = {
     rateLimitMax: Number(opt("RATE_LIMIT_MAX", "100")),
     authSecret: opt("AUTH_SECRET", ""),
     opsToken: opt("OPS_API_TOKEN"),
+    opsAdminToken: opt("OPS_ADMIN_TOKEN"),
     opsSecret: opt("OPS_SECRET", opt("AUTH_SECRET", "")),
     opsAllowedIps: opt("OPS_ALLOWED_IPS"),
     scimToken: opt("SCIM_TOKEN"),

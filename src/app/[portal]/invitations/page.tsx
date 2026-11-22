@@ -40,7 +40,7 @@ interface Invitation {
 }
 
 interface CreatedInvitation {
-    token: string;
+    token?: string;
     id: string;
     expiresAt: string;
 }
@@ -131,7 +131,7 @@ export default function InvitationsPage() {
     }
 
     async function copyToken() {
-        if (!created) return;
+        if (!created?.token) return;
         try {
             await navigator.clipboard.writeText(created.token);
             toast.success(tC("copied"));
@@ -336,26 +336,28 @@ export default function InvitationsPage() {
                             margin: 0,
                         }}
                     >
-                        {t("tokenNotice")}
+                        {created?.token ? t("tokenNotice") : t("emailedNotice")}
                     </p>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <code
-                            style={{
-                                flex: 1,
-                                minWidth: 0,
-                                overflowWrap: "anywhere",
-                                padding: "8px",
-                                background: "var(--color-bg-secondary)",
-                                borderRadius: "5px",
-                                fontSize: "12px",
-                            }}
-                        >
-                            {created?.token}
-                        </code>
-                        <Button size="sm" onClick={copyToken}>
-                            {t("copyToken")}
-                        </Button>
-                    </div>
+                    {created?.token && (
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <code
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    overflowWrap: "anywhere",
+                                    padding: "8px",
+                                    background: "var(--color-bg-secondary)",
+                                    borderRadius: "5px",
+                                    fontSize: "12px",
+                                }}
+                            >
+                                {created?.token}
+                            </code>
+                            <Button size="sm" onClick={copyToken}>
+                                {t("copyToken")}
+                            </Button>
+                        </div>
+                    )}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setCreated(null)}>
                             {tC("close")}

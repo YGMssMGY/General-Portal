@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import * as cheerio from "cheerio";
 import { ApiError, fail, handleRouteError, ok } from "@/lib/api";
+import { sensitiveLimitCheck } from "@/lib/rate-limit-guard";
 import { fetchSafe } from "@/lib/ssrf";
 import { requireTenant } from "@/lib/tenant";
 
@@ -18,6 +19,9 @@ function resolveImage(src: string | undefined, base: URL): string | null {
 export async function GET(request: NextRequest) {
     try {
         await requireTenant(request, {});
+        if (await sensitiveLimitCheck(request, "link-preview")) {
+            return fail("Too many requests", 429);
+        }
 
         const url = new URL(request.url).searchParams.get("url");
         if (!url) throw new ApiError("url query param is required", 400);

@@ -16,6 +16,8 @@ import {
     tasks,
 } from "@/db/schema";
 import { ApiError, handleRouteError, ok, parseBody } from "@/lib/api";
+import { writeAuditLog } from "@/lib/audit";
+import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
 
 const TRASH_ENTITIES = [
@@ -649,6 +651,14 @@ export async function POST(request: NextRequest) {
         }
         const restored = await restoreEntity(t.db, t.workspaceId, body.entityType, body.id);
         if (!restored) throw new ApiError("Item not found", 404);
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "restore",
+            entityType: body.entityType,
+            entityId: body.id,
+            metadata: { permanent: true },
+        });
         return ok({ restored: true });
     } catch (e) {
         return handleRouteError("POST /api/trash/restore", e);
@@ -662,6 +672,26 @@ export async function DELETE(request: NextRequest) {
         const body = await parseBody<EntityInput>(entitySchema as never, request);
         const deleted = await hardDeleteEntity(t.db, t.workspaceId, body.entityType, body.id);
         if (!deleted) throw new ApiError("Item not found", 404);
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "hard_delete",
+            entityType: body.entityType,
+            entityId: body.id,
+            metadata: { permanent: true },
+        });
+        await writeAuditLog(
+            {
+                workspaceId: t.workspaceId,
+                userId: t.userId,
+                action: "hard_delete",
+                entityType: body.entityType,
+                entityId: body.id,
+                metadata: { permanent: true },
+            },
+            t.db,
+            true,
+        );
         return ok({ deleted: true });
     } catch (e) {
         return handleRouteError("DELETE /api/trash", e);

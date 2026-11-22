@@ -43,7 +43,13 @@ export function authenticateOps(request: NextRequest): OpsAuthResult {
     const ip = clientIp(request);
     if (config.opsToken && equalSecret(token, config.opsToken)) {
         return {
-            ctx: { operatorId: "env-token", source: "api", scopes: ALL_SCOPES, ip },
+            ctx: { operatorId: "env-token", source: "api", scopes: ["ops:read"], ip },
+            error: null,
+        };
+    }
+    if (config.opsAdminToken && equalSecret(token, config.opsAdminToken)) {
+        return {
+            ctx: { operatorId: "env-admin-token", source: "api", scopes: ALL_SCOPES, ip },
             error: null,
         };
     }

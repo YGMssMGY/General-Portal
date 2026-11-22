@@ -7,7 +7,7 @@ import { ApiError, clientIp, fail, handleRouteError, parseBody } from "@/lib/api
 import { hashPassword } from "@/lib/auth/passwords";
 import { emailAllowed, getPortalAuthConfig } from "@/lib/auth/providers";
 import { AccessDenied, createSessionForUser, sessionJsonResponse } from "@/lib/auth/session";
-import { resolvePortalSlug, sha256Hex } from "@/lib/tenant";
+import { getSession, resolvePortalSlug, sha256Hex } from "@/lib/tenant";
 
 const GENERIC = "This invitation is invalid or has expired";
 
@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
             throw new ApiError(GENERIC, 400);
         }
         const email = invitation.email.trim().toLowerCase();
+        const session = await getSession(request);
+        if (!session || (session.user.email ?? "").trim().toLowerCase() !== email) {
+            return fail(GENERIC, 403);
+        }
         if (!emailAllowed(email, getPortalAuthConfig(portal).allowedDomains)) {
             throw new ApiError(GENERIC, 400);
         }

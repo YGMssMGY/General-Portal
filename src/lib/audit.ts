@@ -38,7 +38,11 @@ function hashEntry(
         .digest("hex");
 }
 
-export async function writeAuditLog(params: AuditLogParams, db: PortalDb): Promise<void> {
+export async function writeAuditLog(
+    params: AuditLogParams,
+    db: PortalDb,
+    strict = false,
+): Promise<void> {
     const lock = createHash("sha256").update(params.workspaceId).digest();
     const lockA = lock.readInt32BE(0);
     const lockB = lock.readInt32BE(4);
@@ -79,6 +83,7 @@ export async function writeAuditLog(params: AuditLogParams, db: PortalDb): Promi
         });
     } catch (err) {
         logger.error({ err, workspaceId: params.workspaceId }, "audit write failed");
+        if (strict) throw err;
     }
 }
 
