@@ -96,6 +96,28 @@ export const roles = pgTable(
     ],
 );
 
+export const invitations = pgTable(
+    "invitations",
+    {
+        id: id(),
+        workspaceId: uuid("workspaceId")
+            .notNull()
+            .references(() => workspaces.id, { onDelete: "cascade" }),
+        email: text("email").notNull(),
+        roleName: text("roleName").notNull().default("member"),
+        tokenHash: text("tokenHash").notNull(),
+        invitedById: uuid("invitedById").references(() => users.id),
+        expiresAt: ts("expiresAt"),
+        acceptedAt: tsOpt("acceptedAt"),
+        revokedAt: tsOpt("revokedAt"),
+        createdAt: ts("createdAt"),
+    },
+    (t) => [
+        uniqueIndex("invitations_token_uidx").on(t.tokenHash),
+        index("invitations_ws_idx").on(t.workspaceId),
+    ],
+);
+
 export const memberships = pgTable(
     "memberships",
     {
