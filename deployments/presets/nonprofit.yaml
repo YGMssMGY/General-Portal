@@ -1,0 +1,98 @@
+version: 1
+deployment:
+    id: nonprofit-portal
+    environment: production
+    baseUrl: https://nonprofit.example.com
+defaults:
+    locale: en-US
+    timezone: America/Denver
+    theme:
+        primary: "#0f766e"
+        radius: 6
+portals:
+    - slug: nonprofit
+      name: Community Nonprofit
+      category: nonprofit
+      description: A shared workspace for service programs, grants, volunteers, donors, and community events.
+      branding:
+          logo: /nonprofit.png
+          favicon: /nonprofit.png
+          primary: "#0f766e"
+      db:
+          envVar: DATABASE_URL_NONPROFIT
+      auth:
+          providers: [password, passkey]
+          allowedDomains: []
+      modules:
+          [
+              dashboard,
+              onboarding,
+              invitations,
+              tasks,
+              events,
+              volunteers,
+              members,
+              files,
+              meetings,
+              messages,
+              finance,
+              activity,
+              subgroups,
+              settings,
+              notifications,
+              reports,
+              search,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /onboarding
+            label: Setup
+            icon: list-checks
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: mail
+            module: invitations
+          - path: /events
+            label: Service Events
+            icon: calendar
+            module: events
+          - path: /volunteers
+            label: Volunteers
+            icon: hand-heart
+            module: volunteers
+          - path: /members
+            label: Members
+            icon: users
+            module: members
+          - path: /tasks
+            label: Tasks
+            icon: list-todo
+            module: tasks
+          - path: /finance
+            label: Grants and Donations
+            icon: wallet
+            module: finance
+          - path: /reports
+            label: Reports
+            icon: chart-column
+            module: reports
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+      terminology:
+          subgroup: Program
+          academicYear: Program Year
+          member: Volunteer
+          event: Service Event
+      roles: [admin, officer, member]
+      seedPack: nonprofit_default
+      limits:
+          uploadMb: 25
+          requestsPerMinute: 150
+          auditRetentionDays: 1825
+      features: [volunteer_hours, attendance, reports, custom_fields]

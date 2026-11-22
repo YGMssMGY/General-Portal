@@ -1,0 +1,96 @@
+version: 1
+deployment:
+    id: firm-portal
+    environment: production
+    baseUrl: https://firm.example.com
+defaults:
+    locale: en-US
+    timezone: America/Chicago
+    theme:
+        primary: "#1e3a5f"
+        radius: 4
+portals:
+    - slug: firm
+      name: Professional Firm
+      category: business
+      description: A secure workspace for client engagements, document review, meetings, and internal operations.
+      branding:
+          logo: /firm.png
+          favicon: /firm.png
+          primary: "#1e3a5f"
+      db:
+          envVar: DATABASE_URL_FIRM
+      auth:
+          providers: [password, passkey]
+          allowedDomains: []
+      modules:
+          [
+              dashboard,
+              onboarding,
+              invitations,
+              tasks,
+              meetings,
+              messages,
+              files,
+              members,
+              finance,
+              activity,
+              settings,
+              notifications,
+              my_work,
+              budget,
+              search,
+          ]
+      nav:
+          - path: /dashboard
+            label: Dashboard
+            icon: layout-dashboard
+            module: dashboard
+          - path: /onboarding
+            label: Setup
+            icon: list-checks
+            module: onboarding
+          - path: /invitations
+            label: Invitations
+            icon: mail
+            module: invitations
+          - path: /my-work
+            label: My Work
+            icon: clipboard-list
+            module: my_work
+          - path: /tasks
+            label: Assignments
+            icon: list-todo
+            module: tasks
+          - path: /meetings
+            label: Meetings
+            icon: video
+            module: meetings
+          - path: /files
+            label: Documents
+            icon: folder
+            module: files
+          - path: /members
+            label: Personnel
+            icon: users
+            module: members
+          - path: /budget
+            label: Budget
+            icon: piggy-bank
+            module: budget
+          - path: /settings
+            label: Settings
+            icon: settings
+            module: settings
+      terminology:
+          subgroup: Practice Group
+          academicYear: Fiscal Year
+          member: Colleague
+          event: Engagement
+      roles: [admin, officer, member]
+      seedPack: firm_default
+      limits:
+          uploadMb: 50
+          requestsPerMinute: 200
+          auditRetentionDays: 1095
+      features: [meeting_minutes, time_tracking, reports, custom_fields, webhooks]

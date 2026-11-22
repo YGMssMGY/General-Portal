@@ -12,7 +12,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        return await handleOidcCallbackGet(request, "basis-auth");
+        const form = await request.formData();
+        const url = new URL(request.url);
+        for (const [key, value] of form.entries()) {
+            if (typeof value === "string") url.searchParams.set(key, value);
+        }
+        const formPostRequest = new NextRequest(url, {
+            method: "GET",
+            headers: request.headers,
+        });
+        return await handleOidcCallbackGet(formPostRequest, "basis-auth");
     } catch (e) {
         return handleRouteError("auth/bcallback", e);
     }

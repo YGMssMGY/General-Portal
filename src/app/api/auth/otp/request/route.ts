@@ -1,16 +1,17 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { emailOtps, memberships, users, workspaces } from "@/db/schema";
 import { config } from "@/config";
-import { ApiError, clientIp, handleRouteError, ok, parseBody } from "@/lib/api";
+import { ApiError, clientIp, fail, handleRouteError, ok, parseBody } from "@/lib/api";
 import { sendAuthMail } from "@/lib/auth/email";
 import { isProviderAllowed, unavailable } from "@/lib/auth/providers";
 import { checkRateLimit, rateKey } from "@/lib/auth/rate-limit";
 import { sha256Hex, resolvePortalSlug } from "@/lib/tenant";
 import { logger } from "@/lib/logger";
+import { sensitiveLimitCheck } from "@/lib/rate-limit-guard";
 
 const emailSchema = z.string().trim().min(3).max(320).toLowerCase().pipe(z.email());
 
@@ -23,7 +24,12 @@ export async function POST(request: NextRequest) {
     try {
         const body = await parseBody(requestSchema, request);
         const portal = resolvePortalSlug(request);
-        checkRateLimit(rateKey(clientIp(request), "email-otp"));
+        checkRateLimit(
+            rateKey(clientIp(request), "email-otp"),
+            Math.max(10, Math.floor(config.rateLimitMax / 10)),
+        );
+        const limited = await sensitiveLimitCheck(request, "email-otp");
+        if (limited) return fail("Too many requests", 429);
         if (!isProviderAllowed(portal, "email-otp")) throw new ApiError(unavailable, 503);
         const db = getDb(portal);
         const workspace = await db.query.workspaces.findFirst({
@@ -50,6 +56,7 @@ export async function POST(request: NextRequest) {
                     and(
                         eq(emailOtps.email, body.email),
                         eq(emailOtps.purpose, body.purpose),
+                        or(isNull(emailOtps.portal), eq(emailOtps.portal, portal)),
                         isNull(emailOtps.consumedAt),
                     ),
                 );

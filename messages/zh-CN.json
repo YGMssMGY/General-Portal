@@ -53,12 +53,9 @@
         "restoreDeleted": "恢复已删除的项目",
         "trash": "回收站",
         "permanentlyDelete": "永久删除",
-        "dangerZone": "危险操作区"
-    },
-    "app": {
-        "name": "General Portal",
-        "tagline": "学生组织的共享工作空间",
-        "description": "General Portal 是面向学校社团和学生组织的多租户协作平台，将提案、任务、活动、财务、志愿服务和成员管理整合于一处，安全便捷。"
+        "dangerZone": "危险操作区",
+        "breadcrumb": "面包屑导航",
+        "viewInFinance": "在财务中打开"
     },
     "landing": {
         "title": "General Portal",
@@ -99,7 +96,19 @@
         "dues": "会费",
         "assets": "资产",
         "kudos": "表彰",
-        "customFields": "自定义字段"
+        "customFields": "自定义字段",
+        "search": "搜索",
+        "budget": "预算",
+        "partnerships": "合作关系",
+        "myWork": "我的工作",
+        "onboarding": "设置",
+        "invitations": "邀请",
+        "analytics": "分析",
+        "approvals": "审批",
+        "import": "数据导入",
+        "usage": "使用量",
+        "digestPreview": "摘要预览",
+        "purchaseRequests": "采购申请"
     },
     "auth": {
         "signIn": "登录",
@@ -142,7 +151,8 @@
         "resetPassword": "重置密码",
         "resetSuccess": "密码已重置，请登录。",
         "backToSignIn": "返回登录",
-        "passwordTooShort": "至少使用 12 个字符。"
+        "passwordTooShort": "至少使用 12 个字符。",
+        "unavailable": "当前无法登录"
     },
     "dashboard": {
         "title": "仪表板",
@@ -193,7 +203,10 @@
         "dueToday": "今日截止",
         "deleteConfirm": "确定要删除此任务吗？",
         "markDone": "标记为已完成",
-        "markTodo": "标记为待处理"
+        "markTodo": "标记为待处理",
+        "sendComment": "发送评论",
+        "occurrences": "即将发生的重复事项",
+        "noOccurrences": "此时间范围内没有重复事项。"
     },
     "events": {
         "title": "活动",
@@ -416,7 +429,8 @@
         "statusScheduled": "已安排",
         "statusOngoing": "进行中",
         "statusCompleted": "已结束",
-        "statusCancelled": "已取消"
+        "statusCancelled": "已取消",
+        "noMinutes": "尚无会议纪要。"
     },
     "members": {
         "title": "成员",
@@ -483,7 +497,11 @@
         "uploadFailed": "上传失败。",
         "deleteFailed": "删除失败。",
         "downloading": "下载中",
-        "storagePath": "存储路径"
+        "storagePath": "存储路径",
+        "preview": "预览",
+        "selectAll": "全选",
+        "bulkDelete": "删除所选",
+        "bulkDeleteForever": "永久删除所选"
     },
     "links": {
         "title": "链接",
@@ -569,7 +587,10 @@
         "moduleDisabled": "模块已禁用",
         "terminology": "术语",
         "terminologyHint": "重命名模块，以符合贵组织的惯用名称。",
-        "reset": "重置"
+        "reset": "重置",
+        "radius": "圆角",
+        "preview": "预览",
+        "invalidTerminology": "术语必须是文本值的 JSON 对象。"
     },
     "search": {
         "title": "搜索",
@@ -665,7 +686,10 @@
         "noWebhooks": "暂无网络钩子。",
         "testWebhook": "测试网络钩子",
         "testSuccess": "测试已成功发送。",
-        "noSecret": "未配置密钥。"
+        "noSecret": "未配置密钥。",
+        "replay": "重放",
+        "replaySuccess": "已为 {event} 排队重放。",
+        "replayFailed": "重放失败"
     },
     "apiTokens": {
         "title": "API 令牌",
@@ -680,20 +704,6 @@
         "revoke": "吊销",
         "noTokens": "暂无 API 令牌。",
         "tokenShownOnce": "此令牌仅显示一次。"
-    },
-    "audit": {
-        "title": "审计日志",
-        "action": "操作",
-        "entityType": "实体类型",
-        "entityId": "实体 ID",
-        "performedBy": "操作人",
-        "timestamp": "时间戳",
-        "ipAddress": "IP 地址",
-        "noLogs": "暂无审计日志。",
-        "export": "导出",
-        "verifyIntegrity": "验证完整性",
-        "integrityOk": "完整性验证通过。",
-        "integrityFailed": "完整性验证失败。"
     },
     "sessions": {
         "title": "我的会话",
@@ -836,40 +846,6 @@
         "conflict": "此操作与现有数据冲突。",
         "moduleDisabled": "此模块已在此工作区停用。"
     },
-    "validation": {
-        "required": "此项为必填。",
-        "tooShort": "长度不得少于 {min} 个字符。",
-        "tooLong": "长度不得超过 {max} 个字符。",
-        "invalidEmail": "请输入有效的电子邮箱地址。",
-        "invalidUrl": "请输入有效的 URL。",
-        "invalidDate": "请输入有效的日期。",
-        "invalidNumber": "请输入有效的数字。",
-        "mustBePositive": "必须大于零。",
-        "invalidOption": "请选择有效的选项。"
-    },
-    "tui": {
-        "title": "终端",
-        "mainMenu": "主菜单",
-        "sites": "站点",
-        "addSite": "添加站点",
-        "removeSite": "移除站点",
-        "migrate": "迁移",
-        "backup": "备份",
-        "jobs": "任务",
-        "health": "健康状态",
-        "logs": "日志",
-        "danger": "危险操作",
-        "quit": "退出",
-        "selectOption": "请选择操作",
-        "confirmDeletion": "确认删除",
-        "typeSlugToConfirm": "输入 {slug} 以确认",
-        "backupCreated": "备份已创建。",
-        "siteAdded": "站点已添加。",
-        "siteRemoved": "站点已移除。",
-        "migrationComplete": "迁移完成。",
-        "yes": "是",
-        "no": "否"
-    },
     "productivity": {
         "blocked": "已阻塞",
         "blockedBy": "被 {title} 阻塞",
@@ -928,6 +904,502 @@
         "noViews": "暂无已保存视图",
         "invalidJson": "筛选条件必须是有效的 JSON 对象。",
         "sharedWithYou": "与您共享",
-        "filtersJson": "筛选条件 (JSON)"
+        "filtersJson": "筛选条件 (JSON)",
+        "apply": "应用",
+        "share": "分享",
+        "revoke": "撤销",
+        "shareLink": "分享链接",
+        "revoked": "分享链接已撤销。"
+    },
+    "marketing": {
+        "useCases": {
+            "title": "选择你的工作空间",
+            "subtitle": "一个平台，为各类组织量身打造。",
+            "clubs": {
+                "title": "社团与学生组织",
+                "description": "在一个地方管理项目、活动、预算与选举。"
+            },
+            "firms": {
+                "title": "小型企业与团队",
+                "description": "审批、文件、财务与客户工作，不再工具泛滥。"
+            },
+            "agencies": {
+                "title": "机构与大型组织",
+                "description": "十到五十个隔离工作空间，集中治理。"
+            }
+        },
+        "useCase": {
+            "benefitsTitle": "你会得到",
+            "clubs": {
+                "title": "为社团打造",
+                "intro": "从招新到年度规划，一切都在同一工作空间。",
+                "benefits": {
+                    "1": "每个工作空间独立数据库",
+                    "2": "九种登录方式",
+                    "3": "YAML 驱动配置",
+                    "4": "开箱即用五种语言"
+                }
+            },
+            "firms": {
+                "title": "为团队打造",
+                "intro": "让决策、支出与交付物既可审计又高效。",
+                "benefits": {
+                    "1": "40 多个内置模块",
+                    "2": "基于权限的访问控制",
+                    "3": "防篡改审计日志",
+                    "4": "流式验证的文件上传"
+                }
+            },
+            "agencies": {
+                "title": "为机构打造",
+                "intro": "隔离每个客户，同时保持单一部署与统一审计。",
+                "benefits": {
+                    "1": "每次部署十到五十个工作空间",
+                    "2": "每个工作空间可视化品牌",
+                    "3": "定时加密备份",
+                    "4": "面向智能体的运维 API"
+                }
+            }
+        },
+        "links": {
+            "label": "探索",
+            "features": "功能",
+            "demo": "在线演示"
+        },
+        "changelog": {
+            "title": "更新日志",
+            "empty": "暂无更新日志。"
+        },
+        "roadmap": {
+            "title": "路线图",
+            "subtitle": "接下来要发布的内容。",
+            "columns": {
+                "now": "现在",
+                "next": "下一步",
+                "later": "以后",
+                "done": "已完成"
+            },
+            "items": {
+                "presets": "工作空间预设",
+                "demo": "只读演示模式",
+                "sdk": "类型化 SDK 与 CLI",
+                "analytics": "分析中心",
+                "backups": "定时加密备份",
+                "scim": "SCIM 配置",
+                "presence": "在线状态",
+                "badges": "参与徽章"
+            }
+        },
+        "security": {
+            "title": "安全",
+            "subtitle": "General Portal 如何保护你的数据。",
+            "topics": {
+                "transport": {
+                    "title": "传输",
+                    "body": "生产环境强制 HTTPS、HSTS、基于 nonce 的 CSP 与安全头。"
+                },
+                "authn": {
+                    "title": "身份认证",
+                    "body": "不透明会话支持轮换与即时撤销，并提供九种登录方式与通行密钥。"
+                },
+                "authz": {
+                    "title": "授权",
+                    "body": "每个路由都要求租户上下文；每次变更都检查权限与对象归属。"
+                },
+                "uploads": {
+                    "title": "上传",
+                    "body": "魔数嗅探、流式大小限制、校验和与仅附件下载。"
+                },
+                "ssrf": {
+                    "title": "SSRF",
+                    "body": "不可信 URL 解析到已验证 IP，固定连接并重新验证每次重定向。"
+                },
+                "rateLimits": {
+                    "title": "速率限制",
+                    "body": "共享的 Postgres 令牌桶跨实例保护敏感端点。"
+                },
+                "audit": {
+                    "title": "审计",
+                    "body": "仅追加日志，带 SHA-256 哈希链与周期性检查点。"
+                },
+                "supplyChain": {
+                    "title": "供应链",
+                    "body": "锁定依赖文件、依赖审查、CodeQL、Scorecard、SBOM 与签名发布。"
+                }
+            },
+            "reporting": "请通过 GitHub 安全公告私下报告。",
+            "docsLink": "阅读安全指南"
+        },
+        "about": {
+            "tagline": "自托管的工作空间操作系统",
+            "title": "关于 General Portal",
+            "story1": "General Portal 始于两个组织的门户，现已成长为适用于任何团队的通用平台。",
+            "story2": "部署、数据与品牌都由你掌控，无需外部 CDN。",
+            "factsTitle": "事实",
+            "facts": {
+                "license": "GPL-3.0-or-later",
+                "selfHosted": "自托管于你自己的 Postgres",
+                "fonts": "自托管字体，无 CDN"
+            }
+        },
+        "docs": {
+            "title": "文档",
+            "subtitle": "配置、部署与运维工作空间所需的一切。",
+            "guidesTitle": "指南",
+            "guides": {
+                "readme": "README",
+                "architecture": "架构",
+                "deployment": "部署",
+                "auth": "身份认证",
+                "security": "安全",
+                "i18n": "国际化",
+                "tui": "运维控制台",
+                "api": "API 参考",
+                "runbook": "运维手册",
+                "sdk": "SDK 指南",
+                "features": "功能指南"
+            },
+            "apiTitle": "API 参考",
+            "publicApi": "公开 API 描述",
+            "operatorApi": "运维 API 描述"
+        },
+        "demo": {
+            "banner": "只读预览。真实工作空间需要登录。",
+            "title": "查看工作空间",
+            "subtitle": "你将获得的模块的静态预览。",
+            "gated": "登录以使用真实工作空间。",
+            "cards": {
+                "tasks": {
+                    "title": "任务",
+                    "rows": {
+                        "1": "准备季度计划",
+                        "2": "审核年度预算",
+                        "3": "发布活动回顾"
+                    }
+                },
+                "proposals": {
+                    "title": "提案",
+                    "rows": {
+                        "1": "新工作坊系列",
+                        "2": "社区合作"
+                    }
+                },
+                "members": {
+                    "title": "成员",
+                    "rows": {
+                        "1": "管理员",
+                        "2": "干事",
+                        "3": "成员"
+                    }
+                }
+            }
+        },
+        "compare": {
+            "title": "为什么选择 General Portal",
+            "subtitle": "一个工作空间，覆盖组织运营的方方面面。",
+            "selfHostedTitle": "原生支持自托管",
+            "selfHostedBody": "部署、数据和品牌均由您掌控，无需依赖外部服务。"
+        },
+        "features": {
+            "title": "为整个组织而构建",
+            "subtitle": "团队所需的一切，尽在一处。",
+            "modulesTitle": "协同工作的模块",
+            "modulesBody": "项目、活动、财务与沟通共享统一的权限模型和审计记录。"
+        }
+    },
+    "myWork": {
+        "title": "我的工作",
+        "subtitle": "所有分配给你的工作，一目了然。",
+        "customize": "自定义",
+        "done": "完成",
+        "show": "显示",
+        "hide": "隐藏",
+        "moveUp": "上移",
+        "moveDown": "下移",
+        "widget": {
+            "tasks": "我的任务",
+            "events": "近期活动",
+            "proposals": "待审提案",
+            "approvals": "审批",
+            "dues": "我的会费",
+            "polls": "进行中的投票",
+            "rsvps": "我的报名",
+            "kudos": "最近表彰"
+        }
+    },
+    "invitations": {
+        "title": "邀请",
+        "description": "通过有时效的链接邀请成员加入工作空间。",
+        "forbidden": "你没有管理邀请的权限。",
+        "createInvitation": "创建邀请",
+        "noInvitations": "暂无待处理邀请。",
+        "expiresAt": "到期时间",
+        "revoke": "撤销",
+        "revokeWarning": "撤销此邀请？链接将立即失效。",
+        "role": "角色",
+        "roleAdmin": "管理员",
+        "roleOfficer": "干事",
+        "roleMember": "成员",
+        "expiresInDays": "有效天数",
+        "invite": "发送邀请",
+        "tokenTitle": "邀请链接",
+        "tokenNotice": "立即复制此链接，之后将不再显示。",
+        "copyToken": "复制链接",
+        "emailedNotice": "邀请链接已通过邮件发送给受邀人。"
+    },
+    "onboarding": {
+        "title": "设置你的工作空间",
+        "description": "四个简单步骤，让团队快速上手。",
+        "progressLabel": "设置进度",
+        "progressCount": "已完成 {completed} / {total}",
+        "done": "已完成",
+        "pending": "待完成",
+        "passwordTitle": "设置管理员密码",
+        "passwordDescription": "使用强密码保护你的账户。",
+        "passwordAction": "打开账户设置",
+        "brandTitle": "设置工作空间品牌",
+        "brandDescription": "添加名称、徽标与主色。",
+        "brandAction": "打开设置",
+        "inviteTitle": "邀请团队成员",
+        "inviteDescription": "邀请同事加入工作空间。",
+        "inviteAction": "打开邀请",
+        "showcaseTitle": "发布展示页",
+        "showcaseDescription": "向公众分享活动与动态。",
+        "showcaseAction": "打开展示管理"
+    },
+    "permissions": {
+        "title": "权限矩阵",
+        "permission": "权限",
+        "updateSuccess": "权限已更新"
+    },
+    "analytics": {
+        "title": "分析",
+        "range30": "最近 30 天",
+        "range90": "最近 90 天",
+        "range365": "最近一年",
+        "tasksCreated": "已创建任务",
+        "tasksCompleted": "已完成任务",
+        "events": "活动",
+        "members": "成员",
+        "participation": "参与度",
+        "attendanceRate": "出勤率",
+        "tasksTrend": "任务趋势",
+        "eventsTrend": "活动趋势",
+        "membersTrend": "成员增长",
+        "financeTrend": "财务趋势",
+        "noData": "此期间无数据",
+        "created": "已创建",
+        "completed": "已完成",
+        "income": "收入",
+        "expense": "支出",
+        "net": "净额",
+        "cents": "金额以整数分存储。"
+    },
+    "status": {
+        "title": "公开状态",
+        "portals": "工作空间",
+        "name": "名称",
+        "slug": "标识",
+        "configured": "已配置",
+        "notConfigured": "未配置",
+        "migrations": "迁移",
+        "yes": "是",
+        "queues": "任务队列",
+        "state": "状态",
+        "count": "数量",
+        "unavailable": "不可用",
+        "storageNote": "上传的文件存储在服务器本地。"
+    },
+    "apiPlayground": {
+        "title": "API 调试台",
+        "method": "方法",
+        "endpoint": "端点",
+        "body": "JSON 正文",
+        "bodyHint": "可选的请求正文（JSON）",
+        "send": "发送请求",
+        "running": "执行中",
+        "response": "响应",
+        "empty": "暂无响应"
+    },
+    "workflowBuilder": {
+        "title": "工作流构建器",
+        "newWorkflow": "新建工作流",
+        "stages": "阶段",
+        "stage": "阶段",
+        "slaHours": "SLA 小时",
+        "moveUp": "上移",
+        "moveDown": "下移",
+        "removeStage": "移除阶段",
+        "addStage": "添加阶段",
+        "maxStages": "最多 {count} 个阶段",
+        "advanced": "高级",
+        "advancedHint": "可选的每阶段审批人与升级字段（JSON）",
+        "created": "工作流已创建",
+        "deleted": "工作流已删除",
+        "deleteTitle": "删除工作流",
+        "deleteDescription": "删除 {name}？此操作无法撤销。",
+        "noWorkflows": "未配置工作流",
+        "stageCount": "{count} 个阶段"
+    },
+    "badges": {
+        "title": "徽章",
+        "subtitle": "通过参与获得的里程碑",
+        "firstTask": "首个任务",
+        "firstTaskDesc": "完成你的首个任务",
+        "eventGoer": "活动参与者",
+        "eventGoerDesc": "参加三场活动",
+        "volunteer": "志愿者",
+        "volunteerDesc": "报名参与志愿服务",
+        "kudosStar": "表彰之星",
+        "kudosStarDesc": "收到五次表彰",
+        "streak": "连续参与",
+        "streakDesc": "在三个周期中保持活跃",
+        "top10": "前十名",
+        "top10Desc": "进入参与度前十",
+        "noBadges": "暂无徽章",
+        "progress": "{current} / {target}",
+        "earnedOn": "获得于 {date}",
+        "notEarned": "尚未获得"
+    },
+    "presence": {
+        "onlineNow": "当前 {count} 人在线",
+        "noOneOnline": "暂无在线成员",
+        "lastSeen": "最后在线 {time}"
+    },
+    "translations": {
+        "title": "翻译审核",
+        "subtitle": "各语言缺失的键",
+        "complete": "所有语言均已完整",
+        "missing": "缺失",
+        "description": "各语言缺失的键",
+        "allComplete": "所有语言均已完整",
+        "locale": "语言",
+        "keys": "键",
+        "showingFirst": "显示前 {count} 项",
+        "contributing": "贡献指南"
+    },
+    "changelogDrawer": {
+        "title": "新功能",
+        "empty": "暂无发布说明",
+        "trigger": "发布说明",
+        "description": "发布亮点"
+    },
+    "scim": {
+        "notConfigured": "SCIM 未配置",
+        "unauthorized": "未授权",
+        "invalidRequest": "无效请求",
+        "invalidFilter": "无效筛选",
+        "notFound": "未找到",
+        "conflict": "冲突",
+        "internal": "内部错误"
+    },
+    "usage": {
+        "title": "使用量与配额",
+        "subtitle": "当前工作空间的资源消耗",
+        "storage": "文件存储",
+        "storageUsed": "{used} / {limit}",
+        "percentUsed": "已使用 {percent}%",
+        "seats": "成员",
+        "noLimit": "未配置限制",
+        "activeSessions": "活跃会话",
+        "pendingInvitations": "待处理邀请",
+        "activeTokens": "活跃 API 令牌",
+        "alerts": "警报",
+        "noAlerts": "没有配额警报",
+        "requestsPerMinute": "每分钟 {count} 次请求",
+        "auditRetentionDays": "{count} 天审计历史"
+    },
+    "slaInbox": {
+        "title": "审批收件箱",
+        "filterMine": "我的",
+        "filterOverdue": "已逾期",
+        "empty": "暂无待审批项",
+        "overdue": "已逾期",
+        "dueSoon": "即将到期",
+        "onTrack": "正常",
+        "noDueDate": "无截止日期",
+        "dueAt": "截止 {date}",
+        "stage": "第 {n} 阶段",
+        "assignedTo": "指派给 {name}",
+        "commentOptional": "可选备注",
+        "approve": "批准",
+        "reject": "拒绝",
+        "approveSuccess": "已批准",
+        "rejectSuccess": "已拒绝",
+        "typeEvent": "活动",
+        "typeProposal": "提案",
+        "typeTask": "任务",
+        "typeMeeting": "会议",
+        "typeOther": "其他"
+    },
+    "sharedView": {
+        "invalidLink": "此共享视图链接无效或已过期。",
+        "filters": "已保存的筛选",
+        "backToList": "返回视图列表"
+    },
+    "dataImport": {
+        "title": "数据导入",
+        "description": "从 CSV 文件导入最多 500 行。",
+        "entityType": "实体类型",
+        "entityTask": "任务",
+        "entityMember": "成员",
+        "entityTransaction": "交易",
+        "fileLabel": "CSV 文件",
+        "fileHint": "最大 2 MB，带表头的 UTF-8 文本。",
+        "upload": "导入文件",
+        "success": "导入完成",
+        "preview": "预览",
+        "noPreview": "没有可预览的行",
+        "result": "结果",
+        "inserted": "已插入",
+        "failed": "失败",
+        "row": "行",
+        "reason": "原因"
+    },
+    "digestPreview": {
+        "title": "摘要预览",
+        "channel": "渠道",
+        "generate": "生成预览",
+        "total": "未读通知",
+        "sample": "示例文本",
+        "empty": "此摘要没有可包含的内容",
+        "description": "选择渠道并预览邮件或站内摘要。",
+        "channelEmail": "邮件",
+        "channelInApp": "站内",
+        "digest": "摘要频率",
+        "digestNever": "从不",
+        "digestDaily": "每日",
+        "digestWeekly": "每周",
+        "sampleHeading": "示例输出",
+        "totalUnread": "{total} 条未读通知",
+        "groupsHeading": "包含的分类",
+        "openPreferences": "打开通知偏好"
+    },
+    "comments": {
+        "title": "评论",
+        "empty": "尚无评论。",
+        "placeholder": "写下评论",
+        "add": "添加"
+    },
+    "linkPreview": {
+        "loading": "正在加载预览",
+        "alt": "链接预览"
+    },
+    "sidebar": {
+        "toggle": "切换侧边栏",
+        "expand": "展开侧边栏",
+        "collapse": "收起侧边栏",
+        "displaysMobile": "在移动设备上显示",
+        "language": "语言"
+    },
+    "pagination": {
+        "previous": "上一页",
+        "next": "下一页",
+        "previousAria": "转到上一页",
+        "nextAria": "转到下一页",
+        "morePages": "更多页面"
+    },
+    "commandPalette": {
+        "title": "命令面板"
     }
 }

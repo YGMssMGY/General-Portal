@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { budgetAllocations, budgetTransactions } from "@/db/schema";
+import { budgetTransactions } from "@/db/schema";
 import { ApiError, clientIp, handleRouteError, ok, parseBody, requireUuid } from "@/lib/api";
 import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
@@ -32,19 +32,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (cents <= 0) throw new ApiError("A positive amount is required", 400);
 
         const budgetTx = await t.db.transaction(async (tx) => {
-            const alloc = await tx.query.budgetAllocations.findFirst({
-                where: and(
-                    eq(budgetAllocations.id, id),
-                    eq(budgetAllocations.workspaceId, t.workspaceId),
-                    isNull(budgetAllocations.deletedAt),
-                ),
-            });
-            if (!alloc) throw new ApiError("Budget allocation not found", 404);
-            if (alloc.spentCents + cents > alloc.amountCents) {
-                throw new ApiError(
-                    `Insufficient remaining budget. Available: ${((alloc.amountCents - alloc.spentCents) / 100).toFixed(2)}`,
-                    400,
-                );
+            const res = await tx.execute(sql`
+                UPDATE "budget_allocations"
+                SET "spentCents" = "spentCents" + ${cents}, "updatedAt" = now()
+                WHERE "id" = ${id}
+                  AND "workspaceId" = ${t.workspaceId}
+                  AND "deletedAt" IS NULL
+                  AND "spentCents" + ${cents} <= "amountCents"
+                RETURNING "id"
+            `);
+            if (!res.rowCount) {
+                throw new ApiError("Insufficient remaining budget or allocation not found", 400);
             }
             const [bt] = await tx
                 .insert(budgetTransactions)
@@ -57,10 +55,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     decidedById: t.userId,
                 })
                 .returning();
-            await tx
-                .update(budgetAllocations)
-                .set({ spentCents: alloc.spentCents + cents, updatedAt: new Date() })
-                .where(eq(budgetAllocations.id, id));
             return bt;
         });
 

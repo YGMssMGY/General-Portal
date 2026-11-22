@@ -78,6 +78,12 @@ interface KudosItem {
 
 const ALL_WIDGETS = ["tasks", "events", "proposals", "activity", "kudos", "participation"] as const;
 
+const ROLE_WIDGETS: Record<string, string[]> = {
+    admin: ["activity", "tasks", "events", "proposals", "kudos", "participation"],
+    officer: ["tasks", "events", "proposals", "activity", "kudos", "participation"],
+    member: ["tasks", "events", "kudos", "participation", "proposals", "activity"],
+};
+
 function currentMonth(): string {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -134,9 +140,10 @@ export default function DashboardPage() {
         },
     });
 
+    const defaultWidgets = ROLE_WIDGETS[user?.role ?? ""] ?? [...ALL_WIDGETS];
     const visible = prefs
         ? prefs.widgets.filter((w): w is string => (ALL_WIDGETS as readonly string[]).includes(w))
-        : [...ALL_WIDGETS];
+        : defaultWidgets;
     const visibleSet = new Set(visible.length > 0 ? visible : [...ALL_WIDGETS]);
     const ordered = (visible.length > 0 ? visible : [...ALL_WIDGETS]).filter((w) =>
         (ALL_WIDGETS as readonly string[]).includes(w),

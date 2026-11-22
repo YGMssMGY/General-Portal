@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a new capability or improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+    - type: markdown
+      attributes:
+          value: Describe the problem first, then the change you would like to see.
+    - type: textarea
+      id: problem
+      attributes:
+          label: Problem
+          description: What problem does this solve, and who is affected?
+      validations:
+          required: true
+    - type: textarea
+      id: proposal
+      attributes:
+          label: Proposed solution
+          description: Describe the behavior you want. Include API or UI details where relevant.
+      validations:
+          required: true
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: Alternatives considered
+          description: Which other approaches did you consider, and why were they rejected?
+    - type: textarea
+      id: scope
+      attributes:
+          label: Scope and impact
+          description: Which modules, portals, or roles are affected? Does this change the database schema or API contracts?
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Checks
+          options:
+              - label: I searched existing issues and discussions for a similar request.
+                required: true
+              - label: I understand this project is licensed GPL-3.0-or-later and requires all five locales for new UI strings.
+                required: false

@@ -293,9 +293,11 @@ export default function SubgroupsPage() {
                                                         {tB("send")}
                                                     </Button>
                                                 )}
-                                                <Link href={`/${portal}/subgroups/${group.id}`}>
-                                                    <Button size="sm">{t("join")}</Button>
-                                                </Link>
+                                                <Button asChild size="sm">
+                                                    <Link href={`/${portal}/subgroups/${group.id}`}>
+                                                        {t("join")}
+                                                    </Link>
+                                                </Button>
                                             </span>
                                         </div>
                                     </div>

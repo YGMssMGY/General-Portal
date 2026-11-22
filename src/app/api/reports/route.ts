@@ -9,12 +9,14 @@ import {
     ApiError,
     decodeCursorValues,
     encodeCursorValues,
+    fail,
     handleRouteError,
     keysetWhere,
     ok,
     parseBody,
     parsePagination,
 } from "@/lib/api";
+import { isFeatureEnabled } from "@/lib/deployment";
 import { publishReport } from "@/lib/jobs/reports";
 import { logger } from "@/lib/logger";
 import { requireTenant } from "@/lib/tenant";
@@ -53,9 +55,11 @@ function parseRange(body: CreateReportInput): { from: Date | null; to: Date | nu
 export async function GET(request: NextRequest) {
     try {
         const t = await requireTenant(request, { permission: "view_reports", module: "members" });
+        if (!isFeatureEnabled(t.portal, "reports")) return fail("Forbidden", 403);
         const params = new URL(request.url).searchParams;
         const downloadId = params.get("download");
         if (downloadId) {
+            if (!t.permissions.includes("export_data")) return fail("Forbidden", 403);
             const row = await t.db.query.reports.findFirst({
                 where: and(eq(reports.id, downloadId), eq(reports.workspaceId, t.workspaceId)),
             });
@@ -118,6 +122,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const t = await requireTenant(request, { permission: "manage_reports", module: "members" });
+        if (!isFeatureEnabled(t.portal, "reports")) return fail("Forbidden", 403);
         const body = await parseBody<CreateReportInput>(createReportSchema as never, request);
         const { from, to } = parseRange(body);
 

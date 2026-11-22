@@ -1,6 +1,6 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { NextRequest } from "next/server";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { attendance, events, meetings } from "@/db/schema";
 import {
@@ -14,6 +14,7 @@ import {
     parseBody,
     parsePagination,
 } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { emitSideEffects } from "@/lib/side-effects";
 import { requireTenant } from "@/lib/tenant";
 
@@ -120,66 +121,42 @@ export async function POST(request: NextRequest) {
             if (!event) throw new ApiError("Event not found", 404);
         }
 
-        const target = hasMeeting
-            ? and(
-                  eq(attendance.workspaceId, t.workspaceId),
-                  eq(attendance.userId, t.userId),
-                  eq(attendance.meetingId, body.meetingId!),
-              )
-            : and(
-                  eq(attendance.workspaceId, t.workspaceId),
-                  eq(attendance.userId, t.userId),
-                  eq(attendance.eventId, body.eventId!),
-              );
-        const existing = await t.db.query.attendance.findFirst({ where: target });
         const now = new Date();
-
-        if (existing) {
-            const [[updated]] = await Promise.all([
-                t.db
-                    .update(attendance)
-                    .set({ status: "present", checkedInAt: now })
-                    .where(eq(attendance.id, existing.id))
-                    .returning(),
-                emitSideEffects(t.db, {
-                    workspaceId: t.workspaceId,
-                    userId: t.userId,
-                    action: "check_in",
-                    entityType: "attendance",
-                    entityId: existing.id,
-                    metadata: { meetingId: body.meetingId ?? null, eventId: body.eventId ?? null },
-                    ipAddress: clientIp(request),
-                }),
-            ]);
-            return ok(updated);
-        }
-
         const id = randomUUID();
-        const [[created]] = await Promise.all([
-            t.db
-                .insert(attendance)
-                .values({
-                    id,
-                    workspaceId: t.workspaceId,
-                    meetingId: body.meetingId ?? null,
-                    eventId: body.eventId ?? null,
-                    userId: t.userId,
-                    status: "present",
-                    checkedInAt: now,
-                })
-                .returning(),
-            emitSideEffects(t.db, {
+        const conflictTarget = hasMeeting
+            ? [attendance.workspaceId, attendance.userId, attendance.meetingId]
+            : [attendance.workspaceId, attendance.userId, attendance.eventId];
+        const conflictWhere = hasMeeting
+            ? sql`${attendance.meetingId} IS NOT NULL`
+            : sql`${attendance.eventId} IS NOT NULL`;
+        const [row] = await t.db
+            .insert(attendance)
+            .values({
+                id,
                 workspaceId: t.workspaceId,
+                meetingId: body.meetingId ?? null,
+                eventId: body.eventId ?? null,
                 userId: t.userId,
-                action: "check_in",
-                entityType: "attendance",
-                entityId: id,
-                metadata: { meetingId: body.meetingId ?? null, eventId: body.eventId ?? null },
-                ipAddress: clientIp(request),
-            }),
-        ]);
+                status: "present",
+                checkedInAt: now,
+            })
+            .onConflictDoUpdate({
+                target: conflictTarget,
+                targetWhere: conflictWhere,
+                set: { status: "present", checkedInAt: now },
+            })
+            .returning();
+        await emitSideEffects(t.db, {
+            workspaceId: t.workspaceId,
+            userId: t.userId,
+            action: "check_in",
+            entityType: "attendance",
+            entityId: row.id,
+            metadata: { meetingId: body.meetingId ?? null, eventId: body.eventId ?? null },
+            ipAddress: clientIp(request),
+        }).catch((err) => logger.error({ err }, "Check-in side effects failed"));
 
-        return ok(created, 201);
+        return ok(row, row.id === id ? 201 : 200);
     } catch (e) {
         return handleRouteError("POST /api/attendance", e);
     }

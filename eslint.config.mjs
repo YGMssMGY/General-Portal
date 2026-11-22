@@ -44,6 +44,7 @@ const eslintConfig = [
             "src/db/**/*.ts",
             "src/lib/logger.ts",
             "src/tui/**/*",
+            "src/ops/**/*",
             "scripts/**/*",
             "instrumentation.ts",
             "playwright.config.ts",

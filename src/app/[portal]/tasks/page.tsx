@@ -92,6 +92,12 @@ interface Task {
     updatedAt: string;
 }
 
+interface Occurrence {
+    taskId: string;
+    title: string;
+    occurrence: string;
+}
+
 interface TimeEntry {
     id: string;
     taskId: string;
@@ -397,6 +403,21 @@ export default function TasksPage() {
 
     const tasks = data?.items ?? [];
     const nextCursor = data?.nextCursor ?? null;
+    const expandedTask = tasks.find((task) => task.id === expandedId);
+    const showOccurrences = expandedTask?.recurrence != null;
+
+    const { data: occurrences } = useQuery<Occurrence[]>({
+        queryKey: [portal, "task-occurrences", expandedId ?? ""],
+        queryFn: () => {
+            const start = new Date(Date.now() - 30 * 86_400_000).toISOString();
+            const end = new Date(Date.now() + 30 * 86_400_000).toISOString();
+            return fetchJson<Occurrence[]>(
+                `/api/tasks/occurrences?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+            );
+        },
+        enabled: portal !== "" && showOccurrences,
+    });
+    const taskOccurrences = (occurrences ?? []).filter((o) => o.taskId === expandedId);
 
     function resetPaging() {
         setCursorStack([]);
@@ -502,8 +523,8 @@ export default function TasksPage() {
 
     function priorityColor(priority: number): string {
         if (priority >= 3) return "var(--color-destructive)";
-        if (priority === 2) return "var(--color-warning)";
-        return "var(--color-success)";
+        if (priority === 2) return "var(--color-warning-text)";
+        return "var(--color-success-text)";
     }
 
     function statusLabel(status: TaskStatus): string {
@@ -807,6 +828,50 @@ export default function TasksPage() {
                                                     </p>
                                                 )}
                                                 <TaskDetailView task={task} />
+                                                {showOccurrences && expandedId === task.id && (
+                                                    <div>
+                                                        <h4
+                                                            style={{
+                                                                fontSize: "13px",
+                                                                fontWeight: 600,
+                                                                margin: "0 0 8px",
+                                                            }}
+                                                        >
+                                                            {t("occurrences")}
+                                                        </h4>
+                                                        {taskOccurrences.length === 0 ? (
+                                                            <p
+                                                                style={{
+                                                                    fontSize: "12px",
+                                                                    color: "var(--color-text-secondary)",
+                                                                    margin: 0,
+                                                                }}
+                                                            >
+                                                                {t("noOccurrences")}
+                                                            </p>
+                                                        ) : (
+                                                            <div
+                                                                style={{
+                                                                    display: "flex",
+                                                                    flexWrap: "wrap",
+                                                                    gap: "6px",
+                                                                }}
+                                                            >
+                                                                {taskOccurrences.map((o, i) => (
+                                                                    <Badge
+                                                                        key={`${o.taskId}-${o.occurrence}-${i}`}
+                                                                        variant="secondary"
+                                                                    >
+                                                                        {format(
+                                                                            new Date(o.occurrence),
+                                                                            "MMM d, yyyy",
+                                                                        )}
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div
                                                     style={{
                                                         display: "flex",
@@ -1045,6 +1110,7 @@ export default function TasksPage() {
                                                         />
                                                         <Button
                                                             size="icon"
+                                                            aria-label={t("sendComment")}
                                                             onClick={() => {
                                                                 if (commentText.trim())
                                                                     commentMutation.mutate({

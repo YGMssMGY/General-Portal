@@ -1,0 +1,30 @@
+services:
+    app:
+        build: .
+        ports:
+            - "3000:3000"
+        env_file:
+            - .env.docker.example
+        depends_on:
+            db:
+                condition: service_healthy
+        volumes:
+            - uploads:/app/uploads
+    db:
+        image: postgres:18-alpine
+        environment:
+            POSTGRES_USER: general
+            POSTGRES_PASSWORD: general
+            POSTGRES_DB: general_portal_dev
+        ports:
+            - "127.0.0.1:5432:5432"
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U general -d general_portal_dev"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+volumes:
+    uploads:
+    db-data:

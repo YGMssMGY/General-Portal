@@ -47,6 +47,12 @@ const GET_ROUTES = [
     "/api/settings",
     "/api/me",
     "/api/workspace",
+    "/api/my-work",
+    "/api/analytics?range=30",
+    "/api/usage",
+    "/api/badges",
+    "/api/presence",
+    "/api/finance/trends",
 ];
 
 interface PortalInfo {
@@ -308,6 +314,83 @@ async function main(): Promise<void> {
             "cross-portal cookie does not leak data (401/404, never 200)",
             cross.status === 401 || cross.status === 404,
             `status=${cross.status}`,
+        );
+
+        const wrongPassword = await fetch(`${BASE_URL}/api/auth/password/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Cookie: `portal=${first.slug}` },
+            body: JSON.stringify({ email: EMAIL, password: `${PASSWORD}-wrong` }),
+            redirect: "manual",
+        });
+        check("wrong-password login returns 401", wrongPassword.status === 401, "expected 401");
+
+        const csrf = await authed("/api/tasks", first.slug, firstSession, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Origin: "https://evil.example" },
+            body: JSON.stringify({ title: `Smoke CSRF ${run}` }),
+        });
+        check(
+            "cross-origin POST with a session cookie returns 403",
+            csrf.status === 403,
+            `status=${csrf.status}`,
+        );
+
+        const ssrf = await authed(
+            "/api/link-preview?url=http%3A%2F%2F127.0.0.1%2F",
+            first.slug,
+            firstSession,
+        );
+        check("link preview blocks a loopback URL", ssrf.status === 400, `status=${ssrf.status}`);
+
+        const badChannel = await authed(
+            "/api/notification-prefs/preview?channel=sms",
+            first.slug,
+            firstSession,
+        );
+        check(
+            "notification preview rejects an invalid channel",
+            badChannel.status === 400,
+            `status=${badChannel.status}`,
+        );
+
+        const badRange = await authed("/api/analytics?range=abc", first.slug, firstSession);
+        const badRangeBody = dataOf(await readJson(badRange)) as Record<string, unknown> | null;
+        check(
+            "invalid analytics range falls back to 30",
+            badRange.status === 200 && badRangeBody?.range === 30,
+            `status=${badRange.status}`,
+        );
+    }
+
+    const scim = await fetch(`${BASE_URL}/api/scim/v2/Users`, { redirect: "manual" });
+    check(
+        "SCIM is rejected when unconfigured or unauthenticated",
+        scim.status === 401 || scim.status === 501,
+        `status=${scim.status}`,
+    );
+
+    const opsHealth = await fetch(`${BASE_URL}/api/ops/health`, { redirect: "manual" });
+    check(
+        "GET /api/ops/health returns the success envelope",
+        opsHealth.status === 200 && isSuccess(await readJson(opsHealth)),
+        `status=${opsHealth.status}`,
+    );
+    const opsToken = process.env.OPS_API_TOKEN ?? "";
+    if (opsToken) {
+        const opsRun = await fetch(`${BASE_URL}/api/ops/run`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${opsToken}`,
+                "X-Forwarded-Proto": "https",
+            },
+            body: JSON.stringify({ action: "site.list", params: {} }),
+            redirect: "manual",
+        });
+        check(
+            "ops run with a configured token lists sites",
+            opsRun.status === 200 && isSuccess(await readJson(opsRun)),
+            `status=${opsRun.status}`,
         );
     }
 

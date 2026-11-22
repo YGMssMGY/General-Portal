@@ -6,7 +6,7 @@ import { closeAllPools } from "../db/client.js";
 async function main(): Promise<void> {
     if (!process.stdin.isTTY) {
         console.error(
-            "This console requires an interactive terminal. Run it over SSH with a TTY allocated.",
+            "This console requires an interactive terminal. For remote access use the HTTPS operator API with curl or irm (see /api/ops).",
         );
         process.exit(1);
     }

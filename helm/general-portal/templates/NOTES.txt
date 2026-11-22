@@ -1,0 +1,25 @@
+General Portal is installed in namespace {{ .Release.Namespace }} as {{ include "general-portal.fullname" . }}.
+
+1. Confirm the rollout:
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "general-portal.fullname" . }}
+
+2. Supply secrets. Set databases.<slug> and authSecret in values, or set existingSecret to a
+   Secret that contains DATABASE_URL_<SLUG> and AUTH_SECRET keys. The chart ships no real
+   credentials and creates none from defaults.
+
+3. Uploads are mounted at {{ .Values.config.uploadsDir }}. Set uploads.existingClaim to a
+   PersistentVolumeClaim before storing user files; the default emptyDir is ephemeral.
+
+4. Run migrations and seed each database from a host with pnpm, then check GET /api/health.
+{{- if .Values.ingress.enabled }}
+
+5. Ingress is enabled for:
+{{- range .Values.ingress.hosts }}
+  - {{ .host }}{{ range .paths }}{{ .path }}{{ end }}
+{{- end }}
+{{- else }}
+
+5. No Ingress is enabled. Reach the service locally with:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "general-portal.fullname" . }} 8080:{{ .Values.service.port }}
+  Then open http://127.0.0.1:8080/api/health
+{{- end }}

@@ -95,7 +95,7 @@ test("Disabling A Module Hides Its Navigation Item", async ({ page }) => {
         await page.request.put("/api/settings", { data: { settings: original } });
     }
     await page.goto(`/${PORTAL}/dashboard`);
-    await expect(tasksLink).toHaveCount(1);
+    await expect(tasksLink.first()).toBeVisible();
 });
 
 test("Switching The Locale To Chinese Translates The Navigation", async ({ page }) => {

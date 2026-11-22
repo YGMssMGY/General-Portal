@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.backups
+uploads
+test-results
+.env
+*.log
+PORTING_GUIDE.md

@@ -36,7 +36,7 @@ export async function emitSideEffects(
     },
 ): Promise<void> {
     const { workspaceId, userId, action, entityType, entityId, metadata, ipAddress } = params;
-    await Promise.all([
+    const results = await Promise.allSettled([
         db.insert(activityFeed).values({
             workspaceId,
             userId,
@@ -58,17 +58,23 @@ export async function emitSideEffects(
             db,
         ),
     ]);
-    workspaceSlug(db, workspaceId)
-        .then((slug) => {
-            if (!slug) return undefined;
-            return import("@/lib/jobs/webhooks").then(({ publishWebhook }) =>
-                publishWebhook(slug, workspaceId, `${entityType}.${action}`, {
-                    entityType,
-                    entityId: entityId ?? null,
-                    action,
-                    metadata: metadata ?? {},
-                }),
-            );
-        })
-        .catch((err) => logger.debug({ err }, "webhook fan-out skipped"));
+    for (const result of results) {
+        if (result.status === "rejected") {
+            logger.error({ err: result.reason, action }, "side effect failed");
+        }
+    }
+    try {
+        const slug = await workspaceSlug(db, workspaceId);
+        if (slug) {
+            const { publishWebhook } = await import("@/lib/jobs/webhooks");
+            await publishWebhook(slug, workspaceId, `${entityType}.${action}`, {
+                entityType,
+                entityId: entityId ?? null,
+                action,
+                metadata: metadata ?? {},
+            });
+        }
+    } catch (err) {
+        logger.error({ err, workspaceId, action }, "webhook fan-out failed");
+    }
 }

@@ -9,16 +9,25 @@ export default defineConfig({
     use: {
         baseURL: "http://localhost:3000",
         trace: "on-first-retry",
+        extraHTTPHeaders: { "x-forwarded-for": "198.51.100.250" },
     },
     webServer: {
         command: "pnpm dev",
         url: "http://localhost:3000/api/health",
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: true,
         timeout: 180000,
     },
     projects: [
         { name: "setup", testMatch: /auth\.setup\.ts/ },
         { name: "public", testMatch: /public\.spec\.ts/ },
+        { name: "ops", testMatch: /ops\.spec\.ts/ },
+        { name: "a11y", testMatch: /a11y\.spec\.ts/ },
+        {
+            name: "features",
+            testMatch: /features\.spec\.ts/,
+            dependencies: ["portal"],
+            use: { storageState: "tests/e2e/.auth/user.json" },
+        },
         {
             name: "portal",
             testMatch: /portal\.spec\.ts/,

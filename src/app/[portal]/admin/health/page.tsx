@@ -54,7 +54,7 @@ async function loadData(request: NextRequest) {
         let migrations: number | null = null;
         try {
             const mRes = (await db.execute(
-                sql`SELECT count(*) AS n FROM "__drizzle_migrations"`,
+                sql`SELECT count(*) AS n FROM "public"."schema_migrations"`,
             )) as unknown as { rows?: Array<{ n?: string | number }> };
             migrations = Number(mRes.rows?.[0]?.n ?? 0);
         } catch {

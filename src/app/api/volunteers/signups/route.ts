@@ -91,7 +91,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "volunteers" });
+        const t = await requireTenant(request, {
+            permission: "signup_volunteer",
+            module: "volunteers",
+        });
         const body = await parseBody<CreateSignupInput>(createSignupSchema as never, request);
         const slotId = requireUuid(body.slotId, "slotId");
 

@@ -2,6 +2,7 @@ import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@/db/schema";
 import { config } from "@/config";
+import { listPortals } from "@/lib/deployment";
 import { logger } from "@/lib/logger";
 
 export type PortalDb = NodePgDatabase<typeof schema>;
@@ -16,23 +17,42 @@ export function normalizeSlug(raw: string): string | null {
     return SLUG_RE.test(slug) ? slug : null;
 }
 
+export function isSingleDbMode(): boolean {
+    return config.singleDbModeEnabled;
+}
+
+function configuredSlugs(): string[] {
+    return listPortals()
+        .map((p) => normalizeSlug(p.slug))
+        .filter((s): s is string => s !== null);
+}
+
 export function portalDbUrl(slug: string): string | undefined {
-    return process.env[`DATABASE_URL_${slug.toUpperCase().replace(/-/g, "_")}`];
+    const clean = normalizeSlug(slug);
+    if (!clean) return undefined;
+    if (isSingleDbMode() && configuredSlugs().includes(clean)) return config.singleDbUrl;
+    return process.env[`DATABASE_URL_${clean.toUpperCase().replace(/-/g, "_")}`];
 }
 
 export function listPortalSlugs(): string[] {
-    const slugs: string[] = [];
+    const slugs = new Set<string>();
     for (const key of Object.keys(process.env)) {
+        if (key === "DATABASE_URL_SINGLE") continue;
         const m = /^DATABASE_URL_([A-Z0-9_]+)$/.exec(key);
         if (!m || !process.env[key]) continue;
         const slug = m[1].toLowerCase().replace(/_/g, "-");
-        if (normalizeSlug(slug)) slugs.push(slug);
+        const clean = normalizeSlug(slug);
+        if (clean) slugs.add(clean);
     }
-    return slugs.sort();
+    if (isSingleDbMode()) for (const slug of configuredSlugs()) slugs.add(slug);
+    return [...slugs].sort();
 }
 
 export function isKnownPortal(slug: string): boolean {
-    return normalizeSlug(slug) !== null && portalDbUrl(slug) !== undefined;
+    const clean = normalizeSlug(slug);
+    if (!clean) return false;
+    if (isSingleDbMode()) return configuredSlugs().includes(clean);
+    return portalDbUrl(clean) !== undefined;
 }
 
 function buildPool(url: string): Pool {

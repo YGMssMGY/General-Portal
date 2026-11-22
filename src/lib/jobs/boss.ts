@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 let boss: PgBoss | null = null;
 let starting: Promise<PgBoss> | null = null;
 
-function connectionString(): string {
+export function connectionString(): string {
     if (config.bossUrl) return config.bossUrl;
     const first = listPortalSlugs()[0];
     const url = first ? portalDbUrl(first) : undefined;

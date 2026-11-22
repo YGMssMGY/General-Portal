@@ -1,0 +1,593 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { config } from "@/config";
+import { listPortalSlugs, portalDbUrl } from "@/db/client";
+import { workspaces } from "@/db/schema";
+import { runTsx, sealDumpIfConfigured, withClient } from "@/tui/lib/tui-db";
+import { workspaceIdFor } from "./backup";
+import type { ActionDefinition, OpsContext, OpsScope } from "../types";
+
+const slug = z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/)
+    .describe("Portal slug");
+const email = z.string().email().describe("User email");
+const scopes = z.array(z.enum(["ops:read", "ops:deploy", "ops:backup", "ops:danger"])).min(1);
+
+function b64url(input: string): string {
+    return Buffer.from(input, "utf8").toString("base64url");
+}
+
+export function issueToken(
+    subject: string,
+    granted: OpsScope[],
+    ttlSeconds = 3600,
+): { token: string; expiresAt: string } {
+    const exp = Math.floor(Date.now() / 1000) + Math.max(60, Math.min(86400, ttlSeconds));
+    const payload = b64url(JSON.stringify({ sub: subject, scopes: granted, exp }));
+    const sig = createHmac("sha256", config.opsSecret).update(payload).digest("base64url");
+    return { token: `${payload}.${sig}`, expiresAt: new Date(exp * 1000).toISOString() };
+}
+
+export function verifyToken(token: string): {
+    ok: boolean;
+    subject?: string;
+    scopes?: OpsScope[];
+} {
+    const [payload, sig] = token.split(".");
+    if (!payload || !sig) return { ok: false };
+    const expected = createHmac("sha256", config.opsSecret).update(payload).digest("base64url");
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false };
+    try {
+        const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+            sub: string;
+            scopes: OpsScope[];
+            exp: number;
+        };
+        if (parsed.exp < Math.floor(Date.now() / 1000)) return { ok: false };
+        return { ok: true, subject: parsed.sub, scopes: parsed.scopes };
+    } catch {
+        return { ok: false };
+    }
+}
+
+function flatten(obj: Record<string, unknown>, prefix = "", out = new Set<string>()): Set<string> {
+    for (const [k, v] of Object.entries(obj)) {
+        const key = prefix ? `${prefix}.${k}` : k;
+        if (v && typeof v === "object" && !Array.isArray(v))
+            flatten(v as Record<string, unknown>, key, out);
+        else out.add(key);
+    }
+    return out;
+}
+
+export const systemActions: ActionDefinition[] = [
+    {
+        id: "log.tail",
+        group: "system",
+        summary: "Tail recent operator audit entries",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({ limit: z.number().int().min(1).max(500).default(50) }),
+        run: async ({ limit }) => {
+            try {
+                const text = fs.readFileSync(path.resolve(process.cwd(), ".tui-audit.log"), "utf8");
+                return text
+                    .split("\n")
+                    .filter(Boolean)
+                    .slice(-limit)
+                    .map((line) => {
+                        try {
+                            return JSON.parse(line) as Record<string, unknown>;
+                        } catch {
+                            return { raw: line };
+                        }
+                    });
+            } catch {
+                return [];
+            }
+        },
+    },
+    {
+        id: "ops.token",
+        group: "ops",
+        summary: "Issue a scoped, short-lived operator token",
+        scopes: ["ops:danger"],
+        destructive: false,
+        params: z.object({
+            subject: z.string().min(1).max(120),
+            scopes,
+            ttl: z.number().int().min(60).max(86400).default(3600),
+        }),
+        run: async ({ subject, scopes: granted, ttl }) => {
+            const issued = issueToken(subject, granted, ttl);
+            return {
+                subject,
+                scopes: granted,
+                ...issued,
+                note: "Store this token securely; it is shown once.",
+            };
+        },
+    },
+    {
+        id: "ops.whoami",
+        group: "ops",
+        summary: "Show the current operator identity and scopes",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async (_input, ctx: OpsContext) => ({
+            operatorId: ctx.operatorId,
+            source: ctx.source,
+            scopes: ctx.scopes,
+            ip: ctx.ip ?? null,
+        }),
+    },
+    {
+        id: "ops.explain",
+        group: "ops",
+        summary: "Explain an action: params, scopes, confirmation rule and example commands",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({ action: z.string().min(1) }),
+        run: async ({ action }) => {
+            const { describeAction } = await import("../registry");
+            return describeAction(action);
+        },
+    },
+    {
+        id: "ops.status",
+        group: "ops",
+        summary: "Show operator API configuration without revealing secrets",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => ({
+            tokenConfigured: Boolean(config.opsToken),
+            secretConfigured: config.opsSecret.length > 0,
+            ipAllowlistConfigured: config.opsAllowedIps.length > 0,
+            portals: listPortalSlugs().length,
+            baseUrl: config.baseUrl,
+        }),
+    },
+    {
+        id: "config.check",
+        group: "config",
+        summary: "Validate deployment.yaml, env names, seed packs and databases",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => {
+            const r = await runTsx("scripts/config.ts", ["check"]);
+            return { ok: r.code === 0, output: r.out.slice(-12000) };
+        },
+    },
+    {
+        id: "config.init",
+        group: "config",
+        summary: "Write a starter deployment YAML without touching the live file",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => {
+            const r = await runTsx("scripts/config.ts", ["init"]);
+            return { ok: r.code === 0, output: r.out.slice(-6000) };
+        },
+    },
+    {
+        id: "config.diff",
+        group: "config",
+        summary: "Compare YAML branding with live workspace rows",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => {
+            const r = await runTsx("scripts/config.ts", ["diff"]);
+            return { ok: r.code === 0, output: r.out.slice(-12000) };
+        },
+    },
+    {
+        id: "config.doctor",
+        group: "config",
+        summary: "Run all configuration and connectivity checks",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => {
+            const r = await runTsx("scripts/config.ts", ["doctor"]);
+            return { ok: r.code === 0, output: r.out.slice(-16000) };
+        },
+    },
+    {
+        id: "user.list",
+        group: "user",
+        summary: "List workspace members with roles",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({ slug, limit: z.number().int().min(1).max(500).default(100) }),
+        run: async ({ slug, limit }) => {
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const wid = await workspaceIdFor(slug);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'SELECT u.id, u.email, u.name, u.disabled, r.name AS role FROM users u JOIN memberships m ON m."userId" = u.id LEFT JOIN roles r ON r.id = m."roleId" WHERE m."workspaceId" = $1 ORDER BY u.email LIMIT $2',
+                    [wid, limit],
+                );
+                return r.rows;
+            });
+        },
+    },
+    {
+        id: "user.role",
+        group: "user",
+        summary: "Change a member's role by name",
+        scopes: ["ops:deploy"],
+        destructive: true,
+        params: z.object({ slug, email, role: z.enum(["admin", "officer", "member"]) }),
+        run: async ({ slug, email, role }) => {
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const wid = await workspaceIdFor(slug);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'UPDATE memberships SET "roleId" = (SELECT id FROM roles WHERE "workspaceId" = $1 AND name = $2 LIMIT 1) WHERE "workspaceId" = $1 AND "userId" = (SELECT id FROM users WHERE email = $3 LIMIT 1) RETURNING id',
+                    [wid, role, email.toLowerCase()],
+                );
+                return { slug, email, role, updated: r.rowCount ?? 0 };
+            });
+        },
+    },
+    {
+        id: "user.disable",
+        group: "user",
+        summary: "Disable or enable a user account in the target workspace",
+        scopes: ["ops:danger"],
+        destructive: true,
+        params: z.object({ slug, email, disabled: z.boolean().default(true) }),
+        run: async ({ slug, email, disabled }) => {
+            const url = portalDbUrl(slug);
+            const wid = await workspaceIdFor(slug);
+            if (!url || !wid) throw new Error(`Unknown portal: ${slug}`);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'UPDATE users SET disabled = $1 WHERE email = $2 AND id IN (SELECT "userId" FROM memberships WHERE "workspaceId" = $3) RETURNING id',
+                    [disabled, email.toLowerCase(), wid],
+                );
+                return { slug, email, disabled, updated: r.rowCount ?? 0 };
+            });
+        },
+    },
+    {
+        id: "user.sessions",
+        group: "user",
+        summary: "List active sessions for a user",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({ slug, email }),
+        run: async ({ slug, email }) => {
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'SELECT id, provider, "createdAt", "lastSeenAt", "expiresAt" FROM sessions WHERE "userId" = (SELECT id FROM users WHERE email = $1 LIMIT 1) AND "revokedAt" IS NULL ORDER BY "createdAt" DESC LIMIT 100',
+                    [email.toLowerCase()],
+                );
+                return r.rows;
+            });
+        },
+    },
+    {
+        id: "user.revoke-all",
+        group: "user",
+        summary: "Revoke every session for a portal",
+        scopes: ["ops:danger"],
+        destructive: true,
+        confirmField: "slug",
+        params: z.object({ slug }),
+        run: async ({ slug }) => {
+            const wid = await workspaceIdFor(slug);
+            const url = portalDbUrl(slug);
+            if (!url || !wid) throw new Error(`Unknown portal: ${slug}`);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'UPDATE sessions SET "revokedAt" = now() WHERE "workspaceId" = $1 AND "revokedAt" IS NULL',
+                    [wid],
+                );
+                return { slug, revoked: r.rowCount ?? 0 };
+            });
+        },
+    },
+    {
+        id: "danger.revoke-sessions",
+        group: "danger",
+        summary: "Alias of user.revoke-all",
+        scopes: ["ops:danger"],
+        destructive: true,
+        confirmField: "slug",
+        params: z.object({ slug }),
+        run: async ({ slug }) => {
+            const wid = await workspaceIdFor(slug);
+            const url = portalDbUrl(slug);
+            if (!url || !wid) throw new Error(`Unknown portal: ${slug}`);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'UPDATE sessions SET "revokedAt" = now() WHERE "workspaceId" = $1 AND "revokedAt" IS NULL',
+                    [wid],
+                );
+                return { slug, revoked: r.rowCount ?? 0 };
+            });
+        },
+    },
+    {
+        id: "danger.disable-user",
+        group: "danger",
+        summary: "Disable a workspace member by email with typed confirmation",
+        scopes: ["ops:danger"],
+        destructive: true,
+        confirmField: "email",
+        params: z.object({ slug, email }),
+        run: async ({ slug, email }) => {
+            const url = portalDbUrl(slug);
+            const wid = await workspaceIdFor(slug);
+            if (!url || !wid) throw new Error(`Unknown portal: ${slug}`);
+            return withClient(url, async (c) => {
+                const r = await c.query(
+                    'UPDATE users SET disabled = true WHERE email = $1 AND id IN (SELECT "userId" FROM memberships WHERE "workspaceId" = $2) RETURNING id',
+                    [email.toLowerCase(), wid],
+                );
+                return { slug, email, disabled: (r.rowCount ?? 0) > 0 };
+            });
+        },
+    },
+    {
+        id: "data.i18n-missing",
+        group: "data",
+        summary: "Report locale keys missing from any of the five catalogues",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => {
+            const dir = path.resolve(process.cwd(), "messages");
+            const locales = ["en-US", "zh-CN", "de-DE", "fr-FR", "es-ES"];
+            const catalogs = new Map<string, Set<string>>();
+            for (const l of locales) {
+                catalogs.set(
+                    l,
+                    flatten(
+                        JSON.parse(fs.readFileSync(path.join(dir, `${l}.json`), "utf8")) as Record<
+                            string,
+                            unknown
+                        >,
+                    ),
+                );
+            }
+            const baseline = catalogs.get("en-US") ?? new Set<string>();
+            return locales.map((l) => ({
+                locale: l,
+                missing: [...baseline].filter((k) => !catalogs.get(l)?.has(k)),
+            }));
+        },
+    },
+    {
+        id: "data.export",
+        group: "data",
+        summary: "Export a portal database as plain SQL",
+        scopes: ["ops:backup"],
+        destructive: false,
+        params: z.object({ slug }),
+        run: async ({ slug }) => {
+            const { backupFilePath, pgDump } = await import("@/tui/lib/tui-db");
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const staged = backupFilePath(slug, "export");
+            const r = await pgDump(url, staged);
+            if (!r.ok) return { slug, ok: false, bytes: r.bytes };
+            const sealed = await sealDumpIfConfigured(staged);
+            return {
+                slug,
+                ok: true,
+                bytes: sealed?.bytes ?? r.bytes,
+                file: sealed?.path ?? staged,
+                encrypted: Boolean(sealed),
+            };
+        },
+    },
+    {
+        id: "bench",
+        group: "system",
+        summary: "Time a trivial indexed query on every portal",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({}),
+        run: async () => {
+            return Promise.all(
+                listPortalSlugs().map(async (s) => {
+                    const url = portalDbUrl(s);
+                    if (!url) return { slug: s, ms: null };
+                    const start = performance.now();
+                    await withClient(url, async (c) => {
+                        await c.query("SELECT id FROM workspaces WHERE slug = $1 LIMIT 1", [s]);
+                    });
+                    return { slug: s, ms: Math.round((performance.now() - start) * 100) / 100 };
+                }),
+            );
+        },
+    },
+    {
+        id: "data.import",
+        group: "data",
+        summary: "Import a previously exported SQL dump into a portal database",
+        scopes: ["ops:danger"],
+        destructive: true,
+        confirmField: "slug",
+        params: z.object({ slug, file: z.string().min(1) }),
+        run: async ({ slug, file }) => {
+            const { backupEncryptionKey, decryptDump, pgRestore } =
+                await import("@/tui/lib/tui-db");
+            const { isSingleDbMode } = await import("@/db/client");
+            if (isSingleDbMode()) {
+                throw new Error("Direct database import is disabled in single-database mode");
+            }
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const allowed = /^[a-zA-Z0-9_.-]+$/.test(file);
+            if (!allowed) throw new Error("Invalid backup filename");
+            const base = path.resolve(process.cwd(), ".backups", slug);
+            const full = path.resolve(base, file);
+            if (!full.startsWith(`${base}${path.sep}`)) {
+                throw new Error("Path traversal rejected");
+            }
+            let target = full;
+            if (file.endsWith(".enc")) {
+                const key = backupEncryptionKey();
+                if (!key)
+                    throw new Error("Encrypted backup requires a valid BACKUP_ENCRYPTION_KEY");
+                const decrypted = await decryptDump(full, key);
+                target = decrypted.path;
+            }
+            try {
+                const r = await pgRestore(url, target);
+                if (r.code !== 0) throw new Error(`Import failed: ${r.out}`);
+            } finally {
+                if (target !== full)
+                    await fs.promises.rm(path.dirname(target), { recursive: true, force: true });
+            }
+            return { slug, imported: file };
+        },
+    },
+    {
+        id: "compliance.export",
+        group: "data",
+        summary: "Write a compliance evidence bundle for a portal",
+        scopes: ["ops:backup"],
+        destructive: false,
+        params: z.object({ slug }),
+        run: async ({ slug }) => {
+            const { latestBackup, listBackups } = await import("@/tui/lib/tui-db");
+            const url = portalDbUrl(slug);
+            if (!url) throw new Error(`Unknown portal: ${slug}`);
+            const stats = await withClient(url, async (c) => {
+                const r = await c.query<{
+                    users: string;
+                    sessions: string;
+                    revoked: string;
+                    roles: string;
+                }>(
+                    'SELECT (SELECT COUNT(*)::text FROM users) AS users, (SELECT COUNT(*)::text FROM sessions) AS sessions, (SELECT COUNT(*)::text FROM sessions WHERE "revokedAt" IS NOT NULL) AS revoked, (SELECT COUNT(*)::text FROM roles) AS roles',
+                );
+                return r.rows[0];
+            });
+            const bundle = {
+                generatedAt: new Date().toISOString(),
+                portal: slug,
+                users: Number(stats?.users ?? 0),
+                sessions: Number(stats?.sessions ?? 0),
+                revokedSessions: Number(stats?.revoked ?? 0),
+                roles: Number(stats?.roles ?? 0),
+                backups: listBackups(slug).map((b) => ({ file: b.file, bytes: b.bytes })),
+                verifiedBackup: latestBackup(slug)?.file ?? null,
+            };
+            const dir = path.resolve(process.cwd(), ".backups", slug);
+            await fs.promises.mkdir(dir, { recursive: true });
+            const name = `compliance-${Date.now()}.json`;
+            await fs.promises.writeFile(path.join(dir, name), JSON.stringify(bundle, null, 4), {
+                mode: 0o600,
+            });
+            return { slug, file: name, bundle };
+        },
+    },
+    {
+        id: "secret.rotate",
+        group: "ops",
+        summary: "Generate a replacement value for a named secret and print rotation steps",
+        scopes: ["ops:danger"],
+        destructive: false,
+        params: z.object({
+            key: z.enum([
+                "AUTH_SECRET",
+                "OPS_API_TOKEN",
+                "OPS_SECRET",
+                "SCIM_TOKEN",
+                "BACKUP_ENCRYPTION_KEY",
+            ]),
+        }),
+        run: async ({ key }) => {
+            const { randomBytes } = await import("node:crypto");
+            const value =
+                key === "BACKUP_ENCRYPTION_KEY"
+                    ? randomBytes(32).toString("base64")
+                    : randomBytes(48).toString("base64url");
+            return {
+                key,
+                value,
+                steps: [
+                    "Set the new value in the deployment environment.",
+                    "Restart the application so the typed config accessor reads it.",
+                    "Revoke any tokens issued with the old value.",
+                    "Do not commit the value to the repository.",
+                ],
+            };
+        },
+    },
+    {
+        id: "webhook.replay",
+        group: "webhook",
+        summary: "Re-publish an event to all active webhooks for a workspace",
+        scopes: ["ops:deploy"],
+        destructive: true,
+        params: z.object({
+            slug,
+            event: z.string().min(1).max(80),
+            payload: z.record(z.string(), z.unknown()).default({}),
+        }),
+        run: async ({ slug, event, payload }) => {
+            const { publishWebhook } = await import("@/lib/jobs/webhooks");
+            const { getDb } = await import("@/db/client");
+            const db = getDb(slug);
+            const row = await db.query.workspaces.findFirst({
+                where: eq(workspaces.slug, slug),
+                columns: { id: true },
+            });
+            if (!row) throw new Error(`No workspace for ${slug}`);
+            await publishWebhook(slug, row.id, event, payload);
+            return { slug, event, queued: true };
+        },
+    },
+    {
+        id: "cli.completion",
+        group: "ops",
+        summary: "Describe the curl/irm wrapper and print completion for the action registry",
+        scopes: ["ops:read"],
+        destructive: false,
+        params: z.object({ shell: z.enum(["bash", "zsh", "powershell"]) }),
+        run: async ({ shell }) => {
+            const { listActions } = await import("../registry");
+            const ids = listActions()
+                .map((a) => a.id)
+                .join(" ");
+            const wrapper = shell === "powershell" ? "cli/gp.ps1" : "cli/gp.sh";
+            const script =
+                shell === "bash"
+                    ? `complete -W '${ids}' ./${wrapper}`
+                    : shell === "zsh"
+                      ? `compdef '_arguments "1: :(${ids})"' ./${wrapper}`
+                      : `Register-ArgumentCompleter -Native -CommandName '${wrapper}' -ScriptBlock { param($wordToComplete) @(${ids
+                            .split(" ")
+                            .map((i) => `'${i}'`)
+                            .join(", ")}) | Where-Object { $_ -like "$wordToComplete*" } }`;
+            return {
+                wrapper,
+                transport: shell === "powershell" ? "irm" : "curl",
+                usage: `GP_URL=<url> GP_TOKEN=<token> ${wrapper} <action> '<json>'`,
+                note: "The wrapper posts to POST /api/ops/run; use 'list' or 'explain' for discovery.",
+                script,
+            };
+        },
+    },
+];

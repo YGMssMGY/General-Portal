@@ -16,7 +16,10 @@ type PrefsInput = z.infer<typeof prefsSchema>;
 
 export async function GET(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "members" });
+        const t = await requireTenant(request, {
+            permission: "manage_notifications",
+            module: "members",
+        });
         const rows = await t.db.query.notificationPrefs.findMany({
             where: eq(notificationPrefs.userId, t.userId),
             orderBy: [asc(notificationPrefs.channel)],
@@ -29,7 +32,10 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const t = await requireTenant(request, { module: "members" });
+        const t = await requireTenant(request, {
+            permission: "manage_notifications",
+            module: "members",
+        });
         const body = await parseBody<PrefsInput>(prefsSchema as never, request);
         const rows = await Promise.all(
             body.map((p) =>

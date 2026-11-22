@@ -293,7 +293,7 @@ export default function LoginForm({
                         role="status"
                         style={{
                             fontSize: "13px",
-                            color: "var(--color-success)",
+                            color: "var(--color-success-text)",
                             margin: "12px 0 0",
                         }}
                     >

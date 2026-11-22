@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -135,7 +135,20 @@ export default function FinancePage() {
     const canReviewPurchases =
         user?.role === "admin" || (user?.permissions ?? []).includes("manage_purchase_requests");
 
-    const [tab, setTab] = useState("transactions");
+    const tabParam = useSyncExternalStore(
+        (onChange) => {
+            window.addEventListener("popstate", onChange);
+            return () => window.removeEventListener("popstate", onChange);
+        },
+        () => new URLSearchParams(window.location.search).get("tab") ?? "transactions",
+        () => "transactions",
+    );
+    const validTabs = new Set(["transactions", "budget", "requests"]);
+    const initialTab = validTabs.has(tabParam) ? tabParam : "transactions";
+    const [tab, setTab] = useState(initialTab);
+    if (tab !== initialTab && tabParam !== "transactions") {
+        setTab(initialTab);
+    }
     const [typeFilter, setTypeFilter] = useState("all");
     const [fiscalYear, setFiscalYear] = useState(() => new Date().getFullYear().toString());
     const [prStatus, setPrStatus] = useState("all");
