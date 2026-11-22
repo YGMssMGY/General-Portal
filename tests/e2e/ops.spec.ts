@@ -1,17 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const token = process.env.OPS_API_TOKEN ?? "local-ops-token-for-verification";
 const headers = { Authorization: `Bearer ${token}`, "X-Forwarded-Proto": "https" };
 
-async function run(
-    request: {
-        post: (
-            url: string,
-            options: unknown,
-        ) => Promise<{ status: () => number; json: () => Promise<Record<string, unknown>> }>;
-    },
-    body: unknown,
-) {
+async function run(request: APIRequestContext, body: unknown) {
     return request.post("/api/ops/run", { headers, data: body });
 }
 
